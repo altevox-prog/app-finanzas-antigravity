@@ -74,11 +74,7 @@ import {
   getHasCompletedOnboarding,
   setHasCompletedOnboarding
 } from './utils/userProfileHelper';
-import { 
-  DEFAULT_WIDGETS_CONFIG, 
-  getStoredWidgetsConfig, 
-  saveStoredWidgetsConfig 
-} from './utils/widgetsConfig';
+import { DEFAULT_WIDGETS_CONFIG } from './utils/widgetsConfig';
 import { 
   LayoutDashboard, 
   Receipt, 
@@ -118,6 +114,7 @@ import {
 import { useTheme } from './hooks/useTheme';
 import { useSecurity } from './hooks/useSecurity';
 import { useOnboarding } from './hooks/useOnboarding';
+import { useDashboardWidgets } from './hooks/useDashboardWidgets';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -457,32 +454,13 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const [widgets, setWidgets] = useState(() => getStoredWidgetsConfig());
-
-  // Sincronización reactiva bidireccional de widgets
-  useEffect(() => {
-    const handleSync = (e) => {
-      const next = (e?.detail && Array.isArray(e.detail) && e.detail.length > 0)
-        ? e.detail
-        : getStoredWidgetsConfig();
-      setWidgets((prev) => {
-        try {
-          if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
-        } catch (_) {}
-        return [...next];
-      });
-    };
-    window.addEventListener('monety_widgets_order_v2_updated', handleSync);
-    window.addEventListener('monety_widgets_config_updated', handleSync);
-    window.addEventListener('presu_widget_order_updated', handleSync);
-    return () => {
-      window.removeEventListener('monety_widgets_order_v2_updated', handleSync);
-      window.removeEventListener('monety_widgets_config_updated', handleSync);
-      window.removeEventListener('presu_widget_order_updated', handleSync);
-    };
-  }, []);
-
-  const [isEditWidgetsModalOpen, setIsEditWidgetsModalOpen] = useState(false);
+  // Configuración y visibilidad de Widgets del Dashboard
+  const {
+    widgets,
+    setWidgets,
+    isEditWidgetsModalOpen,
+    setIsEditWidgetsModalOpen
+  } = useDashboardWidgets({ userId: user?.id, isResettingRef });
   // Control de estado de onboarding y tutorial
   const {
     isOnboardingActive,
@@ -1010,17 +988,6 @@ export default function App() {
     }
   }, [activeTab]);
 
-  // Persist to localStorage and Supabase profiles
-  const lastSavedWidgetsRef = useRef('');
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    try {
-      const str = JSON.stringify(widgets);
-      if (str === lastSavedWidgetsRef.current) return;
-      lastSavedWidgetsRef.current = str;
-    } catch (_) {}
-    saveStoredWidgetsConfig(widgets, user?.id);
-  }, [widgets, user?.id]);
 
   useEffect(() => {
     if (isResettingRef.current) return;
