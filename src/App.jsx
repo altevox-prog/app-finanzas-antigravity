@@ -66,14 +66,6 @@ import {
   ensureUUID,
   normalizeAccountType
 } from './services/syncEngine';
-import { 
-  extractUserProfile, 
-  syncAndPersistUserProfile, 
-  hasUserCompletedTutorial, 
-  markUserTutorialCompleted,
-  getHasCompletedOnboarding,
-  setHasCompletedOnboarding
-} from './utils/userProfileHelper';
 import { DEFAULT_WIDGETS_CONFIG } from './utils/widgetsConfig';
 import { 
   LayoutDashboard, 
@@ -115,6 +107,7 @@ import { useTheme } from './hooks/useTheme';
 import { useSecurity } from './hooks/useSecurity';
 import { useOnboarding } from './hooks/useOnboarding';
 import { useDashboardWidgets } from './hooks/useDashboardWidgets';
+import { useUserProfile } from './hooks/useUserProfile';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -470,81 +463,12 @@ export default function App() {
     completeOnboarding
   } = useOnboarding();
 
-  // User Profile state (photo, name, initials) - sin valores estáticos por defecto
-  const [userProfile, setUserProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.name && parsed.name !== 'Alex González') {
-          return parsed;
-        }
-      }
-      const name = localStorage.getItem('user_profile_name');
-      if (name && name !== 'Alex González') {
-        return { name, photo: null, initials: name.slice(0, 2).toUpperCase() };
-      }
-      return { name: 'Usuario', photo: null, initials: 'US' };
-    } catch {
-      return { name: 'Usuario', photo: null, initials: 'US' };
-    }
-  });
-
-  // Sincronizar dinámicamente metadatos del perfil de Google (nombre y avatar) al detectar usuario
-  useEffect(() => {
-    if (!user) return;
-    const rawFallback = user.email ? user.email.split('@')[0] : 'Usuario';
-    const cleanFallback = rawFallback.charAt(0).toUpperCase() + rawFallback.slice(1);
-    const fullName = user.user_metadata?.full_name || user.user_metadata?.name || cleanFallback;
-    const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
-
-    if (fullName) {
-      setUserProfile((prev) => {
-        const isDefault = !prev?.name || prev.name === 'Alex González' || prev.name === 'Usuario';
-        const hasGoogleName = Boolean(user.user_metadata?.full_name || user.user_metadata?.name);
-        const finalName = hasGoogleName ? fullName : (isDefault ? fullName : (prev.name || fullName));
-        const finalPhoto = avatarUrl || prev?.photo || null;
-        const initials = finalName
-          .split(' ')
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((w) => w[0].toUpperCase())
-          .join('') || 'US';
-
-        const updated = {
-          name: finalName,
-          photo: finalPhoto,
-          initials
-        };
-
-        try {
-          localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
-          localStorage.setItem('user_profile_name', finalName);
-          localStorage.setItem('user_name', finalName);
-          localStorage.setItem('profile', JSON.stringify(updated));
-        } catch (e) {
-          console.warn('Error guardando perfil en localStorage:', e);
-        }
-
-        return updated;
-      });
-    }
-  }, [user?.id]);
-
-  // Actualización explícita del perfil desde la pantalla de configuración
-  const handleUpdateProfile = async (newProfile) => {
-    setUserProfile(newProfile);
-    try {
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(newProfile));
-      if (newProfile?.name) {
-        localStorage.setItem('user_profile_name', newProfile.name);
-        localStorage.setItem('user_name', newProfile.name);
-      }
-      localStorage.setItem('profile', JSON.stringify(newProfile));
-    } catch (e) {
-      console.warn('Error guardando perfil localmente:', e);
-    }
-  };
+  // Estado y sincronización de Perfil de Usuario
+  const {
+    userProfile,
+    setUserProfile,
+    handleUpdateProfile
+  } = useUserProfile({ user, isResettingRef });
 
   // Security settings (PIN and Biometrics) y estado de bloqueo de app
   const {
@@ -1056,10 +980,6 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.TRM, trm.toString());
   }, [trm]);
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(userProfile));
-  }, [userProfile]);
 
   useEffect(() => {
     if (isResettingRef.current) return;
