@@ -4,7 +4,6 @@ import {
   INITIAL_TRANSACTIONS, 
   INITIAL_DEBTS_AND_LOANS, 
   INITIAL_INVESTMENTS,
-  INITIAL_SUBSCRIPTIONS,
   MONTH_NAMES,
   formatCurrency
 } from './data/initialData';
@@ -107,6 +106,7 @@ import { useTRM } from './hooks/useTRM';
 import { useCategories } from './hooks/useCategories';
 import { useBudgets } from './hooks/useBudgets';
 import { useSavingsGoals } from './hooks/useSavingsGoals';
+import { useRecurringPayments } from './hooks/useRecurringPayments';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -533,101 +533,19 @@ export default function App() {
     }
   };
 
-  // Recurring payments state (synced with localStorage 'recurring_payments' and STORAGE_KEYS.SUBSCRIPTIONS)
-  const [recurringPayments, setRecurringPayments] = useState(() => {
-    try {
-      const savedRec = localStorage.getItem(STORAGE_KEYS.RECURRING_PAYMENTS);
-      if (savedRec) {
-        const parsed = JSON.parse(savedRec);
-        if (Array.isArray(parsed)) return parsed;
-      }
-      const savedSubs = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTIONS);
-      if (savedSubs) {
-        const parsedSubs = JSON.parse(savedSubs);
-        if (Array.isArray(parsedSubs) && parsedSubs.length > 0) {
-          return parsedSubs.map(s => ({
-            id: s.id || 'rec-' + Date.now() + Math.random(),
-            name: s.name,
-            amount: Number(s.amount) || 0,
-            originalAmount: Number(s.amount) || 0,
-            originalCurrency: 'COP',
-            exchangeRate: 1,
-            type: 'expense',
-            mode: s.mode || 'auto',
-            frequency: s.frequency || 'monthly',
-            billingDay: s.billingDay || 1,
-            accountId: s.accountId || '',
-            accountName: s.accountName || '',
-            categoryId: s.categoryId || '',
-            categoryName: s.categoryName || 'Suscripciones',
-            isActive: s.active !== undefined ? s.active : true,
-            createdAt: s.createdAt || new Date().toISOString()
-          }));
-        }
-      }
-      return [];
-    } catch (e) {
-      console.error('Error parseando recurring_payments:', e);
-      return [];
-    }
-  });
-
-  // Alias for backward compatibility
-  const subscriptions = recurringPayments;
-  const setSubscriptions = setRecurringPayments;
-
-  const handleAddRecurring = async (item) => {
-    const updated = [item, ...recurringPayments];
-
-    // 1. Persistencia local garantizada
-    try {
-      setRecurringPayments(updated);
-      localStorage.setItem(STORAGE_KEYS.RECURRING_PAYMENTS, JSON.stringify(updated));
-      localStorage.setItem('app_recurring', JSON.stringify(updated));
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      showToast("Error al guardar localmente", "error");
-      return;
-    }
-
-    // 2. Notificar éxito garantizado
-    showToast('✓ Pago recurrente guardado con éxito', 'success');
-  };
-  const handleSaveRecurring = handleAddRecurring;
-
-  const handleUpdateRecurring = async (updatedItem) => {
-    const updated = recurringPayments.map((item) => (item.id === updatedItem.id ? updatedItem : item));
-
-    // 1. Persistencia local garantizada
-    try {
-      setRecurringPayments(updated);
-      localStorage.setItem(STORAGE_KEYS.RECURRING_PAYMENTS, JSON.stringify(updated));
-      localStorage.setItem('app_recurring', JSON.stringify(updated));
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      showToast("Error al guardar localmente", "error");
-      return;
-    }
-
-    // 2. Notificar éxito garantizado
-    showToast('✓ Pago recurrente actualizado con éxito', 'success');
-  };
-
-  const handleDeleteRecurring = async (id) => {
-    const updated = recurringPayments.filter((item) => item.id !== id);
-    setRecurringPayments(updated);
-    localStorage.setItem(STORAGE_KEYS.RECURRING_PAYMENTS, JSON.stringify(updated));
-    localStorage.setItem('app_recurring', JSON.stringify(updated));
-    toast.info('Elemento eliminado');
-  };
-
-  const handleToggleActiveRecurring = async (id) => {
-    const item = recurringPayments.find(r => r.id === id);
-    if (!item) return;
-    const isActive = item.isActive !== false;
-    const updated = { ...item, isActive: !isActive };
-    await handleUpdateRecurring(updated);
-  };
+  // Pagos recurrentes y suscripciones state & actions
+  const {
+    recurringPayments,
+    setRecurringPayments,
+    subscriptions,
+    setSubscriptions,
+    handleAddRecurring,
+    handleSaveRecurring,
+    handleUpdateRecurring,
+    handleDeleteRecurring,
+    handleToggleActiveRecurring,
+    resetRecurringPayments
+  } = useRecurringPayments(isResettingRef);
 
   // Presupuestos state & actions
   const {
@@ -790,10 +708,7 @@ export default function App() {
 
 
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem(STORAGE_KEYS.SUBSCRIPTIONS, JSON.stringify(subscriptions));
-  }, [subscriptions]);
+
 
 
 
@@ -1830,7 +1745,7 @@ export default function App() {
       setAccounts([]);
       setDebtsAndLoans([]);
       setInvestments([]);
-      setRecurringPayments([]);
+      resetRecurringPayments();
       resetSavingsGoals();
       resetBudgets();
 
