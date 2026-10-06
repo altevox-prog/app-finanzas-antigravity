@@ -117,6 +117,7 @@ import {
 } from './services/storageService';
 import { useTheme } from './hooks/useTheme';
 import { useSecurity } from './hooks/useSecurity';
+import { useOnboarding } from './hooks/useOnboarding';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -482,36 +483,14 @@ export default function App() {
   }, []);
 
   const [isEditWidgetsModalOpen, setIsEditWidgetsModalOpen] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(() => {
-    try {
-      const isTutorialDone = 
-        localStorage.getItem('presu_tutorial_completed') === 'true' ||
-        localStorage.getItem('has_completed_tutorial') === 'true' ||
-        localStorage.getItem('tutorial_completed') === 'true';
-      const isOnboardingDone = 
-        localStorage.getItem('has_completed_onboarding') === 'true' ||
-        localStorage.getItem('hasCompletedOnboarding') === 'true' ||
-        localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED) === 'true';
-      // Si el onboarding inicial ya pasó pero nunca ha visto el tutorial, mostrarlo directamente
-      return !isTutorialDone && isOnboardingDone;
-    } catch {
-      return false;
-    }
-  });
-
-  // Control de estado de onboarding independiente de cuentas/transacciones
-  // Estado local propio que NUNCA es modificado por onAuthStateChange ni efectos secundarios
-  const [isOnboardingActive, setIsOnboardingActive] = useState(() => {
-    try {
-      const isDone = 
-        localStorage.getItem('has_completed_onboarding') === 'true' ||
-        localStorage.getItem('hasCompletedOnboarding') === 'true' ||
-        localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED) === 'true';
-      return !isDone;
-    } catch {
-      return true;
-    }
-  });
+  // Control de estado de onboarding y tutorial
+  const {
+    isOnboardingActive,
+    setIsOnboardingActive,
+    showTutorial,
+    setShowTutorial,
+    completeOnboarding
+  } = useOnboarding();
 
   // User Profile state (photo, name, initials) - sin valores estáticos por defecto
   const [userProfile, setUserProfile] = useState(() => {
@@ -714,22 +693,10 @@ export default function App() {
     }
 
     // 2. Marcar explícitamente como completado en storage y perfil
-    localStorage.setItem('has_completed_onboarding', 'true');
-    localStorage.setItem('hasCompletedOnboarding', 'true');
-    localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
-    if (user?.id) {
-      localStorage.setItem(`has_completed_onboarding_${user.id}`, 'true');
-      localStorage.setItem(`hasCompletedOnboarding_${user.id}`, 'true');
-      setHasCompletedOnboarding(user.id, true);
-    } else {
-      setHasCompletedOnboarding(null, true);
-    }
+    completeOnboarding(user?.id);
 
     setIsLocked(false);
     localStorage.setItem(STORAGE_KEYS.APP_IS_LOCKED, 'false');
-
-    // 3. SOLO AQUÍ se permite navegar o cerrar la vista de onboarding
-    setIsOnboardingActive(false);
 
     const isTutorialDone = 
       localStorage.getItem('presu_tutorial_completed') === 'true' ||
@@ -2449,11 +2416,7 @@ export default function App() {
       localStorage.setItem('app_theme', d.theme);
     }
 
-    localStorage.setItem('has_completed_onboarding', 'true');
-    localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
-    localStorage.setItem('hasCompletedOnboarding', 'true');
-    setHasCompletedOnboarding(user?.id, true);
-    setIsOnboardingActive(false);
+    completeOnboarding(user?.id);
     localStorage.setItem(STORAGE_KEYS.APP_IS_LOCKED, 'false');
 
     setSelectedDay(null);
