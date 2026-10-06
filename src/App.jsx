@@ -5,7 +5,6 @@ import {
   INITIAL_DEBTS_AND_LOANS, 
   INITIAL_INVESTMENTS,
   INITIAL_SUBSCRIPTIONS,
-  INITIAL_BUDGETS,
   INITIAL_SAVINGS_GOALS,
   MONTH_NAMES,
   formatCurrency
@@ -107,6 +106,7 @@ import { useDashboardWidgets } from './hooks/useDashboardWidgets';
 import { useUserProfile } from './hooks/useUserProfile';
 import { useTRM } from './hooks/useTRM';
 import { useCategories } from './hooks/useCategories';
+import { useBudgets } from './hooks/useBudgets';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -629,15 +629,15 @@ export default function App() {
     await handleUpdateRecurring(updated);
   };
 
-  // Presupuestos state
-  const [budgets, setBudgets] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.BUDGETS);
-      return saved ? JSON.parse(saved) : INITIAL_BUDGETS;
-    } catch {
-      return INITIAL_BUDGETS;
-    }
-  });
+  // Presupuestos state & actions
+  const {
+    budgets,
+    setBudgets,
+    updateGlobalBudget,
+    updateCategoryBudget,
+    removeCategoryBudget,
+    resetBudgets
+  } = useBudgets(isResettingRef);
 
   // Metas de Ahorro state
   const [savingsGoals, setSavingsGoals] = useState(() => {
@@ -882,10 +882,6 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.SUBSCRIPTIONS, JSON.stringify(subscriptions));
   }, [subscriptions]);
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
-  }, [budgets]);
 
   useEffect(() => {
     if (isResettingRef.current) return;
@@ -1927,7 +1923,7 @@ export default function App() {
       setInvestments([]);
       setRecurringPayments([]);
       setSavingsGoals([]);
-      setBudgets(INITIAL_BUDGETS);
+      resetBudgets();
 
       // 3. Modo Local: purga exclusiva en dispositivo
       // No se requieren llamadas a servidores remotos
