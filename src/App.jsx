@@ -108,82 +108,15 @@ import {
   reconcileTransactions, 
   generateUUID
 } from './utils/recordMerger';
-
-const STORAGE_KEYS = {
-  TRANSACTIONS: 'finanzas_transactions_v3',
-  ACCOUNTS: 'finanzas_accounts_v3',
-  CATEGORIES: 'finanzas_categories_v3',
-  DEBTS: 'finanzas_debts_v3',
-  INVESTMENTS: 'user_investments',
-  INVESTMENTS_INITIALIZED: 'investments_initialized',
-  TRM: 'presu_investment_trm',
-  THEME: 'presu_theme',
-  DASHBOARD_WIDGETS: 'presu_dashboard_widgets_v1',
-  PROFILE: 'presu_profile_v1',
-  RECURRING_PAYMENTS: 'recurring_payments',
-  SECURITY: 'presu_security_v1',
-  SECURITY_PIN_ENABLED: 'security_pin_enabled',
-  SECURITY_PIN_CODE: 'security_pin_code',
-  SECURITY_BIOMETRIC_ENABLED: 'security_biometric_enabled',
-  APP_IS_LOCKED: 'app_is_locked',
-  SUBSCRIPTIONS: 'presu_subscriptions_v1',
-  BUDGETS: 'presu_budgets_v1',
-  SAVINGS_GOALS: 'presu_savings_goals_v1',
-  ONBOARDING_COMPLETED: 'app_onboarding_completed'
-};
+import { STORAGE_KEYS } from './constants/storageKeys';
+import { 
+  saveAccountsToStorage, 
+  saveTransactionsToStorage, 
+  saveInvestmentsToStorage, 
+  saveDebtsToStorage 
+} from './services/storageService';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
-
-const saveAccountsToStorage = (accs) => {
-  try {
-    const str = JSON.stringify(accs);
-    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, str);
-    localStorage.setItem('user_accounts', str);
-    localStorage.setItem('presu_accounts', str);
-    localStorage.setItem('app_accounts', str);
-    localStorage.setItem('accounts', str);
-  } catch (e) {
-    console.error('Error guardando cuentas en localStorage:', e);
-  }
-};
-
-const saveTransactionsToStorage = (txs) => {
-  try {
-    const str = JSON.stringify(txs);
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, str);
-    localStorage.setItem('presu_transactions', str);
-    localStorage.setItem('app_transactions', str);
-    localStorage.setItem('finanzas_transactions_v3', str);
-    localStorage.setItem('transactions', str);
-  } catch (e) {
-    console.error('Error guardando transacciones en localStorage:', e);
-  }
-};
-
-const saveInvestmentsToStorage = (invs) => {
-  try {
-    const str = JSON.stringify(invs);
-    localStorage.setItem(STORAGE_KEYS.INVESTMENTS, str);
-    localStorage.setItem('presu_investments', str);
-    localStorage.setItem('user_investments', str);
-    localStorage.setItem('app_investments', str);
-  } catch (e) {
-    console.error('Error guardando inversiones en localStorage:', e);
-  }
-};
-
-const saveDebtsToStorage = (debts) => {
-  try {
-    const str = JSON.stringify(debts);
-    localStorage.setItem(STORAGE_KEYS.DEBTS_AND_LOANS, str);
-    localStorage.setItem(STORAGE_KEYS.DEBTS, str);
-    localStorage.setItem('user_debts', str);
-    localStorage.setItem('app_loans', str);
-    localStorage.setItem('finanzas_debts_v3', str);
-  } catch (e) {
-    console.error('Error guardando deudas en localStorage:', e);
-  }
-};
 
 export default function App() {
   const { isPrivacyMode, formatMoney } = usePrivacy();

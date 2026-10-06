@@ -1,0 +1,23 @@
+export const STORAGE_KEYS = {
+  TRANSACTIONS: 'finanzas_transactions_v3',
+  ACCOUNTS: 'finanzas_accounts_v3',
+  CATEGORIES: 'finanzas_categories_v3',
+  DEBTS: 'finanzas_debts_v3',
+  DEBTS_AND_LOANS: 'finanzas_debts_v3',
+  INVESTMENTS: 'user_investments',
+  INVESTMENTS_INITIALIZED: 'investments_initialized',
+  TRM: 'presu_investment_trm',
+  THEME: 'presu_theme',
+  DASHBOARD_WIDGETS: 'presu_dashboard_widgets_v1',
+  PROFILE: 'presu_profile_v1',
+  RECURRING_PAYMENTS: 'recurring_payments',
+  SECURITY: 'presu_security_v1',
+  SECURITY_PIN_ENABLED: 'security_pin_enabled',
+  SECURITY_PIN_CODE: 'security_pin_code',
+  SECURITY_BIOMETRIC_ENABLED: 'security_biometric_enabled',
+  APP_IS_LOCKED: 'app_is_locked',
+  SUBSCRIPTIONS: 'presu_subscriptions_v1',
+  BUDGETS: 'presu_budgets_v1',
+  SAVINGS_GOALS: 'presu_savings_goals_v1',
+  ONBOARDING_COMPLETED: 'app_onboarding_completed'
+};
