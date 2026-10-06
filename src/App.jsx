@@ -42,7 +42,6 @@ import AddRecurringModal from './components/AddRecurringModal';
 import DesktopSidebar from './components/DesktopSidebar';
 import Dashboard from './components/Dashboard';
 import DesktopMonthPicker from './components/DesktopMonthPicker';
-import { getOfficialTRM } from './services/trmService';
 import TaxView from './components/TaxView';
 import TransferModal from './components/TransferModal';
 import QuickActionsModal from './components/QuickActionsModal';
@@ -108,6 +107,7 @@ import { useSecurity } from './hooks/useSecurity';
 import { useOnboarding } from './hooks/useOnboarding';
 import { useDashboardWidgets } from './hooks/useDashboardWidgets';
 import { useUserProfile } from './hooks/useUserProfile';
+import { useTRM } from './hooks/useTRM';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -368,37 +368,8 @@ export default function App() {
     return []; // Si no hay nada guardado, inicia completamente vacía
   });
 
-  const [trm, setTrm] = useState(() => {
-    try {
-      const cached = JSON.parse(localStorage.getItem('presu_trm_data') || '{}');
-      if (cached && cached.value) return Number(cached.value);
-      const saved = localStorage.getItem('custom_trm') || localStorage.getItem(STORAGE_KEYS.TRM);
-      const num = saved ? Number(saved) : 4050;
-      return num > 0 ? num : 4050;
-    } catch {
-      return 4050;
-    }
-  });
-
-  // Sincronización automática de la TRM oficial del día (no editable a mano)
-  useEffect(() => {
-    let isMounted = true;
-    async function syncTRM() {
-      try {
-        const val = await getOfficialTRM();
-        if (isMounted && val && val > 1000) {
-          setTrm(val);
-          localStorage.setItem(STORAGE_KEYS.TRM, String(val));
-        }
-      } catch (err) {
-        console.warn('Error sincronizando TRM oficial:', err);
-      }
-    }
-    syncTRM();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  // Sincronización y estado de la Tasa Representativa del Mercado (TRM)
+  const { trm, setTrm, updateTRM } = useTRM(isResettingRef);
 
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
@@ -975,10 +946,6 @@ export default function App() {
     localStorage.setItem('user_investments', JSON.stringify(investments));
   }, [investments]);
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem(STORAGE_KEYS.TRM, trm.toString());
-  }, [trm]);
 
 
   useEffect(() => {
