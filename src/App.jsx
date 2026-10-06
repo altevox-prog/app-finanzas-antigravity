@@ -5,7 +5,6 @@ import {
   INITIAL_DEBTS_AND_LOANS, 
   INITIAL_INVESTMENTS,
   INITIAL_SUBSCRIPTIONS,
-  INITIAL_SAVINGS_GOALS,
   MONTH_NAMES,
   formatCurrency
 } from './data/initialData';
@@ -107,6 +106,7 @@ import { useUserProfile } from './hooks/useUserProfile';
 import { useTRM } from './hooks/useTRM';
 import { useCategories } from './hooks/useCategories';
 import { useBudgets } from './hooks/useBudgets';
+import { useSavingsGoals } from './hooks/useSavingsGoals';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -639,103 +639,16 @@ export default function App() {
     resetBudgets
   } = useBudgets(isResettingRef);
 
-  // Metas de Ahorro state
-  const [savingsGoals, setSavingsGoals] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SAVINGS_GOALS);
-    if (saved !== null) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.error('Error parseando metas de ahorro:', e);
-      }
-    }
-    return INITIAL_SAVINGS_GOALS;
-  });
-
-  const handleAddGoal = async (newGoal) => {
-    const rawDate = newGoal.target_date || newGoal.dueDate || newGoal.deadline || '';
-    let safeDate = '';
-    if (rawDate) {
-      try {
-        safeDate = new Date(rawDate).toISOString().split('T')[0];
-      } catch (e) {
-        safeDate = String(rawDate).split('T')[0];
-      }
-    }
-    const goalItem = {
-      ...newGoal,
-      target_date: safeDate,
-      dueDate: safeDate,
-      deadline: safeDate,
-      target_account_id: newGoal.target_account_id || newGoal.targetAccountId || null,
-      targetAccountId: newGoal.target_account_id || newGoal.targetAccountId || null,
-      months: newGoal.months ? Number(newGoal.months) : 6,
-      notification_day: newGoal.notification_day ? Number(newGoal.notification_day) : (newGoal.notificationDay ? Number(newGoal.notificationDay) : 15),
-      notificationDay: newGoal.notification_day ? Number(newGoal.notification_day) : (newGoal.notificationDay ? Number(newGoal.notificationDay) : 15),
-      notify_enabled: newGoal.notify_enabled !== undefined ? Boolean(newGoal.notify_enabled) : (newGoal.notifyEnabled !== undefined ? Boolean(newGoal.notifyEnabled) : true),
-      notifyEnabled: newGoal.notify_enabled !== undefined ? Boolean(newGoal.notify_enabled) : (newGoal.notifyEnabled !== undefined ? Boolean(newGoal.notifyEnabled) : true)
-    };
-    setSavingsGoals((prev) => {
-      const updated = [goalItem, ...prev.filter((g) => g.id !== goalItem.id)];
-      try {
-        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(updated));
-        localStorage.setItem('savingsGoals', JSON.stringify(updated));
-        localStorage.setItem('savings', JSON.stringify(updated));
-        localStorage.setItem('goals', JSON.stringify(updated));
-      } catch (e) {}
-      return updated;
-    });
-
-  };
-
-  const handleUpdateGoal = async (updatedGoal) => {
-    const rawDate = updatedGoal.target_date || updatedGoal.dueDate || updatedGoal.deadline || '';
-    let safeDate = '';
-    if (rawDate) {
-      try {
-        safeDate = new Date(rawDate).toISOString().split('T')[0];
-      } catch (e) {
-        safeDate = String(rawDate).split('T')[0];
-      }
-    }
-    const goalItem = {
-      ...updatedGoal,
-      target_date: safeDate,
-      dueDate: safeDate,
-      deadline: safeDate,
-      target_account_id: updatedGoal.target_account_id || updatedGoal.targetAccountId || null,
-      targetAccountId: updatedGoal.target_account_id || updatedGoal.targetAccountId || null,
-      months: updatedGoal.months ? Number(updatedGoal.months) : 6,
-      notification_day: updatedGoal.notification_day ? Number(updatedGoal.notification_day) : (updatedGoal.notificationDay ? Number(updatedGoal.notificationDay) : 15),
-      notificationDay: updatedGoal.notification_day ? Number(updatedGoal.notification_day) : (updatedGoal.notificationDay ? Number(updatedGoal.notificationDay) : 15),
-      notify_enabled: updatedGoal.notify_enabled !== undefined ? Boolean(updatedGoal.notify_enabled) : (updatedGoal.notifyEnabled !== undefined ? Boolean(updatedGoal.notifyEnabled) : true),
-      notifyEnabled: updatedGoal.notify_enabled !== undefined ? Boolean(updatedGoal.notify_enabled) : (updatedGoal.notifyEnabled !== undefined ? Boolean(updatedGoal.notifyEnabled) : true)
-    };
-    setSavingsGoals((prev) => {
-      const updated = prev.map((g) => (g.id === goalItem.id ? goalItem : g));
-      try {
-        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(updated));
-        localStorage.setItem('savingsGoals', JSON.stringify(updated));
-        localStorage.setItem('savings', JSON.stringify(updated));
-        localStorage.setItem('goals', JSON.stringify(updated));
-      } catch (e) {}
-      return updated;
-    });
-  };
-
-  const handleDeleteGoal = async (goalId) => {
-    setSavingsGoals((prev) => {
-      const updated = prev.filter((g) => g.id !== goalId);
-      try {
-        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(updated));
-        localStorage.setItem('savingsGoals', JSON.stringify(updated));
-        localStorage.setItem('savings', JSON.stringify(updated));
-        localStorage.setItem('goals', JSON.stringify(updated));
-      } catch (e) {}
-      return updated;
-    });
-  };
+  // Metas de Ahorro state & actions
+  const {
+    savingsGoals,
+    setSavingsGoals,
+    handleAddGoal,
+    handleUpdateGoal,
+    handleDeleteGoal,
+    handleContributeGoal,
+    resetSavingsGoals
+  } = useSavingsGoals(isResettingRef);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null); // 'YYYY-MM-DD' or null for whole month
@@ -883,10 +796,6 @@ export default function App() {
   }, [subscriptions]);
 
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, JSON.stringify(savingsGoals));
-  }, [savingsGoals]);
 
 
   // Compute monthly transactions and metrics
@@ -1922,7 +1831,7 @@ export default function App() {
       setDebtsAndLoans([]);
       setInvestments([]);
       setRecurringPayments([]);
-      setSavingsGoals([]);
+      resetSavingsGoals();
       resetBudgets();
 
       // 3. Modo Local: purga exclusiva en dispositivo
