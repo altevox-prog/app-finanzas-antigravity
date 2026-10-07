@@ -59,6 +59,7 @@ import { useDebts } from './hooks/useDebts';
 import { useAccounts } from './hooks/useAccounts';
 import { useTransactions } from './hooks/useTransactions';
 import { useFinanceAnalytics } from './hooks/useFinanceAnalytics';
+import { useDateNavigation } from './hooks/useDateNavigation';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -249,8 +250,6 @@ export default function App() {
     resetInvestments
   } = useInvestments(isResettingRef);
 
-
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   // View mode switcher: 'auto' | 'mobile' | 'desktop' (soporta ?view=mobile y ?view=desktop en la URL)
   const [viewMode, setViewMode] = useState(() => {
@@ -482,8 +481,24 @@ export default function App() {
     resetSavingsGoals
   } = useSavingsGoals(isResettingRef);
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedDay, setSelectedDay] = useState(null); // 'YYYY-MM-DD' or null for whole month
+  // Control y navegación unificada de fechas
+  const {
+    selectedDate,
+    setSelectedDate,
+    selectedMonth,
+    selectedYear,
+    selectedDay,
+    setSelectedDay,
+    showMonthPicker,
+    setShowMonthPicker,
+    currentMonthLabel,
+    handlePrevMonth,
+    handleNextMonth,
+    handleResetToToday,
+    handleChangeMonth,
+    handleSelectDay,
+    handleClearSelectedDay
+  } = useDateNavigation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [fromSettings, setFromSettings] = useState(false);
 
@@ -597,9 +612,6 @@ export default function App() {
 
   // Cálculos derivados y métricas analíticas memorizadas
   const {
-    currentYear,
-    currentMonth,
-    currentMonthLabel,
     monthlyTransactions,
     scopedTransactions,
     totalIncome,
@@ -619,6 +631,8 @@ export default function App() {
     investments,
     debtsAndLoans,
     selectedDate,
+    selectedMonth,
+    selectedYear,
     selectedDay,
     trm
   });
@@ -1031,6 +1045,14 @@ export default function App() {
         onOpenProfile={() => setIsSettingsOpen(true)}
         onOpenAuth={() => {}}
         userProfile={userProfile}
+        selectedDate={selectedDate}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        selectedDay={selectedDay}
+        currentMonthLabel={currentMonthLabel}
+        handlePrevMonth={handlePrevMonth}
+        handleNextMonth={handleNextMonth}
+        handleResetToToday={handleResetToToday}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onLogout={() => setIsLocked(true)}
@@ -1074,8 +1096,14 @@ export default function App() {
           activeTab={activeTab}
           userProfile={userProfile}
           currentMonthLabel={currentMonthLabel}
+          selectedDate={selectedDate}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
           selectedDay={selectedDay}
           onOpenMonthPicker={() => setShowMonthPicker(true)}
+          handlePrevMonth={handlePrevMonth}
+          handleNextMonth={handleNextMonth}
+          handleResetToToday={handleResetToToday}
           trm={trm}
           isForcedMobile={isForcedMobile}
           isForcedDesktop={isForcedDesktop}
@@ -1110,8 +1138,13 @@ export default function App() {
               subscriptions={subscriptions}
               monthlyStats={monthlyStats}
               selectedDate={selectedDate}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
               selectedDay={selectedDay}
               setSelectedDay={setSelectedDay}
+              handlePrevMonth={handlePrevMonth}
+              handleNextMonth={handleNextMonth}
+              handleResetToToday={handleResetToToday}
               currentMonthLabel={currentMonthLabel}
               trm={trm}
               widgets={widgets}
@@ -1296,8 +1329,14 @@ export default function App() {
           setTheme={setTheme}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
+          handlePrevMonth={handlePrevMonth}
+          handleNextMonth={handleNextMonth}
+          handleResetToToday={handleResetToToday}
+          handleChangeMonth={handleChangeMonth}
           handleSaveTransaction={handleSaveTransaction}
           handleAddTransaction={handleAddTransaction}
           handleExecuteTransfer={handleExecuteTransfer}
