@@ -5,8 +5,7 @@ import {
 } from './data/initialData';
 import Header from './components/Header';
 import CalendarDropdown from './components/CalendarDropdown';
-import TransactionForm from './components/TransactionForm';
-import AddTransactionModal from './components/AddTransactionModal';
+import AddTransactionModal from './components/modals/AddTransactionModal';
 import TransactionList from './components/TransactionList';
 import TransactionsView from './components/TransactionsView';
 import AccountsAndCategories from './components/AccountsAndCategories';
@@ -34,7 +33,7 @@ import DesktopSidebar from './components/DesktopSidebar';
 import Dashboard from './components/Dashboard';
 import DesktopMonthPicker from './components/DesktopMonthPicker';
 import TaxView from './components/TaxView';
-import TransferModal from './components/TransferModal';
+import TransferModal from './components/modals/TransferModal';
 import QuickActionsModal from './components/QuickActionsModal';
 import BottomNav from './components/BottomNav';
 import { getTomorrowDebtAlerts } from './utils/debtAlerts';
@@ -1504,13 +1503,10 @@ export default function App() {
         </div>
 
         {/* Modal Global para Nuevo Movimiento (AddTransactionModal) */}
-        {(isAddTxOpen || isAddTransactionOpen) && (
+        {isAddTxOpen && (
           <AddTransactionModal
-            isOpen={isAddTxOpen || isAddTransactionOpen}
-            onClose={() => {
-              setIsAddTxOpen(false);
-              setIsAddTransactionOpen(false);
-            }}
+            isOpen={isAddTxOpen}
+            onClose={() => setIsAddTxOpen(false)}
             onSave={handleSaveTransaction}
             onAddTransaction={handleAddTransaction}
             accounts={accounts}
