@@ -58,6 +58,7 @@ import { useFinanceAnalytics } from './hooks/useFinanceAnalytics';
 import { useDateNavigation } from './hooks/useDateNavigation';
 import { useDataManagement } from './hooks/useDataManagement';
 import { useNavigationTabs } from './hooks/useNavigationTabs';
+import { useFinancialOperations } from './hooks/useFinancialOperations';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -172,12 +173,11 @@ export default function App() {
   const {
     transactions,
     setTransactions,
-    handleAddTransaction,
-    handleSaveTransaction,
-    handleUpdateTransaction,
-    handleDeleteTransaction,
-    handleExecuteTransfer,
-    handleTransfer,
+    handleAddTransaction: baseAddTransaction,
+    handleSaveTransaction: baseSaveTransaction,
+    handleUpdateTransaction: baseUpdateTransaction,
+    handleDeleteTransaction: baseDeleteTransaction,
+    handleExecuteTransfer: baseExecuteTransfer,
     resetTransactions
   } = useTransactions({
     isResettingRef,
@@ -218,13 +218,13 @@ export default function App() {
   const {
     debtsAndLoans,
     setDebtsAndLoans,
-    handleAddDebtOrLoan,
-    handleSaveLoan,
+    handleAddDebtOrLoan: baseAddDebtOrLoan,
+    handleSaveLoan: baseSaveLoan,
     handleUpdateDebtOrLoan,
-    handleAddPayment,
-    handleDeletePayment,
-    handleAddDisbursement,
-    handleDeleteDebtOrLoan,
+    handleAddPayment: baseAddPayment,
+    handleDeletePayment: baseDeletePayment,
+    handleAddDisbursement: baseAddDisbursement,
+    handleDeleteDebtOrLoan: baseDeleteDebtOrLoan,
     resetDebts
   } = useDebts({
     isResettingRef,
@@ -239,12 +239,58 @@ export default function App() {
   const {
     investments,
     setInvestments,
-    handleAddInvestment,
-    handleSaveInvestment,
-    handleUpdateInvestment,
-    handleDeleteInvestment,
+    handleAddInvestment: baseAddInvestment,
+    handleSaveInvestment: baseSaveInvestment,
+    handleUpdateInvestment: baseUpdateInvestment,
+    handleDeleteInvestment: baseDeleteInvestment,
     resetInvestments
   } = useInvestments(isResettingRef);
+
+  // Orquestador central de operaciones financieras cruzadas
+  const {
+    handleSaveTransaction,
+    handleAddTransaction,
+    handleUpdateTransaction,
+    handleDeleteTransaction,
+    handleExecuteTransfer,
+    handleAddDebtPayment,
+    handlePayDebtInstallment,
+    handleAddPayment,
+    handleDeletePayment,
+    handleAddDisbursement,
+    handleAddInvestment,
+    handleDeleteInvestment,
+    handleAddDebtOrLoan,
+    handleSaveLoan,
+    handleDeleteDebtOrLoan
+  } = useFinancialOperations({
+    accounts,
+    setAccounts,
+    transactions,
+    setTransactions,
+    debtsAndLoans,
+    setDebtsAndLoans,
+    investments,
+    setInvestments,
+    categories,
+    setCategories,
+    trm,
+    userProfile,
+    isResettingRef,
+    baseAddTransaction,
+    baseSaveTransaction,
+    baseUpdateTransaction,
+    baseDeleteTransaction,
+    baseExecuteTransfer,
+    baseAddPayment,
+    baseDeletePayment,
+    baseAddDisbursement,
+    baseAddInvestment,
+    baseDeleteInvestment,
+    baseAddDebtOrLoan,
+    baseSaveLoan,
+    baseDeleteDebtOrLoan
+  });
 
 
   // View mode switcher: 'auto' | 'mobile' | 'desktop' (soporta ?view=mobile y ?view=desktop en la URL)
