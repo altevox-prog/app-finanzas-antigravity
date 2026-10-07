@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
-import CalendarDropdown from './components/CalendarDropdown';
-import AddTransactionModal from './components/modals/AddTransactionModal';
 import { 
   DashboardView, 
   TransactionsView, 
@@ -11,22 +9,9 @@ import {
   RecurringView, 
   TaxView 
 } from './views';
-import InvestmentFormModal from './components/InvestmentFormModal';
-import AddInvestmentModal from './components/AddInvestmentModal';
-import AddLoanModal from './components/modals/AddLoanModal';
-import BalanceWidget from './components/BalanceWidget';
-import BudgetWidget from './components/BudgetWidget';
-import EditWidgetsModal from './components/modals/EditWidgetsModal';
-import ProfileModal from './components/modals/ProfileModal';
-import LockScreen from './components/LockScreen';
 import SplashScreen from './components/SplashScreen';
-import CreditCardDetailModal from './components/CreditCardDetailModal';
-import BrandIcon from './components/BrandIcon';
-import OnboardingFlow from './components/OnboardingFlow';
 import OnboardingWizard from './components/OnboardingWizard';
-import AddRecurringModal from './components/modals/AddRecurringModal';
-import DesktopMonthPicker from './components/DesktopMonthPicker';
-import TransferModal from './components/modals/TransferModal';
+import { ModalContainer } from './components/modals';
 import QuickActionsModal from './components/QuickActionsModal';
 import { getTomorrowDebtAlerts } from './utils/debtAlerts';
 import { usePrivacy } from './context/PrivacyContext';
@@ -1365,221 +1350,83 @@ export default function App() {
           <div className="w-32 h-1 bg-slate-400/40 rounded-full mx-auto" />
         </div>
 
-        {/* Modal Global para Nuevo Movimiento (AddTransactionModal) */}
-        {isAddTxOpen && (
-          <AddTransactionModal
-            isOpen={isAddTxOpen}
-            onClose={() => setIsAddTxOpen(false)}
-            onSave={handleSaveTransaction}
-            onAddTransaction={handleAddTransaction}
-            accounts={accounts}
-            categories={categories}
-            onAddCategory={handleAddCategory}
-            onAddSubcategory={handleAddSubcategory}
-            onUpdateSubcategory={handleUpdateSubcategory}
-            onDeleteSubcategory={handleDeleteSubcategory}
-            onAddAccount={handleAddAccount}
-            defaultDate={selectedDay || new Date().toISOString().split('T')[0]}
-            defaultType={txDefaultType || 'expense'}
-            trm={trm}
-          />
-        )}
-
-        {/* Modal Global para Transferencia entre Cuentas */}
-        {isTransferModalOpen && (
-          <TransferModal
-            isOpen={isTransferModalOpen}
-            onClose={() => setIsTransferModalOpen(false)}
-            accounts={accounts}
-            transactions={transactions}
-            onTransfer={async (transferData) => {
-              await handleExecuteTransfer(transferData);
-              setIsTransferModalOpen(false);
-            }}
-            trm={trm}
-          />
-        )}
-
-        {/* Modal Global para Nueva Inversión */}
-        {(isAddInvestmentOpen || isNewInvestmentModalOpen) && (
-          <AddInvestmentModal
-            isOpen={isAddInvestmentOpen || isNewInvestmentModalOpen}
-            onClose={() => {
-              setIsAddInvestmentOpen(false);
-              setIsNewInvestmentModalOpen(false);
-            }}
-            onSave={(newInv) => {
-              handleAddInvestment(newInv);
-              setIsAddInvestmentOpen(false);
-              setIsNewInvestmentModalOpen(false);
-              handleTabChange('investments');
-            }}
-          />
-        )}
-
-        {/* Modal Global para Nuevo Préstamo o Deuda */}
-        {isAddLoanOpen && (
-          <AddLoanModal
-            isOpen={isAddLoanOpen}
-            initialType={addLoanInitialType}
-            defaultType={addLoanInitialType}
-            onClose={() => setIsAddLoanOpen(false)}
-            onSave={(newItem) => {
-              handleAddDebtOrLoan(newItem);
-              setIsAddLoanOpen(false);
-              handleTabChange('debts');
-            }}
-          />
-        )}
-
-        {/* Modal Global para Nuevo Pago Recurrente */}
-        {isAddRecurringOpen && (
-          <AddRecurringModal
-            isOpen={isAddRecurringOpen}
-            onClose={() => setIsAddRecurringOpen(false)}
-            onSave={(newItem) => {
-              handleAddRecurring(newItem);
-              setIsAddRecurringOpen(false);
-              handleTabChange('recurring');
-            }}
-            accounts={accounts}
-            categories={categories}
-            onAddCategory={handleAddCategory}
-            onAddSubcategory={handleAddSubcategory}
-            trm={trm}
-          />
-        )}
-
-        {/* Modal Selector de Mes / Año de Escritorio */}
-        <DesktopMonthPicker
-          isOpen={showMonthPicker}
-          onClose={() => setShowMonthPicker(false)}
-          selectedDate={selectedDate}
-          onChangeMonth={(newDate) => {
-            setSelectedDate(newDate);
-            setSelectedDay(null);
-          }}
-          selectedDay={selectedDay}
-          onSelectDay={(day) => setSelectedDay(day)}
-          onClearSelectedDay={() => setSelectedDay(null)}
-          transactions={transactions}
-        />
-
-        {/* Modal Centrado para Calendario y Filtro por Día */}
-        {isCalendarOpen && (
-          <CalendarDropdown
-            isOpen={isCalendarOpen}
-            onClose={() => setIsCalendarOpen(false)}
-            selectedDate={selectedDate}
-            onChangeMonth={setSelectedDate}
-            selectedDay={selectedDay}
-            onSelectDay={(day) => {
-              setSelectedDay(day);
-            }}
-            transactions={transactions}
-          />
-        )}
-
-        {/* Modal Global de Detalle de Tarjeta de Crédito */}
-        {selectedCreditCardDetail && (
-          <CreditCardDetailModal
-            isOpen={!!selectedCreditCardDetail}
-            onClose={() => setSelectedCreditCardDetail(null)}
-            card={accounts.find(a => a.id === selectedCreditCardDetail.id) || selectedCreditCardDetail}
-            transactions={transactions}
-            accounts={accounts}
-            onAddTransaction={handleAddTransaction}
-            onOpenEdit={(card) => {
-              setSelectedCreditCardDetail(null);
-              handleTabChange('accounts');
-            }}
-          />
-        )}
-
-        {/* Modal para Personalizar / Reordenar Widgets del Dashboard */}
-        <EditWidgetsModal
-          isOpen={isEditWidgetsModalOpen}
-          onClose={() => setIsEditWidgetsModalOpen(false)}
-          widgetsConfig={widgets}
-          widgets={widgets}
-          onSave={(newWidgets) => {
-            setWidgets([...newWidgets]);
-          }}
-          onReset={(defWidgets) => {
-            setWidgets([...(defWidgets || DEFAULT_WIDGETS_CONFIG)]);
-          }}
-        />
-
-        {/* Modal de Mi Perfil y Ajustes */}
-        <ProfileModal
-          key={`profile-modal-${profileResetKey}`}
-          isOpen={isSettingsOpen || isProfileOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          userProfile={userProfile}
-          onUpdateProfile={handleUpdateProfile}
-          securitySettings={securitySettings}
-          onUpdateSecurity={setSecuritySettings}
-          subscriptions={subscriptions}
-          onAddSubscription={(newSub) => setSubscriptions(prev => [newSub, ...prev])}
-          onDeleteSubscription={(id) => setSubscriptions(prev => prev.filter(s => s.id !== id))}
-          accountsCount={accounts.length}
-          categoriesCount={categories.length}
-          onOpenAccounts={() => {
-            setFromSettings(true);
-            handleTabChange('accounts', 'settings');
-          }}
-          onNavigateToRecurring={() => {
-            setIsSettingsOpen(false);
-            setFromSettings(true);
-            handleTabChange('recurring', 'settings');
-          }}
-          onOpenTutorial={() => {
-            setIsSettingsOpen(false);
-            setShowTutorial(true);
-          }}
-          theme={theme}
-          onThemeChange={setTheme}
-          budgets={budgets}
-          onUpdateBudgets={setBudgets}
-          savingsGoals={savingsGoals}
-          onAddGoal={handleAddGoal}
-          onUpdateGoal={handleUpdateGoal}
-          onDeleteGoal={handleDeleteGoal}
-          transactions={transactions}
+        {/* Contenedor Orquestador de Modales y Overlays */}
+        <ModalContainer
+          isAddTxOpen={isAddTxOpen}
+          setIsAddTxOpen={setIsAddTxOpen}
+          txDefaultType={txDefaultType}
+          isTransferModalOpen={isTransferModalOpen}
+          setIsTransferModalOpen={setIsTransferModalOpen}
+          isAddInvestmentOpen={isAddInvestmentOpen}
+          setIsAddInvestmentOpen={setIsAddInvestmentOpen}
+          isNewInvestmentModalOpen={isNewInvestmentModalOpen}
+          setIsNewInvestmentModalOpen={setIsNewInvestmentModalOpen}
+          isAddLoanOpen={isAddLoanOpen}
+          setIsAddLoanOpen={setIsAddLoanOpen}
+          addLoanInitialType={addLoanInitialType}
+          isAddRecurringOpen={isAddRecurringOpen}
+          setIsAddRecurringOpen={setIsAddRecurringOpen}
+          showMonthPicker={showMonthPicker}
+          setShowMonthPicker={setShowMonthPicker}
+          isCalendarOpen={isCalendarOpen}
+          setIsCalendarOpen={setIsCalendarOpen}
+          selectedCreditCardDetail={selectedCreditCardDetail}
+          setSelectedCreditCardDetail={setSelectedCreditCardDetail}
+          isEditWidgetsModalOpen={isEditWidgetsModalOpen}
+          setIsEditWidgetsModalOpen={setIsEditWidgetsModalOpen}
+          isSettingsOpen={isSettingsOpen}
+          setIsSettingsOpen={setIsSettingsOpen}
+          isProfileOpen={isProfileOpen}
+          profileResetKey={profileResetKey}
+          showTutorial={showTutorial}
+          setShowTutorial={setShowTutorial}
+          isLocked={isLocked}
+          handleUnlock={handleUnlock}
+          accounts={accounts}
           categories={categories}
-          onAddCategory={handleAddCategory}
-          onUpdateCategory={handleUpdateCategory}
-          onDeleteCategory={handleDeleteCategory}
-          onAddSubcategory={handleAddSubcategory}
-          onUpdateSubcategory={handleUpdateSubcategory}
-          onDeleteSubcategory={handleDeleteSubcategory}
+          transactions={transactions}
           investments={investments}
           debtsAndLoans={debtsAndLoans}
-          accounts={accounts}
-          trm={trm}
-          onOpenAuth={() => {}}
-          onRestoreBackup={handleRestoreBackup}
-          onFactoryReset={handleResetData}
+          subscriptions={subscriptions}
+          setSubscriptions={setSubscriptions}
+          savingsGoals={savingsGoals}
+          budgets={budgets}
+          setBudgets={setBudgets}
+          widgets={widgets}
+          setWidgets={setWidgets}
+          userProfile={userProfile}
+          securitySettings={securitySettings}
+          setSecuritySettings={setSecuritySettings}
           user={user}
+          trm={trm}
+          theme={theme}
+          setTheme={setTheme}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          selectedDay={selectedDay}
+          setSelectedDay={setSelectedDay}
+          handleSaveTransaction={handleSaveTransaction}
+          handleAddTransaction={handleAddTransaction}
+          handleExecuteTransfer={handleExecuteTransfer}
+          handleAddInvestment={handleAddInvestment}
+          handleAddDebtOrLoan={handleAddDebtOrLoan}
+          handleAddRecurring={handleAddRecurring}
+          handleUpdateProfile={handleUpdateProfile}
+          handleAddGoal={handleAddGoal}
+          handleUpdateGoal={handleUpdateGoal}
+          handleDeleteGoal={handleDeleteGoal}
+          handleAddCategory={handleAddCategory}
+          handleUpdateCategory={handleUpdateCategory}
+          handleDeleteCategory={handleDeleteCategory}
+          handleAddSubcategory={handleAddSubcategory}
+          handleUpdateSubcategory={handleUpdateSubcategory}
+          handleDeleteSubcategory={handleDeleteSubcategory}
+          handleAddAccount={handleAddAccount}
+          handleTabChange={handleTabChange}
+          setFromSettings={setFromSettings}
+          handleRestoreBackup={handleRestoreBackup}
+          handleResetData={handleResetData}
         />
-
-        {/* Modal / Overlay del Tutorial rápido (repetible desde Perfil) */}
-        {showTutorial && (
-          <OnboardingFlow
-            tutorialOnly={true}
-            onClose={() => setShowTutorial(false)}
-          />
-        )}
-
-        {/* Pantalla de Bloqueo de Seguridad (Lock Screen) - Sólo exigible si hay PIN activo no vacío */}
-        {isLocked && Boolean(securitySettings?.pinEnabled) && Boolean(securitySettings?.pin && String(securitySettings.pin).trim().length >= 4) && (
-          <LockScreen
-            userProfile={userProfile}
-            expectedPin={securitySettings?.pin || ''}
-            biometricsEnabled={Boolean(securitySettings?.biometricsEnabled)}
-            onUnlock={handleUnlock}
-          />
-        )}
 
         {/* Banner Flotante de Actualización PWA */}
         {hasPwaUpdate && (
