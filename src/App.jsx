@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
-import { 
-  DashboardView, 
-  TransactionsView, 
-  AccountsView, 
-  DebtsView, 
-  InvestmentsView, 
-  RecurringView, 
-  TaxView 
-} from './views';
+import { ViewRouter } from './views';
 import SplashScreen from './components/SplashScreen';
 import OnboardingWizard from './components/OnboardingWizard';
 import { ModalContainer } from './components/modals';
@@ -1105,169 +1097,70 @@ export default function App() {
         {/* Main Content Area con altura adaptable y separación inferior anti-solapamiento */}
         <main ref={mainContentRef} className="flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 pb-28 sm:pb-32 lg:pb-12 relative lg:overflow-y-auto space-y-3.5 sm:space-y-4 lg:space-y-0">
           <div className="w-full lg:max-w-[1550px] lg:mx-auto lg:px-6 lg:py-6">
-            
-            {/* Tab 1: Dashboard Inicio */}
-            {activeTab === 'dashboard' && (
-              <DashboardView
-                key={`dashboard-${tabResetKeys.dashboard}`}
-                alerts={tomorrowDebtAlerts}
-                onReviewAlert={handleReviewDebtAlert}
-                onDismissAlert={handleDismissAlert}
-                formatMoney={formatMoney}
-                accounts={accounts}
-                investments={investments}
-                debtsAndLoans={debtsAndLoans}
-                transactions={transactions}
-                monthlyTransactions={monthlyTransactions}
-                categories={categories}
-                recurringPayments={recurringPayments}
-                subscriptions={subscriptions}
-                monthlyStats={monthlyStats}
-                selectedDate={selectedDate}
-                selectedDay={selectedDay}
-                onSelectDay={setSelectedDay}
-                onOpenCalendar={() => setIsCalendarOpen(true)}
-                onNavigateToTab={handleTabChange}
-                onOpenTransaction={handleOpenTransaction}
-                onAddTransaction={handleAddTransaction}
-                onAddDebtOrLoan={handleAddDebtOrLoan}
-                onAddRecurring={handleAddRecurring}
-                onDeleteTransaction={handleDeleteTransaction}
-                onUpdateTransaction={handleUpdateTransaction}
-                onAddCategory={handleAddCategory}
-                onAddSubcategory={handleAddSubcategory}
-                onUpdateSubcategory={handleUpdateSubcategory}
-                onDeleteSubcategory={handleDeleteSubcategory}
-                onAddAccount={handleAddAccount}
-                onSelectCreditCardDetail={setSelectedCreditCardDetail}
-                onOpenAddRecurring={() => {
-                  setIsAddRecurringOpen(true);
-                  setIsNewRecurringModalOpen(true);
-                }}
-                currentMonthLabel={currentMonthLabel}
-                trm={trm}
-                widgetsConfig={widgets}
-                widgets={widgets}
-                onCustomizeWidgets={() => setIsEditWidgetsModalOpen(true)}
-                onSaveWidgets={(newCfg) => setWidgets(newCfg)}
-              />
-            )}
-
-            {/* Tab 2: Movimientos */}
-            {activeTab === 'transactions' && (
-              <TransactionsView
-                key={`transactions-list-${tabResetKeys.transactions}`}
-                transactions={monthlyTransactions}
-                onAddTransaction={handleAddTransaction}
-                onDeleteTransaction={handleDeleteTransaction}
-                onUpdateTransaction={handleUpdateTransaction}
-                onAddCategory={handleAddCategory}
-                onAddSubcategory={handleAddSubcategory}
-                onUpdateSubcategory={handleUpdateSubcategory}
-                onDeleteSubcategory={handleDeleteSubcategory}
-                onAddAccount={handleAddAccount}
-                categories={categories}
-                accounts={accounts}
-                currentMonthLabel={currentMonthLabel}
-                selectedDay={selectedDay}
-                onSelectDay={setSelectedDay}
-                onOpenTransaction={handleOpenTransaction}
-                onOpenAddTransaction={handleOpenTransaction}
-                setIsAddTransactionOpen={setIsAddTxOpen}
-                trm={trm}
-              />
-            )}
-
-            {/* Tab 3: Cuentas y Métodos de Pago */}
-            {activeTab === 'accounts' && (
-              <AccountsView
-                key={`accounts-${tabResetKeys.accounts}`}
-                accounts={accounts}
-                transactions={transactions}
-                onAddAccount={handleAddAccount}
-                onUpdateAccount={handleUpdateAccount}
-                onDeleteAccount={handleDeleteAccount}
-                onReorderAccounts={handleReorderAccounts}
-                onAddTransaction={handleAddTransaction}
-                onOpenCreditCardDetail={setSelectedCreditCardDetail}
-                trm={trm}
-                onBack={handleGoBackFromSubView}
-                fromSettings={fromSettings}
-              />
-            )}
-
-            {/* Tab 4: Préstamos y Deudas */}
-            {(activeTab === 'debts' || activeTab === 'loans') && (
-              <DebtsView
-                key={`debts-${tabResetKeys.debts}`}
-                debtsAndLoans={debtsAndLoans}
-                accounts={accounts}
-                onAddDebtOrLoan={handleAddDebtOrLoan}
-                onUpdateDebtOrLoan={handleUpdateDebtOrLoan}
-                onAddPayment={handleAddPayment}
-                onAddDisbursement={handleAddDisbursement}
-                onDeletePayment={handleDeletePayment}
-                onDeleteDebtOrLoan={handleDeleteDebtOrLoan}
-                onOpenAddDebt={(type = 'payable') => handleOpenAddDebt(type)}
-                onOpenAddLoan={(type = 'receivable') => handleOpenAddLoan(type)}
-                setIsAddLoanOpen={(val) => {
-                  if (typeof val === 'string') {
-                    const target = (val === 'payable' || val === 'borrowed' || val === 'debo') ? 'payable' : 'receivable';
-                    setAddLoanInitialType(target);
-                    setIsAddLoanOpen(true);
-                  } else {
-                    setIsAddLoanOpen(Boolean(val));
-                  }
-                }}
-              />
-            )}
-
-            {/* Tab 5: Inversiones y Patrimonio */}
-            {activeTab === 'investments' && (
-              <InvestmentsView
-                key={`investments-${tabResetKeys.investments}`}
-                investments={investments}
-                onAddInvestment={handleAddInvestment}
-                onUpdateInvestment={handleUpdateInvestment}
-                onDeleteInvestment={handleDeleteInvestment}
-                trm={trm}
-              />
-            )}
-
-            {/* Vista Dedicada: Pagos Recurrentes */}
-            {activeTab === 'recurring' && (
-              <RecurringView
-                key={`recurring-${tabResetKeys.recurring || 0}`}
-                recurringPayments={recurringPayments}
-                onAddRecurring={handleAddRecurring}
-                onUpdateRecurring={handleUpdateRecurring}
-                onDeleteRecurring={handleDeleteRecurring}
-                onToggleActiveRecurring={handleToggleActiveRecurring}
-                onOpenCreateModal={() => setIsAddRecurringOpen(true)}
-                onOpenAddRecurring={() => setIsAddRecurringOpen(true)}
-                setIsAddRecurringOpen={setIsAddRecurringOpen}
-                onBack={handleGoBackFromSubView}
-                fromSettings={fromSettings}
-                accounts={accounts}
-                categories={categories}
-                onAddCategory={handleAddCategory}
-                onAddSubcategory={handleAddSubcategory}
-                trm={trm}
-              />
-            )}
-
-            {/* Vista Dedicada: Impuestos y Declaración de Renta DIAN */}
-            {activeTab === 'tax' && (
-              <TaxView
-                transactions={transactions}
-                accounts={accounts}
-                investments={investments}
-                onBack={handleGoBackFromSubView}
-                onClose={handleGoBackFromSubView}
-                fromSettings={fromSettings}
-              />
-            )}
-
+            <ViewRouter
+              activeTab={activeTab}
+              tabResetKeys={tabResetKeys}
+              accounts={accounts}
+              investments={investments}
+              debtsAndLoans={debtsAndLoans}
+              transactions={transactions}
+              monthlyTransactions={monthlyTransactions}
+              categories={categories}
+              recurringPayments={recurringPayments}
+              subscriptions={subscriptions}
+              monthlyStats={monthlyStats}
+              selectedDate={selectedDate}
+              selectedDay={selectedDay}
+              setSelectedDay={setSelectedDay}
+              currentMonthLabel={currentMonthLabel}
+              trm={trm}
+              widgets={widgets}
+              setWidgets={setWidgets}
+              tomorrowDebtAlerts={tomorrowDebtAlerts}
+              handleReviewDebtAlert={handleReviewDebtAlert}
+              handleDismissAlert={handleDismissAlert}
+              formatMoney={formatMoney}
+              fromSettings={fromSettings}
+              handleGoBackFromSubView={handleGoBackFromSubView}
+              handleTabChange={handleTabChange}
+              setIsCalendarOpen={setIsCalendarOpen}
+              setIsEditWidgetsModalOpen={setIsEditWidgetsModalOpen}
+              setIsAddTxOpen={setIsAddTxOpen}
+              handleOpenTransaction={handleOpenTransaction}
+              setSelectedCreditCardDetail={setSelectedCreditCardDetail}
+              setIsAddRecurringOpen={setIsAddRecurringOpen}
+              setIsNewRecurringModalOpen={setIsNewRecurringModalOpen}
+              handleOpenAddDebt={handleOpenAddDebt}
+              handleOpenAddLoan={handleOpenAddLoan}
+              setAddLoanInitialType={setAddLoanInitialType}
+              setIsAddLoanOpen={setIsAddLoanOpen}
+              handleAddTransaction={handleAddTransaction}
+              handleUpdateTransaction={handleUpdateTransaction}
+              handleDeleteTransaction={handleDeleteTransaction}
+              handleAddCategory={handleAddCategory}
+              handleUpdateCategory={handleUpdateCategory}
+              handleDeleteCategory={handleDeleteCategory}
+              handleAddSubcategory={handleAddSubcategory}
+              handleUpdateSubcategory={handleUpdateSubcategory}
+              handleDeleteSubcategory={handleDeleteSubcategory}
+              handleAddAccount={handleAddAccount}
+              handleUpdateAccount={handleUpdateAccount}
+              handleDeleteAccount={handleDeleteAccount}
+              handleReorderAccounts={handleReorderAccounts}
+              handleAddDebtOrLoan={handleAddDebtOrLoan}
+              handleUpdateDebtOrLoan={handleUpdateDebtOrLoan}
+              handleAddPayment={handleAddPayment}
+              handleAddDisbursement={handleAddDisbursement}
+              handleDeletePayment={handleDeletePayment}
+              handleDeleteDebtOrLoan={handleDeleteDebtOrLoan}
+              handleAddInvestment={handleAddInvestment}
+              handleUpdateInvestment={handleUpdateInvestment}
+              handleDeleteInvestment={handleDeleteInvestment}
+              handleAddRecurring={handleAddRecurring}
+              handleUpdateRecurring={handleUpdateRecurring}
+              handleDeleteRecurring={handleDeleteRecurring}
+              handleToggleActiveRecurring={handleToggleActiveRecurring}
+            />
           </div>
         </main>
 
