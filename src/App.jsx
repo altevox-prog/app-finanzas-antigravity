@@ -14,8 +14,7 @@ import LoansAndDebts from './components/LoansAndDebts';
 import InvestmentsView from './components/InvestmentsView';
 import InvestmentFormModal from './components/InvestmentFormModal';
 import AddInvestmentModal from './components/AddInvestmentModal';
-import DebtFormModal from './components/DebtFormModal';
-import AddLoanModal from './components/AddLoanModal';
+import AddLoanModal from './components/modals/AddLoanModal';
 import BalanceWidget from './components/BalanceWidget';
 import BudgetWidget from './components/BudgetWidget';
 import EditWidgetsModal from './components/EditWidgetsModal';
@@ -28,7 +27,7 @@ import OnboardingFlow from './components/OnboardingFlow';
 import OnboardingWizard from './components/OnboardingWizard';
 import DebtAlertBanner from './components/DebtAlertBanner';
 import RecurringView from './components/RecurringView';
-import AddRecurringModal from './components/AddRecurringModal';
+import AddRecurringModal from './components/modals/AddRecurringModal';
 import DesktopSidebar from './components/DesktopSidebar';
 import Dashboard from './components/Dashboard';
 import DesktopMonthPicker from './components/DesktopMonthPicker';
@@ -1555,36 +1554,28 @@ export default function App() {
         )}
 
         {/* Modal Global para Nuevo Préstamo o Deuda */}
-        {(isAddLoanOpen || isNewDebtModalOpen) && (
+        {isAddLoanOpen && (
           <AddLoanModal
-            isOpen={isAddLoanOpen || isNewDebtModalOpen}
+            isOpen={isAddLoanOpen}
             initialType={addLoanInitialType}
             defaultType={addLoanInitialType}
-            onClose={() => {
-              setIsAddLoanOpen(false);
-              setIsNewDebtModalOpen(false);
-            }}
+            onClose={() => setIsAddLoanOpen(false)}
             onSave={(newItem) => {
               handleAddDebtOrLoan(newItem);
               setIsAddLoanOpen(false);
-              setIsNewDebtModalOpen(false);
               handleTabChange('debts');
             }}
           />
         )}
 
         {/* Modal Global para Nuevo Pago Recurrente */}
-        {(isAddRecurringOpen || isNewRecurringModalOpen) && (
+        {isAddRecurringOpen && (
           <AddRecurringModal
-            isOpen={isAddRecurringOpen || isNewRecurringModalOpen}
-            onClose={() => {
-              setIsAddRecurringOpen(false);
-              setIsNewRecurringModalOpen(false);
-            }}
+            isOpen={isAddRecurringOpen}
+            onClose={() => setIsAddRecurringOpen(false)}
             onSave={(newItem) => {
               handleAddRecurring(newItem);
               setIsAddRecurringOpen(false);
-              setIsNewRecurringModalOpen(false);
               handleTabChange('recurring');
             }}
             accounts={accounts}

@@ -1,1 +1,1 @@
-export { default } from './AddRecurringModal';
+export { default } from './modals/RecurringModal';
