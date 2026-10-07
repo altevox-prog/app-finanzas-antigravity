@@ -5,41 +5,14 @@ import SplashScreen from './components/SplashScreen';
 import OnboardingWizard from './components/OnboardingWizard';
 import { ModalContainer } from './components/modals';
 import QuickActionsModal from './components/QuickActionsModal';
-import { getTomorrowDebtAlerts } from './utils/debtAlerts';
 import { usePrivacy } from './context/PrivacyContext';
 import SyncStatusBadge from './components/SyncStatusBadge';
 import { useAuth } from './context/AuthContext';
-import { 
-  ensureUUID 
-} from './services/syncEngine';
-import { DEFAULT_WIDGETS_CONFIG } from './utils/widgetsConfig';
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  CreditCard, 
-  HandCoins, 
-  TrendingUp,
-  RotateCcw,
-  Plus,
-  ArrowRight,
-  ArrowLeftRight,
-  SlidersHorizontal,
-  Settings,
-  RefreshCw,
-  CalendarSync,
-  Pencil,
-  MinusCircle,
-  PlusCircle,
-  X
-} from 'lucide-react';
+import { RotateCcw, RefreshCw, X } from 'lucide-react';
 import Toaster from './components/Toaster';
 import { toast } from './utils/toast';
-import { 
-  mergeRecords, 
-  reconcileAccounts, 
-  reconcileTransactions, 
-  generateUUID
-} from './utils/recordMerger';
+import { useViewMode } from './hooks/useViewMode';
+import { useDebtAlerts } from './hooks/useDebtAlerts';
 import { useTheme } from './hooks/useTheme';
 import { useAppSecurity } from './hooks/useAppSecurity';
 import { useOnboarding } from './hooks/useOnboarding';
@@ -61,72 +34,32 @@ import { useNavigationTabs } from './hooks/useNavigationTabs';
 import { useFinancialOperations } from './hooks/useFinancialOperations';
 import { useModalControls } from './hooks/useModalControls';
 
-const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
-
 export default function App() {
-  const { isPrivacyMode, formatMoney } = usePrivacy();
+  const { formatMoney } = usePrivacy();
   const { user, loading: authLoading } = useAuth();
   const { theme, setTheme, handleToggleTheme } = useTheme();
 
   // Gestión centralizada de modales, visibilidad y superposiciones
+  const modalControls = useModalControls();
   const {
     isAddTxOpen,
     setIsAddTxOpen,
-    isAddTransactionOpen,
-    setIsAddTransactionOpen,
-    isNewTxModalOpen,
-    setIsNewTxModalOpen,
-    txDefaultType,
-    setTxDefaultType,
-    isTransferModalOpen,
-    setIsTransferModalOpen,
-    isAddLoanOpen,
-    setIsAddLoanOpen,
-    addLoanInitialType,
-    setAddLoanInitialType,
-    isNewDebtModalOpen,
-    setIsNewDebtModalOpen,
-    isAddRecurringOpen,
-    setIsAddRecurringOpen,
-    isNewRecurringModalOpen,
-    setIsNewRecurringModalOpen,
-    isAddInvestmentOpen,
-    setIsAddInvestmentOpen,
-    isNewInvestmentModalOpen,
-    setIsNewInvestmentModalOpen,
     isSettingsOpen,
     setIsSettingsOpen,
-    isProfileOpen,
-    setIsProfileOpen,
-    isCalendarOpen,
-    setIsCalendarOpen,
     isActionMenuOpen,
     setIsActionMenuOpen,
-    selectedCreditCardDetail,
-    setSelectedCreditCardDetail,
-    profileResetKey,
-    setProfileResetKey,
     handleOpenTransaction,
     handleOpenAddLoan,
     handleOpenAddDebt,
     handleOpenTransfer,
     handleOpenRecurring,
     handleOpenInvestment,
-    handleOpenSettings,
     handleOpenProfile,
-    handleCloseAllModals,
-    modalFlags
-  } = useModalControls();
+    handleCloseAllModals
+  } = modalControls;
 
   // PWA Update notification banner state
   const [hasPwaUpdate, setHasPwaUpdate] = useState(false);
-
-  // Global Toast notification helper (delega al sistema unificado de Toaster)
-  const showToast = (text, type = 'success') => {
-    if (type === 'error') toast.error(text);
-    else if (type === 'info') toast.info(text);
-    else toast.success(text);
-  };
 
   // Escuchar evento de nueva versión disponible de PWA
   useEffect(() => {
@@ -145,6 +78,13 @@ export default function App() {
 
   // Sincronización y estado de la Tasa Representativa del Mercado (TRM)
   const { trm, setTrm, updateTRM } = useTRM(isResettingRef);
+
+  // Estado y sincronización de Perfil de Usuario
+  const {
+    userProfile,
+    setUserProfile,
+    handleUpdateProfile
+  } = useUserProfile({ user, isResettingRef });
 
   // Cuentas state & actions
   const {
@@ -244,23 +184,7 @@ export default function App() {
   } = useInvestments(isResettingRef);
 
   // Orquestador central de operaciones financieras cruzadas
-  const {
-    handleSaveTransaction,
-    handleAddTransaction,
-    handleUpdateTransaction,
-    handleDeleteTransaction,
-    handleExecuteTransfer,
-    handleAddDebtPayment,
-    handlePayDebtInstallment,
-    handleAddPayment,
-    handleDeletePayment,
-    handleAddDisbursement,
-    handleAddInvestment,
-    handleDeleteInvestment,
-    handleAddDebtOrLoan,
-    handleSaveLoan,
-    handleDeleteDebtOrLoan
-  } = useFinancialOperations({
+  const financialOps = useFinancialOperations({
     accounts,
     setAccounts,
     transactions,
@@ -289,51 +213,15 @@ export default function App() {
     baseDeleteDebtOrLoan
   });
 
-
-  // View mode switcher: 'auto' | 'mobile' | 'desktop' (soporta ?view=mobile y ?view=desktop en la URL)
-  const [viewMode, setViewMode] = useState(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const v = params.get('view');
-        if (v === 'mobile' || v === 'desktop' || v === 'auto') return v;
-        const saved = localStorage.getItem('presu_app_view_mode');
-        if (saved === 'mobile' || saved === 'desktop') return saved;
-      }
-    } catch {}
-    return 'auto';
-  });
-
-  const handleSetViewMode = (mode) => {
-    setViewMode(mode);
-    try {
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        if (mode === 'auto') {
-          url.searchParams.delete('view');
-          localStorage.removeItem('presu_app_view_mode');
-        } else {
-          url.searchParams.set('view', mode);
-          localStorage.setItem('presu_app_view_mode', mode);
-        }
-        window.history.pushState({}, '', url.toString());
-      }
-    } catch (e) {
-      console.error('Error al cambiar de vista:', e);
-    }
-  };
-
-  useEffect(() => {
-    const handlePopState = () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const v = params.get('view');
-        setViewMode(v === 'mobile' || v === 'desktop' || v === 'auto' ? v : 'auto');
-      } catch {}
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  // Modo de visualización responsive y vistas fijas
+  const {
+    viewMode,
+    isForcedMobile,
+    isForcedDesktop,
+    desktopOnlyClass,
+    desktopBlockClass,
+    mobileOnlyClass
+  } = useViewMode();
 
   // Configuración y visibilidad de Widgets del Dashboard
   const {
@@ -350,13 +238,6 @@ export default function App() {
     setShowTutorial,
     completeOnboarding
   } = useOnboarding();
-
-  // Estado y sincronización de Perfil de Usuario
-  const {
-    userProfile,
-    setUserProfile,
-    handleUpdateProfile
-  } = useUserProfile({ user, isResettingRef });
 
   // Security settings (PIN and Biometrics) y estado de bloqueo de app
   const {
@@ -485,37 +366,13 @@ export default function App() {
     onOpenProfile: handleOpenProfile
   });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // Cálculos derivados y métricas analíticas memorizadas
   const {
     monthlyTransactions,
     scopedTransactions,
-    totalIncome,
-    totalExpense,
-    netBalance,
-    availableLiquidBalance,
-    savingsRate,
-    incomeCount,
-    expenseCount,
-    activeDebtsCount,
     monthlyStats,
     netWorth,
-    taxMetrics
-  } = useFinanceAnalytics({
+    taxMetrics  } = useFinanceAnalytics({
     transactions,
     accounts,
     investments,
@@ -527,154 +384,186 @@ export default function App() {
     trm
   });
 
-  // Sistema de Alertas y Recordatorios Preventivos (1 día antes)
-  const [managedAlerts, setManagedAlerts] = useState(() => {
-    try {
-      if (typeof window === 'undefined' || typeof localStorage === 'undefined') return [];
-      const today = new Date().toISOString().split('T')[0];
-      const saved = localStorage.getItem(`managed_alerts_${today}`);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+  // Sistema de Alertas Preventivas y Notificaciones PWA
+  const {
+    tomorrowDebtAlerts,
+    handleDismissAlert,
+    handleReviewDebtAlert
+  } = useDebtAlerts({
+    debtsAndLoans,
+    accounts,
+    onNavigateToDebts: () => handleTabChange('debts')
   });
 
-  const tomorrowDebtAlerts = useMemo(() => {
-    try {
-      const all = getTomorrowDebtAlerts(debtsAndLoans || [], accounts || []);
-      const managed = Array.isArray(managedAlerts) ? managedAlerts : [];
-      return all.filter((a) => a && a.id && !managed.includes(a.id));
-    } catch (err) {
-      console.warn('Error calculando alertas preventivas:', err);
-      return [];
-    }
-  }, [debtsAndLoans, accounts, managedAlerts]);
+  // 1. Objeto consolidado y memorizado de datos financieros
+  const financeData = useMemo(() => ({
+    accounts,
+    transactions,
+    monthlyTransactions,
+    scopedTransactions,
+    categories,
+    investments,
+    debtsAndLoans,
+    recurringPayments,
+    subscriptions,
+    budgets,
+    savingsGoals,
+    monthlyStats,
+    netWorth,
+    taxMetrics,
+    trm,
+    userProfile,
+    selectedDate,
+    selectedMonth,
+    selectedYear,
+    selectedDay,
+    currentMonthLabel,
+    widgets,
+    tomorrowDebtAlerts,
+    user,
+    theme,
+    securitySettings,
+    isLocked,
+    failedAttempts,
+    showTutorial
+  }), [
+    accounts,
+    transactions,
+    monthlyTransactions,
+    scopedTransactions,
+    categories,
+    investments,
+    debtsAndLoans,
+    recurringPayments,
+    subscriptions,
+    budgets,
+    savingsGoals,
+    monthlyStats,
+    netWorth,
+    taxMetrics,
+    trm,
+    userProfile,
+    selectedDate,
+    selectedMonth,
+    selectedYear,
+    selectedDay,
+    currentMonthLabel,
+    widgets,
+    tomorrowDebtAlerts,
+    user,
+    theme,
+    securitySettings,
+    isLocked,
+    failedAttempts,
+    showTutorial
+  ]);
 
-  const handleDismissAlert = (alertId) => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      setManagedAlerts((prev) => {
-        const currentList = Array.isArray(prev) ? prev : [];
-        const next = [...currentList, alertId];
-        try {
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem(`managed_alerts_${today}`, JSON.stringify(next));
-          }
-        } catch {
-          // ignore
-        }
-        return next;
-      });
-    } catch (e) {
-      console.warn('Error al descartar alerta:', e);
-    }
-  };
-
-  const handleReviewDebtAlert = (alert) => {
-    handleTabChange('debts');
-  };
-
-  // Notificaciones del Sistema PWA (1 día antes)
-  useEffect(() => {
-    try {
-      if (typeof window === 'undefined' || !('Notification' in window)) return;
-      if (!Array.isArray(tomorrowDebtAlerts) || tomorrowDebtAlerts.length === 0) return;
-
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      const dispatchNotifications = async () => {
-        try {
-          if (typeof Notification === 'undefined') return;
-
-          let permission = Notification.permission;
-          if (permission === 'default' && typeof Notification.requestPermission === 'function') {
-            try {
-              permission = await Notification.requestPermission();
-            } catch (permErr) {
-              console.warn('No se pudo solicitar permiso de notificación:', permErr);
-            }
-          }
-
-          if (permission === 'granted') {
-            tomorrowDebtAlerts.forEach((alert) => {
-              try {
-                if (!alert || !alert.id) return;
-                const sentKey = `pwa_notif_sent_${todayStr}_${alert.id}`;
-                
-                let alreadySent = false;
-                try {
-                  if (typeof localStorage !== 'undefined') {
-                    alreadySent = !!localStorage.getItem(sentKey);
-                  }
-                } catch {
-                  alreadySent = false;
-                }
-
-                if (alreadySent) return;
-
-                let sentViaSW = false;
-                if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker && navigator.serviceWorker.controller) {
-                  try {
-                    navigator.serviceWorker.controller.postMessage({
-                      type: 'SHOW_NOTIFICATION',
-                      title: alert.title || 'Recordatorio',
-                      options: {
-                        body: alert.message || '',
-                        icon: '/icon-192x192.png',
-                        badge: '/icon-192x192.png',
-                        tag: alert.id
-                      }
-                    });
-                    sentViaSW = true;
-                  } catch (swErr) {
-                    console.warn('No se pudo enviar notificación vía Service Worker:', swErr);
-                  }
-                }
-
-                if (!sentViaSW && typeof Notification === 'function') {
-                  try {
-                    new Notification(alert.title || 'Recordatorio', {
-                      body: alert.message || '',
-                      icon: '/icon-192x192.png'
-                    });
-                  } catch (directErr) {
-                    console.warn('Constructor Notification no disponible directamente:', directErr);
-                  }
-                }
-
-                try {
-                  if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem(sentKey, 'true');
-                  }
-                } catch {
-                  // ignore
-                }
-              } catch (alertErr) {
-                console.warn('Error al procesar notificación individual:', alertErr);
-              }
-            });
-          }
-        } catch (dispatchErr) {
-          console.warn('Error en dispatchNotifications:', dispatchErr);
-        }
-      };
-
-      dispatchNotifications();
-    } catch (effectErr) {
-      console.warn('Error en efecto de alertas de deuda:', effectErr);
-    }
-  }, [tomorrowDebtAlerts]);
-
-
-
-
-
-
-
-
-
-
-  // 1. Pantalla de carga neutral mientras se valida la sesión y estado de onboarding
+  // 2. Objeto consolidado y memorizado de acciones y operaciones
+  const financeActions = useMemo(() => ({
+    ...financialOps,
+    ...modalControls,
+    handleTabChange,
+    handleResetTab,
+    setSelectedDate,
+    setSelectedDay,
+    setWidgets,
+    setBudgets,
+    setSubscriptions,
+    setSecuritySettings,
+    setTheme,
+    setShowTutorial,
+    showMonthPicker,
+    setShowMonthPicker,
+    isEditWidgetsModalOpen,
+    setIsEditWidgetsModalOpen,
+    handleUnlock,
+    handleVerifyPin,
+    handleUpdatePin,
+    handleReviewDebtAlert,
+    handleDismissAlert,
+    formatMoney,
+    handleGoBackFromSubView,
+    fromSettings,
+    setFromSettings,
+    handleAddCategory,
+    handleUpdateCategory,
+    handleDeleteCategory,
+    handleAddSubcategory,
+    handleUpdateSubcategory,
+    handleDeleteSubcategory,
+    handleAddAccount,
+    handleUpdateAccount,
+    handleDeleteAccount,
+    handleReorderAccounts,
+    handleUpdateDebtOrLoan,
+    handleUpdateInvestment,
+    handleAddRecurring,
+    handleUpdateRecurring,
+    handleDeleteRecurring,
+    handleToggleActiveRecurring,
+    handleAddGoal,
+    handleUpdateGoal,
+    handleDeleteGoal,
+    handlePrevMonth,
+    handleNextMonth,
+    handleResetToToday,
+    handleChangeMonth,
+    handleRestoreBackup,
+    handleResetData,
+    handleUpdateProfile
+  }), [
+    financialOps,
+    modalControls,
+    handleTabChange,
+    handleResetTab,
+    setSelectedDate,
+    setSelectedDay,
+    setWidgets,
+    setBudgets,
+    setSubscriptions,
+    setSecuritySettings,
+    setTheme,
+    setShowTutorial,
+    showMonthPicker,
+    setShowMonthPicker,
+    isEditWidgetsModalOpen,
+    setIsEditWidgetsModalOpen,
+    handleUnlock,
+    handleVerifyPin,
+    handleUpdatePin,
+    handleReviewDebtAlert,
+    handleDismissAlert,
+    formatMoney,
+    handleGoBackFromSubView,
+    fromSettings,
+    setFromSettings,
+    handleAddCategory,
+    handleUpdateCategory,
+    handleDeleteCategory,
+    handleAddSubcategory,
+    handleUpdateSubcategory,
+    handleDeleteSubcategory,
+    handleAddAccount,
+    handleUpdateAccount,
+    handleDeleteAccount,
+    handleReorderAccounts,
+    handleUpdateDebtOrLoan,
+    handleUpdateInvestment,
+    handleAddRecurring,
+    handleUpdateRecurring,
+    handleDeleteRecurring,
+    handleToggleActiveRecurring,
+    handleAddGoal,
+    handleUpdateGoal,
+    handleDeleteGoal,
+    handlePrevMonth,
+    handleNextMonth,
+    handleResetToToday,
+    handleChangeMonth,
+    handleRestoreBackup,
+    handleResetData,
+    handleUpdateProfile
+  ]);
   if (authLoading) {
     return <SplashScreen message="Verificando tu espacio..." />;
   }
@@ -688,13 +577,6 @@ export default function App() {
       />
     );
   }
-
-  const isForcedMobile = viewMode === 'mobile';
-  const isForcedDesktop = viewMode === 'desktop';
-
-  const desktopOnlyClass = isForcedMobile ? 'hidden' : isForcedDesktop ? 'flex' : 'hidden lg:flex';
-  const desktopBlockClass = isForcedMobile ? 'hidden' : isForcedDesktop ? 'block' : 'hidden lg:block';
-  const mobileOnlyClass = isForcedDesktop ? 'hidden' : isForcedMobile ? 'block' : 'lg:hidden';
 
   return (
     <div className={`min-h-[100dvh] bg-slate-100 dark:bg-[#06070A] text-slate-900 dark:text-slate-100 flex ${
@@ -711,35 +593,21 @@ export default function App() {
         onOpenAddTx={handleOpenTransaction}
         onAddExpense={() => handleOpenTransaction('expense')}
         onAddIncome={() => handleOpenTransaction('income')}
-        onOpenTransfer={() => setIsTransferModalOpen(true)}
+        onOpenTransfer={handleOpenTransfer}
         onOpenAddTransaction={handleOpenTransaction}
         onOpenNewTransaction={handleOpenTransaction}
         isAddTransactionOpen={isAddTxOpen}
         setIsAddTransactionOpen={setIsAddTxOpen}
-        onOpenRecurring={() => {
-          setIsAddRecurringOpen(true);
-          setIsNewRecurringModalOpen(true);
-        }}
+        onOpenRecurring={handleOpenRecurring}
         onOpenLoan={() => handleOpenAddLoan('receivable')}
         onOpenDebt={() => handleOpenAddDebt('payable')}
-        onOpenInvestment={() => {
-          setIsAddInvestmentOpen(true);
-          setIsNewInvestmentModalOpen(true);
-        }}
+        onOpenInvestment={handleOpenInvestment}
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenProfile={() => setIsSettingsOpen(true)}
+        onOpenProfile={handleOpenProfile}
         onOpenAuth={() => {}}
         userProfile={userProfile}
-        selectedDate={selectedDate}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        selectedDay={selectedDay}
-        currentMonthLabel={currentMonthLabel}
-        handlePrevMonth={handlePrevMonth}
-        handleNextMonth={handleNextMonth}
-        handleResetToToday={handleResetToToday}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onLogout={() => setIsLocked(true)}
@@ -815,71 +683,8 @@ export default function App() {
             <ViewRouter
               activeTab={activeTab}
               tabResetKeys={tabResetKeys}
-              accounts={accounts}
-              investments={investments}
-              debtsAndLoans={debtsAndLoans}
-              transactions={transactions}
-              monthlyTransactions={monthlyTransactions}
-              categories={categories}
-              recurringPayments={recurringPayments}
-              subscriptions={subscriptions}
-              monthlyStats={monthlyStats}
-              selectedDate={selectedDate}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
-              selectedDay={selectedDay}
-              setSelectedDay={setSelectedDay}
-              handlePrevMonth={handlePrevMonth}
-              handleNextMonth={handleNextMonth}
-              handleResetToToday={handleResetToToday}
-              currentMonthLabel={currentMonthLabel}
-              trm={trm}
-              widgets={widgets}
-              setWidgets={setWidgets}
-              tomorrowDebtAlerts={tomorrowDebtAlerts}
-              handleReviewDebtAlert={handleReviewDebtAlert}
-              handleDismissAlert={handleDismissAlert}
-              formatMoney={formatMoney}
-              fromSettings={fromSettings}
-              handleGoBackFromSubView={handleGoBackFromSubView}
-              handleTabChange={handleTabChange}
-              setIsCalendarOpen={setIsCalendarOpen}
-              setIsEditWidgetsModalOpen={setIsEditWidgetsModalOpen}
-              setIsAddTxOpen={setIsAddTxOpen}
-              handleOpenTransaction={handleOpenTransaction}
-              setSelectedCreditCardDetail={setSelectedCreditCardDetail}
-              setIsAddRecurringOpen={setIsAddRecurringOpen}
-              setIsNewRecurringModalOpen={setIsNewRecurringModalOpen}
-              handleOpenAddDebt={handleOpenAddDebt}
-              handleOpenAddLoan={handleOpenAddLoan}
-              setAddLoanInitialType={setAddLoanInitialType}
-              setIsAddLoanOpen={setIsAddLoanOpen}
-              handleAddTransaction={handleAddTransaction}
-              handleUpdateTransaction={handleUpdateTransaction}
-              handleDeleteTransaction={handleDeleteTransaction}
-              handleAddCategory={handleAddCategory}
-              handleUpdateCategory={handleUpdateCategory}
-              handleDeleteCategory={handleDeleteCategory}
-              handleAddSubcategory={handleAddSubcategory}
-              handleUpdateSubcategory={handleUpdateSubcategory}
-              handleDeleteSubcategory={handleDeleteSubcategory}
-              handleAddAccount={handleAddAccount}
-              handleUpdateAccount={handleUpdateAccount}
-              handleDeleteAccount={handleDeleteAccount}
-              handleReorderAccounts={handleReorderAccounts}
-              handleAddDebtOrLoan={handleAddDebtOrLoan}
-              handleUpdateDebtOrLoan={handleUpdateDebtOrLoan}
-              handleAddPayment={handleAddPayment}
-              handleAddDisbursement={handleAddDisbursement}
-              handleDeletePayment={handleDeletePayment}
-              handleDeleteDebtOrLoan={handleDeleteDebtOrLoan}
-              handleAddInvestment={handleAddInvestment}
-              handleUpdateInvestment={handleUpdateInvestment}
-              handleDeleteInvestment={handleDeleteInvestment}
-              handleAddRecurring={handleAddRecurring}
-              handleUpdateRecurring={handleUpdateRecurring}
-              handleDeleteRecurring={handleDeleteRecurring}
-              handleToggleActiveRecurring={handleToggleActiveRecurring}
+              financeData={financeData}
+              financeActions={financeActions}
             />
           </div>
         </main>
@@ -893,17 +698,11 @@ export default function App() {
           setIsActionMenuOpen={setIsActionMenuOpen}
           onOpenTransaction={handleOpenTransaction}
           onOpenAddTx={handleOpenTransaction}
-          onOpenTransfer={() => setIsTransferModalOpen(true)}
-          onOpenRecurring={() => {
-            setIsAddRecurringOpen(true);
-            setIsNewRecurringModalOpen(true);
-          }}
+          onOpenTransfer={handleOpenTransfer}
+          onOpenRecurring={handleOpenRecurring}
           onOpenLoan={() => handleOpenAddLoan('receivable')}
           onOpenDebt={() => handleOpenAddDebt('payable')}
-          onOpenInvestment={() => {
-            setIsAddInvestmentOpen(true);
-            setIsNewInvestmentModalOpen(true);
-          }}
+          onOpenInvestment={handleOpenInvestment}
           mobileOnlyClass={mobileOnlyClass}
         />
 
@@ -918,43 +717,17 @@ export default function App() {
           onOpenNewTransaction={handleOpenTransaction}
           openModal={(modalName) => {
             if (modalName === 'expense' || modalName === 'income' || modalName === 'transaction') handleOpenTransaction();
-            else if (modalName === 'transfer') setIsTransferModalOpen(true);
-            else if (modalName === 'recurring') {
-              setIsAddRecurringOpen(true);
-              setIsNewRecurringModalOpen(true);
-            }
-            else if (modalName === 'debt') {
-              handleOpenAddDebt('payable');
-            }
-            else if (modalName === 'loan') {
-              handleOpenAddLoan('receivable');
-            }
-            else if (modalName === 'investment') {
-              setIsAddInvestmentOpen(true);
-              setIsNewInvestmentModalOpen(true);
-            }
+            else if (modalName === 'transfer') handleOpenTransfer();
+            else if (modalName === 'recurring') handleOpenRecurring();
+            else if (modalName === 'debt') handleOpenAddDebt('payable');
+            else if (modalName === 'loan') handleOpenAddLoan('receivable');
+            else if (modalName === 'investment') handleOpenInvestment();
           }}
-          onOpenTransfer={() => setIsTransferModalOpen(true)}
-          onOpenInvestment={() => {
-            setIsAddInvestmentOpen(true);
-            setIsNewInvestmentModalOpen(true);
-          }}
-          onOpenNewInvestment={() => {
-            setIsAddInvestmentOpen(true);
-            setIsNewInvestmentModalOpen(true);
-          }}
-          onOpenRecurring={() => {
-            setIsAddRecurringOpen(true);
-            setIsNewRecurringModalOpen(true);
-          }}
-          onOpenAddRecurring={() => {
-            setIsAddRecurringOpen(true);
-            setIsNewRecurringModalOpen(true);
-          }}
+          onOpenTransfer={handleOpenTransfer}
+          onOpenInvestment={handleOpenInvestment}
+          onOpenRecurring={handleOpenRecurring}
           onOpenLoan={() => handleOpenAddLoan('receivable')}
-          onOpenAddLoan={() => handleOpenAddLoan('receivable')}
           onOpenDebt={() => handleOpenAddDebt('payable')}
-          onOpenAddDebt={() => handleOpenAddDebt('payable')}
           setActiveTab={handleTabChange}
         />
 
@@ -965,68 +738,8 @@ export default function App() {
 
         {/* Contenedor Orquestador de Modales y Overlays */}
         <ModalContainer
-          {...modalFlags}
-          showMonthPicker={showMonthPicker}
-          setShowMonthPicker={setShowMonthPicker}
-          isEditWidgetsModalOpen={isEditWidgetsModalOpen}
-          setIsEditWidgetsModalOpen={setIsEditWidgetsModalOpen}
-          showTutorial={showTutorial}
-          setShowTutorial={setShowTutorial}
-          isLocked={isLocked}
-          handleUnlock={handleUnlock}
-          handleVerifyPin={handleVerifyPin}
-          handleUpdatePin={handleUpdatePin}
-          failedAttempts={failedAttempts}
-          accounts={accounts}
-          categories={categories}
-          transactions={transactions}
-          investments={investments}
-          debtsAndLoans={debtsAndLoans}
-          subscriptions={subscriptions}
-          setSubscriptions={setSubscriptions}
-          savingsGoals={savingsGoals}
-          budgets={budgets}
-          setBudgets={setBudgets}
-          widgets={widgets}
-          setWidgets={setWidgets}
-          userProfile={userProfile}
-          securitySettings={securitySettings}
-          setSecuritySettings={setSecuritySettings}
-          user={user}
-          trm={trm}
-          theme={theme}
-          setTheme={setTheme}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          selectedDay={selectedDay}
-          setSelectedDay={setSelectedDay}
-          handlePrevMonth={handlePrevMonth}
-          handleNextMonth={handleNextMonth}
-          handleResetToToday={handleResetToToday}
-          handleChangeMonth={handleChangeMonth}
-          handleSaveTransaction={handleSaveTransaction}
-          handleAddTransaction={handleAddTransaction}
-          handleExecuteTransfer={handleExecuteTransfer}
-          handleAddInvestment={handleAddInvestment}
-          handleAddDebtOrLoan={handleAddDebtOrLoan}
-          handleAddRecurring={handleAddRecurring}
-          handleUpdateProfile={handleUpdateProfile}
-          handleAddGoal={handleAddGoal}
-          handleUpdateGoal={handleUpdateGoal}
-          handleDeleteGoal={handleDeleteGoal}
-          handleAddCategory={handleAddCategory}
-          handleUpdateCategory={handleUpdateCategory}
-          handleDeleteCategory={handleDeleteCategory}
-          handleAddSubcategory={handleAddSubcategory}
-          handleUpdateSubcategory={handleUpdateSubcategory}
-          handleDeleteSubcategory={handleDeleteSubcategory}
-          handleAddAccount={handleAddAccount}
-          handleTabChange={handleTabChange}
-          setFromSettings={setFromSettings}
-          handleRestoreBackup={handleRestoreBackup}
-          handleResetData={handleResetData}
+          financeData={financeData}
+          financeActions={financeActions}
         />
 
         {/* Banner Flotante de Actualización PWA */}
