@@ -3,7 +3,6 @@ import {
   INITIAL_ACCOUNTS, 
   INITIAL_TRANSACTIONS, 
   INITIAL_DEBTS_AND_LOANS, 
-  INITIAL_INVESTMENTS,
   MONTH_NAMES,
   formatCurrency
 } from './data/initialData';
@@ -94,7 +93,6 @@ import { STORAGE_KEYS } from './constants/storageKeys';
 import { 
   saveAccountsToStorage, 
   saveTransactionsToStorage, 
-  saveInvestmentsToStorage, 
   saveDebtsToStorage 
 } from './services/storageService';
 import { useTheme } from './hooks/useTheme';
@@ -107,6 +105,7 @@ import { useCategories } from './hooks/useCategories';
 import { useBudgets } from './hooks/useBudgets';
 import { useSavingsGoals } from './hooks/useSavingsGoals';
 import { useRecurringPayments } from './hooks/useRecurringPayments';
+import { useInvestments } from './hooks/useInvestments';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -295,30 +294,16 @@ export default function App() {
     return INITIAL_DEBTS_AND_LOANS;
   });
 
-  const [investments, setInvestments] = useState(() => {
-    const saved = localStorage.getItem('presu_investments') ||
-                  localStorage.getItem('user_investments') ||
-                  localStorage.getItem('app_investments');
-    if (saved !== null) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Si contiene datos de prueba antiguos ('inv-1' o 'VOO Vanguard'), limpiarlo a vacío
-        if (Array.isArray(parsed) && parsed.some(inv => inv.id === 'inv-1' || inv.name?.includes('VOO Vanguard'))) {
-          saveInvestmentsToStorage([]);
-          return [];
-        }
-        return Array.isArray(parsed) ? parsed.map(inv => ({
-          ...inv,
-          quantity: toSafeNumber(inv.quantity || inv.shares),
-          buyPrice: toSafeNumber(inv.buyPrice || inv.purchasePrice),
-          currentPrice: toSafeNumber(inv.currentPrice || inv.unitPrice || inv.buyPrice)
-        })) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-    return []; // Si no hay nada guardado, inicia completamente vacía
-  });
+  // Inversiones y portafolio state & actions
+  const {
+    investments,
+    setInvestments,
+    handleAddInvestment,
+    handleSaveInvestment,
+    handleUpdateInvestment,
+    handleDeleteInvestment,
+    resetInvestments
+  } = useInvestments(isResettingRef);
 
   // Sincronización y estado de la Tasa Representativa del Mercado (TRM)
   const { trm, setTrm, updateTRM } = useTRM(isResettingRef);
@@ -437,11 +422,7 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.DEBTS_AND_LOANS, JSON.stringify([]));
 
-    setInvestments([]);
-    localStorage.setItem('user_investments', JSON.stringify([]));
-    localStorage.setItem('presu_investments', JSON.stringify([]));
-    localStorage.setItem('app_investments', JSON.stringify([]));
-    saveInvestmentsToStorage([]);
+    resetInvestments();
 
     const rawFullName = user?.user_metadata?.full_name || 
                         user?.user_metadata?.name || 
@@ -685,26 +666,7 @@ export default function App() {
     localStorage.setItem('user_debts', JSON.stringify(debtsAndLoans));
   }, [debtsAndLoans]);
 
-  useEffect(() => {
-    // Purga de claves legadas y datos residuales de prueba
-    try {
-      localStorage.removeItem('finanzas_investments_v1');
-      localStorage.removeItem('investments_initialized');
-      const saved = localStorage.getItem('user_investments');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some(inv => inv.id === 'inv-1' || inv.name?.includes('VOO Vanguard'))) {
-          localStorage.setItem('user_investments', JSON.stringify([]));
-          setInvestments([]);
-        }
-      }
-    } catch {}
-  }, []);
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem('user_investments', JSON.stringify(investments));
-  }, [investments]);
 
 
 
@@ -1660,60 +1622,7 @@ export default function App() {
     }
   };
 
-  // Investment Actions
-  const handleAddInvestment = async (newInv) => {
-    const sanitizedInv = {
-      ...newInv,
-      quantity: toSafeNumber(newInv.quantity || newInv.shares),
-      buyPrice: toSafeNumber(newInv.buyPrice || newInv.purchasePrice),
-      currentPrice: toSafeNumber(newInv.currentPrice || newInv.unitPrice || newInv.buyPrice)
-    };
-    const next = [sanitizedInv, ...investments];
 
-    // 1. Guardado local garantizado
-    try {
-      setInvestments(next);
-      saveInvestmentsToStorage(next);
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      toast.error("Error al guardar localmente");
-      return;
-    }
-
-    // 2. Notificar éxito garantizado
-    toast.success('Inversión guardada correctamente');
-  };
-  const handleSaveInvestment = handleAddInvestment;
-
-  const handleUpdateInvestment = async (updatedInv) => {
-    const sanitizedInv = {
-      ...updatedInv,
-      quantity: toSafeNumber(updatedInv.quantity || updatedInv.shares),
-      buyPrice: toSafeNumber(updatedInv.buyPrice || updatedInv.purchasePrice),
-      currentPrice: toSafeNumber(updatedInv.currentPrice || updatedInv.unitPrice || updatedInv.buyPrice)
-    };
-    const next = investments.map((inv) => (inv.id === sanitizedInv.id ? sanitizedInv : inv));
-
-    // 1. Guardado local garantizado
-    try {
-      setInvestments(next);
-      saveInvestmentsToStorage(next);
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      toast.error("Error al guardar localmente");
-      return;
-    }
-
-    // 2. Notificar éxito garantizado
-    toast.success('Inversión actualizada correctamente');
-  };
-
-  const handleDeleteInvestment = async (invId) => {
-    const next = investments.filter((inv) => inv.id !== invId);
-    setInvestments(next);
-    saveInvestmentsToStorage(next);
-    toast.info('Elemento eliminado');
-  };
 
   // Reset de Fábrica Total y Purga Completa
   const handleFactoryReset = async (skipConfirm = false) => {
@@ -1744,7 +1653,7 @@ export default function App() {
       setTransactions([]);
       setAccounts([]);
       setDebtsAndLoans([]);
-      setInvestments([]);
+      resetInvestments();
       resetRecurringPayments();
       resetSavingsGoals();
       resetBudgets();
