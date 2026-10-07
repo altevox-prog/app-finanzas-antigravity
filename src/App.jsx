@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { AppHeader, BottomNav } from './components/layout';
+import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
 import CalendarDropdown from './components/CalendarDropdown';
 import AddTransactionModal from './components/modals/AddTransactionModal';
 import { 
@@ -25,7 +25,6 @@ import BrandIcon from './components/BrandIcon';
 import OnboardingFlow from './components/OnboardingFlow';
 import OnboardingWizard from './components/OnboardingWizard';
 import AddRecurringModal from './components/modals/AddRecurringModal';
-import DesktopSidebar from './components/DesktopSidebar';
 import DesktopMonthPicker from './components/DesktopMonthPicker';
 import TransferModal from './components/modals/TransferModal';
 import QuickActionsModal from './components/QuickActionsModal';
@@ -1028,8 +1027,10 @@ export default function App() {
       {/* 1. BARRA LATERAL FIJA EN ESCRITORIO (Sidebar visible solo en lg:) */}
       <DesktopSidebar
         activeTab={activeTab}
+        setActiveTab={setActiveTab}
         onTabChange={handleTabChange}
         onOpenTransaction={handleOpenTransaction}
+        onOpenAddTx={handleOpenTransaction}
         onAddExpense={() => handleOpenTransaction('expense')}
         onAddIncome={() => handleOpenTransaction('income')}
         onOpenTransfer={() => setIsTransferModalOpen(true)}
