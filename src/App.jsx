@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  INITIAL_TRANSACTIONS, 
   MONTH_NAMES, 
   formatCurrency
 } from './data/initialData';
@@ -88,8 +87,7 @@ import {
 } from './utils/recordMerger';
 import { STORAGE_KEYS } from './constants/storageKeys';
 import { 
-  saveAccountsToStorage, 
-  saveTransactionsToStorage 
+  saveAccountsToStorage 
 } from './services/storageService';
 import { useTheme } from './hooks/useTheme';
 import { useSecurity } from './hooks/useSecurity';
@@ -104,6 +102,7 @@ import { useRecurringPayments } from './hooks/useRecurringPayments';
 import { useInvestments } from './hooks/useInvestments';
 import { useDebts } from './hooks/useDebts';
 import { useAccounts } from './hooks/useAccounts';
+import { useTransactions } from './hooks/useTransactions';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -190,60 +189,8 @@ export default function App() {
   // Flag de control para evitar que useEffects sobreescriban localStorage durante un reset de fábrica
   const isResettingRef = useRef(false);
 
-  // Initialize state with localStorage or defaults (Lazy Initialization directa sin duplicaciones)
-  const [transactions, setTransactions] = useState(() => {
-    // Mismo mapa usado en la migración de cuentas para mantener integridad referencial
-    const TX_LEGACY_ID_MAP = {
-      'acc-1': '00000001-0000-4000-8000-000000000001',
-      'acc-2': '00000002-0000-4000-8000-000000000002',
-      'acc-3': '00000003-0000-4000-8000-000000000003',
-      'acc-4': '00000004-0000-4000-8000-000000000004',
-      'acc-5': '00000005-0000-4000-8000-000000000005'
-    };
-    try {
-      const local = localStorage.getItem('presu_transactions') ||
-                    localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) ||
-                    localStorage.getItem('app_transactions');
-      if (local) {
-        const parsed = JSON.parse(local);
-        if (Array.isArray(parsed)) {
-          const seen = new Set();
-          let needsWrite = false;
-          const result = parsed.filter(t => {
-            if (!t || !t.id) return false;
-            if (seen.has(t.id)) return false;
-            seen.add(t.id);
-            return true;
-          }).map((t) => {
-            const txIdOK = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-            // Migrar accountId legacy si corresponde
-            const rawAccId = t.accountId || t.account_id;
-            const migratedAccId = rawAccId && TX_LEGACY_ID_MAP[rawAccId]
-              ? (needsWrite = true, TX_LEGACY_ID_MAP[rawAccId])
-              : rawAccId;
-            return {
-              ...t,
-              id: (t.id && txIdOK.test(t.id)) ? t.id : (t.id || generateUUID()),
-              accountId: migratedAccId || t.accountId,
-              amount: toSafeNumber(t.amount),
-              originalAmount: toSafeNumber(t.originalAmount ?? t.amount),
-              exchangeRate: toSafeNumber(t.exchangeRate || 1)
-            };
-          });
-          if (needsWrite) {
-            try {
-              localStorage.setItem('presu_transactions', JSON.stringify(result));
-            } catch {}
-          }
-          return result;
-        }
-      }
-      return [];
-    } catch (e) {
-      console.error('Error parseando transacciones:', e);
-      return [];
-    }
-  });
+  const transactionsRef = useRef([]);
+  const setTransactionsRef = useRef(null);
 
   // Sincronización y estado de la Tasa Representativa del Mercado (TRM)
   const { trm, setTrm, updateTRM } = useTRM(isResettingRef);
@@ -263,10 +210,31 @@ export default function App() {
     resetAccounts
   } = useAccounts({
     isResettingRef,
-    transactions,
-    trm,
-    setTransactions
+    transactionsRef,
+    setTransactionsRef,
+    trm
   });
+
+  // Transacciones state & actions
+  const {
+    transactions,
+    setTransactions,
+    handleAddTransaction,
+    handleSaveTransaction,
+    handleUpdateTransaction,
+    handleDeleteTransaction,
+    handleExecuteTransfer,
+    handleTransfer,
+    resetTransactions
+  } = useTransactions({
+    isResettingRef,
+    accounts,
+    setAccounts,
+    trm
+  });
+
+  transactionsRef.current = transactions;
+  setTransactionsRef.current = setTransactions;
 
   // Gestión de categorías y subcategorías
   const {
@@ -427,12 +395,7 @@ export default function App() {
     saveAccountsToStorage(finalAccounts);
 
     // Al reiniciar o completar onboarding inicial, asegurar transacciones, inversiones y deudas estrictamente en blanco
-    setTransactions([]);
-    localStorage.setItem('presu_transactions', JSON.stringify([]));
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
-    localStorage.setItem('app_transactions', JSON.stringify([]));
-    localStorage.setItem('transactions', JSON.stringify([]));
-    saveTransactionsToStorage([]);
+    resetTransactions();
 
     resetDebts();
 
@@ -662,10 +625,6 @@ export default function App() {
   }, [activeTab]);
 
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
-  }, [transactions]);
 
 
 
@@ -899,237 +858,6 @@ export default function App() {
     }
   }, [tomorrowDebtAlerts]);
 
-  // Transaction Actions
-  const handleAddTransaction = async (newTx) => {
-    const id = (newTx.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newTx.id))
-      ? newTx.id
-      : generateUUID();
-    const sanitizedTx = {
-      ...newTx,
-      id,
-      amount: toSafeNumber(newTx.amount),
-      originalAmount: toSafeNumber(newTx.originalAmount ?? newTx.amount),
-      exchangeRate: toSafeNumber(newTx.exchangeRate || 1),
-      updated_at: new Date().toISOString()
-    };
-    const updated = [sanitizedTx, ...transactions.filter(t => t.id !== id)];
-
-    // 1. Escribir inmediatamente en localStorage de forma síncrona
-    try {
-      localStorage.setItem('presu_transactions', JSON.stringify(updated));
-      saveTransactionsToStorage(updated);
-      setTransactions(updated);
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      toast.error("Error al guardar localmente");
-      return;
-    }
-
-    // Si es un movimiento de tipo transferencia con origen y destino válidos
-    const isTxTransfer = Boolean(
-      sanitizedTx.isTransfer ||
-      sanitizedTx.is_transfer ||
-      sanitizedTx.type === 'transfer' ||
-      sanitizedTx.type === 'transferencia'
-    );
-    const fromId = sanitizedTx.fromAccountId || sanitizedTx.from_account_id;
-    const toId = sanitizedTx.toAccountId || sanitizedTx.to_account_id;
-
-    let updatedAccounts = accounts;
-    if (isTxTransfer && fromId && toId && fromId !== toId) {
-      const transferAmount = toSafeNumber(sanitizedTx.originalAmount || sanitizedTx.amount);
-      updatedAccounts = accounts.map((acc) => {
-        if (acc.id === fromId) {
-          const currentBalance = toSafeNumber(acc.balance);
-          return {
-            ...acc,
-            initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-            balance: currentBalance - transferAmount,
-            currentBalance: currentBalance - transferAmount,
-            updated_at: new Date().toISOString()
-          };
-        }
-        if (acc.id === toId) {
-          const currentBalance = toSafeNumber(acc.balance);
-          return {
-            ...acc,
-            initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-            balance: currentBalance + transferAmount,
-            currentBalance: currentBalance + transferAmount,
-            updated_at: new Date().toISOString()
-          };
-        }
-        return acc;
-      });
-      setAccounts(updatedAccounts);
-      localStorage.setItem('presu_accounts', JSON.stringify(updatedAccounts));
-      saveAccountsToStorage(updatedAccounts);
-    }
-
-    // 2. Notificar éxito garantizado al usuario
-    toast.success('Movimiento registrado con éxito');
-
-  };
-  const handleSaveTransaction = handleAddTransaction;
-
-  const handleUpdateTransaction = async (updatedTx) => {
-    const sanitizedTx = {
-      ...updatedTx,
-      amount: toSafeNumber(updatedTx.amount),
-      originalAmount: toSafeNumber(updatedTx.originalAmount ?? updatedTx.amount),
-      exchangeRate: toSafeNumber(updatedTx.exchangeRate || 1),
-      updated_at: new Date().toISOString()
-    };
-    const updated = transactions.map((t) => (t.id === sanitizedTx.id ? sanitizedTx : t));
-
-    // 1. Escribir inmediatamente en localStorage de forma síncrona
-    try {
-      localStorage.setItem('presu_transactions', JSON.stringify(updated));
-      saveTransactionsToStorage(updated);
-      setTransactions(updated);
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      toast.error("Error al guardar localmente");
-      return;
-    }
-
-    // 2. Notificar éxito garantizado
-    toast.success('Movimiento actualizado con éxito');
-  };
-
-  const handleDeleteTransaction = async (txId) => {
-    const updated = transactions.filter((t) => t.id !== txId && ensureUUID(t.id) !== txId);
-
-    // 1. Escribir inmediatamente en localStorage de forma síncrona
-    localStorage.setItem('presu_transactions', JSON.stringify(updated));
-    saveTransactionsToStorage(updated);
-
-    // 2. Actualizar el estado de React
-    setTransactions(updated);
-    toast.info('Elemento eliminado');
-  };
-
-  // Transferencia entre cuentas
-  const handleExecuteTransfer = async ({
-    fromAcc,
-    toAcc,
-    amount,
-    destAmount,
-    fromCurrency,
-    toCurrency,
-    date,
-    note
-  }) => {
-    if (!fromAcc?.id || !toAcc?.id || fromAcc.id === toAcc.id) {
-      toast.error('Selecciona cuentas de origen y destino válidas y diferentes');
-      return;
-    }
-
-    const transferAmount = toSafeNumber(amount);
-    if (transferAmount <= 0) {
-      toast.error('El monto a transferir debe ser mayor a 0');
-      return;
-    }
-
-    const cleanDestAmount = destAmount !== undefined ? toSafeNumber(destAmount) : transferAmount;
-    const rate = fromCurrency === 'USD' ? (Number(trm) || 4050) : fromCurrency === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
-    const copAmount = fromCurrency === 'COP' ? transferAmount : Math.round(transferAmount * rate);
-
-    const outId = generateUUID();
-    const inId = generateUUID();
-
-    // Débito / Gasto en cuenta origen
-    const outTx = {
-      id: outId,
-      date: date || new Date().toISOString().split('T')[0],
-      type: 'expense',
-      amount: copAmount,
-      originalAmount: transferAmount,
-      originalCurrency: fromCurrency,
-      exchangeRate: rate,
-      categoryId: 'cat-transfer',
-      categoryName: 'Transferencias',
-      subcategoryId: 'sub-transfer-out',
-      subcategoryName: 'Transferencia Enviada',
-      accountId: fromAcc.id,
-      accountName: fromAcc.name,
-      fromAccountId: fromAcc.id,   // FK explícito para Supabase
-      toAccountId: toAcc.id,       // FK explícito para Supabase
-      note: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
-      notes: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
-      isTransfer: true,
-      updated_at: new Date().toISOString()
-    };
-
-    // Crédito / Ingreso en cuenta destino
-    const inRate = toCurrency === 'USD' ? (Number(trm) || 4050) : toCurrency === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
-    const inTx = {
-      id: inId,
-      date: date || new Date().toISOString().split('T')[0],
-      type: 'income',
-      amount: copAmount,
-      originalAmount: cleanDestAmount,
-      originalCurrency: toCurrency,
-      exchangeRate: inRate,
-      categoryId: 'cat-transfer',
-      categoryName: 'Transferencias',
-      subcategoryId: 'sub-transfer-in',
-      subcategoryName: 'Transferencia Recibida',
-      accountId: toAcc.id,
-      accountName: toAcc.name,
-      fromAccountId: fromAcc.id,   // FK explícito para Supabase
-      toAccountId: toAcc.id,       // FK explícito para Supabase
-      note: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
-      notes: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
-      isTransfer: true,
-      updated_at: new Date().toISOString()
-    };
-
-    // 1. Actualización atómica de saldos de ambas cuentas en estado y localStorage
-    const updatedAccounts = accounts.map((acc) => {
-      if (acc.id === fromAcc.id) {
-        const currentBalance = toSafeNumber(acc.balance);
-        return {
-          ...acc,
-          initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-          balance: currentBalance - transferAmount,
-          currentBalance: currentBalance - transferAmount,
-          updated_at: new Date().toISOString()
-        };
-      }
-      if (acc.id === toAcc.id) {
-        const currentBalance = toSafeNumber(acc.balance);
-        return {
-          ...acc,
-          initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-          balance: currentBalance + cleanDestAmount,
-          currentBalance: currentBalance + cleanDestAmount,
-          updated_at: new Date().toISOString()
-        };
-      }
-      return acc;
-    });
-
-    // 1. Actualización local garantizada
-    const nextTxs = [inTx, outTx, ...transactions];
-    try {
-      setAccounts(updatedAccounts);
-      localStorage.setItem('presu_accounts', JSON.stringify(updatedAccounts));
-      saveAccountsToStorage(updatedAccounts);
-      localStorage.setItem('presu_transactions', JSON.stringify(nextTxs));
-      saveTransactionsToStorage(nextTxs);
-      setTransactions(nextTxs);
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      toast.error("Error al guardar localmente");
-      return;
-    }
-    setIsTransferModalOpen(false);
-
-    // 2. Notificar éxito garantizado
-    toast.success('Movimiento registrado con éxito');
-
-  };
 
 
 
@@ -1163,7 +891,7 @@ export default function App() {
       } catch (e) {}
 
       // 2. Resetear inmediatamente el estado en memoria de React a ceros absolutos
-      setTransactions([]);
+      resetTransactions();
       resetAccounts();
       resetDebts();
       resetInvestments();
@@ -1805,7 +1533,10 @@ export default function App() {
             onClose={() => setIsTransferModalOpen(false)}
             accounts={accounts}
             transactions={transactions}
-            onTransfer={handleExecuteTransfer}
+            onTransfer={async (transferData) => {
+              await handleExecuteTransfer(transferData);
+              setIsTransferModalOpen(false);
+            }}
             trm={trm}
           />
         )}

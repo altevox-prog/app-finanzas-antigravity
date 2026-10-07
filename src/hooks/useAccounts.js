@@ -29,10 +29,22 @@ function getInitialAccounts() {
 export function useAccounts({
   isResettingRef,
   transactions = [],
+  transactionsRef,
   trm = 4050,
-  setTransactions
+  setTransactions,
+  setTransactionsRef
 } = {}) {
   const [accounts, setAccounts] = useState(getInitialAccounts);
+
+  const getActiveTransactions = useCallback(() => {
+    if (transactionsRef?.current) return transactionsRef.current;
+    return transactions;
+  }, [transactions, transactionsRef]);
+
+  const getActiveSetTransactions = useCallback(() => {
+    if (setTransactionsRef?.current) return setTransactionsRef.current;
+    return setTransactions;
+  }, [setTransactions, setTransactionsRef]);
 
   // Persistencia reactiva en localStorage
   useEffect(() => {
@@ -85,7 +97,8 @@ export function useAccounts({
   const handleUpdateAccount = useCallback(async (updatedAcc) => {
     const existing = accounts.find((a) => a.id === updatedAcc.id) || {};
     const parsedInitialBalance = toSafeNumber(updatedAcc.initialBalance ?? existing.initialBalance ?? 0);
-    const liveBalance = getAccountNativeBalance({ ...existing, ...updatedAcc, initialBalance: parsedInitialBalance }, transactions, trm);
+    const activeTxs = getActiveTransactions();
+    const liveBalance = getAccountNativeBalance({ ...existing, ...updatedAcc, initialBalance: parsedInitialBalance }, activeTxs, trm);
 
     const normalizedAcc = {
       ...existing,
@@ -108,8 +121,9 @@ export function useAccounts({
       localStorage.setItem('presu_accounts', JSON.stringify(nextAccs));
       saveAccountsToStorage(nextAccs);
       setAccounts(nextAccs);
-      if (setTransactions) {
-        setTransactions((prev) =>
+      const activeSetTxs = getActiveSetTransactions();
+      if (activeSetTxs) {
+        activeSetTxs((prev) =>
           prev.map((t) => (t.accountId === normalizedAcc.id ? { ...t, accountName: normalizedAcc.name } : t))
         );
       }
@@ -120,7 +134,7 @@ export function useAccounts({
       toast.error('Error al guardar localmente');
       return null;
     }
-  }, [accounts, transactions, trm, setTransactions]);
+  }, [accounts, getActiveTransactions, trm, getActiveSetTransactions]);
 
   // Eliminar cuenta
   const handleDeleteAccount = useCallback(async (accountId) => {
@@ -132,8 +146,9 @@ export function useAccounts({
       saveAccountsToStorage(updated);
 
       // Reconciliar transacciones locales vinculadas
-      if (setTransactions) {
-        setTransactions((prev) => {
+      const activeSetTxs = getActiveSetTransactions();
+      if (activeSetTxs) {
+        activeSetTxs((prev) => {
           const nextTxs = prev.filter((t) => t.accountId !== accountId && t.accountId !== canonicalId);
           localStorage.setItem('presu_transactions', JSON.stringify(nextTxs));
           saveTransactionsToStorage(nextTxs);
@@ -146,7 +161,7 @@ export function useAccounts({
       console.error('Error al eliminar cuenta:', error);
       toast.error('No se pudo eliminar la cuenta');
     }
-  }, [accounts, setTransactions]);
+  }, [accounts, getActiveSetTransactions]);
 
   const deleteAccount = handleDeleteAccount;
 
