@@ -59,6 +59,7 @@ import { useDateNavigation } from './hooks/useDateNavigation';
 import { useDataManagement } from './hooks/useDataManagement';
 import { useNavigationTabs } from './hooks/useNavigationTabs';
 import { useFinancialOperations } from './hooks/useFinancialOperations';
+import { useModalControls } from './hooks/useModalControls';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -67,60 +68,56 @@ export default function App() {
   const { user, loading: authLoading } = useAuth();
   const { theme, setTheme, handleToggleTheme } = useTheme();
 
-  // ==============================================================
-  // ESTADOS CENTRALIZADOS DE MODALES
-  // ==============================================================
-  const [isAddTxOpen, setIsAddTxOpen] = useState(false);
-  const [isAddRecurringOpen, setIsAddRecurringOpen] = useState(false);
-  const [isAddLoanOpen, setIsAddLoanOpen] = useState(false);
-  const [addLoanInitialType, setAddLoanInitialType] = useState('receivable');
-  const [isAddInvestmentOpen, setIsAddInvestmentOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Gestión centralizada de modales, visibilidad y superposiciones
+  const {
+    isAddTxOpen,
+    setIsAddTxOpen,
+    isAddTransactionOpen,
+    setIsAddTransactionOpen,
+    isNewTxModalOpen,
+    setIsNewTxModalOpen,
+    txDefaultType,
+    setTxDefaultType,
+    isTransferModalOpen,
+    setIsTransferModalOpen,
+    isAddLoanOpen,
+    setIsAddLoanOpen,
+    addLoanInitialType,
+    setAddLoanInitialType,
+    isNewDebtModalOpen,
+    setIsNewDebtModalOpen,
+    isAddRecurringOpen,
+    setIsAddRecurringOpen,
+    isNewRecurringModalOpen,
+    setIsNewRecurringModalOpen,
+    isAddInvestmentOpen,
+    setIsAddInvestmentOpen,
+    isNewInvestmentModalOpen,
+    setIsNewInvestmentModalOpen,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    isProfileOpen,
+    setIsProfileOpen,
+    isCalendarOpen,
+    setIsCalendarOpen,
+    isActionMenuOpen,
+    setIsActionMenuOpen,
+    selectedCreditCardDetail,
+    setSelectedCreditCardDetail,
+    profileResetKey,
+    setProfileResetKey,
+    handleOpenTransaction,
+    handleOpenAddLoan,
+    handleOpenAddDebt,
+    handleOpenTransfer,
+    handleOpenRecurring,
+    handleOpenInvestment,
+    handleOpenSettings,
+    handleOpenProfile,
+    handleCloseAllModals,
+    modalFlags
+  } = useModalControls();
 
-  const handleOpenAddLoan = (type = 'receivable') => {
-    const norm = (type === 'payable' || type === 'borrowed' || type === 'debo') ? 'payable' : 'receivable';
-    setAddLoanInitialType(norm);
-    setIsAddLoanOpen(true);
-  };
-
-  const handleOpenAddDebt = (type = 'payable') => {
-    const norm = (type === 'receivable' || type === 'lent' || type === 'me_deben') ? 'receivable' : 'payable';
-    setAddLoanInitialType(norm);
-    setIsAddLoanOpen(true);
-  };
-
-  // Aliases retrocompatibles para integración fluida en toda la app:
-  const isAddTransactionOpen = isAddTxOpen;
-  const setIsAddTransactionOpen = setIsAddTxOpen;
-  const isNewTxModalOpen = isAddTxOpen;
-  const setIsNewTxModalOpen = setIsAddTxOpen;
-  const isProfileOpen = isSettingsOpen;
-  const setIsProfileOpen = setIsSettingsOpen;
-  const isNewDebtModalOpen = isAddLoanOpen;
-  const setIsNewDebtModalOpen = setIsAddLoanOpen;
-  const isNewRecurringModalOpen = isAddRecurringOpen;
-  const setIsNewRecurringModalOpen = setIsAddRecurringOpen;
-  const isNewInvestmentModalOpen = isAddInvestmentOpen;
-  const setIsNewInvestmentModalOpen = setIsAddInvestmentOpen;
-
-  // Manejador centralizado con log de depuración y soporte para 'expense' | 'income'
-  const handleOpenTransaction = (type = 'expense') => {
-    const safeType = type === 'income' ? 'income' : 'expense';
-    console.log('>>> Abriendo AddTransactionModal...', safeType);
-    setTxDefaultType(safeType);
-    setIsAddTxOpen(true);
-  };
-
-  // Modal State for Calendar Dropdown
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  // Global Action Menu State for central FAB (+) button
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
-  // Default type for opening transaction form ('expense' | 'income')
-  const [txDefaultType, setTxDefaultType] = useState('expense');
-  // Modal State for Transfers between accounts
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  // Modal State for Credit Card Detail
-  const [selectedCreditCardDetail, setSelectedCreditCardDetail] = useState(null);
   // PWA Update notification banner state
   const [hasPwaUpdate, setHasPwaUpdate] = useState(false);
 
@@ -464,37 +461,12 @@ export default function App() {
     completeOnboarding
   });
 
-  // Clave de reseteo para forzar recarga en modal de perfil
-  const [profileResetKey, setProfileResetKey] = useState(0);
-
-  // Apertura limpia de Perfil (cierra otros elementos y resetea a la vista raíz principal)
-  const handleOpenProfile = useCallback(() => {
-    setIsActionMenuOpen(false);
-    setIsAddTxOpen(false);
-    setIsAddTransactionOpen(false);
-    setIsNewInvestmentModalOpen(false);
-    setIsAddLoanOpen(false);
-    setIsAddRecurringOpen(false);
-    setIsCalendarOpen(false);
-    setIsEditWidgetsModalOpen(false);
-    setProfileResetKey((prev) => prev + 1);
-    setIsSettingsOpen(true);
-  }, [setIsAddTransactionOpen]);
-
   // Cierre preventivo de menús y modales al cambiar de pestaña
   const handleCloseOverlaysOnTabChange = useCallback(() => {
-    setIsActionMenuOpen(false);
-    setIsAddTxOpen(false);
-    setIsAddTransactionOpen(false);
-    setIsNewInvestmentModalOpen(false);
-    setIsAddLoanOpen(false);
-    setIsAddRecurringOpen(false);
-    setIsCalendarOpen(false);
-    setIsSettingsOpen(false);
+    handleCloseAllModals();
     setIsEditWidgetsModalOpen(false);
-    setSelectedCreditCardDetail(null);
     setSelectedDay(null);
-  }, [setIsAddTransactionOpen, setSelectedDay]);
+  }, [handleCloseAllModals, setIsEditWidgetsModalOpen, setSelectedDay]);
 
   // Gestión centralizada de pestañas, scroll y reseteos
   const {
@@ -993,32 +965,11 @@ export default function App() {
 
         {/* Contenedor Orquestador de Modales y Overlays */}
         <ModalContainer
-          isAddTxOpen={isAddTxOpen}
-          setIsAddTxOpen={setIsAddTxOpen}
-          txDefaultType={txDefaultType}
-          isTransferModalOpen={isTransferModalOpen}
-          setIsTransferModalOpen={setIsTransferModalOpen}
-          isAddInvestmentOpen={isAddInvestmentOpen}
-          setIsAddInvestmentOpen={setIsAddInvestmentOpen}
-          isNewInvestmentModalOpen={isNewInvestmentModalOpen}
-          setIsNewInvestmentModalOpen={setIsNewInvestmentModalOpen}
-          isAddLoanOpen={isAddLoanOpen}
-          setIsAddLoanOpen={setIsAddLoanOpen}
-          addLoanInitialType={addLoanInitialType}
-          isAddRecurringOpen={isAddRecurringOpen}
-          setIsAddRecurringOpen={setIsAddRecurringOpen}
+          {...modalFlags}
           showMonthPicker={showMonthPicker}
           setShowMonthPicker={setShowMonthPicker}
-          isCalendarOpen={isCalendarOpen}
-          setIsCalendarOpen={setIsCalendarOpen}
-          selectedCreditCardDetail={selectedCreditCardDetail}
-          setSelectedCreditCardDetail={setSelectedCreditCardDetail}
           isEditWidgetsModalOpen={isEditWidgetsModalOpen}
           setIsEditWidgetsModalOpen={setIsEditWidgetsModalOpen}
-          isSettingsOpen={isSettingsOpen}
-          setIsSettingsOpen={setIsSettingsOpen}
-          isProfileOpen={isProfileOpen}
-          profileResetKey={profileResetKey}
           showTutorial={showTutorial}
           setShowTutorial={setShowTutorial}
           isLocked={isLocked}
