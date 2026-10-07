@@ -6,12 +6,15 @@ import {
 import Header from './components/Header';
 import CalendarDropdown from './components/CalendarDropdown';
 import AddTransactionModal from './components/modals/AddTransactionModal';
-import TransactionList from './components/TransactionList';
-import TransactionsView from './components/TransactionsView';
-import AccountsAndCategories from './components/AccountsAndCategories';
-import ReportsAndCharts from './components/ReportsAndCharts';
-import LoansAndDebts from './components/LoansAndDebts';
-import InvestmentsView from './components/InvestmentsView';
+import { 
+  DashboardView, 
+  TransactionsView, 
+  AccountsView, 
+  DebtsView, 
+  InvestmentsView, 
+  RecurringView, 
+  TaxView 
+} from './views';
 import InvestmentFormModal from './components/InvestmentFormModal';
 import AddInvestmentModal from './components/AddInvestmentModal';
 import AddLoanModal from './components/modals/AddLoanModal';
@@ -25,13 +28,9 @@ import CreditCardDetailModal from './components/CreditCardDetailModal';
 import BrandIcon from './components/BrandIcon';
 import OnboardingFlow from './components/OnboardingFlow';
 import OnboardingWizard from './components/OnboardingWizard';
-import DebtAlertBanner from './components/DebtAlertBanner';
-import RecurringView from './components/RecurringView';
 import AddRecurringModal from './components/modals/AddRecurringModal';
 import DesktopSidebar from './components/DesktopSidebar';
-import Dashboard from './components/Dashboard';
 import DesktopMonthPicker from './components/DesktopMonthPicker';
-import TaxView from './components/TaxView';
 import TransferModal from './components/modals/TransferModal';
 import QuickActionsModal from './components/QuickActionsModal';
 import BottomNav from './components/BottomNav';
@@ -1250,60 +1249,53 @@ export default function App() {
             
             {/* Tab 1: Dashboard Inicio */}
             {activeTab === 'dashboard' && (
-              <div key={`dashboard-${tabResetKeys.dashboard}`} className="w-full flex flex-col gap-4">
-                {/* Banner preventivo de recordatorios y alertas para mañana */}
-                <DebtAlertBanner
-                  alerts={tomorrowDebtAlerts}
-                  onReview={handleReviewDebtAlert}
-                  onDismiss={handleDismissAlert}
-                  formatMoney={formatMoney}
-                />
-
-                {/* Widgets Financieros Modulares y Dinámicos (ordenados por el usuario, responsivo para móvil, tablet y PC) */}
-                <Dashboard
-                  accounts={accounts}
-                  investments={investments}
-                  debtsAndLoans={debtsAndLoans}
-                  transactions={transactions}
-                  monthlyTransactions={monthlyTransactions}
-                  categories={categories}
-                  recurringPayments={recurringPayments}
-                  subscriptions={subscriptions}
-                  monthlyStats={monthlyStats}
-                  selectedDate={selectedDate}
-                  selectedDay={selectedDay}
-                  onSelectDay={setSelectedDay}
-                  onOpenCalendar={() => setIsCalendarOpen(true)}
-                  onNavigateToTab={handleTabChange}
-                  onOpenTransaction={handleOpenTransaction}
-                  onAddTransaction={handleAddTransaction}
-                  onAddDebtOrLoan={handleAddDebtOrLoan}
-                  onAddRecurring={handleAddRecurring}
-                  onDeleteTransaction={handleDeleteTransaction}
-                  onUpdateTransaction={handleUpdateTransaction}
-                  onAddCategory={handleAddCategory}
-                  onAddSubcategory={handleAddSubcategory}
-                  onUpdateSubcategory={handleUpdateSubcategory}
-                  onDeleteSubcategory={handleDeleteSubcategory}
-                  onAddAccount={handleAddAccount}
-                  onSelectCreditCardDetail={setSelectedCreditCardDetail}
-                  onOpenAddRecurring={() => {
-                    setIsAddRecurringOpen(true);
-                    setIsNewRecurringModalOpen(true);
-                  }}
-                  currentMonthLabel={currentMonthLabel}
-                  trm={trm}
-                  widgetsConfig={widgets}
-                  widgets={widgets}
-                  onCustomizeWidgets={() => setIsEditWidgetsModalOpen(true)}
-                  onSaveWidgets={(newCfg) => setWidgets(newCfg)}
-                />
-              </div>
+              <DashboardView
+                key={`dashboard-${tabResetKeys.dashboard}`}
+                alerts={tomorrowDebtAlerts}
+                onReviewAlert={handleReviewDebtAlert}
+                onDismissAlert={handleDismissAlert}
+                formatMoney={formatMoney}
+                accounts={accounts}
+                investments={investments}
+                debtsAndLoans={debtsAndLoans}
+                transactions={transactions}
+                monthlyTransactions={monthlyTransactions}
+                categories={categories}
+                recurringPayments={recurringPayments}
+                subscriptions={subscriptions}
+                monthlyStats={monthlyStats}
+                selectedDate={selectedDate}
+                selectedDay={selectedDay}
+                onSelectDay={setSelectedDay}
+                onOpenCalendar={() => setIsCalendarOpen(true)}
+                onNavigateToTab={handleTabChange}
+                onOpenTransaction={handleOpenTransaction}
+                onAddTransaction={handleAddTransaction}
+                onAddDebtOrLoan={handleAddDebtOrLoan}
+                onAddRecurring={handleAddRecurring}
+                onDeleteTransaction={handleDeleteTransaction}
+                onUpdateTransaction={handleUpdateTransaction}
+                onAddCategory={handleAddCategory}
+                onAddSubcategory={handleAddSubcategory}
+                onUpdateSubcategory={handleUpdateSubcategory}
+                onDeleteSubcategory={handleDeleteSubcategory}
+                onAddAccount={handleAddAccount}
+                onSelectCreditCardDetail={setSelectedCreditCardDetail}
+                onOpenAddRecurring={() => {
+                  setIsAddRecurringOpen(true);
+                  setIsNewRecurringModalOpen(true);
+                }}
+                currentMonthLabel={currentMonthLabel}
+                trm={trm}
+                widgetsConfig={widgets}
+                widgets={widgets}
+                onCustomizeWidgets={() => setIsEditWidgetsModalOpen(true)}
+                onSaveWidgets={(newCfg) => setWidgets(newCfg)}
+              />
             )}
 
-          {/* Tab 2: Movimientos */}
-          {activeTab === 'transactions' && (
-            <div className="space-y-4">
+            {/* Tab 2: Movimientos */}
+            {activeTab === 'transactions' && (
               <TransactionsView
                 key={`transactions-list-${tabResetKeys.transactions}`}
                 transactions={monthlyTransactions}
@@ -1325,90 +1317,88 @@ export default function App() {
                 setIsAddTransactionOpen={setIsAddTxOpen}
                 trm={trm}
               />
-            </div>
-          )}
+            )}
 
-          {/* Tab 3: Cuentas y Métodos de Pago */}
-          {activeTab === 'accounts' && (
-            <AccountsAndCategories
-              key={`accounts-${tabResetKeys.accounts}`}
-              accounts={accounts}
-              transactions={transactions}
-              onAddAccount={handleAddAccount}
-              onUpdateAccount={handleUpdateAccount}
-              onDeleteAccount={handleDeleteAccount}
-              onReorderAccounts={handleReorderAccounts}
-              onAddTransaction={handleAddTransaction}
-              onOpenCreditCardDetail={setSelectedCreditCardDetail}
-              trm={trm}
-              onBack={handleGoBackFromSubView}
-              fromSettings={fromSettings}
-            />
-          )}
+            {/* Tab 3: Cuentas y Métodos de Pago */}
+            {activeTab === 'accounts' && (
+              <AccountsView
+                key={`accounts-${tabResetKeys.accounts}`}
+                accounts={accounts}
+                transactions={transactions}
+                onAddAccount={handleAddAccount}
+                onUpdateAccount={handleUpdateAccount}
+                onDeleteAccount={handleDeleteAccount}
+                onReorderAccounts={handleReorderAccounts}
+                onAddTransaction={handleAddTransaction}
+                onOpenCreditCardDetail={setSelectedCreditCardDetail}
+                trm={trm}
+                onBack={handleGoBackFromSubView}
+                fromSettings={fromSettings}
+              />
+            )}
 
-          {/* Tab 4: Préstamos y Deudas */}
-          {(activeTab === 'debts' || activeTab === 'loans') && (
-            <LoansAndDebts
-              key={`debts-${tabResetKeys.debts}`}
-              debtsAndLoans={debtsAndLoans}
-              accounts={accounts}
-              onAddDebtOrLoan={handleAddDebtOrLoan}
-              onUpdateDebtOrLoan={handleUpdateDebtOrLoan}
-              onAddPayment={handleAddPayment}
-              onAddDisbursement={handleAddDisbursement}
-              onDeletePayment={handleDeletePayment}
-              onDeleteDebtOrLoan={handleDeleteDebtOrLoan}
-              onOpenAddDebt={(type = 'payable') => handleOpenAddDebt(type)}
-              onOpenAddLoan={(type = 'receivable') => handleOpenAddLoan(type)}
-              setIsAddLoanOpen={(val) => {
-                if (typeof val === 'string') {
-                  const target = (val === 'payable' || val === 'borrowed' || val === 'debo') ? 'payable' : 'receivable';
-                  setAddLoanInitialType(target);
-                  setIsAddLoanOpen(true);
-                } else {
-                  setIsAddLoanOpen(Boolean(val));
-                }
-              }}
-            />
-          )}
+            {/* Tab 4: Préstamos y Deudas */}
+            {(activeTab === 'debts' || activeTab === 'loans') && (
+              <DebtsView
+                key={`debts-${tabResetKeys.debts}`}
+                debtsAndLoans={debtsAndLoans}
+                accounts={accounts}
+                onAddDebtOrLoan={handleAddDebtOrLoan}
+                onUpdateDebtOrLoan={handleUpdateDebtOrLoan}
+                onAddPayment={handleAddPayment}
+                onAddDisbursement={handleAddDisbursement}
+                onDeletePayment={handleDeletePayment}
+                onDeleteDebtOrLoan={handleDeleteDebtOrLoan}
+                onOpenAddDebt={(type = 'payable') => handleOpenAddDebt(type)}
+                onOpenAddLoan={(type = 'receivable') => handleOpenAddLoan(type)}
+                setIsAddLoanOpen={(val) => {
+                  if (typeof val === 'string') {
+                    const target = (val === 'payable' || val === 'borrowed' || val === 'debo') ? 'payable' : 'receivable';
+                    setAddLoanInitialType(target);
+                    setIsAddLoanOpen(true);
+                  } else {
+                    setIsAddLoanOpen(Boolean(val));
+                  }
+                }}
+              />
+            )}
 
-          {/* Tab 5: Inversiones y Patrimonio */}
-          {activeTab === 'investments' && (
-            <InvestmentsView
-              key={`investments-${tabResetKeys.investments}`}
-              investments={investments}
-              onAddInvestment={handleAddInvestment}
-              onUpdateInvestment={handleUpdateInvestment}
-              onDeleteInvestment={handleDeleteInvestment}
-              trm={trm}
-            />
-          )}
+            {/* Tab 5: Inversiones y Patrimonio */}
+            {activeTab === 'investments' && (
+              <InvestmentsView
+                key={`investments-${tabResetKeys.investments}`}
+                investments={investments}
+                onAddInvestment={handleAddInvestment}
+                onUpdateInvestment={handleUpdateInvestment}
+                onDeleteInvestment={handleDeleteInvestment}
+                trm={trm}
+              />
+            )}
 
-          {/* Vista Dedicada: Pagos Recurrentes */}
-          {activeTab === 'recurring' && (
-            <RecurringView
-              key={`recurring-${tabResetKeys.recurring || 0}`}
-              recurringPayments={recurringPayments}
-              onAddRecurring={handleAddRecurring}
-              onUpdateRecurring={handleUpdateRecurring}
-              onDeleteRecurring={handleDeleteRecurring}
-              onToggleActiveRecurring={handleToggleActiveRecurring}
-              onOpenCreateModal={() => setIsAddRecurringOpen(true)}
-              onOpenAddRecurring={() => setIsAddRecurringOpen(true)}
-              setIsAddRecurringOpen={setIsAddRecurringOpen}
-              onBack={handleGoBackFromSubView}
-              fromSettings={fromSettings}
-              accounts={accounts}
-              categories={categories}
-              onAddCategory={handleAddCategory}
-              onAddSubcategory={handleAddSubcategory}
-              trm={trm}
-            />
-          )}
+            {/* Vista Dedicada: Pagos Recurrentes */}
+            {activeTab === 'recurring' && (
+              <RecurringView
+                key={`recurring-${tabResetKeys.recurring || 0}`}
+                recurringPayments={recurringPayments}
+                onAddRecurring={handleAddRecurring}
+                onUpdateRecurring={handleUpdateRecurring}
+                onDeleteRecurring={handleDeleteRecurring}
+                onToggleActiveRecurring={handleToggleActiveRecurring}
+                onOpenCreateModal={() => setIsAddRecurringOpen(true)}
+                onOpenAddRecurring={() => setIsAddRecurringOpen(true)}
+                setIsAddRecurringOpen={setIsAddRecurringOpen}
+                onBack={handleGoBackFromSubView}
+                fromSettings={fromSettings}
+                accounts={accounts}
+                categories={categories}
+                onAddCategory={handleAddCategory}
+                onAddSubcategory={handleAddSubcategory}
+                trm={trm}
+              />
+            )}
 
-          {/* Vista Dedicada: Impuestos y Declaración de Renta DIAN */}
-          {activeTab === 'tax' && (
-            <div className="w-full space-y-4">
+            {/* Vista Dedicada: Impuestos y Declaración de Renta DIAN */}
+            {activeTab === 'tax' && (
               <TaxView
                 transactions={transactions}
                 accounts={accounts}
@@ -1417,8 +1407,7 @@ export default function App() {
                 onClose={handleGoBackFromSubView}
                 fromSettings={fromSettings}
               />
-            </div>
-          )}
+            )}
 
           </div>
         </main>
