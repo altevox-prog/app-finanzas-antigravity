@@ -49,6 +49,9 @@ export default function ModalContainer({
   setShowTutorial,
   isLocked,
   handleUnlock,
+  handleVerifyPin,
+  handleUpdatePin,
+  failedAttempts,
 
   // Datos financieros y estados de configuración
   accounts = [],
@@ -317,6 +320,7 @@ export default function ModalContainer({
           expectedPin={securitySettings?.pin || ''}
           biometricsEnabled={Boolean(securitySettings?.biometricsEnabled)}
           onUnlock={handleUnlock}
+          failedAttempts={failedAttempts}
         />
       )}
     </>

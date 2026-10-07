@@ -41,7 +41,7 @@ import {
   generateUUID
 } from './utils/recordMerger';
 import { useTheme } from './hooks/useTheme';
-import { useSecurity } from './hooks/useSecurity';
+import { useAppSecurity } from './hooks/useAppSecurity';
 import { useOnboarding } from './hooks/useOnboarding';
 import { useDashboardWidgets } from './hooks/useDashboardWidgets';
 import { useUserProfile } from './hooks/useUserProfile';
@@ -322,8 +322,12 @@ export default function App() {
     setSecuritySettings,
     isLocked,
     setIsLocked,
-    handleUnlock
-  } = useSecurity(isResettingRef);
+    handleUnlock,
+    handleVerifyPin,
+    handleUpdatePin,
+    failedAttempts,
+    lockApp
+  } = useAppSecurity(isResettingRef);
 
   // Pagos recurrentes y suscripciones state & actions
   const {
@@ -1021,6 +1025,9 @@ export default function App() {
           setShowTutorial={setShowTutorial}
           isLocked={isLocked}
           handleUnlock={handleUnlock}
+          handleVerifyPin={handleVerifyPin}
+          handleUpdatePin={handleUpdatePin}
+          failedAttempts={failedAttempts}
           accounts={accounts}
           categories={categories}
           transactions={transactions}
