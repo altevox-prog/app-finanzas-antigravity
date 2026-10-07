@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  INITIAL_ACCOUNTS, 
   INITIAL_TRANSACTIONS, 
-  MONTH_NAMES,
+  MONTH_NAMES, 
   formatCurrency
 } from './data/initialData';
 import Header from './components/Header';
@@ -55,8 +54,7 @@ import {
 import SyncStatusBadge from './components/SyncStatusBadge';
 import { useAuth } from './context/AuthContext';
 import { 
-  ensureUUID,
-  normalizeAccountType
+  ensureUUID 
 } from './services/syncEngine';
 import { DEFAULT_WIDGETS_CONFIG } from './utils/widgetsConfig';
 import { 
@@ -105,6 +103,7 @@ import { useSavingsGoals } from './hooks/useSavingsGoals';
 import { useRecurringPayments } from './hooks/useRecurringPayments';
 import { useInvestments } from './hooks/useInvestments';
 import { useDebts } from './hooks/useDebts';
+import { useAccounts } from './hooks/useAccounts';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -246,13 +245,27 @@ export default function App() {
     }
   });
 
-  const [accounts, setAccounts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('presu_accounts');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+  // Sincronización y estado de la Tasa Representativa del Mercado (TRM)
+  const { trm, setTrm, updateTRM } = useTRM(isResettingRef);
+
+  // Cuentas state & actions
+  const {
+    accounts,
+    setAccounts,
+    handleAddAccount,
+    handleSaveAccount,
+    handleUpdateAccount,
+    handleDeleteAccount,
+    deleteAccount,
+    handleReorderAccounts,
+    handleArchiveAccount,
+    handleAdjustAccountBalance,
+    resetAccounts
+  } = useAccounts({
+    isResettingRef,
+    transactions,
+    trm,
+    setTransactions
   });
 
   // Gestión de categorías y subcategorías
@@ -312,8 +325,6 @@ export default function App() {
     resetInvestments
   } = useInvestments(isResettingRef);
 
-  // Sincronización y estado de la Tasa Representativa del Mercado (TRM)
-  const { trm, setTrm, updateTRM } = useTRM(isResettingRef);
 
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
@@ -656,11 +667,6 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
   }, [transactions]);
 
-  useEffect(() => {
-    if (isResettingRef.current) return;
-    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
-    localStorage.setItem('user_accounts', JSON.stringify(accounts));
-  }, [accounts]);
 
 
 
@@ -1125,118 +1131,6 @@ export default function App() {
 
   };
 
-  // Account Actions
-  const handleAddAccount = async (newAcc) => {
-    const id = (newAcc.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newAcc.id))
-      ? newAcc.id
-      : generateUUID();
-    const parsedInitialBalance = toSafeNumber(newAcc.initialBalance ?? newAcc.balance ?? 0);
-    const normalizedAcc = {
-      ...newAcc,
-      id,
-      name: (newAcc.name || 'Cuenta').trim(),
-      type: normalizeAccountType(newAcc.type),
-      currency: (newAcc.currency || 'COP').toUpperCase(),
-      initialBalance: parsedInitialBalance,
-      balance: parsedInitialBalance,
-      currentBalance: parsedInitialBalance,
-      color: newAcc.color || '#007AFF',
-      icon: newAcc.icon || 'Building2',
-      updated_at: new Date().toISOString()
-    };
-
-    // 1. Generar nuevo arreglo eliminando duplicados por ID o por firma idéntica
-    const nextAccs = [
-      ...accounts.filter(a => a.id !== id && `${(a.name || '').trim().toLowerCase()}___${(a.currency || 'COP').toUpperCase()}` !== `${normalizedAcc.name.toLowerCase()}___${normalizedAcc.currency}`),
-      normalizedAcc
-    ];
-
-    // 2. Escribir inmediatamente en localStorage de forma síncrona
-    try {
-      localStorage.setItem('presu_accounts', JSON.stringify(nextAccs));
-      saveAccountsToStorage(nextAccs);
-      setAccounts(nextAccs);
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      toast.error("Error al guardar localmente");
-      return;
-    }
-
-    // 3. Notificar éxito garantizado
-    toast.success('Cuenta guardada correctamente');
-  };
-  const handleSaveAccount = handleAddAccount;
-
-  const handleUpdateAccount = async (updatedAcc) => {
-    const existing = accounts.find((a) => a.id === updatedAcc.id) || {};
-    const parsedInitialBalance = toSafeNumber(updatedAcc.initialBalance ?? existing.initialBalance ?? 0);
-    const liveBalance = getAccountNativeBalance({ ...existing, ...updatedAcc, initialBalance: parsedInitialBalance }, transactions, trm);
-
-    const normalizedAcc = {
-      ...existing,
-      ...updatedAcc,
-      id: updatedAcc.id,
-      name: (updatedAcc.name || existing.name || 'Cuenta').trim(),
-      type: normalizeAccountType(updatedAcc.type || existing.type),
-      currency: (updatedAcc.currency || existing.currency || 'COP').toUpperCase(),
-      initialBalance: parsedInitialBalance,
-      balance: liveBalance,
-      currentBalance: liveBalance,
-      color: updatedAcc.color || existing.color || '#007AFF',
-      icon: updatedAcc.icon || existing.icon || 'Building2',
-      updated_at: new Date().toISOString()
-    };
-
-    // 1. Generar nuevo arreglo
-    const nextAccs = accounts.map((a) => (a.id === normalizedAcc.id ? normalizedAcc : a));
-
-    // 2. Escribir inmediatamente en localStorage de forma síncrona
-    try {
-      localStorage.setItem('presu_accounts', JSON.stringify(nextAccs));
-      saveAccountsToStorage(nextAccs);
-      setAccounts(nextAccs);
-      setTransactions((prev) =>
-        prev.map((t) => (t.accountId === normalizedAcc.id ? { ...t, accountName: normalizedAcc.name } : t))
-      );
-    } catch (localErr) {
-      console.error("Fallo real en localStorage:", localErr);
-      toast.error("Error al guardar localmente");
-      return;
-    }
-
-    // 3. Notificar éxito garantizado
-    toast.success('Cuenta guardada correctamente');
-  };
-
-  const handleDeleteAccount = async (accountId) => {
-    try {
-      const canonicalId = ensureUUID(accountId);
-
-      // Eliminar en local
-      const updated = accounts.filter(acc => acc.id !== accountId && ensureUUID(acc.id) !== accountId);
-      setAccounts(updated);
-      localStorage.setItem('presu_accounts', JSON.stringify(updated));
-      saveAccountsToStorage(updated);
-
-      // Reconciliar transacciones locales vinculadas
-      setTransactions((prev) => {
-        const nextTxs = prev.filter(t => t.accountId !== accountId && t.accountId !== canonicalId);
-        localStorage.setItem('presu_transactions', JSON.stringify(nextTxs));
-        return nextTxs;
-      });
-
-      toast.success('Cuenta eliminada correctamente');
-    } catch (error) {
-      console.error('Error al eliminar cuenta:', error);
-      toast.error('No se pudo eliminar la cuenta');
-    }
-  };
-  const deleteAccount = handleDeleteAccount;
-
-  const handleReorderAccounts = (newAccounts) => {
-    setAccounts(newAccounts);
-    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(newAccounts));
-  };
 
 
 
@@ -1270,7 +1164,7 @@ export default function App() {
 
       // 2. Resetear inmediatamente el estado en memoria de React a ceros absolutos
       setTransactions([]);
-      setAccounts([]);
+      resetAccounts();
       resetDebts();
       resetInvestments();
       resetRecurringPayments();
