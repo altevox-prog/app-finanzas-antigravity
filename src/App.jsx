@@ -1,8 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  MONTH_NAMES, 
-  formatCurrency
-} from './data/initialData';
 import { AppHeader, BottomNav } from './components/layout';
 import CalendarDropdown from './components/CalendarDropdown';
 import AddTransactionModal from './components/modals/AddTransactionModal';
@@ -35,17 +31,6 @@ import TransferModal from './components/modals/TransferModal';
 import QuickActionsModal from './components/QuickActionsModal';
 import { getTomorrowDebtAlerts } from './utils/debtAlerts';
 import { usePrivacy } from './context/PrivacyContext';
-import { 
-  getAccountNativeBalance, 
-  formatNativeCurrency, 
-  convertToCOP 
-} from './utils/currencyUtils';
-import {
-  toSafeNumber,
-  calculateNetFlow,
-  calculateDebtStats,
-  calculateSavingsRate
-} from './utils/financeMath';
 import SyncStatusBadge from './components/SyncStatusBadge';
 import { useAuth } from './context/AuthContext';
 import { 
@@ -97,6 +82,7 @@ import { useInvestments } from './hooks/useInvestments';
 import { useDebts } from './hooks/useDebts';
 import { useAccounts } from './hooks/useAccounts';
 import { useTransactions } from './hooks/useTransactions';
+import { useFinanceAnalytics } from './hooks/useFinanceAnalytics';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -633,86 +619,33 @@ export default function App() {
 
 
 
-  // Compute monthly transactions and metrics
-  const currentYear = selectedDate.getFullYear();
-  const currentMonth = selectedDate.getMonth();
-
-  const monthlyTransactions = transactions.filter((tx) => {
-    const txDate = new Date(tx.date + 'T00:00:00');
-    return txDate.getFullYear() === currentYear && txDate.getMonth() === currentMonth;
-  });
-
-  // Calculate statistics (scoped to selectedDay if set, otherwise whole month)
-  const scopedTransactions = selectedDay 
-    ? monthlyTransactions.filter((tx) => tx.date === selectedDay)
-    : monthlyTransactions;
-
-  const isTransferTx = (tx) => Boolean(
-    tx && (
-      tx.isTransfer ||
-      tx.is_transfer ||
-      tx.type === 'transfer' ||
-      tx.type === 'transferencia' ||
-      tx.categoryId === 'cat-transfer' ||
-      tx.category_id === 'cat-transfer' ||
-      tx.subcategoryId === 'sub-transfer-in' ||
-      tx.subcategoryId === 'sub-transfer-out'
-    )
-  );
-
-  const totalIncome = scopedTransactions
-    .filter((tx) => tx && (tx.type === 'income' || tx.type === 'ingreso') && !isTransferTx(tx))
-    .reduce((sum, tx) => sum + toSafeNumber(tx.amount), 0);
-
-  const totalExpense = scopedTransactions
-    .filter((tx) => tx && (tx.type === 'expense' || tx.type === 'gasto') && !isTransferTx(tx))
-    .reduce((sum, tx) => sum + toSafeNumber(tx.amount), 0);
-
-  const netBalance = calculateNetFlow(totalIncome, totalExpense);
-
-  // Saldo Disponible Líquido: Sumando exclusivamente el saldo positivo de las cuentas líquidas del usuario (Efectivo, Cuentas de ahorros/débito, Billeteras). Excluye tarjetas de crédito, deudas y pasivos.
-  // Convierte automáticamente cuentas en USD y EUR a COP con la TRM oficial
-  const isLiquidAccount = (acc) => {
-    if (!acc) return false;
-    const t = String(acc.type || '').toLowerCase();
-    // Excluir tarjetas de crédito, deudas, préstamos y pasivos
-    if (t === 'card' || t === 'credit' || t === 'credit_card' || t === 'debt' || t === 'loan' || t === 'liability') {
-      return false;
-    }
-    return true;
-  };
-
-  const liquidAccounts = accounts.filter(isLiquidAccount);
-  const availableLiquidBalance = liquidAccounts.reduce((sum, acc) => {
-    const balNative = toSafeNumber(getAccountNativeBalance(acc, transactions, trm));
-    if (balNative <= 0) return sum;
-    const balCOP = convertToCOP(balNative, acc.currency || 'COP', trm);
-    return sum + toSafeNumber(balCOP);
-  }, 0);
-
-  // Active debts count con validación matemática contra saldos negativos o redondeos float
-  const activeDebtsCount = debtsAndLoans.filter((item) => {
-    const base = toSafeNumber(item.principalAmount || item.totalAmount);
-    const accruedInterest = base * (toSafeNumber(item.interestRate) / 100);
-    const insurance = toSafeNumber(item.insuranceFee);
-    const stats = calculateDebtStats(base, item.payments, {
-      accruedInterest: accruedInterest + insurance
-    });
-    return !stats.isPaid && stats.outstandingBalance > 0.01;
-  }).length;
-
-  const savingsRate = calculateSavingsRate(totalIncome, totalExpense);
-
-  const monthlyStats = {
+  // Cálculos derivados y métricas analíticas memorizadas
+  const {
+    currentYear,
+    currentMonth,
+    currentMonthLabel,
+    monthlyTransactions,
+    scopedTransactions,
     totalIncome,
     totalExpense,
     netBalance,
     availableLiquidBalance,
     savingsRate,
-    incomeCount: scopedTransactions.filter((tx) => (tx?.type === 'income' || tx?.type === 'ingreso') && !isTransferTx(tx)).length,
-    expenseCount: scopedTransactions.filter((tx) => (tx?.type === 'expense' || tx?.type === 'gasto') && !isTransferTx(tx)).length,
-    activeDebtsCount
-  };
+    incomeCount,
+    expenseCount,
+    activeDebtsCount,
+    monthlyStats,
+    netWorth,
+    taxMetrics
+  } = useFinanceAnalytics({
+    transactions,
+    accounts,
+    investments,
+    debtsAndLoans,
+    selectedDate,
+    selectedDay,
+    trm
+  });
 
   // Sistema de Alertas y Recordatorios Preventivos (1 día antes)
   const [managedAlerts, setManagedAlerts] = useState(() => {
@@ -1063,8 +996,6 @@ export default function App() {
 
     setSelectedDay(null);
   };
-
-  const currentMonthLabel = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
 
   // 1. Pantalla de carga neutral mientras se valida la sesión y estado de onboarding
   if (authLoading) {
