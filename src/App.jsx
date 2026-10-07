@@ -57,6 +57,7 @@ import { useTransactions } from './hooks/useTransactions';
 import { useFinanceAnalytics } from './hooks/useFinanceAnalytics';
 import { useDateNavigation } from './hooks/useDateNavigation';
 import { useDataManagement } from './hooks/useDataManagement';
+import { useNavigationTabs } from './hooks/useNavigationTabs';
 
 const DEFAULT_WIDGETS = DEFAULT_WIDGETS_CONFIG;
 
@@ -121,8 +122,6 @@ export default function App() {
   const [selectedCreditCardDetail, setSelectedCreditCardDetail] = useState(null);
   // PWA Update notification banner state
   const [hasPwaUpdate, setHasPwaUpdate] = useState(false);
-  // Ref for scrolling main content to top on tab change
-  const mainContentRef = useRef(null);
 
   // Global Toast notification helper (delega al sistema unificado de Toaster)
   const showToast = (text, type = 'success') => {
@@ -419,23 +418,13 @@ export default function App() {
     completeOnboarding
   });
 
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [fromSettings, setFromSettings] = useState(false);
-
-  // Claves de reseteo para forzar estado inicial limpio al seleccionar cualquier pestaña
-  const [tabResetKeys, setTabResetKeys] = useState({
-    dashboard: 0,
-    transactions: 0,
-    investments: 0,
-    debts: 0,
-    accounts: 0,
-    recurring: 0
-  });
+  // Clave de reseteo para forzar recarga en modal de perfil
   const [profileResetKey, setProfileResetKey] = useState(0);
 
   // Apertura limpia de Perfil (cierra otros elementos y resetea a la vista raíz principal)
-  const handleOpenProfile = () => {
+  const handleOpenProfile = useCallback(() => {
     setIsActionMenuOpen(false);
+    setIsAddTxOpen(false);
     setIsAddTransactionOpen(false);
     setIsNewInvestmentModalOpen(false);
     setIsAddLoanOpen(false);
@@ -444,32 +433,12 @@ export default function App() {
     setIsEditWidgetsModalOpen(false);
     setProfileResetKey((prev) => prev + 1);
     setIsSettingsOpen(true);
-  };
+  }, [setIsAddTransactionOpen]);
 
-  // Manejador de retorno para subvistas accesibles desde Configuración o Dashboard
-  const handleGoBackFromSubView = () => {
-    if (fromSettings) {
-      setFromSettings(false);
-      handleOpenProfile();
-    } else {
-      handleTabChange('dashboard');
-    }
-  };
-  
-  // Reseteo de Estado al Cambiar o Volver a Pulsar cualquier Pestaña:
-  // 1. Cierra todos los modales abiertos, menús flotantes (+) y bottom sheets
-  // 2. Fuerza el reinicio a la pantalla raíz y variables de sub-navegación internas
-  // 3. Restablece el scroll de la ventana y contenedor principal al inicio (0, 0)
-  const handleTabChange = (rawTab, fromSource = null) => {
-    const tab = rawTab === 'loans' ? 'debts' : rawTab;
-    if (fromSource === 'settings') {
-      setFromSettings(true);
-    } else if (fromSource !== 'keep') {
-      setFromSettings(false);
-    }
-
-    // 1. Cierre garantizado de menús flotantes y bottom sheets
+  // Cierre preventivo de menús y modales al cambiar de pestaña
+  const handleCloseOverlaysOnTabChange = useCallback(() => {
     setIsActionMenuOpen(false);
+    setIsAddTxOpen(false);
     setIsAddTransactionOpen(false);
     setIsNewInvestmentModalOpen(false);
     setIsAddLoanOpen(false);
@@ -479,41 +448,24 @@ export default function App() {
     setIsEditWidgetsModalOpen(false);
     setSelectedCreditCardDetail(null);
     setSelectedDay(null);
-    
-    // 2. Forzar reseteo de sub-vistas internas
-    setTabResetKeys((prev) => ({
-      ...prev,
-      [tab]: (prev[tab] || 0) + 1
-    }));
+  }, [setIsAddTransactionOpen, setSelectedDay]);
 
-    if (tab === 'profile' || tab === 'settings' || tab === 'configuracion' || tab === 'ajustes') {
-      handleOpenProfile();
-      return;
-    }
-    
-    // 3. Scroll automático al tope inmediato en todos los contenedores posibles
-    if (mainContentRef.current) {
-      mainContentRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      mainContentRef.current.scrollTop = 0;
-    }
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    if (document.documentElement) {
-      document.documentElement.scrollTop = 0;
-    }
-    if (document.body) {
-      document.body.scrollTop = 0;
-    }
-    
-    setActiveTab(tab);
-  };
-
-  // Garantizar que cualquier navegación a 'settings' o 'profile' abra limpiamente el modal de Configuración
-  useEffect(() => {
-    if (activeTab === 'settings' || activeTab === 'profile' || activeTab === 'configuracion' || activeTab === 'ajustes') {
-      handleOpenProfile();
-      setActiveTab('dashboard');
-    }
-  }, [activeTab]);
+  // Gestión centralizada de pestañas, scroll y reseteos
+  const {
+    activeTab,
+    setActiveTab,
+    tabResetKeys,
+    handleTabChange,
+    handleResetTab,
+    mainContentRef,
+    fromSettings,
+    setFromSettings,
+    handleGoBackFromSubView
+  } = useNavigationTabs({
+    initialTab: 'dashboard',
+    onTabChange: handleCloseOverlaysOnTabChange,
+    onOpenProfile: handleOpenProfile
+  });
 
 
 
