@@ -132,14 +132,18 @@ export default function DebtReceiptModal({
     if (!isOpen || !debt) return;
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && onClose) {
+      if (e?.key === 'Escape' && onClose) {
         onClose();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    if (typeof window !== 'undefined' && window?.addEventListener) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      if (typeof window !== 'undefined' && window?.removeEventListener) {
+        window.removeEventListener('keydown', handleKeyDown);
+      }
     };
   }, [isOpen, debt, onClose]);
 

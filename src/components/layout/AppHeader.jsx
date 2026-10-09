@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
 import Header from '../Header';
+import SyncStatusBadge from '../SyncStatusBadge';
 
 const TAB_TITLES = {
   dashboard: 'Panel financiero',
@@ -40,6 +41,9 @@ export default function AppHeader({
   onOpenSettings,
   onOpenAuth = () => {},
   onLogout,
+  syncStatus = 'idle',
+  isCloudEnabled = false,
+  syncUser = null,
   accounts = [],
   subscriptions = [],
   debtsAndLoans = [],
@@ -114,6 +118,16 @@ export default function AppHeader({
               <span>{selectedDay ? selectedDay : currentMonthLabel}</span>
               <ChevronDown className="w-3 h-3 opacity-50" />
             </button>
+
+            {/* Estado de Sincronización en la Nube */}
+            <div className="hidden sm:flex max-w-[190px]">
+              <SyncStatusBadge
+                syncStatus={syncStatus}
+                isCloudEnabled={isCloudEnabled}
+                user={syncUser}
+                onOpenAuth={onOpenAuth}
+              />
+            </div>
 
             {/* TRM Oficial Automatizado (No editable) */}
             <div 

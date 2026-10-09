@@ -29,8 +29,16 @@ export function initPWA() {
     })();
   }
 
-  // 2. Actualizar SW cuando la app recupera el foco (solo producción)
+  // 2. Actualizar SW cuando la app recupera el foco y recargar al actualizarse (solo producción)
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         (async () => {

@@ -57,6 +57,7 @@ import TaxView from '../TaxView';
 import { downloadBackupJSON, downloadTransactionsCSV, downloadInvestmentsCSV, parseAndValidateBackup } from '../../utils/exportUtils';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { useAuth } from '../../context/AuthContext';
+import { signInWithGoogle, signOutUser } from '../../services/supabaseClient';
 import { safeNumber } from '../../utils/financeMath';
 
 export default function ProfileModal({
@@ -123,6 +124,14 @@ export default function ProfileModal({
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const isCloudUser = Boolean(
+    user && 
+    user.id && 
+    user.id !== 'local-user' && 
+    user.email && 
+    user.email !== 'local@device'
+  );
 
   useBackHandler(isOpen, () => {
     if (currentView !== 'main') {
@@ -636,16 +645,37 @@ export default function ProfileModal({
     showToast('¡Copia de seguridad restaurada con éxito!');
   };
 
+  const handleCloudSync = async () => {
+    if (typeof onManualCloudSync === 'function') {
+      setIsCloudSyncing(true);
+      try {
+        const res = await onManualCloudSync();
+        if (res && res.success === false) {
+          showToast(res.error?.message || 'Error al sincronizar con la nube', true);
+        } else {
+          showToast('¡Datos sincronizados con éxito en la nube!');
+        }
+      } catch {
+        showToast('Error al conectar con la nube', true);
+      } finally {
+        setIsCloudSyncing(false);
+      }
+    }
+  };
+
   const handleFullLogout = async () => {
     setIsLoggingOut(true);
     try {
-      localStorage.clear();
-      sessionStorage.clear();
-      if (typeof window !== 'undefined') {
-        window.location.replace('/');
+      await signOutUser();
+      if (typeof signOut === 'function') {
+        await signOut();
       }
+      setShowLogoutConfirm(false);
+      showToast('Sesión de Google cerrada exitosamente.');
     } catch (err) {
       console.error('Error al cerrar sesión:', err);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -1182,6 +1212,116 @@ export default function ProfileModal({
               {/* TAB 3: ALMACENAMIENTO & DATOS */}
               {activeTab === 'cloud' && (
                 <div className="space-y-5 animate-fadeIn">
+                  {/* Módulo de Acceso con Google y Supabase Auth */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 px-1">
+                      <Cloud className="w-4 h-4 text-blue-500" />
+                      <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Acceso y Sincronización en la Nube
+                      </h3>
+                    </div>
+
+                    {isCloudUser ? (
+                      <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {user?.user_metadata?.avatar_url || user?.user_metadata?.picture ? (
+                              <img
+                                src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                                alt="Avatar de Google"
+                                className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500 shrink-0 shadow-xs"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 font-bold shrink-0">
+                                {(user?.user_metadata?.full_name || user?.email || 'G')[0].toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                  {user?.user_metadata?.full_name || 'Cuenta Google'}
+                                </h4>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                  Conectado
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
+                                {user?.email}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2.5 pt-2 border-t border-slate-200/70 dark:border-slate-700/60">
+                          {typeof onManualCloudSync === 'function' && (
+                            <button
+                              type="button"
+                              onClick={handleCloudSync}
+                              disabled={isCloudSyncing}
+                              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+                              <span>{isCloudSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowLogoutConfirm(true)}
+                            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                          >
+                            <LogOut className="w-3.5 h-3.5" />
+                            <span>Cerrar sesión</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                            Acceso y Respaldo Multi-cuenta
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                            Inicia sesión para sincronizar automáticamente tus finanzas de forma segura en la nube y acceder desde cualquier dispositivo.
+                          </p>
+                        </div>
+
+                        {/* Botón oficial 'Continuar con Google' */}
+                        <button
+                          type="button"
+                          onClick={() => signInWithGoogle()}
+                          className="w-full py-2.5 px-4 font-medium flex items-center justify-center gap-3 rounded-xl bg-white text-gray-800 hover:bg-gray-100 dark:bg-slate-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                        >
+                          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                            <path
+                              fill="#4285F4"
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                              fill="#34A853"
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                              fill="#FBBC05"
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                            />
+                            <path
+                              fill="#EA4335"
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                            />
+                          </svg>
+                          <span>Continuar con Google</span>
+                        </button>
+
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span>Autenticación oficial vía Supabase Auth. Los datos se almacenan exclusivamente bajo tu cuenta.</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Tarjeta Unificada de Estado Local-First */}
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 px-1">
@@ -2337,7 +2477,7 @@ export default function ProfileModal({
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">¿Cerrar Sesión?</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-4 leading-relaxed">
-              Se cerrará la sesión y se limpiará el almacenamiento de este dispositivo.
+              Se desconectará la cuenta de Google activa manteniendo tus datos locales protegidos en este dispositivo.
             </p>
             <div className="flex w-full gap-2">
               <button

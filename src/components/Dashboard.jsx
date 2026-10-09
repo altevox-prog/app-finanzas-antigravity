@@ -36,6 +36,7 @@ import ReportsAndCharts from './ReportsAndCharts';
 import TransactionList from './TransactionList';
 import BrandIcon from './BrandIcon';
 import AccountsWidgetComponent from './AccountsWidget';
+import { RecentMovementsWidget, TransactionsWidget } from './RecentMovementsWidget';
 import AddLoanModal from './AddLoanModal';
 import AddRecurringModal from './AddRecurringModal';
 import AddTransactionModal from './AddTransactionModal';
@@ -330,137 +331,7 @@ export function AccountsWidget(props) {
 // ============================================================================
 // SUBCOMPONENTE 5: WIDGET DE MOVIMIENTOS RECIENTES
 // ============================================================================
-export function TransactionsWidget({
-  transactions = [],
-  onNavigateToTab = () => {},
-  setActiveTab = null,
-  onOpenTransaction = null,
-  onOpenAddTransaction = null,
-  setIsAddTransactionOpen = null,
-  setIsTransactionModalOpen = null,
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`
-}) {
-  const handleNav = (tab = 'transactions') => {
-    if (typeof onNavigateToTab === 'function') onNavigateToTab(tab);
-    else if (typeof setActiveTab === 'function') setActiveTab(tab);
-  };
-
-  const handleAdd = (e, type = 'expense') => {
-    if (e) {
-      if (typeof e.preventDefault === 'function') e.preventDefault();
-      if (typeof e.stopPropagation === 'function') e.stopPropagation();
-    }
-    if (typeof onOpenAddTransaction === 'function') {
-      onOpenAddTransaction(type);
-    } else if (typeof onOpenTransaction === 'function') {
-      onOpenTransaction(type);
-    } else if (typeof setIsTransactionModalOpen === 'function') {
-      setIsTransactionModalOpen(true);
-    } else if (typeof setIsAddTransactionOpen === 'function') {
-      setIsAddTransactionOpen(true);
-    } else {
-      handleNav('transactions');
-    }
-  };
-
-  const safeList = Array.isArray(transactions) ? transactions : [];
-  const count = safeList.length;
-  const recentTx = count > 0 ? safeList[0] : null;
-
-  return (
-    <div 
-      onClick={() => handleNav('transactions')}
-      className="min-h-[140px] p-4 sm:p-6 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
-    >
-      <div>
-        {/* Cabecera interna sin encabezados duplicados ni botones flotantes externos */}
-        <div className="flex items-center justify-between gap-1.5 sm:gap-2 mb-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 min-w-0">
-            <Activity className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="truncate sm:hidden">Movimientos</span>
-            <span className="truncate hidden sm:inline">Movimientos Recientes</span>
-          </span>
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <span className="text-[10px] text-slate-400 font-semibold hidden sm:inline">
-              {count} {count === 1 ? 'registro' : 'registros'}
-            </span>
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onTouchStart={(e) => e.stopPropagation()}
-              onClick={(e) => handleAdd(e, 'expense')}
-              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-2xs shrink-0"
-              title="Añadir nuevo movimiento"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Nuevo</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Contenido / Estado vacío o resumen de último movimiento */}
-        <div className="mt-1">
-          {count === 0 ? (
-            <div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Sin movimientos
-              </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
-                No hay ingresos ni gastos registrados este mes.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
-                  {recentTx?.note || recentTx?.categoryName || 'Último movimiento'}
-                </span>
-                <span className={`text-sm sm:text-base font-black tabular-nums tracking-tight shrink-0 ${
-                  recentTx?.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                }`}>
-                  {recentTx?.type === 'income' ? '+' : '-'}{formatMoney(recentTx?.amount || 0)}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium truncate">
-                {recentTx?.accountName ? `${recentTx.accountName} • ` : ''}{recentTx?.date || 'Reciente'}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Footer homogéneo */}
-      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-slate-400 font-medium">
-          Historial completo
-        </span>
-        <button
-          type="button"
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleNav('transactions');
-          }}
-          className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 text-[11px] group-hover:translate-x-0.5 transition-transform hover:underline cursor-pointer"
-        >
-          <span>Ver todos</span>
-          <ArrowRight className="w-3 h-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export const RecentMovementsWidget = TransactionsWidget;
+export { RecentMovementsWidget, TransactionsWidget };
 
 // ============================================================================
 // SUBCOMPONENTE 6: WIDGET DE PAGOS RECURRENTES
@@ -934,7 +805,9 @@ export default function Dashboard({
   onCustomizeWidgets = null,
   onSaveWidgets = null,
   allowedWidgetIds = null,
-  className = null
+  className = null,
+  financeData = {},
+  financeActions = {}
 }) {
   const { formatMoney } = usePrivacy();
   const trmValue = toSafeNumber(trm) || 4050;
@@ -947,8 +820,13 @@ export default function Dashboard({
   const [txModalDefaultType, setTxModalDefaultType] = useState('expense');
 
   // Helpers unificados para navegación de pestañas y apertura de modales reales
-  const navigateToTab = (tab) => {
-    if (typeof onNavigateToTab === 'function') {
+  const navigateToTab = (rawTab) => {
+    const tab = (rawTab === 'movements' || rawTab === 'movimientos') ? 'transactions' : (rawTab === 'inicio') ? 'dashboard' : rawTab;
+    if (financeActions && typeof financeActions.setActiveTab === 'function') {
+      financeActions.setActiveTab(tab);
+    } else if (financeActions && typeof financeActions.handleTabChange === 'function') {
+      financeActions.handleTabChange(tab);
+    } else if (typeof onNavigateToTab === 'function') {
       onNavigateToTab(tab);
     } else if (typeof setActiveTab === 'function') {
       setActiveTab(tab);
@@ -979,7 +857,11 @@ export default function Dashboard({
 
   const handleOpenTxModal = (type = 'expense') => {
     const norm = (type === 'income' || type === 'ingreso') ? 'income' : 'expense';
-    if (typeof onOpenAddTransaction === 'function') {
+    if (financeActions && typeof financeActions.handleOpenAddTransaction === 'function') {
+      financeActions.handleOpenAddTransaction(norm);
+    } else if (financeActions && typeof financeActions.handleOpenTransaction === 'function') {
+      financeActions.handleOpenTransaction(norm);
+    } else if (typeof onOpenAddTransaction === 'function') {
       onOpenAddTransaction(norm);
     } else if (typeof onOpenTransaction === 'function') {
       onOpenTransaction(norm);
@@ -1269,6 +1151,9 @@ export default function Dashboard({
         selectedDate={selectedDate}
         selectedDay={selectedDay}
         onOpenCalendar={onOpenCalendar}
+        financeActions={financeActions}
+        onNavigateToTab={navigateToTab}
+        setActiveTab={navigateToTab}
       />
     ),
 
@@ -1289,6 +1174,7 @@ export default function Dashboard({
     recent_movements: (
       <TransactionsWidget
         transactions={displayTransactions}
+        financeActions={financeActions}
         onDeleteTransaction={onDeleteTransaction}
         onUpdateTransaction={onUpdateTransaction}
         onAddCategory={handleAddCategory}
@@ -1379,6 +1265,9 @@ export default function Dashboard({
         selectedDate={selectedDate}
         selectedDay={selectedDay}
         onOpenCalendar={onOpenCalendar}
+        financeActions={financeActions}
+        onNavigateToTab={navigateToTab}
+        setActiveTab={navigateToTab}
       />
     ),
     charts: (
@@ -1388,6 +1277,9 @@ export default function Dashboard({
         selectedDate={selectedDate}
         selectedDay={selectedDay}
         onOpenCalendar={onOpenCalendar}
+        financeActions={financeActions}
+        onNavigateToTab={navigateToTab}
+        setActiveTab={navigateToTab}
       />
     ),
 
@@ -1418,6 +1310,7 @@ export default function Dashboard({
     movimientos_recientes: (
       <TransactionsWidget
         transactions={displayTransactions}
+        financeActions={financeActions}
         onNavigateToTab={navigateToTab}
         setActiveTab={navigateToTab}
         onOpenTransaction={handleOpenTxModal}
@@ -1430,6 +1323,7 @@ export default function Dashboard({
     recent_transactions: (
       <TransactionsWidget
         transactions={displayTransactions}
+        financeActions={financeActions}
         onNavigateToTab={navigateToTab}
         setActiveTab={navigateToTab}
         onOpenTransaction={handleOpenTxModal}
@@ -1496,11 +1390,7 @@ export default function Dashboard({
         setIsNewDebtModalOpen={handleOpenDebtModal}
         formatMoney={formatMoney}
       />
-    ),
-
-    // TRM Oficial
-    trm_oficial: <TRMWidget trm={trm} />,
-    trm: <TRMWidget trm={trm} />
+    )
   };
 
   const WIDGET_COMPONENTS = WIDGET_REGISTRY;
@@ -1795,14 +1685,68 @@ export default function Dashboard({
 
   const visibleWidgets = widgets.filter(w => {
     if (!w.visible) return false;
+    const norm = normalizeWidgetId(w.id);
+    if (norm === 'trm' || norm === 'trm_oficial' || w.id === 'trm' || w.id === 'trm_oficial') return false;
     if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
-      const norm = normalizeWidgetId(w.id);
       if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
     }
     return Boolean(WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)]);
   });
 
   const hiddenWidgets = widgets.filter((w) => !w.visible);
+
+  const getWidget = (id) => {
+    const norm = normalizeWidgetId(id);
+    return WIDGET_COMPONENTS[id] || WIDGET_COMPONENTS[norm] || null;
+  };
+
+  const isWidgetVisible = (id) => {
+    const norm = normalizeWidgetId(id);
+    if (norm === 'trm' || norm === 'trm_oficial' || id === 'trm' || id === 'trm_oficial') return false;
+    if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
+      if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(id)) return false;
+    }
+    const found = widgets.find(w => w.id === id || normalizeWidgetId(w.id) === norm);
+    return found ? Boolean(found.visible) : false;
+  };
+
+  const renderedWidgetIds = useMemo(() => new Set([
+    'net_worth', 'patrimonio', 'patrimonio_total',
+    'investments', 'inversiones',
+    'debts', 'prestamos', 'prestamos_deudas',
+    'trm', 'trm_oficial',
+    'liquid_balance', 'balance', 'balance_general',
+    'monthly_income',
+    'monthly_expense',
+    'savings_rate',
+    'weekly_cashflow',
+    'recent_movements', 'movimientos_recientes', 'recent_transactions',
+    'expenses_category', 'gastos_categoria', 'charts',
+    'my_accounts', 'mis_cuentas', 'accounts',
+    'recurring_payments', 'pagos_recurrentes', 'recurring',
+    'budget', 'presupuesto_metas'
+  ]), []);
+
+  const renderWidgetWrapper = (id) => {
+    const comp = getWidget(id);
+    if (!comp) return null;
+    const index = visibleWidgets.findIndex(w => w.id === id || normalizeWidgetId(w.id) === normalizeWidgetId(id));
+    return (
+      <div
+        key={id}
+        onMouseDown={index >= 0 ? () => handlePressStart(index) : undefined}
+        onMouseUp={handlePressEnd}
+        onMouseLeave={handlePressEnd}
+        onTouchStart={index >= 0 ? (e) => handleTouchStart(e, index) : undefined}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        className="w-full"
+      >
+        {comp}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -1823,40 +1767,38 @@ export default function Dashboard({
         </div>
       )}
 
-      <div className={`${className || "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full"} ${isReordering ? 'touch-none select-none' : ''}`}>
-        {visibleWidgets.map((w, index) => {
-          const widgetComponent = WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)];
-          if (!widgetComponent) return null;
+      {isReordering ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full touch-none select-none">
+          {visibleWidgets.map((w, index) => {
+            const widgetComponent = WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)];
+            if (!widgetComponent) return null;
 
-          const isFull = ['my_accounts', 'weekly_cashflow'].includes(w.id) || ['my_accounts', 'weekly_cashflow'].includes(normalizeWidgetId(w.id));
-          const isJigglingAlt = index % 2 === 1;
+            const isFull = ['my_accounts', 'weekly_cashflow'].includes(w.id) || ['my_accounts', 'weekly_cashflow'].includes(normalizeWidgetId(w.id));
+            const isJigglingAlt = index % 2 === 1;
 
-          return (
-            <div 
-              key={w.id} 
-              data-widget-index={index}
-              draggable={isReordering}
-              onMouseDown={() => handlePressStart(index)}
-              onMouseUp={handlePressEnd}
-              onMouseLeave={handlePressEnd}
-              onTouchStart={(e) => handleTouchStart(e, index)}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onTouchCancel={handleTouchEnd}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={handleDrop}
-              onDragEnd={handleDragEnd}
-              className={`relative transition-transform duration-150 ${isFull ? 'col-span-full' : 'col-span-1'} ${
-                isReordering 
-                  ? `${isJigglingAlt ? 'animate-jiggle-alt' : 'animate-jiggle'} cursor-grab active:cursor-grabbing select-none touch-none ${
-                      draggedIndex === index ? 'opacity-40 scale-[0.98]' : 'hover:scale-[1.01]'
-                    }` 
-                  : ''
-              }`}
-            >
-              {/* Botón flotante para ocultar widget en modo reorganización */}
-              {isReordering && (
+            return (
+              <div 
+                key={w.id} 
+                data-widget-index={index}
+                draggable={isReordering}
+                onMouseDown={() => handlePressStart(index)}
+                onMouseUp={handlePressEnd}
+                onMouseLeave={handlePressEnd}
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                className={`relative transition-transform duration-150 ${isFull ? 'col-span-full' : 'col-span-1'} ${
+                  isJigglingAlt ? 'animate-jiggle-alt' : 'animate-jiggle'
+                } cursor-grab active:cursor-grabbing select-none touch-none ${
+                  draggedIndex === index ? 'opacity-40 scale-[0.98]' : 'hover:scale-[1.01]'
+                }`}
+              >
+                {/* Botón flotante para ocultar widget en modo reorganización */}
                 <button
                   type="button"
                   onMouseDown={(e) => e.stopPropagation()}
@@ -1868,15 +1810,66 @@ export default function Dashboard({
                 >
                   <EyeOff className="w-3.5 h-3.5 stroke-[2.5]" />
                 </button>
-              )}
 
-              <div className={isReordering ? 'pointer-events-none' : ''}>
-                {widgetComponent}
+                <div className="pointer-events-none">
+                  {widgetComponent}
+                </div>
               </div>
+            );
+          })}
+        </div>
+      ) : className ? (
+        <div className={className}>
+          {visibleWidgets.map((w) => {
+            const widgetComponent = WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)];
+            if (!widgetComponent) return null;
+            return <div key={w.id}>{widgetComponent}</div>;
+          })}
+        </div>
+      ) : (
+        <div className="w-full flex flex-col gap-4 sm:gap-5 lg:gap-6">
+          {/* Fila Superior: Resumen Patrimonial (Patrimonio, Inversiones, Deudas) */}
+          {(isWidgetVisible('net_worth') || isWidgetVisible('investments') || isWidgetVisible('debts')) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full">
+              {isWidgetVisible('net_worth') && renderWidgetWrapper('net_worth')}
+              {isWidgetVisible('investments') && renderWidgetWrapper('investments')}
+              {isWidgetVisible('debts') && renderWidgetWrapper('debts')}
             </div>
-          );
-        })}
-      </div>
+          )}
+
+          {/* 1. Fila de Métricas de Flujo (Simetría en 4 Columnas) */}
+          {(isWidgetVisible('liquid_balance') || isWidgetVisible('monthly_income') || isWidgetVisible('monthly_expense') || isWidgetVisible('savings_rate')) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 w-full">
+              {isWidgetVisible('liquid_balance') && renderWidgetWrapper('liquid_balance')}
+              {isWidgetVisible('monthly_income') && renderWidgetWrapper('monthly_income')}
+              {isWidgetVisible('monthly_expense') && renderWidgetWrapper('monthly_expense')}
+              {isWidgetVisible('savings_rate') && renderWidgetWrapper('savings_rate')}
+            </div>
+          )}
+
+          {/* 2. Zona Central en 2 Secciones (Proporción 2/3 y 1/3 en Desktop) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 w-full items-start">
+            {/* Columna Izquierda (lg:col-span-2): Flujo de caja semanal y Movimientos Recientes */}
+            <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5 lg:gap-6">
+              {isWidgetVisible('weekly_cashflow') && renderWidgetWrapper('weekly_cashflow')}
+              {isWidgetVisible('recent_movements') && renderWidgetWrapper('recent_movements')}
+            </div>
+
+            {/* Columna Derecha (lg:col-span-1): Tus Gastos, Mis Cuentas y Gasto Fijo Proyectado / Pagos Recurrentes */}
+            <div className="lg:col-span-1 flex flex-col gap-4 sm:gap-5 lg:gap-6">
+              {isWidgetVisible('expenses_category') && renderWidgetWrapper('expenses_category')}
+              {isWidgetVisible('my_accounts') && renderWidgetWrapper('my_accounts')}
+              {isWidgetVisible('recurring_payments') && renderWidgetWrapper('recurring_payments')}
+              {isWidgetVisible('budget') && renderWidgetWrapper('budget')}
+            </div>
+          </div>
+
+          {/* Widgets adicionales (si existieran widgets personalizados adicionales fuera de los principales) */}
+          {visibleWidgets
+            .filter(w => !renderedWidgetIds.has(w.id) && !renderedWidgetIds.has(normalizeWidgetId(w.id)))
+            .map((w) => renderWidgetWrapper(w.id))}
+        </div>
+      )}
 
       {/* Bandeja de widgets ocultos (solo visible mientras isReordering sea true) */}
       {isReordering && hiddenWidgets.length > 0 && (

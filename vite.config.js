@@ -11,8 +11,9 @@ export default defineConfig(({ mode }) => ({
       devOptions: {
         enabled: false,
       },
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       workbox: {
+        cacheId: 'monety-v3-' + Date.now(),
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,

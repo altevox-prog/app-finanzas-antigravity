@@ -94,9 +94,11 @@ export default function ViewRouter({
   return (
     <>
       {/* Tab 1: Dashboard Inicio */}
-      {activeTab === 'dashboard' && (
+      {(activeTab === 'dashboard' || activeTab === 'inicio') && (
         <DashboardView
-          key={`dashboard-${tabResetKeys?.dashboard || 0}`}
+          key={`dashboard-${tabResetKeys?.dashboard || tabResetKeys?.inicio || 0}`}
+          financeData={financeData}
+          financeActions={financeActions}
           alerts={tomorrowDebtAlerts}
           onReviewAlert={handleReviewDebtAlert}
           onDismissAlert={handleDismissAlert}
@@ -141,7 +143,7 @@ export default function ViewRouter({
       )}
 
       {/* Tab 2: Movimientos */}
-      {activeTab === 'transactions' && (
+      {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
         <TransactionsView
           key={`transactions-list-${tabResetKeys?.transactions || 0}`}
           transactions={monthlyTransactions}

@@ -310,6 +310,8 @@ export default function ModalContainer({
         onOpenAuth={() => {}}
         onRestoreBackup={handleRestoreBackup}
         onFactoryReset={handleResetData}
+        onManualCloudSync={merged.pushLocalToCloud}
+        syncStatus={merged.syncStatus}
         user={user}
       />
 

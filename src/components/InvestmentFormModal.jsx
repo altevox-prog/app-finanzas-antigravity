@@ -14,8 +14,7 @@ import {
   DollarSign,
   AlertCircle,
   RefreshCw,
-  Search,
-  HandCoins
+  Search
 } from 'lucide-react';
 import { INVESTMENT_CATEGORIES, formatCurrency, formatUSD } from '../data/initialData';
 import { useBackHandler } from '../hooks/useBackHandler';
@@ -64,11 +63,8 @@ export default function InvestmentFormModal({
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
 
-  // Conditional Private Loan / Subtype fields for Renta Fija
-  const [subType, setSubType] = useState('cdt'); // 'cdt' | 'private_loan' | 'bond'
-  const [loanBorrower, setLoanBorrower] = useState('');
-  const [monthlyRate, setMonthlyRate] = useState('2.0');
-  const [paymentDay, setPaymentDay] = useState(1);
+  // Conditional Subtype fields for Renta Fija
+  const [subType, setSubType] = useState('cdt'); // 'cdt' | 'bond'
 
   // Initialize or reset form when currentInitial changes
   useEffect(() => {
@@ -76,22 +72,27 @@ export default function InvestmentFormModal({
       setName(currentInitial.name || '');
       setTicker(currentInitial.ticker || '');
       setInstitution(currentInitial.institution || '');
-      setAssetType(currentInitial.assetType || (currentInitial.category === 'crypto' ? 'crypto' : currentInitial.category === 'fixed' ? (currentInitial.subType === 'private_loan' ? 'loan' : 'cdt') : 'etf'));
+      setAssetType(currentInitial.assetType || (currentInitial.category === 'crypto' ? 'crypto' : currentInitial.category === 'fixed' ? (currentInitial.subType === 'bond' ? 'bond' : 'cdt') : 'etf'));
       setCategory(currentInitial.category || 'crypto');
       setCurrency(currentInitial.currency || 'USD');
       setShares(currentInitial.shares !== undefined ? String(currentInitial.shares) : '');
       setBuyPrice(currentInitial.buyPrice !== undefined ? String(currentInitial.buyPrice) : '');
       setCurrentPrice(currentInitial.currentPrice !== undefined ? String(currentInitial.currentPrice) : '');
-      setInvestedAmount(currentInitial.investedAmount !== undefined ? formatCurrencyInput(currentInitial.investedAmount, enableDecimals) : '');
-      setCurrentAmount(currentInitial.currentAmount !== undefined ? formatCurrencyInput(currentInitial.currentAmount, enableDecimals) : '');
+      setInvestedAmount(
+        currentInitial.investedAmount !== undefined && currentInitial.investedAmount !== null && Number(currentInitial.investedAmount) !== 0
+          ? formatCurrencyInput(currentInitial.investedAmount, enableDecimals)
+          : ''
+      );
+      setCurrentAmount(
+        currentInitial.currentAmount !== undefined && currentInitial.currentAmount !== null && Number(currentInitial.currentAmount) !== 0
+          ? formatCurrencyInput(currentInitial.currentAmount, enableDecimals)
+          : ''
+      );
       setNotes(currentInitial.notes || '');
       setInterestRate(currentInitial.interestRate !== undefined ? String(currentInitial.interestRate) : '');
       setStartDate(currentInitial.startDate || '');
       setDueDate(currentInitial.dueDate || '');
-      setSubType(currentInitial.subType || (currentInitial.assetType === 'loan' ? 'private_loan' : 'cdt'));
-      setLoanBorrower(currentInitial.borrower || currentInitial.loanBorrower || '');
-      setMonthlyRate(currentInitial.monthlyRate !== undefined ? String(currentInitial.monthlyRate) : '2.0');
-      setPaymentDay(Number(currentInitial.paymentDay) || 1);
+      setSubType(currentInitial.subType === 'bond' ? 'bond' : 'cdt');
     } else {
       setName('');
       setTicker('');
@@ -107,9 +108,6 @@ export default function InvestmentFormModal({
       setNotes('');
       setInterestRate('');
       setSubType('cdt');
-      setLoanBorrower('');
-      setMonthlyRate('2.0');
-      setPaymentDay(1);
       const todayStr = new Date().toISOString().split('T')[0];
       setStartDate(todayStr);
       // Default 180 days ahead for CDT
@@ -198,7 +196,6 @@ export default function InvestmentFormModal({
     handleFetchQuote(presetTicker);
   };
 
-  // When switching category to 'fixed' (CDT), default currency to COP
   const handleCategoryChange = (newCat) => {
     setCategory(newCat);
     if (newCat === 'fixed') {
@@ -210,6 +207,22 @@ export default function InvestmentFormModal({
     } else if (newCat === 'liquidity') {
       setAssetType('fund');
       if (!isEditing) setCurrency('COP');
+    }
+  };
+
+  // Placeholders dinámicos e inteligentes para Nombre del Activo
+  const getNamePlaceholder = (cat) => {
+    switch (cat) {
+      case 'fixed':
+        return 'ej. CDT Bancolombia, CDT Nu, Bono...';
+      case 'variable':
+        return 'ej. Vanguard S&P 500 (VOO), Acciones Apple...';
+      case 'crypto':
+        return 'ej. Bitcoin, Ethereum, Solana...';
+      case 'liquidity':
+      case 'other':
+      default:
+        return 'ej. Cajita de Ahorro, Fondo Fiducuenta...';
     }
   };
 
@@ -244,7 +257,7 @@ export default function InvestmentFormModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const finalName = name.trim() || (category === 'fixed' && subType === 'private_loan' ? `Préstamo a ${loanBorrower.trim() || 'Tercero'}` : '');
+    const finalName = name.trim();
     if (!finalName) return;
 
     const sNum = parseFloat(shares) || 0;
@@ -261,22 +274,16 @@ export default function InvestmentFormModal({
       currNum = Math.round(sNum * cNum * 100) / 100;
     }
 
-    const isLoan = category === 'fixed' && subType === 'private_loan';
-
     const payload = {
       id: initialInvestment ? initialInvestment.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `inv-${Date.now()}`),
       name: finalName,
-      ticker: ticker ? ticker.toUpperCase().trim() : (isLoan ? 'PREST' : ''),
-      assetType: category === 'fixed' ? (subType === 'private_loan' ? 'loan' : subType === 'bond' ? 'bond' : 'cdt') : assetType,
+      ticker: ticker ? ticker.toUpperCase().trim() : '',
+      assetType: category === 'fixed' ? (subType === 'bond' ? 'bond' : 'cdt') : assetType,
       type: category === 'fixed' ? 'fixed_income' : undefined,
       category,
       subType: category === 'fixed' ? subType : undefined,
       currency,
       institution: institution.trim() || undefined,
-      borrower: isLoan ? loanBorrower.trim() : undefined,
-      loanBorrower: isLoan ? loanBorrower.trim() : undefined,
-      monthlyRate: isLoan ? (parseFloat(monthlyRate) || 0) : undefined,
-      paymentDay: isLoan ? Number(paymentDay || 1) : undefined,
       shares: sNum > 0 ? sNum : undefined,
       buyPrice: bNum > 0 ? bNum : undefined,
       currentPrice: cNum > 0 ? cNum : undefined,
@@ -285,7 +292,7 @@ export default function InvestmentFormModal({
       notes: notes.trim(),
       interestRate: interestRate ? parseFloat(interestRate) : undefined,
       startDate: category === 'fixed' ? startDate : undefined,
-      dueDate: category === 'fixed' && subType !== 'private_loan' ? dueDate : undefined,
+      dueDate: category === 'fixed' ? dueDate : undefined,
       isImmediateLiquidity: category === 'liquidity'
     };
 
@@ -341,88 +348,122 @@ export default function InvestmentFormModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           {/* Cuerpo con Scroll y Padding Inferior Suficiente */}
           <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 pb-6">
-          {/* Ticker / Símbolo y Consulta en Vivo */}
-          {category !== 'fixed' && (
-            <div className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold opacity-70">
-                  Ticker / Símbolo de Mercado
-                </label>
-                {currentPrice && (
-                  <span className="text-[10px] font-bold text-emerald-500">
-                    Cotización: ${Number(currentPrice).toLocaleString('es-CO', { maximumFractionDigits: 2 })} {currency}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    placeholder="ej. BTC, ETH, VOO, SPY, QQQ, AAPL"
-                    value={ticker}
-                    onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                    className="w-full text-xs font-mono font-bold px-3 py-2 rounded-xl border border-transparent focus:outline-none uppercase"
-                    style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleFetchQuote()}
-                  disabled={!ticker.trim() || isFetchingPrice}
-                  className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isFetchingPrice ? 'animate-spin' : ''}`} />
-                  <span>{isFetchingPrice ? 'Buscando...' : 'Cotización'}</span>
-                </button>
-              </div>
-
-              {/* Presets rápidos de tickers frecuentes */}
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-1">
-                <span className="text-[10px] opacity-40 font-semibold mr-0.5">Top:</span>
-                {[
-                  { sym: 'BTC', name: 'Bitcoin', type: 'crypto', cat: 'crypto' },
-                  { sym: 'ETH', name: 'Ethereum', type: 'crypto', cat: 'crypto' },
-                  { sym: 'SOL', name: 'Solana', type: 'crypto', cat: 'crypto' },
-                  { sym: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'etf', cat: 'variable' },
-                  { sym: 'SPY', name: 'SPDR S&P 500 ETF', type: 'etf', cat: 'variable' },
-                  { sym: 'QQQ', name: 'Invesco QQQ (Nasdaq 100)', type: 'etf', cat: 'variable' },
-                  { sym: 'AAPL', name: 'Apple Inc.', type: 'stock', cat: 'variable' },
-                  { sym: 'NVDA', name: 'Nvidia Corp.', type: 'stock', cat: 'variable' }
-                ].map((item) => (
-                  <button
-                    key={item.sym}
-                    type="button"
-                    onClick={() => handleSelectPreset(item.sym, item.name, item.type, item.cat)}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
-                      ticker === item.sym 
-                        ? 'bg-emerald-600 text-white shadow-xs' 
-                        : 'bg-slate-200/60 dark:bg-white/5 opacity-70 hover:opacity-100 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    {item.sym}
-                  </button>
-                ))}
+            {/* Categoría Selector (Arriba del todo, justo debajo del título principal) */}
+            <div>
+              <label className="block text-[11px] font-bold opacity-70 mb-1.5">
+                Categoría de Inversión *
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {INVESTMENT_CATEGORIES.map((cat) => {
+                  const isSelected = category === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      data-category-btn={cat.id}
+                      type="button"
+                      onClick={() => handleCategoryChange(cat.id)}
+                      className={`p-2 rounded-xl text-left border flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
+                        isSelected ? 'ring-2 font-black shadow-xs' : 'opacity-70 hover:opacity-100'
+                      }`}
+                      style={{
+                        backgroundColor: isSelected ? `${cat.color}15` : 'var(--bg-input)',
+                        borderColor: isSelected ? cat.color : 'transparent',
+                        color: isSelected ? cat.color : 'var(--text-main)'
+                      }}
+                    >
+                      <span 
+                        className="w-2.5 h-2.5 rounded-full shrink-0" 
+                        style={{ backgroundColor: cat.color }} 
+                      />
+                      <span className="text-[11px] font-bold truncate">{cat.shortName}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
 
-          {/* Nombre / Activo */}
-          <div>
-            <label className="block text-[11px] font-bold opacity-70 mb-1">
-              Nombre del Activo *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="ej. Bitcoin, Vanguard S&P 500, CDT Bancolombia..."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none transition-all"
-              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-            />
-          </div>
+            {/* Ticker / Símbolo y Consulta en Vivo */}
+            {category !== 'fixed' && (
+              <div className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold opacity-70">
+                    Ticker / Símbolo de Mercado
+                  </label>
+                  {currentPrice && (
+                    <span className="text-[10px] font-bold text-emerald-500">
+                      Cotización: ${Number(currentPrice).toLocaleString('es-CO', { maximumFractionDigits: 2 })} {currency}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="ej. BTC, ETH, VOO, SPY, QQQ, AAPL"
+                      value={ticker}
+                      onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                      className="w-full text-xs font-mono font-bold px-3 py-2 rounded-xl border border-transparent focus:outline-none uppercase"
+                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleFetchQuote()}
+                    disabled={!ticker.trim() || isFetchingPrice}
+                    className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isFetchingPrice ? 'animate-spin' : ''}`} />
+                    <span>{isFetchingPrice ? 'Buscando...' : 'Cotización'}</span>
+                  </button>
+                </div>
+
+                {/* Presets rápidos de tickers frecuentes */}
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-1">
+                  <span className="text-[10px] opacity-40 font-semibold mr-0.5">Top:</span>
+                  {[
+                    { sym: 'BTC', name: 'Bitcoin', type: 'crypto', cat: 'crypto' },
+                    { sym: 'ETH', name: 'Ethereum', type: 'crypto', cat: 'crypto' },
+                    { sym: 'SOL', name: 'Solana', type: 'crypto', cat: 'crypto' },
+                    { sym: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'etf', cat: 'variable' },
+                    { sym: 'SPY', name: 'SPDR S&P 500 ETF', type: 'etf', cat: 'variable' },
+                    { sym: 'QQQ', name: 'Invesco QQQ (Nasdaq 100)', type: 'etf', cat: 'variable' },
+                    { sym: 'AAPL', name: 'Apple Inc.', type: 'stock', cat: 'variable' },
+                    { sym: 'NVDA', name: 'Nvidia Corp.', type: 'stock', cat: 'variable' }
+                  ].map((item) => (
+                    <button
+                      key={item.sym}
+                      type="button"
+                      onClick={() => handleSelectPreset(item.sym, item.name, item.type, item.cat)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                        ticker === item.sym 
+                          ? 'bg-emerald-600 text-white shadow-xs' 
+                          : 'bg-slate-200/60 dark:bg-white/5 opacity-70 hover:opacity-100 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {item.sym}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Nombre / Activo */}
+            <div>
+              <label className="block text-[11px] font-bold opacity-70 mb-1">
+                Nombre del Activo *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder={getNamePlaceholder(category)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none transition-all"
+                style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+              />
+            </div>
 
           {/* Entidad Financiera / Banco */}
           <div>
@@ -533,40 +574,6 @@ export default function InvestmentFormModal({
             </div>
           )}
 
-          {/* Categoría Selector */}
-          <div>
-            <label className="block text-[11px] font-bold opacity-70 mb-1.5">
-              Categoría de Inversión *
-            </label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {INVESTMENT_CATEGORIES.map((cat) => {
-                const isSelected = category === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    data-category-btn={cat.id}
-                    type="button"
-                    onClick={() => handleCategoryChange(cat.id)}
-                    className={`p-2 rounded-xl text-left border flex items-center gap-2 transition-all active:scale-95 ${
-                      isSelected ? 'ring-2 font-black shadow-xs' : 'opacity-70 hover:opacity-100'
-                    }`}
-                    style={{
-                      backgroundColor: isSelected ? `${cat.color}15` : 'var(--bg-input)',
-                      borderColor: isSelected ? cat.color : 'transparent',
-                      color: isSelected ? cat.color : 'var(--text-main)'
-                    }}
-                  >
-                    <span 
-                      className="w-2.5 h-2.5 rounded-full shrink-0" 
-                      style={{ backgroundColor: cat.color }} 
-                    />
-                    <span className="text-[11px] font-bold truncate">{cat.shortName}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Moneda de origen (COP vs USD) */}
           <div>
             <label className="block text-[11px] font-bold opacity-70 mb-1">
@@ -657,10 +664,9 @@ export default function InvestmentFormModal({
                 <label className="block text-[11px] font-bold opacity-70 mb-1.5">
                   Subtipo de Renta Fija *
                 </label>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'cdt', label: '🏦 CDT Bancario' },
-                    { id: 'private_loan', label: '🤝 Préstamo a Tercero' },
+                    { id: 'cdt', label: '🏛️ CDT Bancario' },
                     { id: 'bond', label: '📜 Bono / General' }
                   ].map((tab) => {
                     const isSelected = subType === tab.id;
@@ -668,12 +674,7 @@ export default function InvestmentFormModal({
                       <button
                         key={tab.id}
                         type="button"
-                        onClick={() => {
-                          setSubType(tab.id);
-                          if (tab.id === 'private_loan' && !name) {
-                            setName(loanBorrower ? `Préstamo a ${loanBorrower}` : 'Préstamo a Tercero');
-                          }
-                        }}
+                        onClick={() => setSubType(tab.id)}
                         className={`p-2 rounded-xl text-center text-xs font-bold transition-all border active:scale-95 cursor-pointer ${
                           isSelected
                             ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-xs'
@@ -691,163 +692,82 @@ export default function InvestmentFormModal({
                 </div>
               </div>
 
-              {/* OPCIÓN 1: Préstamo a Tercero (Cobro de Interés) */}
-              {subType === 'private_loan' ? (
-                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-3 animate-fadeIn">
-                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
-                    <HandCoins className="w-4 h-4" />
-                    <span>Condiciones del Préstamo e Intereses</span>
+              {/* Detalles CDT Bancario o Bono General */}
+              <div 
+                className="p-3.5 rounded-2xl border space-y-2.5 animate-fadeIn"
+                style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
+              >
+                <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#34C759]">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{subType === 'bond' ? 'Detalles del Bono / Renta Fija' : 'Detalles del CDT'}</span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
+                      Tasa (% E.A.)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="10.5"
+                      value={interestRate}
+                      onChange={(e) => setInterestRate(e.target.value)}
+                      className="w-full text-xs font-bold px-2 py-1.5 rounded-lg border border-transparent focus:outline-none"
+                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Deudor / Beneficiario */}
-                    <div className="col-span-2">
-                      <label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Nombre del Deudor / Persona</label>
-                      <input
-                        type="text"
-                        placeholder="ej. Carlos Pérez"
-                        value={loanBorrower}
-                        onChange={(e) => {
-                          setLoanBorrower(e.target.value);
-                          if (!name || name.startsWith('Préstamo a ')) {
-                            setName(e.target.value ? `Préstamo a ${e.target.value}` : '');
-                          }
-                        }}
-                        className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] text-sm"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
+                      Apertura
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
+                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+                    />
+                  </div>
 
-                    {/* Tasa de interés mensual */}
-                    <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Tasa Mensual (% M.V.)</label>
-                      <div className="relative mt-1">
-                        <input
-                          type="number"
-                          step="0.1"
-                          placeholder="ej. 2.0"
-                          value={monthlyRate}
-                          onChange={(e) => setMonthlyRate(e.target.value)}
-                          className="w-full p-2.5 pr-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] text-sm font-semibold"
-                        />
-                        <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
-                      </div>
-                    </div>
-
-                    {/* Rendimiento mensual calculado */}
-                    <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Rendimiento mensual</label>
-                      <div className="mt-1 p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                        {currency === 'USD' 
-                          ? formatUSD(((parseFormattedAmount(investedAmount) || 0) * (parseFloat(monthlyRate) || 0)) / 100) 
-                          : formatCurrency(((parseFormattedAmount(investedAmount) || 0) * (parseFloat(monthlyRate) || 0)) / 100)
-                        }
-                      </div>
-                    </div>
-
-                    {/* Fecha de desembolso */}
-                    <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Fecha de Préstamo</label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] text-sm"
-                      />
-                    </div>
-
-                    {/* Día de cobro mensual */}
-                    <div>
-                      <label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Día de pago cada mes</label>
-                      <select
-                        value={paymentDay}
-                        onChange={(e) => setPaymentDay(Number(e.target.value))}
-                        className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] text-sm"
-                      >
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                          <option key={day} value={day}>Día {day} de cada mes</option>
-                        ))}
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
+                      Vencimiento
+                    </label>
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
+                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+                    />
                   </div>
                 </div>
-              ) : (
-                /* OPCIÓN 2 y 3: CDT Bancario o Bono General */
-                <div 
-                  className="p-3.5 rounded-2xl border space-y-2.5 animate-fadeIn"
-                  style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#34C759]">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>{subType === 'bond' ? 'Detalles del Bono / Renta Fija' : 'Detalles del CDT'}</span>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                {/* Cálculo en tiempo real de Días y Ganancia Estimada */}
+                {cdtTotalDays && (
+                  <div className="pt-2 border-t flex items-center justify-between text-[11px]" style={{ borderColor: 'var(--border-color)' }}>
                     <div>
-                      <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
-                        Tasa (% E.A.)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="10.5"
-                        value={interestRate}
-                        onChange={(e) => setInterestRate(e.target.value)}
-                        className="w-full text-xs font-bold px-2 py-1.5 rounded-lg border border-transparent focus:outline-none"
-                        style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                      />
+                      <span className="opacity-60 block text-[9px] uppercase font-bold">Plazo</span>
+                      <span className={`font-black ${isMatured ? 'text-[#FF3B30]' : 'text-[#007AFF]'}`}>
+                        {isMatured 
+                          ? 'Vencido' 
+                          : `Vence en ${cdtDaysRemaining} días (${cdtTotalDays}d totales)`}
+                      </span>
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
-                        Apertura
-                      </label>
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
-                        style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
-                        Vencimiento
-                      </label>
-                      <input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
-                        style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Cálculo en tiempo real de Días y Ganancia Estimada */}
-                  {cdtTotalDays && (
-                    <div className="pt-2 border-t flex items-center justify-between text-[11px]" style={{ borderColor: 'var(--border-color)' }}>
-                      <div>
-                        <span className="opacity-60 block text-[9px] uppercase font-bold">Plazo</span>
-                        <span className={`font-black ${isMatured ? 'text-[#FF3B30]' : 'text-[#007AFF]'}`}>
-                          {isMatured 
-                            ? 'Vencido' 
-                            : `Vence en ${cdtDaysRemaining} días (${cdtTotalDays}d totales)`}
+                    {cdtEstimatedGain !== null && (
+                      <div className="text-right">
+                        <span className="opacity-60 block text-[9px] uppercase font-bold">Ganancia pactada</span>
+                        <span className="font-black text-[#34C759]">
+                          +{currency === 'USD' ? formatUSD(cdtEstimatedGain) : formatCurrency(cdtEstimatedGain)}
                         </span>
                       </div>
-
-                      {cdtEstimatedGain !== null && (
-                        <div className="text-right">
-                          <span className="opacity-60 block text-[9px] uppercase font-bold">Ganancia pactada</span>
-                          <span className="font-black text-[#34C759]">
-                            +{currency === 'USD' ? formatUSD(cdtEstimatedGain) : formatCurrency(cdtEstimatedGain)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

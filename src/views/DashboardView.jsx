@@ -44,7 +44,9 @@ export default function DashboardView({
   widgetsConfig,
   widgets,
   onCustomizeWidgets,
-  onSaveWidgets
+  onSaveWidgets,
+  financeData = {},
+  financeActions = {}
 }) {
   return (
     <div className="w-full flex flex-col gap-4">
@@ -60,6 +62,8 @@ export default function DashboardView({
 
       {/* Widgets Financieros Modulares y Dinámicos */}
       <Dashboard
+        financeData={financeData}
+        financeActions={financeActions}
         accounts={accounts}
         investments={investments}
         debtsAndLoans={debtsAndLoans}
@@ -73,8 +77,8 @@ export default function DashboardView({
         selectedDay={selectedDay}
         onSelectDay={onSelectDay}
         onOpenCalendar={onOpenCalendar}
-        onNavigateToTab={onNavigateToTab}
-        onOpenTransaction={onOpenTransaction}
+        onNavigateToTab={onNavigateToTab || financeActions?.handleTabChange || financeActions?.setActiveTab}
+        onOpenTransaction={onOpenTransaction || financeActions?.handleOpenAddTransaction || financeActions?.handleOpenTransaction}
         onAddTransaction={onAddTransaction}
         onAddDebtOrLoan={onAddDebtOrLoan}
         onAddRecurring={onAddRecurring}

@@ -60,15 +60,41 @@ export const normalizeAccountType = (type) => {
   return 'other';
 };
 
-// Funciones stub inofensivas para compatibilidad
+// Funciones de sincronización y compatibilidad con manejo seguro de perfil
 export const syncMutation = () => {};
 export const queueOfflineMutation = () => {};
 export const flushOfflineQueue = async () => {};
 export const purgeCorruptOfflineQueue = () => {};
 export const pushLocalDataToSupabase = async () => ({ success: true });
-export const fetchCloudData = async () => null;
-export const fetchAndHydrateUserData = async () => null;
+
+/**
+ * Procesa la respuesta de la nube e hidrata los datos del usuario de forma segura.
+ * Garantiza que cloudProfile esté debidamente declarado y desestructurado (data?.profile || null).
+ */
+export const fetchCloudData = async (userId, profileRes = null) => {
+  const cloudProfile = profileRes?.data || profileRes?.profile || null;
+  return { success: true, profile: cloudProfile };
+};
+
+export const fetchAndHydrateUserData = async (userId, profileRes = null) => {
+  try {
+    const cloudProfile = profileRes?.data || profileRes?.profile || null;
+    return { success: true, profile: cloudProfile };
+  } catch (err) {
+    const cloudProfile = null;
+    return { success: false, profile: cloudProfile, error: err };
+  }
+};
+
+export const wn = fetchAndHydrateUserData;
+
+export const processCloudProfile = (profileRes) => {
+  const cloudProfile = profileRes?.data || profileRes?.profile || null;
+  return cloudProfile;
+};
+
 export const migrateLocalDataToCloud = async () => ({ success: true });
 export const subscribeToRealtimeChanges = () => () => {};
 export const formatRecordForSupabase = (table, record) => ({ ...record });
 export const extractRecordFromSupabase = (record) => record;
+

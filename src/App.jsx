@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
 import { ViewRouter } from './views';
 import SplashScreen from './components/SplashScreen';
@@ -33,6 +33,7 @@ import { useDataManagement } from './hooks/useDataManagement';
 import { useNavigationTabs } from './hooks/useNavigationTabs';
 import { useFinancialOperations } from './hooks/useFinancialOperations';
 import { useModalControls } from './hooks/useModalControls';
+import { useDataSync } from './hooks/useDataSync';
 
 export default function App() {
   const { formatMoney } = usePrivacy();
@@ -342,6 +343,34 @@ export default function App() {
     completeOnboarding
   });
 
+  // Sincronización en segundo plano con Supabase (Local-First Cloud Sync)
+  const {
+    syncStatus,
+    syncUser,
+    isCloudEnabled,
+    pushLocalToCloud,
+    pullCloudToLocal
+  } = useDataSync({
+    accounts,
+    setAccounts,
+    transactions,
+    setTransactions,
+    debtsAndLoans,
+    setDebtsAndLoans,
+    investments,
+    setInvestments,
+    recurringPayments,
+    setRecurringPayments,
+    budgets,
+    setBudgets,
+    categories,
+    setCategories,
+    savingsGoals,
+    setSavingsGoals,
+    userProfile,
+    setUserProfile
+  });
+
   // Cierre preventivo de menús y modales al cambiar de pestaña
   const handleCloseOverlaysOnTabChange = useCallback(() => {
     handleCloseAllModals();
@@ -425,7 +454,10 @@ export default function App() {
     securitySettings,
     isLocked,
     failedAttempts,
-    showTutorial
+    showTutorial,
+    syncStatus,
+    syncUser,
+    isCloudEnabled
   }), [
     accounts,
     transactions,
@@ -455,7 +487,10 @@ export default function App() {
     securitySettings,
     isLocked,
     failedAttempts,
-    showTutorial
+    showTutorial,
+    syncStatus,
+    syncUser,
+    isCloudEnabled
   ]);
 
   // 2. Objeto consolidado y memorizado de acciones y operaciones
@@ -496,7 +531,7 @@ export default function App() {
     handleDeleteAccount,
     handleReorderAccounts,
     handleUpdateDebtOrLoan,
-    handleUpdateInvestment,
+    handleUpdateInvestment: baseUpdateInvestment,
     handleAddRecurring,
     handleUpdateRecurring,
     handleDeleteRecurring,
@@ -510,7 +545,9 @@ export default function App() {
     handleChangeMonth,
     handleRestoreBackup,
     handleResetData,
-    handleUpdateProfile
+    handleUpdateProfile,
+    pushLocalToCloud,
+    pullCloudToLocal
   }), [
     financialOps,
     modalControls,
@@ -548,7 +585,7 @@ export default function App() {
     handleDeleteAccount,
     handleReorderAccounts,
     handleUpdateDebtOrLoan,
-    handleUpdateInvestment,
+    baseUpdateInvestment,
     handleAddRecurring,
     handleUpdateRecurring,
     handleDeleteRecurring,
@@ -562,14 +599,16 @@ export default function App() {
     handleChangeMonth,
     handleRestoreBackup,
     handleResetData,
-    handleUpdateProfile
+    handleUpdateProfile,
+    pushLocalToCloud,
+    pullCloudToLocal
   ]);
   if (authLoading) {
     return <SplashScreen message="Verificando tu espacio..." />;
   }
 
-  // 2. Si el Onboarding está activo, mostrar la pantalla fija e ininterrumpida
-  if (isOnboardingActive) {
+  // 2. Si el Onboarding está activo y no hay usuario autenticado, mostrar la pantalla de bienvenida
+  if (isOnboardingActive && (!user || user.id === 'local-user')) {
     return (
       <OnboardingWizard 
         onComplete={handleOnboardingComplete} 
@@ -606,12 +645,15 @@ export default function App() {
         setIsSettingsOpen={setIsSettingsOpen}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenProfile={handleOpenProfile}
-        onOpenAuth={() => {}}
+        onOpenAuth={handleOpenProfile}
         userProfile={userProfile}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onLogout={() => setIsLocked(true)}
         trm={trm}
+        syncStatus={syncStatus}
+        isCloudEnabled={isCloudEnabled}
+        syncUser={syncUser}
         className={desktopOnlyClass}
       />
 
@@ -669,8 +711,11 @@ export default function App() {
           onToggleTheme={handleToggleTheme}
           onOpenProfile={handleOpenProfile}
           onOpenSettings={handleOpenProfile}
-          onOpenAuth={() => {}}
+          onOpenAuth={handleOpenProfile}
           onLogout={() => setIsLocked(true)}
+          syncStatus={syncStatus}
+          isCloudEnabled={isCloudEnabled}
+          syncUser={syncUser}
           accounts={accounts}
           subscriptions={subscriptions}
           debtsAndLoans={debtsAndLoans}

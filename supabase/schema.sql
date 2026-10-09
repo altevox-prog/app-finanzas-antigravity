@@ -82,9 +82,6 @@ create table if not exists public.transactions (
   date text,
   notes text,
   description text,
-  is_transfer boolean default false,
-  from_account_id text,
-  to_account_id text,
   raw_data jsonb default '{}'::jsonb,
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
@@ -105,7 +102,7 @@ create table if not exists public.recurring_payments (
 );
 
 -- 7. TABLA DE DEUDAS Y PRÉSTAMOS
-create table if not exists public.debts_loans (
+create table if not exists public.debts (
   id text not null,
   user_id uuid references auth.users on delete cascade not null,
   name text,
@@ -147,7 +144,7 @@ alter table public.accounts enable row level security;
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 alter table public.recurring_payments enable row level security;
-alter table public.debts_loans enable row level security;
+alter table public.debts enable row level security;
 alter table public.investments enable row level security;
 alter table public.user_sync_backup enable row level security;
 
@@ -159,7 +156,7 @@ create policy "Users can manage own accounts" on public.accounts for all using (
 create policy "Users can manage own categories" on public.categories for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users can manage own transactions" on public.transactions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users can manage own recurring" on public.recurring_payments for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "Users can manage own debts" on public.debts_loans for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users can manage own debts" on public.debts for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users can manage own investments" on public.investments for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users can manage own backup" on public.user_sync_backup for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -176,6 +173,6 @@ begin;
     public.categories, 
     public.transactions, 
     public.recurring_payments, 
-    public.debts_loans, 
+    public.debts, 
     public.investments;
 commit;

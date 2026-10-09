@@ -53,6 +53,9 @@ export default function DesktopSidebar({
   onOpenProfile,
   onOpenAuth,
   onLogout,
+  syncStatus = 'idle',
+  isCloudEnabled = false,
+  syncUser = null,
   trm = 4000,
   className = 'hidden lg:flex'
 }) {
@@ -288,6 +291,9 @@ export default function DesktopSidebar({
         {/* Estado de Sincronización en la Nube */}
         <div className="px-1 flex justify-start">
           <SyncStatusBadge 
+            syncStatus={syncStatus}
+            isCloudEnabled={isCloudEnabled}
+            user={syncUser}
             onOpenAuth={onOpenAuth} 
           />
         </div>

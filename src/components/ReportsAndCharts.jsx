@@ -145,14 +145,30 @@ function formatAbbreviatedMoney(amount, fallbackFormatter) {
 export default function ReportsAndCharts({ 
   transactions = [], 
   categories = [], 
-  selectedDate = new Date(),
-  selectedDay = null,
-  onOpenCalendar
+  selectedDate = new Date(), 
+  selectedDay = null, 
+  onOpenCalendar,
+  financeActions = null,
+  onNavigateToTab = null,
+  setActiveTab = null
 }) {
   const { formatMoney } = usePrivacy();
   const [hoveredCategoryId, setHoveredCategoryId] = useState(null);
   const [selectedCategoryModal, setSelectedCategoryModal] = useState(null);
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false);
+
+  const handleNav = (tab = 'transactions') => {
+    const targetTab = (tab === 'movements' || tab === 'movimientos') ? 'transactions' : tab;
+    if (financeActions && typeof financeActions.setActiveTab === 'function') {
+      financeActions.setActiveTab(targetTab);
+    } else if (financeActions && typeof financeActions.handleTabChange === 'function') {
+      financeActions.handleTabChange(targetTab);
+    } else if (typeof onNavigateToTab === 'function') {
+      onNavigateToTab(targetTab);
+    } else if (typeof setActiveTab === 'function') {
+      setActiveTab(targetTab);
+    }
+  };
 
   const currentYear = selectedDate.getFullYear();
   const currentMonth = selectedDate.getMonth();
@@ -241,7 +257,13 @@ export default function ReportsAndCharts({
 
   return (
     <div 
-      onClick={() => setShowAllCategoriesModal(true)}
+      onClick={() => {
+        if (financeActions && typeof financeActions.setActiveTab === 'function') {
+          financeActions.setActiveTab('transactions');
+        } else {
+          handleNav('transactions');
+        }
+      }}
       className="min-h-[140px] p-5 sm:p-6 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group relative overflow-hidden"
       style={{ 
         backgroundColor: 'var(--bg-card, #ffffff)', 
@@ -268,8 +290,13 @@ export default function ReportsAndCharts({
           <div 
             className="relative w-24 h-24 sm:w-26 sm:h-26 shrink-0 flex items-center justify-center cursor-pointer group"
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
-              setShowAllCategoriesModal(true);
+              if (financeActions && typeof financeActions.setActiveTab === 'function') {
+                financeActions.setActiveTab('transactions');
+              } else {
+                handleNav('transactions');
+              }
             }}
             title={`Total de gastos: ${formatMoney(totalExpense)}`}
           >
@@ -413,7 +440,18 @@ export default function ReportsAndCharts({
       </div>
 
       {/* Footer homogéneo */}
-      <div className="pt-2.5 mt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
+      <div 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (financeActions && typeof financeActions.setActiveTab === 'function') {
+            financeActions.setActiveTab('transactions');
+          } else {
+            handleNav('transactions');
+          }
+        }}
+        className="pt-2.5 mt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs cursor-pointer"
+      >
         <span className="text-slate-500 dark:text-slate-400 font-medium">
           Distribución de gastos
         </span>
@@ -428,7 +466,13 @@ export default function ReportsAndCharts({
       {/* ============================================================== */}
       {showAllCategoriesModal && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4 animate-fadeIn pointer-events-auto"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4 animate-fadeIn pointer-events-auto"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -436,8 +480,13 @@ export default function ReportsAndCharts({
           }}
         >
           <div 
-            className="w-full sm:max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl border shadow-2xl flex flex-col overflow-hidden animate-slide-up bg-white dark:bg-[#121622] border-slate-200/80 dark:border-white/10"
-            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl border shadow-2xl flex flex-col overflow-hidden animate-slide-up bg-white dark:bg-[#121622] border-slate-200/80 dark:border-white/10 pointer-events-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             {/* Header del Modal */}
             <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between">
@@ -456,6 +505,13 @@ export default function ReportsAndCharts({
               </div>
               <button
                 type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -524,6 +580,13 @@ export default function ReportsAndCharts({
             <div className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-white/10">
               <button
                 type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -543,7 +606,13 @@ export default function ReportsAndCharts({
       {/* ============================================================== */}
       {selectedCategoryModal && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4 animate-fadeIn pointer-events-auto"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4 animate-fadeIn pointer-events-auto"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -551,8 +620,13 @@ export default function ReportsAndCharts({
           }}
         >
           <div 
-            className="w-full sm:max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl border shadow-2xl flex flex-col overflow-hidden animate-slide-up bg-white dark:bg-[#121622] border-slate-200/80 dark:border-white/10"
-            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md max-h-[85vh] rounded-t-3xl sm:rounded-3xl border shadow-2xl flex flex-col overflow-hidden animate-slide-up bg-white dark:bg-[#121622] border-slate-200/80 dark:border-white/10 pointer-events-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             {/* Header del Modal */}
             <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between">
@@ -571,6 +645,13 @@ export default function ReportsAndCharts({
               </div>
               <button
                 type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -727,6 +808,13 @@ export default function ReportsAndCharts({
             <div className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-white/10">
               <button
                 type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

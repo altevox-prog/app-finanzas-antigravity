@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase, isSupabaseConfigured, signInWithGoogle, signOutUser, signOutSupabase } from '../services/supabaseClient';
 
 const AuthContext = createContext(null);
 
@@ -27,20 +28,61 @@ export function AuthProvider({ children }) {
     };
   });
 
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+      }
+    }).catch(() => {});
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        setUser({
+          id: 'local-user',
+          email: 'local@device',
+          user_metadata: {
+            full_name: 'Usuario'
+          }
+        });
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
+
   const value = {
     user,
     setUser,
     session: null,
     setSession: () => {},
     loading: false, // 100% Local-First: carga instantánea sin demoras ni peticiones de red
-    isConfigured: false,
+    isConfigured: isSupabaseConfigured,
     authError: null,
     setAuthError: () => {},
     signInWithEmail: async () => ({ data: null, error: null }),
     signUpWithEmail: async () => ({ data: null, error: null }),
     signInWithOtp: async () => ({ data: null, error: null }),
-    signInWithGoogle: async () => ({ data: null, error: null }),
-    signOut: async () => ({ error: null }),
+    signInWithGoogle,
+    signOut: async () => {
+      if (isSupabaseConfigured && supabase) {
+        await signOutSupabase();
+      }
+      setUser({
+        id: 'local-user',
+        email: 'local@device',
+        user_metadata: {
+          full_name: 'Usuario'
+        }
+      });
+      return { error: null };
+    },
+    signOutUser,
     resetPassword: async () => ({ data: null, error: null })
   };
 
@@ -54,3 +96,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export { signInWithGoogle, signOutUser };

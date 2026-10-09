@@ -11,14 +11,25 @@ export function useNavigationTabs({
   onTabChange = null,
   onOpenProfile = null
 } = {}) {
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, rawSetActiveTab] = useState(initialTab);
+
+  const setActiveTab = useCallback((rawTab) => {
+    let tab = rawTab;
+    if (tab === 'loans') tab = 'debts';
+    if (tab === 'movements' || tab === 'movimientos') tab = 'transactions';
+    if (tab === 'inicio') tab = 'dashboard';
+    rawSetActiveTab(tab);
+  }, []);
+
   const [fromSettings, setFromSettings] = useState(false);
   const mainContentRef = useRef(null);
 
   // Claves de reseteo para forzar estado inicial limpio al seleccionar cualquier pestaña
   const [tabResetKeys, setTabResetKeys] = useState({
     dashboard: 0,
+    inicio: 0,
     transactions: 0,
+    movements: 0,
     investments: 0,
     debts: 0,
     accounts: 0,
@@ -27,7 +38,8 @@ export function useNavigationTabs({
 
   // Función para forzar reseteo de una pestaña específica o la actual
   const handleResetTab = useCallback((tabName) => {
-    const target = tabName || activeTab;
+    const raw = tabName || activeTab;
+    const target = (raw === 'movements' || raw === 'movimientos') ? 'transactions' : (raw === 'inicio') ? 'dashboard' : raw;
     setTabResetKeys((prev) => ({
       ...prev,
       [target]: (prev[target] || 0) + 1
@@ -60,7 +72,13 @@ export function useNavigationTabs({
 
   // Manejador centralizado de cambio de pestaña
   const handleTabChange = useCallback((rawTab, fromSource = null) => {
-    const tab = rawTab === 'loans' ? 'debts' : rawTab;
+    let tab = rawTab === 'loans' ? 'debts' : rawTab;
+    if (tab === 'movements' || tab === 'movimientos') {
+      tab = 'transactions';
+    }
+    if (tab === 'inicio') {
+      tab = 'dashboard';
+    }
 
     if (fromSource === 'settings') {
       setFromSettings(true);
