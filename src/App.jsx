@@ -343,33 +343,14 @@ export default function App() {
     completeOnboarding
   });
 
-  // Sincronización en segundo plano con Supabase (Local-First Cloud Sync)
+  // Sincronización en segundo plano con Supabase (Desconectado / Modo 100% Local-First)
   const {
     syncStatus,
     syncUser,
     isCloudEnabled,
     pushLocalToCloud,
     pullCloudToLocal
-  } = useDataSync({
-    accounts,
-    setAccounts,
-    transactions,
-    setTransactions,
-    debtsAndLoans,
-    setDebtsAndLoans,
-    investments,
-    setInvestments,
-    recurringPayments,
-    setRecurringPayments,
-    budgets,
-    setBudgets,
-    categories,
-    setCategories,
-    savingsGoals,
-    setSavingsGoals,
-    userProfile,
-    setUserProfile
-  });
+  } = useDataSync();
 
   // Cierre preventivo de menús y modales al cambiar de pestaña
   const handleCloseOverlaysOnTabChange = useCallback(() => {

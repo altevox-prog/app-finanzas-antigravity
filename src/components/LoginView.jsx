@@ -17,7 +17,6 @@ import {
   MailCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { fetchAndHydrateUserData, migrateLocalDataToCloud } from '../services/syncEngine';
 import { syncAndPersistUserProfile } from '../utils/userProfileHelper';
 import { supabase, updateSupabaseCredentials } from '../lib/supabase';
 import { getURL } from '../utils/urlHelper';
@@ -91,11 +90,9 @@ export default function LoginView({ onSuccess }) {
           console.warn('Error verificando AAL de 2FA:', mfaErr);
         }
 
-        setFeedback({ type: 'success', message: '¡Sesión iniciada con éxito! Sincronizando datos...' });
+        setFeedback({ type: 'success', message: '¡Sesión iniciada con éxito!' });
         if (data?.user?.id) {
           await syncAndPersistUserProfile(data.user, supabase);
-          await migrateLocalDataToCloud(data.user.id);
-          await fetchAndHydrateUserData(data.user.id);
         }
         if (typeof onSuccess === 'function') {
           onSuccess(data?.user);
@@ -134,12 +131,10 @@ export default function LoginView({ onSuccess }) {
 
         setFeedback({ 
           type: 'success', 
-          message: '¡Cuenta creada con éxito! Sincronizando datos...' 
+          message: '¡Cuenta creada con éxito!' 
         });
         if (data?.user?.id) {
           await syncAndPersistUserProfile(data.user, supabase);
-          await migrateLocalDataToCloud(data.user.id);
-          await fetchAndHydrateUserData(data.user.id);
         }
         if (typeof onSuccess === 'function') {
           onSuccess(data?.user);
@@ -213,12 +208,8 @@ export default function LoginView({ onSuccess }) {
 
       if (verifyRes.error) throw verifyRes.error;
 
-      setFeedback({ type: 'success', message: '¡Autenticación de 2 Factores aprobada! Sincronizando datos...' });
+      setFeedback({ type: 'success', message: '¡Autenticación de 2 Factores aprobada!' });
       const activeUser = verifyRes.data?.user || pending2faUser || user;
-      if (activeUser?.id) {
-        await migrateLocalDataToCloud(activeUser.id);
-        await fetchAndHydrateUserData(activeUser.id);
-      }
       if (typeof onSuccess === 'function') {
         onSuccess(activeUser);
       }
@@ -281,11 +272,7 @@ export default function LoginView({ onSuccess }) {
         return;
       }
 
-      setFeedback({ type: 'success', message: '¡Código verificado con éxito! Sincronizando datos...' });
-      if (data?.user?.id) {
-        await migrateLocalDataToCloud(data.user.id);
-        await fetchAndHydrateUserData(data.user.id);
-      }
+      setFeedback({ type: 'success', message: '¡Código verificado con éxito!' });
       if (typeof onSuccess === 'function') {
         onSuccess(data?.user);
       }

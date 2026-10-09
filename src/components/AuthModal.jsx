@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useBackHandler } from '../hooks/useBackHandler';
-import { fetchAndHydrateUserData, migrateLocalDataToCloud } from '../services/syncEngine';
 import { syncAndPersistUserProfile, setHasCompletedOnboarding } from '../utils/userProfileHelper';
 import AppLogo from './AppLogo';
 import { supabase, updateSupabaseCredentials } from '../lib/supabase';
@@ -100,13 +99,10 @@ export default function AuthModal({ isOpen, onClose }) {
           console.warn('Error verificando AAL de 2FA:', mfaErr);
         }
 
-        setFeedback({ type: 'success', message: '¡Sesión iniciada con éxito! Sincronizando datos...' });
+        setFeedback({ type: 'success', message: '¡Sesión iniciada con éxito!' });
         if (data?.user?.id) {
           // Extraer y persistir metadatos de Google / usuario
           await syncAndPersistUserProfile(data.user, supabase);
-          // Migrar datos locales existentes a Supabase y luego hidratar
-          await migrateLocalDataToCloud(data.user.id);
-          await fetchAndHydrateUserData(data.user.id);
         }
         setTimeout(() => {
           onClose();
@@ -161,12 +157,10 @@ export default function AuthModal({ isOpen, onClose }) {
         // Si ya está confirmado (ej. auto-confirm habilitado en desarrollo)
         setFeedback({ 
           type: 'success', 
-          message: '¡Cuenta creada con éxito! Sincronizando datos iniciales...' 
+          message: '¡Cuenta creada con éxito!' 
         });
         if (data?.user?.id) {
           await syncAndPersistUserProfile(data.user, supabase);
-          await migrateLocalDataToCloud(data.user.id);
-          await fetchAndHydrateUserData(data.user.id);
         }
         setTimeout(() => {
           onClose();
@@ -243,11 +237,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
       if (verifyRes.error) throw verifyRes.error;
 
-      setFeedback({ type: 'success', message: '¡Autenticación de 2 Factores aprobada! Restaurando datos...' });
-      const activeUser = verifyRes.data?.user || pending2faUser || user;
-      if (activeUser?.id) {
-        await fetchAndHydrateUserData(activeUser.id);
-      }
+      setFeedback({ type: 'success', message: '¡Autenticación de 2 Factores aprobada!' });
       setTimeout(() => {
         onClose();
       }, 600);
@@ -312,10 +302,7 @@ export default function AuthModal({ isOpen, onClose }) {
         return;
       }
 
-      setFeedback({ type: 'success', message: '¡Código verificado con éxito! Restaurando datos...' });
-      if (data?.user?.id) {
-        await fetchAndHydrateUserData(data.user.id);
-      }
+      setFeedback({ type: 'success', message: '¡Código verificado con éxito!' });
       setTimeout(() => {
         onClose();
       }, 600);
