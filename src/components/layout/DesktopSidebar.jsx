@@ -12,12 +12,9 @@ import {
   TrendingUp,
   Plus,
   Settings,
-  Lock,
-  LogOut,
   Sparkles,
   ChevronRight
 } from 'lucide-react';
-import SyncStatusBadge from '../SyncStatusBadge';
 import AppLogo from '../AppLogo';
 import Avatar from '../ui/Avatar';
 
@@ -330,41 +327,8 @@ export default function DesktopSidebar({
         </nav>
       </div>
 
-      {/* SECCIÓN INFERIOR: Sincronización, Perfil y Ajustes */}
-      <div className="pt-4 border-t border-slate-200/80 dark:border-white/5 space-y-3">
-        {/* Estado de Sincronización en la Nube y Bloqueo de sesión */}
-        <div className="px-1 flex items-center justify-between">
-          <SyncStatusBadge 
-            syncStatus={syncStatus}
-            isCloudEnabled={isCloudEnabled}
-            user={syncUser}
-            onOpenAuth={onOpenAuth} 
-          />
-
-          <div className="flex items-center gap-0.5">
-            {onLock && (
-              <button
-                type="button"
-                onClick={onLock}
-                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer"
-                title="Bloquear pantalla con PIN"
-              >
-                <Lock className="w-4 h-4" />
-              </button>
-            )}
-            {onLogout && (
-              <button
-                type="button"
-                onClick={onLogout}
-                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
+      {/* SECCIÓN INFERIOR: Perfil y Ajustes */}
+      <div className="pt-4 border-t border-slate-200/80 dark:border-white/5">
         {/* Tarjeta de Perfil y Acceso a Ajustes */}
         <button
           type="button"

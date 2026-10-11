@@ -583,7 +583,8 @@ export default function App() {
     handleResetData,
     handleUpdateProfile,
     pushLocalToCloud,
-    pullCloudToLocal
+    pullCloudToLocal,
+    onLogout: handleGlobalLogout
   }), [
     financialOps,
     modalControls,
@@ -637,7 +638,8 @@ export default function App() {
     handleResetData,
     handleUpdateProfile,
     pushLocalToCloud,
-    pullCloudToLocal
+    pullCloudToLocal,
+    handleGlobalLogout
   ]);
   if (authLoading) {
     return <SplashScreen message="Verificando tu espacio..." />;
@@ -688,7 +690,8 @@ export default function App() {
         userProfile={userProfile}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onLogout={() => setIsLocked(true)}
+        onLock={() => setIsLocked(true)}
+        onLogout={handleGlobalLogout}
         trm={trm}
         syncStatus={syncStatus}
         isCloudEnabled={isCloudEnabled}
@@ -751,7 +754,7 @@ export default function App() {
           onOpenProfile={handleOpenProfile}
           onOpenSettings={handleOpenProfile}
           onOpenAuth={handleOpenProfile}
-          onLogout={() => setIsLocked(true)}
+          onLogout={handleGlobalLogout}
           syncStatus={syncStatus}
           isCloudEnabled={isCloudEnabled}
           syncUser={syncUser}
@@ -835,6 +838,7 @@ export default function App() {
           {...modalControls}
           financeData={financeData}
           financeActions={financeActions}
+          onLogout={handleGlobalLogout}
         />
 
         {/* Banner Flotante de Actualización PWA */}

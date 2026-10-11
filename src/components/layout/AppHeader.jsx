@@ -1,8 +1,7 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Calendar, ChevronDown, Bell } from 'lucide-react';
 import Header from '../Header';
 import SyncStatusBadge from '../SyncStatusBadge';
-import Avatar from '../ui/Avatar';
 import NotificationCenter from '../NotificationCenter';
 import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
 
@@ -175,24 +174,6 @@ export default function AppHeader({
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
-            </button>
-
-            {/* Avatar de Perfil en Header Desktop */}
-            <button
-              type="button"
-              onClick={onOpenProfile}
-              className="flex items-center justify-center p-0.5 rounded-full cursor-pointer transition-transform active:scale-95 ml-1 select-none focus:outline-none"
-              title={`Perfil - ${userProfile?.name || 'Usuario'}`}
-              aria-label={`Perfil - ${userProfile?.name || 'Usuario'}`}
-            >
-              <Avatar 
-                src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
-                name={syncUser?.user_metadata?.full_name || userProfile?.name} 
-                email={syncUser?.email || userProfile?.email}
-                size="sm" 
-                showStatus={Boolean(syncUser?.id && syncUser?.id !== 'local-user')} 
-                isOnline={Boolean(syncUser?.id && syncUser?.id !== 'local-user')}
-              />
             </button>
           </div>
         </div>
