@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Activity, Plus, ArrowRight } from 'lucide-react';
 
 /**
@@ -67,7 +67,7 @@ export function RecentMovementsWidget({
           handleNav('transactions');
         }
       }}
-      className="min-h-[140px] p-4 sm:p-6 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
+      className="min-h-[140px] p-4 sm:p-6 rounded-3xl border shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
       style={{
         backgroundColor: 'var(--bg-card, #ffffff)',
         borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))'
@@ -105,7 +105,7 @@ export function RecentMovementsWidget({
                   handleAdd(e, 'expense');
                 }
               }}
-              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-2xs shrink-0"
+              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
               title="Añadir nuevo movimiento"
             >
               <Plus className="w-3.5 h-3.5" />

@@ -41,7 +41,7 @@ export default function BottomNav({
   return (
     <nav 
       aria-label="Navegación principal móvil"
-      className={`fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:left-1/2 sm:-translate-x-1/2 z-40 backdrop-blur-xl border-t pt-1.5 px-2 pb-2 sm:pb-3 grid grid-cols-5 items-center justify-items-center shadow-lg bg-white/95 dark:bg-[#12141C]/95 border-slate-200/80 dark:border-white/10 ${mobileOnlyClass || className}`}
+      className={`fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:left-1/2 sm:-translate-x-1/2 z-40 backdrop-blur-xl border-t pt-1.5 px-2 pb-2 sm:pb-3 grid grid-cols-5 items-center justify-items-center shadow-lg bg-white/95 dark:bg-[#18181b]/95 border-slate-200/80 dark:border-white/[0.08] ${mobileOnlyClass || className}`}
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
       {/* 1. Inicio */}
@@ -49,7 +49,7 @@ export default function BottomNav({
         id="dock-tab-dashboard"
         type="button"
         onClick={() => handleTab('dashboard')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl active:scale-90 transition-all cursor-pointer ${
+        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none cursor-pointer ${
           activeTab === 'dashboard' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
         }`}
       >
@@ -62,7 +62,7 @@ export default function BottomNav({
         id="dock-tab-transactions"
         type="button"
         onClick={() => handleTab('transactions')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl active:scale-90 transition-all cursor-pointer ${
+        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none cursor-pointer ${
           activeTab === 'transactions' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
         }`}
       >
@@ -76,7 +76,7 @@ export default function BottomNav({
           id="dock-btn-fab"
           type="button"
           onClick={handleFabClick}
-          className="relative -top-5 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-600/40 active:scale-90 transition-all z-50 pointer-events-auto cursor-pointer"
+          className="relative -top-5 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-600/40 hover:shadow-emerald-600/60 transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 z-50 pointer-events-auto cursor-pointer select-none"
           aria-label="Nuevo movimiento y acciones"
         >
           <Plus 
@@ -92,7 +92,7 @@ export default function BottomNav({
         id="dock-tab-investments"
         type="button"
         onClick={() => handleTab('investments')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl active:scale-90 transition-all cursor-pointer ${
+        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none cursor-pointer ${
           activeTab === 'investments' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
         }`}
       >
@@ -105,7 +105,7 @@ export default function BottomNav({
         id="dock-tab-debts"
         type="button"
         onClick={() => handleTab('debts')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl active:scale-90 transition-all relative cursor-pointer ${
+        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none relative cursor-pointer ${
           activeTab === 'debts' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
         }`}
       >

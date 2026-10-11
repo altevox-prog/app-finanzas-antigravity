@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { X, Search } from 'lucide-react';
 import { useBackHandler } from '../hooks/useBackHandler';
 
@@ -351,7 +351,7 @@ export default function EmojiPickerModal({
         {/* Encabezado */}
         <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--border-color)' }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-xl shadow-2xs">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-xl shadow-sm">
               {selectedEmoji || '🏷️'}
             </div>
             <div>
@@ -404,7 +404,7 @@ export default function EmojiPickerModal({
                   onClick={() => setActiveTab(cat.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-emerald-500 text-white shadow-xs scale-102'
+                      ? 'bg-emerald-500 text-white shadow-sm scale-102'
                       : 'hover:bg-slate-200/50 dark:hover:bg-white/10 opacity-70'
                   }`}
                   style={!isActive ? { backgroundColor: 'var(--bg-card-sub)' } : {}}

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { toast } from '../utils/toast';
+import { ensureUUID } from '../services/syncEngine';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 function getInitialRecurringPayments() {
   try {
@@ -98,6 +100,11 @@ export function useRecurringPayments(isResettingRef) {
       saveRecurringToStorage(updated);
       return updated;
     });
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('recurring_payments').delete().eq('id', ensureUUID(id)).catch(() => {});
+    }
+
     toast.info('Elemento eliminado');
   }, []);
 

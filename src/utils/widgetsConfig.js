@@ -108,11 +108,14 @@ export const normalizeWidgetId = (id) => {
   if (id === 'patrimonio' || id === 'patrimonio_total') return 'net_worth';
   if (id === 'inversiones') return 'investments';
   if (id === 'prestamos' || id === 'prestamos_deudas') return 'debts';
-  if (id === 'balance' || id === 'balance_general') return 'liquid_balance';
+  if (id === 'balance') return 'balance_general';
   if (id === 'mis_cuentas' || id === 'accounts') return 'my_accounts';
   if (id === 'gastos_categoria' || id === 'charts' || id === 'expenses') return 'expenses_category';
   if (id === 'movimientos_recientes' || id === 'recent_transactions' || id === 'recent') return 'recent_movements';
   if (id === 'pagos_recurrentes' || id === 'recurring') return 'recurring_payments';
+  if (id === 'presupuesto_metas') return 'budget';
+  if (id === 'bento') return 'bento_metrics';
+  if (id === 'pill_bar_chart') return 'weekly_cashflow';
   return id;
 };
 
@@ -200,10 +203,12 @@ export const saveStoredWidgetsConfig = async (config, userId = null) => {
     console.error('[Monety] Error guardando monety_widgets_config localmente:', err);
   }
 
-  // Notificar al Dashboard y componentes en vivo solo si hubo cambios reales
+  // Notificar al Dashboard y componentes en vivo solo si hubo cambios reales (desacoplado del ciclo de render sincrónico)
   if (hasChanged && typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('monety_widgets_order_v2_updated', { detail: config }));
-    window.dispatchEvent(new CustomEvent('monety_widgets_config_updated', { detail: config }));
-    window.dispatchEvent(new CustomEvent('presu_widget_order_updated', { detail: config }));
+    queueMicrotask(() => {
+      window.dispatchEvent(new CustomEvent('monety_widgets_order_v2_updated', { detail: config }));
+      window.dispatchEvent(new CustomEvent('monety_widgets_config_updated', { detail: config }));
+      window.dispatchEvent(new CustomEvent('presu_widget_order_updated', { detail: config }));
+    });
   }
 };

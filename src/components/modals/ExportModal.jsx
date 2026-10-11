@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, 
@@ -136,7 +136,7 @@ export default function ExportModal({
         {/* Cabecera */}
         <div className="shrink-0 px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-color, rgba(255,255,255,0.1))' }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-500 shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-500 shadow-sm">
               <HardDrive className="w-5 h-5" />
             </div>
             <div>
@@ -173,7 +173,7 @@ export default function ExportModal({
             <button
               type="button"
               onClick={handleExportJSON}
-              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Descargar Copia de Seguridad JSON</span>
@@ -264,7 +264,7 @@ export default function ExportModal({
                 <button
                   type="button"
                   onClick={confirmRestore}
-                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-xs"
+                  className="flex-1 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-sm"
                 >
                   Confirmar y Cargar
                 </button>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Calendar, Pencil, Sparkles, ChevronDown } from 'lucide-react';
 import DesktopSidebar from './DesktopSidebar';
 import DesktopMonthPicker from './DesktopMonthPicker';
@@ -105,7 +105,7 @@ export default function DesktopLayout({
               <button
                 type="button"
                 onClick={() => setShowMonthPicker(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/80 dark:border-white/10 shadow-2xs group"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/80 dark:border-white/10 shadow-sm group"
                 title="Abrir selector de mes y año"
               >
                 <Calendar className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
@@ -115,7 +115,7 @@ export default function DesktopLayout({
 
               {/* 4. Chip de TRM Oficial Automatizado (No editable) */}
               <div 
-                className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 select-none shadow-2xs"
+                className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 select-none shadow-sm"
                 title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

@@ -5,6 +5,9 @@
 :root,
 html.light,
 body[data-theme="light"] {
+  --surface-base: #F7FCF5;
+  --surface-level1: #FFFFFF;
+  --surface-level2: #F3FEE8;
   --bg-app: #F7FCF5;
   --bg-card: #FFFFFF;
   --bg-card-sub: #F3FEE8;
@@ -13,7 +16,9 @@ body[data-theme="light"] {
   --bg-segmented-btn-active: #FFFFFF;
   --text-main: #122315;
   --text-muted: #49634D;
+  --text-tertiary: #8BA89C;
   --border-color: #DBEED8;
+  --border-alpha: rgba(18, 60, 21, 0.12);
   --header-bg: rgba(247, 252, 245, 0.92);
   --dock-bg: rgba(255, 255, 255, 0.96);
   --modal-bg: #FFFFFF;
@@ -32,29 +37,40 @@ body[data-theme="light"] {
 
 html.dark,
 body[data-theme="dark"] {
-  --bg-app: #080E0C;
-  --bg-card: #101C18;
-  --bg-card-sub: #162420;
-  --bg-input: #162420;
-  --bg-segmented: rgba(41, 214, 145, 0.08);
-  --bg-segmented-btn-active: #1D332B;
-  --text-main: #F0FDF6;
-  --text-muted: #8BA89C;
-  --border-color: #1A2F28;
-  --header-bg: rgba(8, 14, 12, 0.92);
-  --dock-bg: rgba(16, 28, 24, 0.96);
-  --modal-bg: #101C18;
-  --pill-bg: #162420;
+  /* Jerarquía de Superficies Elevadas (Dark Mode) */
+  --surface-base: #09090b;       /* Lienzo / Fondo base (page) zinc-950 */
+  --surface-level1: #18181b;     /* Superficie nivel 1: tarjetas / contenedores zinc-900 */
+  --surface-level2: #27272a;     /* Superficie nivel 2: menús desplegables / modales / drawers zinc-800 */
+
+  --bg-app: #09090b;
+  --bg-card: #18181b;
+  --bg-card-sub: #27272a;
+  --bg-input: #27272a;
+  --bg-segmented: rgba(255, 255, 255, 0.05);
+  --bg-segmented-btn-active: #27272a;
+
+  /* Jerarquía de textos en dark mode */
+  --text-main: #f4f4f5;          /* text-zinc-100 (87% de luminosidad) */
+  --text-muted: #a1a1aa;         /* text-zinc-400 (60% de luminosidad) */
+  --text-tertiary: #52525b;      /* text-zinc-600 (38% de luminosidad) */
+
+  /* Bordes Alpha en lugar de sombras opacas */
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-alpha: rgba(255, 255, 255, 0.08);
+  --header-bg: rgba(9, 9, 11, 0.88);
+  --dock-bg: rgba(24, 24, 27, 0.92);
+  --modal-bg: #27272a;           /* Nivel 2: modales / menús desplegables */
+  --pill-bg: #27272a;
   --accent-color: #29D691;
   --brand-primary: #29D691;
-  --brand-primary-text: #05100B;
+  --brand-primary-text: #09090b;
   --brand-accent: #29D691;
   --brand-accent-bg: rgba(41, 214, 145, 0.12);
-  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
-  --balance-card-bg: linear-gradient(145deg, #101C18 0%, #080E0C 100%);
-  --balance-card-border: #1A2F28;
-  --balance-card-sub-bg: rgba(22, 36, 32, 0.7);
-  --balance-card-text: #F0FDF6;
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  --balance-card-bg: linear-gradient(145deg, #18181b 0%, #09090b 100%);
+  --balance-card-border: rgba(255, 255, 255, 0.08);
+  --balance-card-sub-bg: rgba(39, 39, 42, 0.75);
+  --balance-card-text: #f4f4f5;
 }
 
 @layer base {
@@ -97,7 +113,7 @@ body[data-theme="dark"] {
 .ios-card {
   background-color: var(--bg-card);
   color: var(--text-main);
-  border-radius: 24px;
+  border-radius: 16px; /* Escala concéntrica: tarjetas principales 16px (rounded-2xl) */
   border: 1px solid var(--border-color);
   box-shadow: var(--card-shadow);
   transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
@@ -273,4 +289,125 @@ body[data-theme="dark"] {
   animation: monety-jiggle-alt 0.24s infinite ease-in-out;
   transform-origin: 50% 50%;
 }
+
+/* ==========================================================================
+   Fundación Visual: Dark Mode Elevado, Bordes Alpha y Tokens de Radio
+   ========================================================================== */
+
+/* 1. Jerarquía de Superficies Dark Mode */
+.surface-page,
+.dark-surface-page {
+  background-color: #09090b !important; /* Lienzo base (zinc-950) */
+}
+
+.surface-card,
+.dark-surface-card {
+  background-color: #18181b !important; /* Nivel 1: tarjetas / contenedores (zinc-900) */
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.surface-elevated,
+.dark-surface-elevated {
+  background-color: #27272a !important; /* Nivel 2: menús / modales / drawers (zinc-800) */
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 2. Bordes Alpha en lugar de sombras opacas en dark mode */
+.dark-border,
+.dark-border-alpha,
+.border-alpha {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark-border-subtle {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 3. Jerarquía de Textos en Dark Mode */
+.dark-text-primary {
+  color: #f4f4f5 !important; /* text-zinc-100 (87% de luminosidad) */
+}
+
+.dark-text-secondary {
+  color: #a1a1aa !important; /* text-zinc-400 (60% de luminosidad) */
+}
+
+.dark-text-tertiary {
+  color: #52525b !important; /* text-zinc-600 (38% de luminosidad) */
+}
+
+/* 4. Sistema Concéntrico de Redondeo (Border Radius) */
+/* Chips / Badges: rounded-md (6px) o rounded-full para etiquetas inline puras */
+.radius-chip,
+.radius-badge {
+  border-radius: 6px !important;
+}
+
+/* Botones e Inputs: rounded-lg (8px) */
+.radius-btn,
+.radius-button,
+.radius-input {
+  border-radius: 8px !important;
+}
+
+/* Tarjetas principales: rounded-xl (12px) o rounded-2xl (16px) */
+.radius-card {
+  border-radius: 16px !important;
+}
+
+.radius-card-sm {
+  border-radius: 12px !important;
+}
+
+/* Modales: rounded-2xl (16px a 20px) */
+.radius-modal {
+  border-radius: 20px !important;
+}
+
+/* 5. Estilo para Autofill del Navegador (evita flash blanco de Chrome/Safari en modo oscuro) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: inherit;
+  -webkit-box-shadow: 0 0 0px 1000px #18181b inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover, 
+.dark input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f4f4f5 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #18181b inset !important;
+}
+
+html:not(.dark) input:-webkit-autofill,
+html:not(.dark) input:-webkit-autofill:hover, 
+html:not(.dark) input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+}
+
+/* Eliminar spinners por defecto en inputs numéricos */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ==========================================================================
+   Ergonomía Móvil y Compensación de Scroll (Principio 9)
+   ========================================================================== */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+[id] {
+  scroll-margin-top: 5rem;
+}
+
 

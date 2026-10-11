@@ -11,21 +11,27 @@ export function useDashboardWidgets({ userId = null, isResettingRef = null } = {
 
   // Sincronización reactiva bidireccional de widgets
   useEffect(() => {
+    let isMounted = true;
     const handleSync = (e) => {
       const next = (e?.detail && Array.isArray(e.detail) && e.detail.length > 0)
         ? e.detail
         : getStoredWidgetsConfig();
-      setWidgets((prev) => {
-        try {
-          if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
-        } catch (_) {}
-        return [...next];
+      // Desacoplar al siguiente microtask para evitar actualizar App durante el render de Dashboard
+      queueMicrotask(() => {
+        if (!isMounted) return;
+        setWidgets((prev) => {
+          try {
+            if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
+          } catch (_) {}
+          return [...next];
+        });
       });
     };
     window.addEventListener('monety_widgets_order_v2_updated', handleSync);
     window.addEventListener('monety_widgets_config_updated', handleSync);
     window.addEventListener('presu_widget_order_updated', handleSync);
     return () => {
+      isMounted = false;
       window.removeEventListener('monety_widgets_order_v2_updated', handleSync);
       window.removeEventListener('monety_widgets_config_updated', handleSync);
       window.removeEventListener('presu_widget_order_updated', handleSync);

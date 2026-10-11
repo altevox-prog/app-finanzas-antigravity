@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { ArrowRight, Wallet, Plus, CreditCard } from 'lucide-react';
 import BrandIcon from './BrandIcon';
 import { getAccountNativeBalance, formatNativeCurrency, safeNumber } from '../utils/currencyUtils';
@@ -54,22 +54,22 @@ export default function AccountsWidget({
         {accountList.length === 0 ? (
           <div 
             onClick={() => onNavigateToTab('accounts')}
-            className="w-full sm:w-[320px] p-4 rounded-2xl border border-dashed border-slate-300 dark:border-white/10 bg-white/50 dark:bg-[#101C18]/60 flex items-center justify-between gap-3 cursor-pointer hover:border-emerald-500/50 dark:hover:border-[#29D691]/50 transition-all group"
+            className="w-full sm:w-[320px] p-4 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-[#29D691]/15 text-emerald-600 dark:text-[#29D691] flex items-center justify-center group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <Plus className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">
                   Sin cuentas registradas
                 </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                <p className="text-[11px] text-slate-400 dark:text-zinc-500">
                   Toca aquí para vincular tu primera cuenta
                 </p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-emerald-500 dark:text-[#29D691] opacity-70 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight className="w-4 h-4 text-slate-400 dark:text-zinc-400 opacity-70 group-hover:translate-x-0.5 transition-transform" />
           </div>
         ) : (
           accountList.map((acc, index) => {
@@ -107,43 +107,43 @@ export default function AccountsWidget({
                     onNavigateToTab('accounts');
                   }
                 }}
-                className={`shrink-0 snap-start ${cardResponsiveClasses} p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-[#1A2F28] bg-white dark:bg-[#101C18] flex flex-col justify-between shadow-xs hover:shadow-md cursor-pointer active:scale-98 transition-all hover:border-emerald-500/50 dark:hover:border-[#29D691]/50 group`}
+                className={`shrink-0 snap-start ${cardResponsiveClasses} p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-sm hover:shadow-sm cursor-pointer active:scale-98 transition-all hover:border-slate-300 dark:hover:border-white/20 group`}
               >
                 {/* Cabecera de la tarjeta: Logo + Tipo + Moneda */}
                 <div className="flex items-center justify-between gap-1 mb-2.5">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                    <div className="p-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0 overflow-hidden">
                       <BrandIcon 
                         name={acc?.name || 'Cuenta'} 
                         type={acc?.type}
-                        size={22} 
+                        size={20} 
                       />
                     </div>
                     <span 
-                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1.5 truncate max-w-[85px] bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300"
+                      className="text-xs font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 truncate max-w-[95px] bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: acc?.color || '#29D691' }} />
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: acc?.color || '#3b82f6' }} />
                       <span className="truncate">{typeLabel}</span>
                     </span>
                   </div>
 
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] shrink-0">
                     {currency}
                   </span>
                 </div>
 
                 {/* Detalle y Saldo */}
                 <div className="min-w-0">
-                  <div className="text-[13px] sm:text-[14px] font-bold text-slate-800 dark:text-slate-200 truncate leading-snug group-hover:text-emerald-600 dark:group-hover:text-[#29D691] transition-colors">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate leading-snug">
                     {acc?.name || 'Sin nombre'}
                   </div>
 
-                  <div className={`text-[15px] sm:text-[17px] font-black mt-1 tracking-tight leading-none tabular-nums truncate ${
+                  <div className={`text-base sm:text-lg font-bold font-mono mt-1 tracking-tight leading-none tabular-nums truncate ${
                     isCreditCard 
-                      ? (cardOutstandingDebt > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-[#29D691]') 
+                      ? (cardOutstandingDebt > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400') 
                       : balNative < 0 
-                      ? 'text-rose-500 dark:text-rose-400' 
-                      : 'text-slate-900 dark:text-white'
+                      ? 'text-rose-600 dark:text-rose-400' 
+                      : 'text-slate-900 dark:text-zinc-100'
                   }`}>
                     {isCreditCard 
                       ? (cardOutstandingDebt > 0 ? `-${formatMoney(cardOutstandingDebt)}` : 'Sin deuda')
@@ -154,13 +154,13 @@ export default function AccountsWidget({
                   </div>
 
                   {isForeign && !isCreditCard && (
-                    <div className="text-[10px] text-slate-400 font-medium mt-1 truncate tabular-nums">
+                    <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium mt-1 truncate tabular-nums">
                       ≈ $ {Math.round(copBal).toLocaleString('es-CO')} COP
                     </div>
                   )}
 
                   {isInvestment && shares > 0 && (
-                    <div className="text-[10px] text-emerald-600 dark:text-[#29D691] font-semibold mt-1 truncate">
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1 truncate">
                       {shares} {shares === 1 ? 'acc' : 'accs'}{unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)}` : ''}
                     </div>
                   )}

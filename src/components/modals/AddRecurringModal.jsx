@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, 
@@ -15,6 +15,7 @@ import {
 import CategoryCombobox from '../CategoryCombobox';
 import SubcategoryCombobox from '../SubcategoryCombobox';
 import AccountCombobox from '../AccountCombobox';
+import SegmentedControl from '../common/SegmentedControl';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../../utils/currencyFormatter';
@@ -322,6 +323,8 @@ export default function AddRecurringModal({
     onClose();
   };
 
+  if (!isOpen) return null;
+
   const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
       <div 
@@ -356,39 +359,24 @@ export default function AddRecurringModal({
 
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 overscroll-contain">
+          <div className="flex-1 overflow-y-auto scroll-touch p-5 sm:p-6 space-y-4 overscroll-contain">
             
             {/* 1. Tipo: Gasto vs Ingreso */}
-            <div className="ios-segmented w-full flex justify-center p-1 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
-              <button
-                type="button"
-                onClick={() => setType('expense')}
-                className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  type === 'expense' 
-                    ? 'ios-segmented-btn-active text-[#FF3B30] bg-white dark:bg-[#1E2330] shadow-xs scale-[1.01]' 
-                    : 'opacity-60 text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                <ArrowDownRight className="w-4 h-4" />
-                <span>Gasto Fijo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setType('income')}
-                className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  type === 'income' 
-                    ? 'ios-segmented-btn-active text-[#34C759] bg-white dark:bg-[#1E2330] shadow-xs scale-[1.01]' 
-                    : 'opacity-60 text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                <ArrowUpRight className="w-4 h-4" />
-                <span>Ingreso Periódico</span>
-              </button>
+            <div>
+              <SegmentedControl
+                options={[
+                  { id: 'expense', label: 'Gasto Fijo', icon: ArrowDownRight },
+                  { id: 'income', label: 'Ingreso Periódico', icon: ArrowUpRight }
+                ]}
+                value={type}
+                onChange={setType}
+                size="md"
+              />
             </div>
 
             {/* 2. Nombre / Concepto */}
             <div>
-              <label className="block text-[11px] font-bold opacity-60 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Nombre o Concepto *
               </label>
               <input
@@ -397,7 +385,7 @@ export default function AddRecurringModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ej. Arriendo, Internet Fibra, Netflix, Salario"
-                className="w-full px-3.5 py-2.5 rounded-2xl text-sm font-semibold border border-slate-200/80 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                className="w-full h-11 px-3.5 rounded-xl text-sm font-semibold border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100"
               />
 
               {/* Sugerencias Rápidas */}
@@ -417,11 +405,11 @@ export default function AddRecurringModal({
 
             {/* 3. Monto y Multidivisa */}
             <div>
-              <label className="block text-[11px] font-bold opacity-60 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Monto ({currency === 'COP' ? '$ COP' : currency}) *
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 font-black text-lg">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 font-black text-lg text-slate-900 dark:text-zinc-100">
                   {currency === 'EUR' ? '€' : '$'}
                 </span>
                 <input
@@ -432,7 +420,7 @@ export default function AddRecurringModal({
                   value={amount}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setAmount(formatCurrencyInput(e.target.value, enableDecimals))}
-                  className="w-full pl-8 pr-3.5 py-2.5 rounded-2xl text-xl font-bold border border-slate-200/80 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white tabular-nums"
+                  className="w-full pl-8 pr-3.5 h-12 rounded-xl text-xl font-bold font-mono tracking-tight border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 tabular-nums"
                 />
               </div>
 
@@ -460,7 +448,7 @@ export default function AddRecurringModal({
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-emerald-500 text-white shadow-xs font-bold scale-[1.02]'
+                          ? 'bg-emerald-500 text-white shadow-sm font-bold scale-[1.02]'
                           : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-white/10'
                       }`}
                     >
@@ -511,7 +499,7 @@ export default function AddRecurringModal({
                   onClick={() => setMode('auto')}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     mode === 'auto'
-                      ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 ring-1 ring-emerald-500 shadow-xs'
+                      ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 ring-1 ring-emerald-500 shadow-sm'
                       : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 opacity-70 hover:opacity-100'
                   }`}
                 >
@@ -534,7 +522,7 @@ export default function AddRecurringModal({
                   onClick={() => setMode('manual')}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     mode === 'manual'
-                      ? 'border-amber-500 bg-amber-500/10 dark:bg-amber-500/15 ring-1 ring-amber-500 shadow-xs'
+                      ? 'border-amber-500 bg-amber-500/10 dark:bg-amber-500/15 ring-1 ring-amber-500 shadow-sm'
                       : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 opacity-70 hover:opacity-100'
                   }`}
                 >

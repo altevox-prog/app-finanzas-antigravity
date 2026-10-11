@@ -19,6 +19,8 @@ import {
   Tv,
   Music,
   Cloud,
+  Bell,
+  Clock,
   Zap,
   RotateCcw,
   Sparkles,
@@ -57,8 +59,9 @@ import TaxView from '../TaxView';
 import { downloadBackupJSON, downloadTransactionsCSV, downloadInvestmentsCSV, parseAndValidateBackup } from '../../utils/exportUtils';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { useAuth } from '../../context/AuthContext';
-import { signInWithGoogle, signOutUser } from '../../services/supabaseClient';
+import { signInWithGoogle, signOutUser, supabase, isSupabaseConfigured } from '../../services/supabaseClient';
 import { safeNumber } from '../../utils/financeMath';
+import Avatar from '../ui/Avatar';
 
 export default function ProfileModal({
   isOpen,
@@ -110,8 +113,10 @@ export default function ProfileModal({
   // Sistema de 4 Pestañas en el Centro de Control: 'finances' | 'security' | 'cloud' | 'system'
   const [activeTab, setActiveTab] = useState('finances');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [confirmDeleteText, setConfirmDeleteText] = useState('');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
 
   useEffect(() => {
@@ -132,14 +137,6 @@ export default function ProfileModal({
     user.email && 
     user.email !== 'local@device'
   );
-
-  useBackHandler(isOpen, () => {
-    if (currentView !== 'main') {
-      setCurrentView('main');
-    } else {
-      onClose();
-    }
-  });
 
   // Edit Name State
   const [isEditingName, setIsEditingName] = useState(false);
@@ -195,6 +192,32 @@ export default function ProfileModal({
   const [backupPreview, setBackupPreview] = useState(null);
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
+  // Manejador centralizado de tecla Volver / Popstate para navegación interna escalonada
+  useBackHandler(isOpen, () => {
+    if (showAddGoalForm || editingGoal) {
+      setShowAddGoalForm(false);
+      setEditingGoal(null);
+      return;
+    }
+    if (showAddSubForm) {
+      setShowAddSubForm(false);
+      return;
+    }
+    if (isEditingGlobalBudget) {
+      setIsEditingGlobalBudget(false);
+      return;
+    }
+    if (editingCatBudgetId) {
+      setEditingCatBudgetId(null);
+      return;
+    }
+    if (currentView !== 'main') {
+      setCurrentView('main');
+    } else {
+      onClose();
+    }
+  });
+
   // Cada vez que se abre el modal de perfil, regresar siempre a la pantalla raíz principal ('main')
   useEffect(() => {
     if (isOpen) {
@@ -207,6 +230,7 @@ export default function ProfileModal({
       setEditingCatBudgetId(null);
       setBackupPreview(null);
       setShowResetConfirm(false);
+      setConfirmDeleteText('');
       setShowLogoutConfirm(false);
     }
   }, [isOpen]);
@@ -476,17 +500,123 @@ export default function ProfileModal({
 
   // Budgets Handlers
   const handleSaveGlobalBudget = () => {
-    const val = Number(tempGlobalBudget);
-    if (val <= 0) {
+    const val = Number(tempGlobalBudget || 0);
+    if (val < 0) {
       showToast('Ingresa un monto válido para el presupuesto.', true);
       return;
     }
-    onUpdateBudgets({
+    const updated = {
       ...budgets,
       global: val
-    });
+    };
+    if (typeof onUpdateBudgets === 'function') {
+      onUpdateBudgets(updated);
+    }
+    try {
+      localStorage.setItem('presu_budgets_v1', JSON.stringify(updated));
+      localStorage.setItem('budgets', JSON.stringify(updated));
+      localStorage.setItem('global_budget_limit', String(val));
+    } catch {}
+
+    // Persistir directamente en Supabase si hay sesión activa
+    if (isSupabaseConfigured && supabase) {
+      (async () => {
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          const targetUserId = authData?.user?.id || (user?.id !== 'local-user' ? user?.id : null);
+          if (targetUserId) {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            let budgetId = localStorage.getItem('global_budget_id');
+            if (!budgetId || !uuidRegex.test(budgetId)) {
+              if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                try { budgetId = crypto.randomUUID(); } catch {}
+              }
+              if (!budgetId || !uuidRegex.test(budgetId)) {
+                budgetId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                  const r = (Math.random() * 16) | 0;
+                  const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                  return v.toString(16);
+                });
+              }
+              try {
+                localStorage.setItem('global_budget_id', budgetId);
+              } catch {}
+            }
+
+            const nowIso = new Date().toISOString();
+            const budgetRecord = {
+              id: budgetId,
+              user_id: targetUserId,
+              name: 'Límite Global',
+              category: 'General',
+              period: 'monthly',
+              amount: Number(val) || 0,
+              is_global: true,
+              updated_at: nowIso
+            };
+
+            const { error: bErr } = await supabase.from('budgets').upsert([budgetRecord], { onConflict: 'id' });
+            if (bErr) {
+              console.warn('[ProfileModal] Upsert en budgets falló (400/schema):', bErr.message || bErr);
+              // Fallback defensivo a localStorage bajo la clave global_budget_limit
+              try {
+                localStorage.setItem('global_budget_limit', String(Number(val) || 0));
+              } catch {}
+
+              // Reintento defensivo con columnas básicas si rechaza is_global o name
+              try {
+                await supabase.from('budgets').upsert([{
+                  id: budgetId,
+                  user_id: targetUserId,
+                  name: 'Límite Global',
+                  category: 'General',
+                  period: 'monthly',
+                  amount: Number(val) || 0,
+                  updated_at: nowIso
+                }], { onConflict: 'id' });
+              } catch (reErr) {
+                console.warn('[ProfileModal] Reintento básico de budgets omitido:', reErr);
+              }
+            } else {
+              try {
+                localStorage.setItem('global_budget_limit', String(Number(val) || 0));
+              } catch {}
+            }
+
+            try {
+              const { error: settingsError } = await supabase
+                .from('user_settings')
+                .upsert(
+                  { user_id: targetUserId, global_budget_limit: val, updated_at: nowIso },
+                  { onConflict: 'user_id' }
+                );
+
+              if (settingsError) {
+                console.warn('[ProfileModal] Upsert en user_settings omitido (404/PGRST204):', settingsError.message || settingsError);
+              }
+            } catch (settingsEx) {
+              console.warn('[ProfileModal] Fallo defensivo al persistir en user_settings:', settingsEx);
+            }
+
+            try {
+              localStorage.setItem('user_settings', JSON.stringify({
+                user_id: targetUserId,
+                global_budget_limit: val,
+                updated_at: nowIso
+              }));
+            } catch {}
+          }
+        } catch (e) {
+          console.warn('Error al guardar presupuesto en Supabase:', e);
+          try {
+            localStorage.setItem('global_budget_limit', String(Number(val) || 0));
+          } catch {}
+        }
+      })();
+    }
+
     setIsEditingGlobalBudget(false);
-    showToast('Presupuesto global actualizado.');
+    showToast(val > 0 ? 'Presupuesto global actualizado.' : 'Límite global eliminado ($0).');
   };
 
   const handleSaveCategoryBudget = (catId) => {
@@ -666,14 +796,18 @@ export default function ProfileModal({
   const handleFullLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await signOutUser();
+      if (isSupabaseConfigured && supabase) {
+        await supabase.auth.signOut();
+      }
       if (typeof signOut === 'function') {
         await signOut();
       }
       setShowLogoutConfirm(false);
-      showToast('Sesión de Google cerrada exitosamente.');
+      onClose();
+      showToast('Sesión cerrada exitosamente.');
     } catch (err) {
       console.error('Error al cerrar sesión:', err);
+      showToast('Error al cerrar sesión', true);
     } finally {
       setIsLoggingOut(false);
     }
@@ -686,37 +820,140 @@ export default function ProfileModal({
     }
 
     try {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.replace('/');
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data } = await supabase.auth.getUser();
+          const userId = data?.user?.id || (user?.id !== 'local-user' ? user?.id : null);
+          if (userId) {
+            await Promise.allSettled([
+              supabase.from('transactions').delete().eq('user_id', userId),
+              supabase.from('debts').delete().eq('user_id', userId),
+              supabase.from('recurring_payments').delete().eq('user_id', userId),
+              supabase.from('investments').delete().eq('user_id', userId),
+              supabase.from('savings_goals').delete().eq('user_id', userId),
+              supabase.from('budgets').delete().eq('user_id', userId),
+              supabase.from('categories').delete().eq('user_id', userId),
+              supabase.from('accounts').delete().eq('user_id', userId)
+            ]);
+            try {
+              await supabase.from('accounts').delete().eq('user_id', userId);
+            } catch {}
+          }
+        } catch (cloudErr) {
+          console.warn('Error al borrar datos en Supabase:', cloudErr);
+        }
+      }
+
+      // Preservar tokens de sesión de Supabase y banderas de tutorial/onboarding
+      try {
+        const isPreservedKey = (key) => {
+          if (!key) return false;
+          // Tokens y sesiones de autenticación
+          if (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth')) return true;
+          // Banderas de tutorial y onboarding
+          if (
+            key === 'presu_tutorial_completed' ||
+            key === 'has_completed_tutorial' ||
+            key === 'tutorial_completed' ||
+            key === 'hasSeenTutorial' ||
+            key === 'tutorial_seen' ||
+            key === 'app_onboarding_completed' ||
+            key === 'has_completed_onboarding' ||
+            key === 'hasCompletedOnboarding' ||
+            key.startsWith('tutorial_completed_') ||
+            key.startsWith('presu_tutorial_completed_') ||
+            key.startsWith('has_completed_tutorial_') ||
+            key.startsWith('has_completed_onboarding_') ||
+            key.startsWith('hasCompletedOnboarding_')
+          ) {
+            return true;
+          }
+          return false;
+        };
+
+        const preservedData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && isPreservedKey(key)) {
+            preservedData[key] = localStorage.getItem(key);
+          }
+        }
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && !isPreservedKey(key)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+        Object.entries(preservedData).forEach(([k, v]) => {
+          if (v !== null) localStorage.setItem(k, v);
+        });
+
+        // Asegurar que las banderas de tutorial y onboarding continúen en true
+        localStorage.setItem('presu_tutorial_completed', 'true');
+        localStorage.setItem('has_completed_tutorial', 'true');
+        localStorage.setItem('tutorial_completed', 'true');
+        localStorage.setItem('hasSeenTutorial', 'true');
+        localStorage.setItem('tutorial_seen', 'true');
+        localStorage.setItem('app_onboarding_completed', 'true');
+        localStorage.setItem('has_completed_onboarding', 'true');
+        localStorage.setItem('hasCompletedOnboarding', 'true');
+        const activeUserId = user?.id && user.id !== 'local-user' ? user.id : null;
+        if (activeUserId) {
+          localStorage.setItem(`presu_tutorial_completed_${activeUserId}`, 'true');
+          localStorage.setItem(`has_completed_tutorial_${activeUserId}`, 'true');
+          localStorage.setItem(`tutorial_completed_${activeUserId}`, 'true');
+          localStorage.setItem(`has_completed_onboarding_${activeUserId}`, 'true');
+          localStorage.setItem(`hasCompletedOnboarding_${activeUserId}`, 'true');
+        }
+      } catch (e) {
+        console.warn('Error clearing localStorage:', e);
+      }
     } catch (error) {
       console.error('Error al restablecer la aplicación:', error);
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (e) {}
-      window.location.replace('/');
     }
   };
 
   const handleConfirmFactoryReset = async () => {
-    setShowResetConfirm(false);
-    if (onFactoryReset) {
-      await onFactoryReset(true);
-    } else {
-      await handleFullReset();
+    if (confirmDeleteText.trim().toUpperCase() !== 'BORRAR') {
+      return;
+    }
+
+    try {
+      setIsResetting(true);
+      if (onFactoryReset) {
+        await onFactoryReset(true);
+      } else {
+        await handleFullReset();
+      }
+
+      // Asegurar explícitamente persistencia del tutorial completado
+      localStorage.setItem('presu_tutorial_completed', 'true');
+      localStorage.setItem('has_completed_tutorial', 'true');
+      localStorage.setItem('tutorial_completed', 'true');
+      localStorage.setItem('hasSeenTutorial', 'true');
+      localStorage.setItem('tutorial_seen', 'true');
+      localStorage.setItem('app_onboarding_completed', 'true');
+      localStorage.setItem('has_completed_onboarding', 'true');
+      localStorage.setItem('hasCompletedOnboarding', 'true');
+
+      showToast('Todos los datos han sido restablecidos');
+      setShowResetConfirm(false);
+      setConfirmDeleteText('');
+      onClose();
+    } catch (err) {
+      console.error('Error al restablecer:', err);
+      showToast('Error al restablecer los datos', true);
+    } finally {
+      setIsResetting(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-fadeIn">
       <div 
-        className="rounded-t-2xl sm:rounded-3xl w-full max-w-lg lg:max-w-xl mx-auto shadow-2xl border flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden animate-slide-up transition-all"
-        style={{ 
-          backgroundColor: 'var(--modal-bg, #090d16)', 
-          borderColor: 'var(--border-color, rgba(255,255,255,0.1))',
-          color: 'var(--text-main, #ffffff)' 
-        }}
+        className="rounded-t-2xl sm:rounded-2xl w-full max-w-lg lg:max-w-xl mx-auto shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden animate-slide-up transition-all"
       >
         {/* iOS Handle Indicator para Móvil */}
         <div className="w-12 h-1.5 bg-slate-400/30 dark:bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
@@ -725,8 +962,7 @@ export default function ProfileModal({
         {/* CABECERA FIJA (HEADER)                                         */}
         {/* ============================================================== */}
         <div 
-          className="p-4 sm:p-5 border-b shrink-0 bg-slate-50/70 dark:bg-black/30 backdrop-blur-md"
-          style={{ borderColor: 'var(--border-color, rgba(255,255,255,0.08))' }}
+          className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/[0.08] shrink-0 bg-slate-50/70 dark:bg-black/30 backdrop-blur-md"
         >
           {currentView === 'main' ? (
             <>
@@ -734,17 +970,14 @@ export default function ProfileModal({
                 {/* Foto/Avatar editable con badge de cámara + nombre y correo */}
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   <div className="relative group shrink-0">
-                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-slate-900 border-2 border-emerald-400/40 shadow-md overflow-hidden flex items-center justify-center text-lg sm:text-xl font-bold text-white select-none">
-                      {userProfile?.photo ? (
-                        <img 
-                          src={userProfile.photo} 
-                          alt={userProfile.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span>{userProfile?.initials || 'US'}</span>
-                      )}
-                    </div>
+                    <Avatar 
+                      src={user?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
+                      name={user?.user_metadata?.full_name || userProfile?.name} 
+                      email={user?.email}
+                      size="xl" 
+                      showStatus={true} 
+                      isOnline={Boolean(user?.id && user?.id !== 'local-user')} 
+                    />
 
                     {/* Badge de cámara */}
                     <button
@@ -835,7 +1068,7 @@ export default function ProfileModal({
                   onClick={() => setActiveTab('finances')}
                   className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer ${
                     activeTab === 'finances'
-                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-sm'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -848,7 +1081,7 @@ export default function ProfileModal({
                   onClick={() => setActiveTab('security')}
                   className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer ${
                     activeTab === 'security'
-                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-sm'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -861,7 +1094,7 @@ export default function ProfileModal({
                   onClick={() => setActiveTab('cloud')}
                   className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer ${
                     activeTab === 'cloud'
-                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-sm'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -874,7 +1107,7 @@ export default function ProfileModal({
                   onClick={() => setActiveTab('system')}
                   className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 transition-all cursor-pointer ${
                     activeTab === 'system'
-                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      ? 'bg-white dark:bg-[#151922] text-emerald-600 dark:text-emerald-400 shadow-sm'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -930,7 +1163,7 @@ export default function ProfileModal({
         )}
 
         {/* Scrollable Content Body */}
-        <div className="overflow-y-auto px-5 py-4 space-y-6 flex-1 scroll-smooth pb-safe">
+        <div className="overflow-y-auto scroll-touch px-5 py-4 space-y-6 flex-1 scroll-smooth pb-safe">
 
           {/* ============================================================== */}
           {/* VIEW: MAIN PROFILE & CONTROL CENTER                            */}
@@ -954,19 +1187,20 @@ export default function ProfileModal({
                       <button
                         type="button"
                         onClick={() => setCurrentView('budgets')}
-                        style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-                        className="w-full p-3.5 rounded-2xl border hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
+                        className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-500 dark:text-violet-400 shrink-0">
                             <PieChart className="w-4.5 h-4.5" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-colors" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-colors">
                               Presupuestos de Gasto
                             </p>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                              Límite global: {formatMoney(budgets?.global || 3000000)} ({Math.round((totalMonthExpense / (budgets?.global || 3000000)) * 100)}% consumido)
+                              {budgets?.global && Number(budgets.global) > 0
+                                ? `Límite global: ${formatMoney(budgets.global)} (${Math.round((totalMonthExpense / budgets.global) * 100)}% consumido)`
+                                : 'Sin límite configurado'}
                             </p>
                           </div>
                         </div>
@@ -977,15 +1211,14 @@ export default function ProfileModal({
                       <button
                         type="button"
                         onClick={() => setCurrentView('savings_goals')}
-                        style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-                        className="w-full p-3.5 rounded-2xl border hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
+                        className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                             <PiggyBank className="w-4.5 h-4.5" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                               Metas de Ahorro
                             </p>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -1006,15 +1239,14 @@ export default function ProfileModal({
                             setCurrentView('subscriptions');
                           }
                         }}
-                        style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-                        className="w-full p-3.5 rounded-2xl border hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
+                        className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                             <CalendarSync className="w-4.5 h-4.5" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">
                               Pagos Recurrentes
                             </p>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -1044,15 +1276,14 @@ export default function ProfileModal({
                           onClose();
                           onOpenAccounts?.();
                         }}
-                        style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-                        className="w-full p-3.5 rounded-2xl border hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
+                        className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[#007AFF] shrink-0">
                             <CreditCard className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold group-hover:text-[#007AFF] transition-colors" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-[#007AFF] transition-colors">
                               Mis Cuentas
                             </p>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -1067,15 +1298,14 @@ export default function ProfileModal({
                       <button
                         type="button"
                         onClick={() => setCurrentView('categories')}
-                        style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-                        className="w-full p-3.5 rounded-2xl border hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
+                        className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
                             <Tag className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                               Mis Categorías
                             </p>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -1086,36 +1316,6 @@ export default function ProfileModal({
                         <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-purple-500 transition-colors" />
                       </button>
                     </div>
-                  </div>
-
-                  {/* 3. Impuestos y Declaración de Renta (Reemplaza Tutorial al final del bloque Gestión) */}
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentView('tax')}
-                      style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-                      className="w-full p-3.5 rounded-2xl border hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                          <Landmark className="w-4.5 h-4.5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-[13px] font-semibold group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" style={{ color: 'var(--text-main)' }}>
-                              Impuestos y Declaración de Renta
-                            </p>
-                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                              DIAN
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Calcula tu fecha de vencimiento oficial y monitorea topes
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-                    </button>
                   </div>
                 </div>
               )}
@@ -1133,41 +1333,44 @@ export default function ProfileModal({
                     </div>
 
                     <div 
-                      className="p-3.5 rounded-2xl border space-y-3.5"
-                      style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
+                      className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 space-y-3.5"
                     >
-                      {/* Toggle PIN */}
-                      <div className="flex items-center justify-between gap-3">
+                      {/* Toggle PIN - Fila táctil completa */}
+                      <div 
+                        onClick={handleTogglePin}
+                        className="min-h-[48px] p-2.5 sm:p-3 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors gap-3 select-none"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
                             <Lock className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold" style={{ color: 'var(--text-main)' }}>Bloqueo con Contraseña / PIN</p>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Solicitar PIN al iniciar o reanudar sesión</p>
+                            <p className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">Bloqueo con Contraseña / PIN</p>
+                            <p className="text-[11px] text-slate-500 dark:text-zinc-400">Solicitar PIN al iniciar o reanudar sesión</p>
                           </div>
                         </div>
 
-                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <div className="relative inline-flex items-center shrink-0 pointer-events-none">
                           <input 
                             type="checkbox" 
                             checked={Boolean(securitySettings?.pinEnabled)} 
-                            onChange={handleTogglePin}
+                            readOnly
                             className="sr-only peer" 
                           />
                           <div className="w-10 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                        </label>
+                        </div>
                       </div>
 
                       {/* Si el PIN está activo, permitir cambiarlo */}
                       {securitySettings?.pinEnabled && (
-                        <div className="pt-2 border-t flex items-center justify-between" style={{ borderColor: 'var(--border-color)' }}>
+                        <div className="pt-2 px-2 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
                           <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                             <Check className="w-3.5 h-3.5" /> PIN Activo
                           </span>
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setNewPin('');
                               setConfirmPin('');
                               setPinError('');
@@ -1181,27 +1384,30 @@ export default function ProfileModal({
                         </div>
                       )}
 
-                      {/* Toggle Biometría WebAuthn */}
-                      <div className="pt-3 border-t flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-color)' }}>
+                      {/* Toggle Biometría WebAuthn - Fila táctil completa */}
+                      <div 
+                        onClick={handleToggleBiometrics}
+                        className="pt-3 border-t border-slate-200/80 dark:border-white/[0.08] min-h-[48px] p-2.5 sm:p-3 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors gap-3 select-none" 
+                      >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
                             <Fingerprint className="w-4.5 h-4.5" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold" style={{ color: 'var(--text-main)' }}>Bloqueo con Huella / Biometría</p>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Autenticación biométrica mediante WebAuthn</p>
+                            <p className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">Bloqueo con Huella / Biometría</p>
+                            <p className="text-[11px] text-slate-500 dark:text-zinc-400">Autenticación biométrica mediante WebAuthn</p>
                           </div>
                         </div>
 
-                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <div className="relative inline-flex items-center shrink-0 pointer-events-none">
                           <input 
                             type="checkbox" 
                             checked={Boolean(securitySettings?.biometricsEnabled)} 
-                            onChange={handleToggleBiometrics}
+                            readOnly
                             className="sr-only peer" 
                           />
                           <div className="w-10 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                        </label>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1225,18 +1431,14 @@ export default function ProfileModal({
                       <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
                           <div className="flex items-center gap-3 min-w-0">
-                            {user?.user_metadata?.avatar_url || user?.user_metadata?.picture ? (
-                              <img
-                                src={user.user_metadata.avatar_url || user.user_metadata.picture}
-                                alt="Avatar de Google"
-                                className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500 shrink-0 shadow-xs"
-                                referrerPolicy="no-referrer"
-                              />
-                            ) : (
-                              <div className="w-11 h-11 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 font-bold shrink-0">
-                                {(user?.user_metadata?.full_name || user?.email || 'G')[0].toUpperCase()}
-                              </div>
-                            )}
+                            <Avatar
+                              src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture}
+                              name={user?.user_metadata?.full_name}
+                              email={user?.email}
+                              size="lg"
+                              showStatus={true}
+                              isOnline={true}
+                            />
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
@@ -1291,7 +1493,7 @@ export default function ProfileModal({
                         <button
                           type="button"
                           onClick={() => signInWithGoogle()}
-                          className="w-full py-2.5 px-4 font-medium flex items-center justify-center gap-3 rounded-xl bg-white text-gray-800 hover:bg-gray-100 dark:bg-slate-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                          className="w-full py-2.5 px-4 font-medium flex items-center justify-center gap-3 rounded-xl bg-white text-gray-800 hover:bg-gray-100 dark:bg-slate-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
                         >
                           <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                             <path
@@ -1322,10 +1524,10 @@ export default function ProfileModal({
                     )}
                   </div>
 
-                  {/* Tarjeta Unificada de Estado Local-First */}
+                  {/* Tarjeta Unificada de Estado: Almacenamiento y Privacidad */}
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 px-1">
-                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                      <ShieldCheck className={`w-4 h-4 ${isCloudUser ? 'text-emerald-500' : 'text-amber-500'}`} />
                       <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                         Almacenamiento y Privacidad
                       </h3>
@@ -1334,21 +1536,34 @@ export default function ProfileModal({
                     <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-start sm:items-center gap-3.5">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 mt-0.5 sm:mt-0">
-                            <ShieldCheck className="w-5 h-5" />
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 ${
+                            isCloudUser
+                              ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
+                              : 'bg-amber-500/10 border border-amber-500/20 text-amber-500'
+                          }`}>
+                            {isCloudUser ? <Cloud className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                                Modo 100% Local-First
+                                {isCloudUser ? 'Sincronización en la Nube' : 'Modo Local'}
                               </h4>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                Activo
-                              </span>
+                              {isCloudUser ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                  Sincronización en la Nube Activa
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                  Modo Local (Sin sincronizar)
+                                </span>
+                              )}
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                              Tus datos residen exclusivamente en este dispositivo (localStorage). Cero servidores remotos, máxima velocidad y privacidad absoluta.
+                              {isCloudUser
+                                ? 'Tus datos se respaldan de forma segura en tu cuenta en la nube, con una copia local en este dispositivo para respuesta instantánea y disponibilidad offline.'
+                                : 'Tus datos residen únicamente en este navegador (localStorage). Inicia sesión con tu correo para habilitar respaldo multi-dispositivo.'}
                             </p>
                           </div>
                         </div>
@@ -1371,7 +1586,7 @@ export default function ProfileModal({
                       <button
                         type="button"
                         onClick={handleExportJSON}
-                        className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-xs"
+                        className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
                       >
                         <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0 sm:mb-2.5">
                           <Database className="w-4 h-4" />
@@ -1391,7 +1606,7 @@ export default function ProfileModal({
                       <button
                         type="button"
                         onClick={() => downloadTransactionsCSV(transactions)}
-                        className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-xs"
+                        className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
                       >
                         <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 sm:mb-2.5">
                           <FileSpreadsheet className="w-4 h-4" />
@@ -1411,7 +1626,7 @@ export default function ProfileModal({
                       <button
                         type="button"
                         onClick={() => downloadInvestmentsCSV(investments, trm)}
-                        className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-xs"
+                        className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
                       >
                         <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shrink-0 sm:mb-2.5">
                           <TrendingUp className="w-4 h-4" />
@@ -1431,7 +1646,7 @@ export default function ProfileModal({
                     {/* Tarjeta de Restauración */}
                     <div 
                       onClick={() => restoreInputRef.current?.click()}
-                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 active:scale-98 transition-all cursor-pointer flex items-center justify-between gap-3.5 group shadow-xs"
+                      className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 active:scale-98 transition-all cursor-pointer flex items-center justify-between gap-3.5 group shadow-sm"
                     >
                       <div className="flex items-center gap-3.5 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-slate-200/70 dark:bg-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0 group-hover:text-emerald-500 group-hover:bg-emerald-500/10 transition-colors">
@@ -1449,7 +1664,7 @@ export default function ProfileModal({
                       <button
                         type="button"
                         disabled={isRestoring}
-                        className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-200 group-hover:border-emerald-500/40 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0 shadow-xs"
+                        className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-200 group-hover:border-emerald-500/40 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0 shadow-sm"
                       >
                         {isRestoring ? 'Restaurando...' : 'Examinar'}
                       </button>
@@ -1471,16 +1686,19 @@ export default function ProfileModal({
                           <AlertTriangle className="w-4 h-4" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400">Zona de peligro: restablecer app</h4>
+                          <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400">Zona de peligro: restablecer datos</h4>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                            Elimina de forma permanente todas las transacciones, cuentas e inversiones asociadas a tu usuario en la nube y en este dispositivo.
+                            Elimina de forma permanente todas las transacciones, cuentas e inversiones en la nube y en este dispositivo, manteniendo tu sesión activa.
                           </p>
                         </div>
                       </div>
 
                       <button
                         type="button"
-                        onClick={() => setShowResetConfirm(true)}
+                        onClick={() => {
+                          setConfirmDeleteText('');
+                          setShowResetConfirm(true);
+                        }}
                         className="w-full py-2 px-3 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs transition-colors cursor-pointer active:scale-98"
                       >
                         Restablecer y borrar todos los datos
@@ -1503,8 +1721,7 @@ export default function ProfileModal({
                     </div>
 
                     <div 
-                      className="p-3.5 rounded-2xl border space-y-3"
-                      style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
+                      className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 space-y-3"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -1512,7 +1729,7 @@ export default function ProfileModal({
                             {theme === 'dark' ? <Moon className="w-4.5 h-4.5" /> : <Sun className="w-4.5 h-4.5" />}
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">
                               Modo {theme === 'dark' ? 'Oscuro' : 'Claro'}
                             </p>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -1528,7 +1745,7 @@ export default function ProfileModal({
                             onClick={() => onThemeChange?.('light')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                               theme === 'light'
-                                ? 'bg-white text-slate-900 shadow-xs'
+                                ? 'bg-white text-slate-900 shadow-sm'
                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
@@ -1540,7 +1757,7 @@ export default function ProfileModal({
                             onClick={() => onThemeChange?.('dark')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                               theme === 'dark'
-                                ? 'bg-white dark:bg-[#1a2030] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                                ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
@@ -1562,33 +1779,35 @@ export default function ProfileModal({
                     </div>
 
                     <div 
-                      className="p-3.5 rounded-2xl border space-y-3"
-                      style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
+                      className="p-1 sm:p-1.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90"
                     >
-                      <div className="flex items-center justify-between gap-3">
+                      <div 
+                        onClick={toggleEnableDecimals}
+                        className="min-h-[48px] p-2.5 sm:p-3 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors gap-3 select-none"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
                             <Coins className="w-4.5 h-4.5" />
                           </div>
                           <div>
-                            <p className="text-[13px] font-semibold" style={{ color: 'var(--text-main)' }}>
+                            <p className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">
                               Permitir decimales en montos
                             </p>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            <p className="text-[11px] text-slate-500 dark:text-zinc-400">
                               Habilita 2 decimales para precisión contable o transacciones en USD.
                             </p>
                           </div>
                         </div>
 
-                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <div className="relative inline-flex items-center shrink-0 pointer-events-none">
                           <input 
                             type="checkbox" 
                             checked={Boolean(enableDecimals)} 
-                            onChange={toggleEnableDecimals}
+                            readOnly
                             className="sr-only peer" 
                           />
                           <div className="w-10 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                        </label>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1619,20 +1838,20 @@ export default function ProfileModal({
           {currentView === 'budgets' && (
             <div className="space-y-4">
               {/* Presupuesto Global Mensual */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-3 transition-all">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Presupuesto Mensual Global</h3>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Límite general para todo el mes</p>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-zinc-100 uppercase tracking-wider font-mono">Presupuesto Mensual Global</h3>
+                    <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">Límite general para todo el mes</p>
                   </div>
                   {!isEditingGlobalBudget ? (
                     <button
                       type="button"
                       onClick={() => {
-                        setTempGlobalBudget(budgets?.global || 0);
+                        setTempGlobalBudget(budgets?.global ? budgets.global.toString() : '');
                         setIsEditingGlobalBudget(true);
                       }}
-                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
                     >
                       Modificar
                     </button>
@@ -1643,34 +1862,36 @@ export default function ProfileModal({
                   <div className="flex items-center gap-2 pt-1">
                     <input
                       type="number"
+                      inputMode="decimal"
                       value={tempGlobalBudget}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setTempGlobalBudget(e.target.value)}
-                      placeholder="Monto global"
-                      className="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-black/50 border border-emerald-500/50 text-slate-900 dark:text-white text-sm font-semibold focus:outline-none"
+                      placeholder="Sin límite ($0)"
+                      className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-zinc-100 text-xs sm:text-sm font-mono font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
                     />
                     <button
                       type="button"
                       onClick={handleSaveGlobalBudget}
-                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold shrink-0 cursor-pointer"
+                      className="h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shrink-0 cursor-pointer shadow-sm active:scale-95 transition-all"
                     >
                       Guardar
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsEditingGlobalBudget(false)}
-                      className="px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                      className="h-11 px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
                     >
                       Cancelar
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-xl font-bold text-slate-900 dark:text-white tabular-nums">
+                    <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                      <span className="text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">
                         {formatMoney(totalMonthExpense)}
                       </span>
-                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium tabular-nums">
-                        {budgets?.global ? `de ${formatMoney(budgets.global)}` : 'Sin límite global'}
+                      <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono tabular-nums">
+                        {budgets?.global && Number(budgets.global) > 0 ? `de ${formatMoney(budgets.global)}` : 'Sin límite configurado'}
                       </span>
                     </div>
 
@@ -1679,11 +1900,11 @@ export default function ProfileModal({
                       const globalLimit = budgets?.global || 0;
                       if (globalLimit === 0) {
                         return (
-                          <div className="space-y-1.5">
-                            <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden p-0.5">
+                          <div className="space-y-1">
+                            <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3 mb-2">
                               <div className="h-full rounded-full" style={{ width: '0%' }} />
                             </div>
-                            <div className="flex justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            <div className="flex justify-between text-xs font-mono text-slate-500 dark:text-zinc-400">
                               <span>0% consumido</span>
                               <span>Sin límite global asignado</span>
                             </div>
@@ -1694,23 +1915,23 @@ export default function ProfileModal({
                       const isOver = totalMonthExpense > globalLimit;
                       const barColor = isOver ? '#EF4444' : percent > 80 ? '#F59E0B' : '#10B981';
                       const textColorClass = isOver 
-                        ? 'text-rose-700 dark:text-rose-400' 
+                        ? 'text-rose-600 dark:text-rose-400 font-semibold' 
                         : percent > 80 
-                        ? 'text-amber-700 dark:text-amber-400' 
-                        : 'text-emerald-700 dark:text-emerald-400';
+                        ? 'text-amber-600 dark:text-amber-400 font-semibold' 
+                        : 'text-emerald-600 dark:text-emerald-400 font-semibold';
                       const remaining = Math.max(0, globalLimit - totalMonthExpense);
 
                       return (
-                        <div className="space-y-1.5">
-                          <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden p-0.5">
+                        <div className="space-y-1">
+                          <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3 mb-2">
                             <div 
-                              className="h-full rounded-full transition-all duration-500" 
+                              className="h-full rounded-full transition-all duration-500 ease-out" 
                               style={{ width: `${Math.max(4, percent)}%`, backgroundColor: barColor }} 
                             />
                           </div>
-                          <div className="flex justify-between text-[11px] font-semibold tabular-nums">
+                          <div className="flex justify-between text-xs font-mono tabular-nums">
                             <span className={textColorClass}>{percent}% consumido</span>
-                            <span className="text-slate-600 dark:text-slate-400 font-medium">
+                            <span className="text-slate-500 dark:text-zinc-400">
                               {isOver ? `Excedido en ${formatMoney(totalMonthExpense - globalLimit)}` : `Disponible: ${formatMoney(remaining)}`}
                             </span>
                           </div>
@@ -1723,7 +1944,7 @@ export default function ProfileModal({
 
               {/* Presupuestos por Categoría */}
               <div className="space-y-2.5">
-                <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider px-1">
+                <h4 className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider font-mono px-1">
                   Límites por Categoría
                 </h4>
 
@@ -1735,30 +1956,30 @@ export default function ProfileModal({
                     const isOver = catLimit > 0 && spent > catLimit;
                     const barColor = isOver ? '#EF4444' : percent > 80 ? '#F59E0B' : cat.color || '#10B981';
                     const textColorClass = isOver 
-                      ? 'text-rose-700 dark:text-rose-400' 
+                      ? 'text-rose-600 dark:text-rose-400 font-semibold' 
                       : percent > 80 
-                      ? 'text-amber-700 dark:text-amber-400' 
-                      : 'text-emerald-700 dark:text-emerald-400';
+                      ? 'text-amber-600 dark:text-amber-400 font-semibold' 
+                      : 'text-emerald-600 dark:text-emerald-400 font-semibold';
 
                     return (
                       <div 
                         key={cat.id} 
-                        className="p-3.5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200/80 dark:border-white/5 space-y-2 shadow-2xs"
+                        className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] space-y-2.5 shadow-sm transition-all"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <span 
-                              className="w-2.5 h-2.5 rounded-full shrink-0" 
+                              className="w-3 h-3 rounded-full shrink-0" 
                               style={{ backgroundColor: cat.color || '#10B981' }} 
                             />
-                            <span className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">{cat.name}</span>
+                            <span className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 truncate">{cat.name}</span>
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">
+                            <span className="text-xs font-bold font-mono text-slate-900 dark:text-zinc-100 tabular-nums">
                               {formatMoney(spent)}
                               {catLimit > 0 && (
-                                <span className="text-slate-600 dark:text-slate-400 font-normal"> / {formatMoney(catLimit)}</span>
+                                <span className="text-slate-500 dark:text-zinc-400 font-normal"> / {formatMoney(catLimit)}</span>
                               )}
                             </span>
                             <button
@@ -1767,7 +1988,7 @@ export default function ProfileModal({
                                 setEditingCatBudgetId(cat.id);
                                 setTempCatBudgetAmount(catLimit > 0 ? catLimit.toString() : '');
                               }}
-                              className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer ml-1"
+                              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer ml-1"
                             >
                               {catLimit > 0 ? 'Editar' : 'Fijar'}
                             </button>
@@ -1776,25 +1997,27 @@ export default function ProfileModal({
 
                         {/* Inline editor */}
                         {editingCatBudgetId === cat.id && (
-                          <div className="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-white/5 animate-fadeIn">
+                          <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-white/[0.06] animate-fadeIn">
                             <input
                               type="number"
+                              inputMode="decimal"
                               value={tempCatBudgetAmount}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) => setTempCatBudgetAmount(e.target.value)}
                               placeholder="Límite para esta categoría"
-                              className="flex-1 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
+                              className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/[0.08] text-xs sm:text-sm font-mono tabular-nums text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
                             />
                             <button
                               type="button"
                               onClick={() => handleSaveCategoryBudget(cat.id)}
-                              className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold"
+                              className="h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all shadow-sm"
                             >
                               Guardar
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingCatBudgetId(null)}
-                              className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-400"
+                              className="h-11 px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                             >
                               ✕
                             </button>
@@ -1803,13 +2026,13 @@ export default function ProfileModal({
 
                         {catLimit > 0 && (
                           <div className="space-y-1">
-                            <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                            <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-2 mb-1.5">
                               <div 
-                                className="h-full rounded-full transition-all duration-300" 
+                                className="h-full rounded-full transition-all duration-500 ease-out" 
                                 style={{ width: `${Math.max(3, percent)}%`, backgroundColor: barColor }} 
                               />
                             </div>
-                            <div className="flex justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium tabular-nums">
+                            <div className="flex justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 tabular-nums">
                               <span className={textColorClass}>{percent}% consumido</span>
                               <span>
                                 {isOver ? `Excedido en ${formatMoney(spent - catLimit)}` : `Quedan ${formatMoney(catLimit - spent)}`}
@@ -1829,32 +2052,38 @@ export default function ProfileModal({
           {currentView === 'savings_goals' && (
             <div className="space-y-4">
               {/* Header con resumen de metas y botón '+' compacto */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-emerald-500/20 shadow-xs flex items-center justify-between">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex items-center justify-between transition-all">
                 <div>
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-emerald-700 dark:text-emerald-400">Total Ahorrado</p>
-                  <p className="text-[20px] font-bold text-slate-900 dark:text-white tabular-nums mt-0.5">
+                  <p className="text-xs uppercase tracking-wider font-bold font-mono text-emerald-600 dark:text-emerald-400">Total Ahorrado</p>
+                  <p className="text-lg sm:text-xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums mt-0.5">
                     {formatMoney(totalSavedAcrossGoals)}
-                    <span className="text-xs text-slate-600 dark:text-slate-400 font-normal"> / {formatMoney(totalTargetAcrossGoals)}</span>
+                    <span className="text-xs text-slate-500 dark:text-zinc-400 font-normal font-mono tabular-nums tracking-tight"> / {formatMoney(totalTargetAcrossGoals)}</span>
                   </p>
                 </div>
-                {/* Botón '+' para abrir GoalModal */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingGoal(null);
-                    setShowAddGoalForm(true);
-                  }}
-                  className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
-                  title="Nueva Meta de Ahorro"
-                >
-                  <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
-                </button>
+                {/* Botón '+' para abrir GoalModal sólo si ya existen metas */}
+                {savingsGoals.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingGoal(null);
+                      setShowAddGoalForm(true);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-sm active:scale-95 transition-all cursor-pointer shrink-0"
+                    title="Nueva Meta de Ahorro"
+                    aria-label="Agregar meta de ahorro"
+                  >
+                    <Plus className="w-5 h-5 stroke-[2.5]" />
+                  </button>
+                )}
               </div>
 
               {/* Modal Especializado para Crear o Editar Meta de Ahorro */}
               {(showAddGoalForm || !!editingGoal) && (
                 <GoalModal
                   isOpen={showAddGoalForm || !!editingGoal}
+                  disableBackHandler={true}
                   onClose={() => {
                     setShowAddGoalForm(false);
                     setEditingGoal(null);
@@ -1879,7 +2108,28 @@ export default function ProfileModal({
               {/* Lista de Metas */}
               <div className="space-y-3">
                 {savingsGoals.length === 0 ? (
-                  <p className="text-center text-xs text-slate-500 py-6 italic">No tienes metas de ahorro registradas aún.</p>
+                  <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 space-y-3 bg-slate-50/50 dark:bg-white/[0.01]">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                      <Target className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-zinc-100">No tienes metas de ahorro registradas aún</p>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono mt-0.5">Establece objetivos financieros con cuotas mensuales sugeridas.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setEditingGoal(null);
+                        setShowAddGoalForm(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer active:scale-95 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Agregar meta de ahorro</span>
+                    </button>
+                  </div>
                 ) : (
                   savingsGoals.map((goal) => {
                     const current = Number(goal.currentAmount || 0);
@@ -1907,38 +2157,40 @@ export default function ProfileModal({
                     const suggestedQuota = Math.round(remainingGoal / monthsCount);
                     const notifDay = goal.notification_day || goal.notificationDay;
 
+                    const barColor = percent >= 100 ? '#10B981' : percent >= 50 ? '#10B981' : percent >= 20 ? '#F59E0B' : '#0D9488';
+
                     return (
                       <div
                         key={goal.id}
-                        className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200/80 dark:border-white/5 space-y-3 shadow-2xs"
+                        className="bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm transition-all space-y-3"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                              <Target className="w-4 h-4" />
+                            <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+                              <Target className="w-4 h-4 text-emerald-500" />
                             </div>
                             <div className="min-w-0">
-                              <h5 className="text-[13px] font-bold text-slate-900 dark:text-white truncate">{goal.name}</h5>
+                              <h5 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 truncate">{goal.name}</h5>
                               <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                 {daysLeftText && (
-                                  <span className="text-[10px] text-slate-600 dark:text-slate-400 flex items-center gap-1 font-medium">
+                                  <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
                                     <span>{daysLeftText}</span>
                                   </span>
                                 )}
                                 {targetAcc && (
-                                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md flex items-center gap-1 font-medium">
+                                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono flex items-center gap-1">
                                     <Wallet className="w-3 h-3 shrink-0" />
                                     <span>{targetAcc.name}</span>
                                   </span>
                                 )}
                                 {suggestedQuota > 0 && (
-                                  <span className="text-[10px] text-teal-600 dark:text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-md font-medium">
-                                    Cuota: {formatMoney(suggestedQuota)}/mes ({monthsCount}m)
+                                  <span className="text-xs text-teal-600 dark:text-teal-400 font-mono">
+                                    Cuota: {formatMoney(suggestedQuota)}/m ({monthsCount}m)
                                   </span>
                                 )}
                                 {goal.notify_enabled !== false && notifDay && (
-                                  <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 font-medium">
+                                  <span className="text-xs text-amber-600 dark:text-amber-400 font-mono flex items-center gap-0.5">
                                     <Bell className="w-2.5 h-2.5" />
                                     <span>Día {notifDay}</span>
                                   </span>
@@ -1948,27 +2200,38 @@ export default function ProfileModal({
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300">
+                              {percent}%
+                            </span>
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 setContributeGoalId(contributeGoalId === goal.id ? null : goal.id);
                                 setContributeAmount('');
                               }}
-                              className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-0.5"
+                              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer flex items-center gap-0.5"
                             >
                               <span>Abonar</span>
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleOpenEditGoal(goal)}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-[#007AFF] transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleOpenEditGoal(goal);
+                              }}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-colors cursor-pointer"
                               title="Editar meta"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 if (confirm(`¿Eliminar la meta "${goal.name}"?`)) {
                                   onDeleteGoal(goal.id);
                                 }
@@ -1981,47 +2244,64 @@ export default function ProfileModal({
                           </div>
                         </div>
 
-                        {/* Modal inline de abono */}
+                        {/* Modal inline de abono estandarizado en h-11 */}
                         {contributeGoalId === goal.id && (
-                          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-emerald-500/30 flex items-center gap-2 animate-fadeIn">
+                          <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-emerald-500/30 flex items-center gap-2 animate-fadeIn">
                             <input
                               type="number"
+                              inputMode="decimal"
                               placeholder="Monto a abonar ($)"
                               value={contributeAmount}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) => setContributeAmount(e.target.value)}
-                              className="flex-1 px-2.5 py-1 rounded-lg bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white focus:outline-none"
+                              className="flex-1 h-11 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] text-xs sm:text-sm font-mono tabular-nums text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
                             />
                             <button
                               type="button"
-                              onClick={() => handleContributeToGoal(goal.id)}
-                              className="px-3 py-1 rounded-lg bg-emerald-500 text-white text-xs font-bold"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleContributeToGoal(goal.id);
+                              }}
+                              className="h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all shadow-sm cursor-pointer"
                             >
                               Abonar
                             </button>
                             <button
                               type="button"
-                              onClick={() => setContributeGoalId(null)}
-                              className="px-2 py-1 text-slate-600 dark:text-slate-400 text-xs"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setContributeGoalId(null);
+                              }}
+                              className="h-11 px-3 rounded-xl text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 text-xs transition-colors cursor-pointer"
                             >
                               ✕
                             </button>
                           </div>
                         )}
 
-                        {/* Progress bar */}
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-xs font-semibold tabular-nums">
-                            <span className="text-slate-900 dark:text-white font-bold">{formatMoney(current)}</span>
-                            <span className="text-slate-600 dark:text-slate-400 font-medium">Meta: {formatMoney(target)}</span>
+                        {/* Progress bar y montos */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-baseline gap-2">
+                            <span className="text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">
+                              {formatMoney(current)}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono tabular-nums tracking-tight">
+                              Meta: {formatMoney(target)}
+                            </span>
                           </div>
-                          <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+
+                          {/* Riel y Relleno de Barra de Progreso */}
+                          <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3 mb-2">
                             <div 
-                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
-                              style={{ width: `${Math.max(4, percent)}%` }}
+                              className="h-full rounded-full transition-all duration-500 ease-out"
+                              style={{ width: `${Math.max(4, percent)}%`, backgroundColor: barColor }}
                             />
                           </div>
-                          <div className="flex justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium tabular-nums">
-                            <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{percent}% alcanzado</span>
+
+                          <div className="flex justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 tabular-nums">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{percent}% alcanzado</span>
                             <span>Faltan {formatMoney(Math.max(0, target - current))}</span>
                           </div>
                         </div>
@@ -2109,7 +2389,7 @@ export default function ProfileModal({
           {currentView === 'subscriptions' && (
             <div className="space-y-4">
               {/* Tarjeta Superior de Resumen ('Total Recurrente') */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-[#12141C] border border-slate-200 dark:border-white/10 shadow-xs flex items-center justify-between">
+              <div className="p-5 rounded-2xl bg-white dark:bg-[#12141C] border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     TOTAL MENSUAL RECURRENTE
@@ -2228,7 +2508,7 @@ export default function ProfileModal({
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
                     >
                       Guardar Suscripción
                     </button>
@@ -2238,7 +2518,7 @@ export default function ProfileModal({
 
               {/* Lista de suscripciones / Estado Vacío */}
               {subscriptions.length === 0 ? (
-                <div className="py-12 px-4 rounded-2xl bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 text-center space-y-3 shadow-xs">
+                <div className="py-12 px-4 rounded-2xl bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 text-center space-y-3 shadow-sm">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 flex items-center justify-center mx-auto">
                     <CalendarSync className="w-6 h-6" />
                   </div>
@@ -2253,7 +2533,7 @@ export default function ProfileModal({
                   <button
                     type="button"
                     onClick={() => setShowAddSubForm(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Añadir primera suscripción</span>
@@ -2269,7 +2549,7 @@ export default function ProfileModal({
                     return (
                       <div
                         key={sub.id}
-                        className="bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 transition-all hover:border-emerald-500/40 shadow-xs flex items-center justify-between gap-3"
+                        className="bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 transition-all hover:border-emerald-500/40 shadow-sm flex items-center justify-between gap-3"
                       >
                         {/* Lado izquierdo: Icono e Info */}
                         <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -2356,8 +2636,7 @@ export default function ProfileModal({
         {/* Pie Fijo (Footer) con Botón de Cerrar Sesión destacado en tono carmesí/rojo suave */}
         {currentView === 'main' && (
           <div 
-            className="p-3.5 sm:p-4 border-t shrink-0 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-black/40 backdrop-blur-md"
-            style={{ borderColor: 'var(--border-color, rgba(255,255,255,0.08))' }}
+            className="p-3.5 sm:p-4 border-t border-slate-200/80 dark:border-white/[0.08] shrink-0 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-black/40 backdrop-blur-md"
           >
             <div className="min-w-0 flex-1 hidden sm:block">
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
@@ -2371,7 +2650,7 @@ export default function ProfileModal({
             <button
               type="button"
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer shadow-xs ml-auto"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer shadow-sm ml-auto"
               title="Cerrar Sesión"
             >
               <LogOut className="w-4 h-4 shrink-0" />
@@ -2385,29 +2664,28 @@ export default function ProfileModal({
       {backupPreview && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fadeIn">
           <div 
-            className="w-full max-w-sm rounded-3xl border shadow-2xl p-5 flex flex-col items-center text-center animate-slide-up"
-            style={{ backgroundColor: 'var(--bg-card, #0f172a)', borderColor: 'var(--border-color, rgba(255,255,255,0.1))' }}
+            className="w-full max-w-sm rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-2xl p-5 flex flex-col items-center text-center animate-slide-up"
           >
-            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-3">
+            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
               <Database className="w-6 h-6 text-[#FF9500]" />
             </div>
-            <h3 className="text-lg font-bold" style={{ color: 'var(--text-main, #fff)' }}>Confirmar Restauración</h3>
-            <p className="text-xs text-slate-400 mt-1.5 mb-4">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Confirmar Restauración</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 mb-4">
               Se sobrescribirán tus datos actuales con la copia de seguridad. ¿Deseas continuar?
             </p>
             
             <div className="w-full space-y-2 mb-5">
-              <div className="flex justify-between items-center p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--bg-card-sub, #1e293b)', borderColor: 'var(--border-color, rgba(255,255,255,0.1))' }}>
-                <span className="text-xs text-slate-400">Movimientos</span>
-                <span className="text-sm font-bold" style={{ color: 'var(--text-main, #fff)' }}>{backupPreview.summary?.transactionsCount || 0}</span>
+              <div className="flex justify-between items-center p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Movimientos</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{backupPreview.summary?.transactionsCount || 0}</span>
               </div>
-              <div className="flex justify-between items-center p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--bg-card-sub, #1e293b)', borderColor: 'var(--border-color, rgba(255,255,255,0.1))' }}>
-                <span className="text-xs text-slate-400">Inversiones</span>
-                <span className="text-sm font-bold" style={{ color: 'var(--text-main, #fff)' }}>{backupPreview.summary?.investmentsCount || 0}</span>
+              <div className="flex justify-between items-center p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Inversiones</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{backupPreview.summary?.investmentsCount || 0}</span>
               </div>
-              <div className="flex justify-between items-center p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--bg-card-sub, #1e293b)', borderColor: 'var(--border-color, rgba(255,255,255,0.1))' }}>
-                <span className="text-xs text-slate-400">Cuentas</span>
-                <span className="text-sm font-bold" style={{ color: 'var(--text-main, #fff)' }}>{backupPreview.summary?.accountsCount || 0}</span>
+              <div className="flex justify-between items-center p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Cuentas</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{backupPreview.summary?.accountsCount || 0}</span>
               </div>
             </div>
 
@@ -2415,8 +2693,7 @@ export default function ProfileModal({
               <button
                 type="button"
                 onClick={() => setBackupPreview(null)}
-                className="flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors hover:opacity-80"
-                style={{ borderColor: 'var(--border-color, rgba(255,255,255,0.1))', color: 'var(--text-main, #fff)' }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-zinc-200 text-sm font-semibold transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800"
               >
                 Cancelar
               </button>
@@ -2432,34 +2709,75 @@ export default function ProfileModal({
         </div>
       )}
 
-      {/* MODAL DE CONFIRMACIÓN DE BORRADO DE DATOS LOCALES (ZONA DE PELIGRO) */}
+      {/* MODAL DE DOBLE CONFIRMACIÓN DE BORRADO DE DATOS (ZONA DE PELIGRO) */}
       {showResetConfirm && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[70] p-4 animate-fadeIn">
           <div 
-            className="w-full max-w-sm rounded-3xl border border-rose-500/30 shadow-2xl p-5 flex flex-col items-center text-center animate-slide-up bg-white dark:bg-[#12141C]"
+            className="w-full max-w-sm rounded-2xl border border-rose-500/40 shadow-2xl p-5 sm:p-6 flex flex-col items-center text-center animate-slide-up bg-white dark:bg-zinc-900"
           >
-            <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-3 text-rose-500">
-              <AlertTriangle className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/25 flex items-center justify-center mb-3.5 text-rose-500 ring-4 ring-rose-500/10">
+              <AlertTriangle className="w-7 h-7" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">¿Restablecer Monety?</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-1 leading-relaxed">
-              ¿Estás seguro de restablecer Monety? Se borrarán todas las cuentas, inversiones, deudas, transacciones y configuraciones, y la app volverá a la pantalla de bienvenida.
+
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              ¿Estás completamente seguro?
+            </h3>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 mb-2 leading-relaxed">
+              Esta acción eliminará de forma permanente todas tus cuentas, transacciones, deudas y configuraciones en la nube y en este dispositivo. No podrás recuperar esta información.
             </p>
-            <p className="text-xs text-rose-400 font-semibold mb-4">⚠️ Esta acción no se puede deshacer.</p>
+
+            <div className="w-full my-3 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-left">
+              <label htmlFor="confirm-delete-input" className="block text-[11px] font-semibold text-rose-600 dark:text-rose-400 mb-1.5 text-center">
+                Escribe <span className="font-extrabold uppercase tracking-widest text-rose-700 dark:text-rose-300">BORRAR</span> para confirmar:
+              </label>
+              <input
+                id="confirm-delete-input"
+                type="text"
+                value={confirmDeleteText}
+                onChange={(e) => setConfirmDeleteText(e.target.value)}
+                placeholder="Escribe BORRAR"
+                autoComplete="off"
+                spellCheck="false"
+                disabled={isResetting}
+                className="w-full px-3 py-2 text-center text-xs font-bold tracking-widest rounded-xl bg-white dark:bg-black/60 border border-rose-500/30 text-rose-600 dark:text-rose-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+              />
+            </div>
+
+            <p className="text-[11px] text-rose-500 font-semibold mb-4">
+              ⚠️ Esta acción no se puede deshacer.
+            </p>
+
             <div className="flex w-full gap-2">
               <button
                 type="button"
-                onClick={() => setShowResetConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                disabled={isResetting}
+                onClick={() => {
+                  setShowResetConfirm(false);
+                  setConfirmDeleteText('');
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="button"
+                disabled={confirmDeleteText.trim().toUpperCase() !== 'BORRAR' || isResetting}
                 onClick={handleConfirmFactoryReset}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer active:scale-95"
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  confirmDeleteText.trim().toUpperCase() !== 'BORRAR' || isResetting
+                    ? 'bg-rose-500/20 text-rose-300/60 dark:text-rose-400/40 cursor-not-allowed border border-rose-500/10 opacity-70'
+                    : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer active:scale-95 shadow-md shadow-rose-600/30'
+                }`}
               >
-                Sí, restablecer todo
+                {isResetting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  'Sí, eliminar todo definitivamente'
+                )}
               </button>
             </div>
           </div>

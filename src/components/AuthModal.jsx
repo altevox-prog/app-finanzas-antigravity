@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Cloud, 
@@ -321,6 +321,10 @@ export default function AuthModal({ isOpen, onClose }) {
         provider: 'google',
         options: {
           redirectTo: getURL(),
+          queryParams: {
+            prompt: 'select_account',
+            access_type: 'offline'
+          }
         },
       });
       if (error) {
@@ -344,7 +348,7 @@ export default function AuthModal({ isOpen, onClose }) {
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-white dark:bg-[#121622] rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-white/10 animate-slide-up relative overflow-hidden"
+        className="w-full max-w-md bg-white dark:bg-[#27272a] rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-white/[0.08] animate-slide-up relative overflow-hidden"
       >
         {/* Halo decorativo de fondo */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -743,7 +747,7 @@ export default function AuthModal({ isOpen, onClose }) {
                   onClick={() => { setMode('login'); setFeedback(null); }}
                   className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     mode === 'login'
-                      ? 'bg-white dark:bg-[#1a2030] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      ? 'bg-white dark:bg-[#1a2030] text-emerald-600 dark:text-emerald-400 shadow-sm'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -754,7 +758,7 @@ export default function AuthModal({ isOpen, onClose }) {
                   onClick={() => { setMode('register'); setFeedback(null); }}
                   className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     mode === 'register'
-                      ? 'bg-white dark:bg-[#1a2030] text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      ? 'bg-white dark:bg-[#1a2030] text-emerald-600 dark:text-emerald-400 shadow-sm'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
@@ -816,7 +820,7 @@ export default function AuthModal({ isOpen, onClose }) {
                     />
                     <button
                       type="submit"
-                      className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-xs"
+                      className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-sm"
                     >
                       Guardar y Conectar Supabase
                     </button>
@@ -835,7 +839,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-98 shadow-xs"
+                className="w-full py-2.5 px-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-98 shadow-sm"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path

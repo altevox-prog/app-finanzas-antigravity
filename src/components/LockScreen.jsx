@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Fingerprint, Delete, ShieldCheck, AlertCircle } from 'lucide-react';
 import AppLogo from './AppLogo';
 
@@ -291,7 +291,7 @@ export default function LockScreen({
               key={num}
               type="button"
               onClick={() => handleDigit(num)}
-              className="h-16 sm:h-18 py-2.5 rounded-2xl bg-white dark:bg-[#141824] border border-slate-200/80 dark:border-white/10 shadow-xs hover:shadow-md hover:bg-slate-50 dark:hover:bg-[#1A2030] active:scale-95 transition-all flex flex-col items-center justify-center group cursor-pointer"
+              className="h-16 sm:h-18 py-2.5 rounded-2xl bg-white dark:bg-[#141824] border border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-[#1A2030] active:scale-95 transition-all flex flex-col items-center justify-center group cursor-pointer"
             >
               <span className="text-2xl font-bold text-slate-800 dark:text-white group-active:text-emerald-600 transition-colors">
                 {num}
@@ -323,7 +323,7 @@ export default function LockScreen({
           <button
             type="button"
             onClick={() => handleDigit(0)}
-            className="h-16 sm:h-18 py-2.5 rounded-2xl bg-white dark:bg-[#141824] border border-slate-200/80 dark:border-white/10 shadow-xs hover:shadow-md hover:bg-slate-50 dark:hover:bg-[#1A2030] active:scale-95 transition-all flex flex-col items-center justify-center group cursor-pointer"
+            className="h-16 sm:h-18 py-2.5 rounded-2xl bg-white dark:bg-[#141824] border border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-[#1A2030] active:scale-95 transition-all flex flex-col items-center justify-center group cursor-pointer"
           >
             <span className="text-2xl font-bold text-slate-800 dark:text-white group-active:text-emerald-600 transition-colors">
               0

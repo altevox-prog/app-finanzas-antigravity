@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, 
   User, 
@@ -599,7 +599,7 @@ export default function OnboardingFlow({
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                           enableBiometrics
-                            ? 'bg-purple-500 text-white shadow-xs'
+                            ? 'bg-purple-500 text-white shadow-sm'
                             : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
                         }`}>
                           <Fingerprint className="w-5 h-5" />

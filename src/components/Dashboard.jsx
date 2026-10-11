@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+﻿import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   Landmark, 
   HandCoins, 
@@ -14,7 +14,11 @@ import {
   Activity,
   Check,
   Eye,
-  EyeOff
+  EyeOff,
+  GripVertical,
+  CreditCard,
+  Receipt,
+  PieChart
 } from 'lucide-react';
 import { usePrivacy } from '../context/PrivacyContext';
 import { getAccountNativeBalance, formatNativeCurrency } from '../utils/currencyUtils';
@@ -28,25 +32,18 @@ import {
 import { 
   getStoredWidgetsConfig, 
   saveStoredWidgetsConfig,
-  normalizeWidgetId 
+  normalizeWidgetId,
+  DEFAULT_WIDGETS_CONFIG
 } from '../utils/widgetsConfig';
 import BalanceWidget from './BalanceWidget';
 import BudgetWidget from './BudgetWidget';
 import ReportsAndCharts from './ReportsAndCharts';
-import TransactionList from './TransactionList';
-import BrandIcon from './BrandIcon';
 import AccountsWidgetComponent from './AccountsWidget';
 import { RecentMovementsWidget, TransactionsWidget } from './RecentMovementsWidget';
-import AddLoanModal from './AddLoanModal';
-import AddRecurringModal from './AddRecurringModal';
-import AddTransactionModal from './AddTransactionModal';
-
-// Aliases para nombres semánticos de widgets y modales
-const GoalsWidget = BudgetWidget;
-const CategoriesWidget = ReportsAndCharts;
-const NewDebtModal = AddLoanModal;
-const NewRecurringModal = AddRecurringModal;
-const NewTransactionModal = AddTransactionModal;
+import BentoMetricsGrid from './common/BentoMetricsGrid';
+import PillBarChart from './common/PillBarChart';
+import SegmentedControl from './common/SegmentedControl';
+import { MONTH_NAMES } from '../data/initialData';
 
 // ============================================================================
 // SUBCOMPONENTE 1: WIDGET DE PATRIMONIO TOTAL NETO
@@ -68,11 +65,7 @@ export function NetWorthWidget({
   return (
     <div 
       onClick={() => handleNav('accounts')}
-      className="min-h-[140px] p-5 sm:p-6 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="min-h-[140px] p-5 sm:p-6 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group"
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
@@ -90,20 +83,20 @@ export function NetWorthWidget({
         </div>
 
         <div className="mt-1">
-          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">
+          <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100 leading-none">
             {formatMoney(netWorthCOP)}
           </h3>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
-            Activos totales: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{formatMoney(totalAssetsCOP)}</strong>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2 font-mono">
+            Activos totales: <strong className="text-slate-700 dark:text-zinc-300 font-bold font-mono tracking-tight tabular-nums">{formatMoney(totalAssetsCOP)}</strong>
           </p>
         </div>
       </div>
 
-      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-slate-400 font-medium">
+      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+        <span className="text-slate-500 dark:text-zinc-400 font-medium">
           Debo actualmente:
         </span>
-        <span className="font-black text-rose-600 dark:text-rose-400 tabular-nums">
+        <span className="font-bold font-mono tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
           -{formatMoney(totalPayableCOP)}
         </span>
       </div>
@@ -149,11 +142,7 @@ export function DebtsWidget({
   return (
     <div 
       onClick={() => handleNav('debts')}
-      className="min-h-[140px] p-5 sm:p-6 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="min-h-[140px] p-5 sm:p-6 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group"
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
@@ -177,7 +166,7 @@ export function DebtsWidget({
                 e.stopPropagation();
                 handleAdd(e, 'payable');
               }}
-              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-2xs"
+              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm"
               title="Añadir deuda o préstamo"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -205,7 +194,7 @@ export function DebtsWidget({
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 block truncate">
               Me deben ({debtsAndLoansMetrics.receivableCount || 0})
             </span>
-            <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight block mt-0.5 truncate">
+            <span className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight block mt-0.5 truncate">
               {formatMoney(debtsAndLoansMetrics.totalReceivableCOP)}
             </span>
           </div>
@@ -227,7 +216,7 @@ export function DebtsWidget({
             <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 block truncate">
               Debo ({debtsAndLoansMetrics.payableCount || 0})
             </span>
-            <span className="text-sm sm:text-base font-black text-rose-600 dark:text-rose-400 tabular-nums tracking-tight block mt-0.5 truncate">
+            <span className="text-sm sm:text-base font-bold font-mono text-rose-600 dark:text-rose-400 tabular-nums tracking-tight block mt-0.5 truncate">
               -{formatMoney(debtsAndLoansMetrics.totalPayableCOP)}
             </span>
           </div>
@@ -235,7 +224,7 @@ export function DebtsWidget({
       </div>
 
       <div className="pt-2.5 mt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
-        <span className="text-slate-400 text-[11px] font-medium">
+        <span className="text-slate-400 text-[11px] font-medium font-mono">
           Balance crediticio neto
         </span>
         <button
@@ -274,11 +263,7 @@ export function InvestmentsWidget({
   return (
     <div 
       onClick={() => handleNav('investments')}
-      className="min-h-[140px] p-5 sm:p-6 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="min-h-[140px] p-5 sm:p-6 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group"
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
@@ -287,7 +272,7 @@ export function InvestmentsWidget({
             <span>Inversiones</span>
           </span>
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono tabular-nums border ${
               investmentsMetrics.isPositive 
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
                 : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
@@ -298,20 +283,20 @@ export function InvestmentsWidget({
         </div>
 
         <div className="mt-1">
-          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">
+          <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100 leading-none">
             {formatMoney(investmentsMetrics.totalCurrentValueCOP)}
           </h3>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
-            Capital invertido: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{formatMoney(investmentsMetrics.totalInvestedCostCOP)}</strong>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2 font-mono">
+            Capital invertido: <strong className="text-slate-700 dark:text-zinc-300 font-bold font-mono tracking-tight tabular-nums">{formatMoney(investmentsMetrics.totalInvestedCostCOP)}</strong>
           </p>
         </div>
       </div>
 
-      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-slate-400 font-medium">
+      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+        <span className="text-slate-500 dark:text-zinc-400 font-medium">
           Rentabilidad neta:
         </span>
-        <span className={`font-black tabular-nums ${
+        <span className={`font-bold font-mono tracking-tight tabular-nums ${
           investmentsMetrics.isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
         }`}>
           {investmentsMetrics.isPositive ? '+' : ''}{formatMoney(investmentsMetrics.netProfitCOP)}
@@ -378,11 +363,7 @@ export function RecurringPaymentsWidget({
   return (
     <div 
       onClick={() => handleNav('recurring')}
-      className="min-h-[140px] p-4 sm:p-5 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="min-h-[140px] p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
     >
       <div>
         {/* Cabecera interna limpia ([📅] Gasto fijo proyectado) sin elementos flotantes externos */}
@@ -403,7 +384,7 @@ export function RecurringPaymentsWidget({
               e.stopPropagation();
               handleAdd(e);
             }}
-            className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-2xs shrink-0"
+            className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
             title="Añadir nuevo pago recurrente"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -425,7 +406,7 @@ export function RecurringPaymentsWidget({
           ) : (
             <div>
               <div className="flex items-baseline gap-1.5">
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">
+                <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100 leading-none">
                   {formatMoney(totalMonth)}
                 </h3>
                 <span className="text-xs font-semibold text-slate-400">
@@ -469,7 +450,7 @@ export function RecurringPaymentsWidget({
 // ============================================================================
 export function TRMWidget({ trm = 4050 }) {
   return (
-    <div className="flex items-center justify-between p-3 px-3.5 rounded-2xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-2xs select-none">
+    <div className="flex items-center justify-between p-3 px-3.5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm select-none">
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
           <TrendingUp className="w-4 h-4" />
@@ -486,7 +467,7 @@ export function TRMWidget({ trm = 4050 }) {
         </div>
       </div>
       <div className="text-right shrink-0">
-        <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+        <span className="text-sm font-extrabold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
           ${Number(trm || 4050).toLocaleString('es-CO')}
         </span>
         <span className="text-[9px] text-slate-400 block font-semibold uppercase tracking-wider">COP</span>
@@ -505,33 +486,31 @@ export function LiquidBalanceWidget({
 }) {
   return (
     <div 
-      className="p-3.5 sm:p-4 rounded-2xl border shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full group"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full select-none"
     >
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-          Saldo disponible
-        </span>
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 dark:bg-[#29D691]/15 text-emerald-600 dark:text-[#29D691] flex items-center justify-center shrink-0">
-          <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+            <Wallet className="w-4 h-4" />
+          </div>
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
+            Saldo disponible
+          </span>
         </div>
       </div>
       <div className="mt-2 min-w-0">
-        <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight truncate leading-tight">
+        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums truncate leading-tight">
           {formatMoney(availableLiquidBalance)}
         </h3>
-        <div className="flex items-center gap-1 mt-1 text-[10px] sm:text-[11px] font-semibold truncate">
-          <span className={`inline-flex items-center px-1.5 py-0.2 rounded-md ${
+        <div className="flex items-center gap-1.5 mt-2 text-xs font-medium truncate">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium ${
             netBalance >= 0 
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-[#29D691]' 
-              : 'bg-rose-500/10 text-rose-500'
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+              : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20'
           }`}>
             {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
           </span>
-          <span className="text-slate-400 dark:text-slate-500 truncate hidden xs:inline">mes</span>
+          <span className="text-slate-400 dark:text-zinc-500 truncate hidden xs:inline">mes</span>
         </div>
       </div>
     </div>
@@ -548,27 +527,27 @@ export function MonthlyIncomeWidget({
 }) {
   return (
     <div 
-      className="p-3.5 sm:p-4 rounded-2xl border shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full group"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full group"
     >
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-          Ingreso del mes
-        </span>
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 dark:bg-[#29D691]/15 text-emerald-600 dark:text-[#29D691] flex items-center justify-center shrink-0">
-          <ArrowDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-emerald-500/10 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400">
+            <ArrowDownRight className="w-4 h-4" />
+          </div>
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
+            Ingreso del mes
+          </span>
         </div>
       </div>
       <div className="mt-2 min-w-0">
-        <h3 className="text-base sm:text-lg md:text-xl font-black text-emerald-600 dark:text-[#29D691] tabular-nums tracking-tight truncate leading-tight">
+        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums truncate leading-tight">
           +{formatMoney(totalIncome)}
         </h3>
-        <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1 truncate">
-          {incomeCount || 0} ingresos
-        </p>
+        <div className="flex items-center gap-1.5 mt-2">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 truncate">
+            {incomeCount || 0} ingresos
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -584,27 +563,27 @@ export function MonthlyExpenseWidget({
 }) {
   return (
     <div 
-      className="p-3.5 sm:p-4 rounded-2xl border shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full group"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full group"
     >
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-          Gasto del mes
-        </span>
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
-          <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-rose-500/10 dark:bg-zinc-800 text-rose-600 dark:text-rose-400">
+            <ArrowUpRight className="w-4 h-4" />
+          </div>
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
+            Gasto del mes
+          </span>
         </div>
       </div>
       <div className="mt-2 min-w-0">
-        <h3 className="text-base sm:text-lg md:text-xl font-black text-rose-500 tabular-nums tracking-tight truncate leading-tight">
+        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-rose-500 dark:text-rose-400 tabular-nums truncate leading-tight">
           -{formatMoney(totalExpense)}
         </h3>
-        <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1 truncate">
-          {expenseCount || 0} compras y egresos
-        </p>
+        <div className="flex items-center gap-1.5 mt-2">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 truncate">
+            {expenseCount || 0} egresos
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -620,32 +599,28 @@ export function SavingsRateWidget({
 }) {
   return (
     <div 
-      className="p-3.5 sm:p-4 rounded-2xl border shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full group"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full group"
     >
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-          Tasa de ahorro
-        </span>
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-teal-500/10 dark:bg-[#29D691]/15 text-teal-600 dark:text-[#29D691] flex items-center justify-center shrink-0">
-          <PiggyBank className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </div>
-      </div>
-      <div className="mt-2 min-w-0">
-        <div className="flex items-baseline justify-between gap-1 truncate">
-          <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight leading-tight">
-            {savingsRate}%
-          </h3>
-          <span className="text-[10px] sm:text-xs font-bold text-teal-600 dark:text-[#29D691] tabular-nums truncate">
-            {formatMoney(freeCash)}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-teal-500/10 dark:bg-zinc-800 text-teal-600 dark:text-teal-400">
+            <PiggyBank className="w-4 h-4" />
+          </div>
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
+            Tasa de ahorro
           </span>
         </div>
-        <div className="w-full h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden mt-1.5">
+        <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 tabular-nums">
+          {formatMoney(freeCash)} libre
+        </span>
+      </div>
+      <div className="mt-2 min-w-0">
+        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums leading-tight">
+          {savingsRate}%
+        </h3>
+        <div className="w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3">
           <div 
-            className="h-full bg-gradient-to-r from-teal-500 to-[#29D691] rounded-full transition-all duration-700" 
+            className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-700" 
             style={{ width: `${Math.min(Math.max(savingsRate, 0), 100)}%` }} 
           />
         </div>
@@ -661,20 +636,23 @@ export function WeeklyCashflowWidget({
   weeklyCashFlow,
   hoveredWeekIndex,
   setHoveredWeekIndex,
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`
+  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`,
+  currentPeriod,
+  setPeriod,
+  periodOptions = [
+    { id: 'month', label: 'Mensual' },
+    { id: 'week', label: 'Semanal' },
+    { id: 'day', label: 'Diario' }
+  ]
 }) {
   const weeks = weeklyCashFlow?.weeks || [];
   const maxVal = weeklyCashFlow?.maxVal || 100000;
 
   return (
     <div 
-      className="p-5 sm:p-6 rounded-3xl border shadow-xs space-y-4"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="p-5 sm:p-6 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
@@ -689,14 +667,27 @@ export function WeeklyCashflowWidget({
           </p>
         </div>
 
-        <div className="flex items-center gap-3 text-xs font-semibold">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span className="text-slate-600 dark:text-slate-300">Ingresos</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-            <span className="text-slate-600 dark:text-slate-300">Gastos</span>
+        <div className="flex items-center gap-3">
+          {setPeriod && (
+            <div className="w-56 sm:w-60">
+              <SegmentedControl
+                options={periodOptions}
+                value={currentPeriod}
+                onChange={setPeriod}
+                size="sm"
+              />
+            </div>
+          )}
+
+          <div className="hidden sm:flex items-center gap-3 text-xs font-semibold">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span className="text-slate-600 dark:text-slate-300">Ingresos</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              <span className="text-slate-600 dark:text-slate-300">Gastos</span>
+            </div>
           </div>
         </div>
       </div>
@@ -727,13 +718,13 @@ export function WeeklyCashflowWidget({
                 <div className="flex items-end gap-1.5 sm:gap-2 w-full justify-center">
                   <div className="w-3.5 sm:w-5 bg-slate-100 dark:bg-white/5 rounded-t-xl overflow-hidden flex items-end">
                     <div
-                      className="w-full bg-emerald-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-xs"
+                      className="w-full bg-emerald-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-sm"
                       style={{ height: `${incomeHeight}px` }}
                     />
                   </div>
                   <div className="w-3.5 sm:w-5 bg-slate-100 dark:bg-white/5 rounded-t-xl overflow-hidden flex items-end">
                     <div
-                      className="w-full bg-rose-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-xs"
+                      className="w-full bg-rose-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-sm"
                       style={{ height: `${expenseHeight}px` }}
                     />
                   </div>
@@ -753,6 +744,21 @@ export function WeeklyCashflowWidget({
     </div>
   );
 }
+
+const WIDGET_ICON_MAP = {
+  Landmark,
+  TrendingUp,
+  HandCoins,
+  Wallet,
+  ArrowDownRight,
+  ArrowUpRight,
+  PiggyBank,
+  Activity,
+  PieChart,
+  CreditCard,
+  Receipt,
+  CalendarSync
+};
 
 // ============================================================================
 // COMPONENTE PRINCIPAL DASHBOARD MODULAR Y DINÁMICO
@@ -775,21 +781,12 @@ export default function Dashboard({
   setActiveTab = null,
   onOpenTransaction = () => {},
   onOpenAddTransaction = null,
-  setIsTransactionModalOpen: setIsTransactionModalOpenProp = null,
-  setIsAddTransactionOpen = null,
   onOpenAddDebt = null,
   onOpenAddLoan = null,
-  setIsNewDebtModalOpen: setIsNewDebtModalOpenProp = null,
-  setIsAddLoanOpen = null,
   onOpenAddRecurring = null,
-  setIsRecurringModalOpen: setIsRecurringModalOpenProp = null,
-  setIsAddRecurringOpen = null,
   onAddDebtOrLoan = null,
-  onSaveDebt = null,
   onAddRecurring = null,
-  onSaveRecurring = null,
   onAddTransaction = null,
-  onSaveTransaction = null,
   onDeleteTransaction = () => {},
   onUpdateTransaction = () => {},
   onAddCategory = () => {},
@@ -812,16 +809,15 @@ export default function Dashboard({
   const { formatMoney } = usePrivacy();
   const trmValue = toSafeNumber(trm) || 4050;
 
-  // Estados de modales gestionados directamente en Dashboard para evitar parpadeos y pérdidas de evento
-  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
-  const [debtModalInitialType, setDebtModalInitialType] = useState('payable');
-  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
-  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [txModalDefaultType, setTxModalDefaultType] = useState('expense');
-
-  // Helpers unificados para navegación de pestañas y apertura de modales reales
+  // Helpers unificados para navegación de pestañas y apertura de modales globales
   const navigateToTab = (rawTab) => {
-    const tab = (rawTab === 'movements' || rawTab === 'movimientos') ? 'transactions' : (rawTab === 'inicio') ? 'dashboard' : rawTab;
+    const tab = (rawTab === 'movements' || rawTab === 'movimientos') 
+      ? 'transactions' 
+      : (rawTab === 'inicio') 
+      ? 'dashboard' 
+      : (rawTab === 'cuentas') 
+      ? 'accounts' 
+      : rawTab;
     if (financeActions && typeof financeActions.setActiveTab === 'function') {
       financeActions.setActiveTab(tab);
     } else if (financeActions && typeof financeActions.handleTabChange === 'function') {
@@ -837,94 +833,46 @@ export default function Dashboard({
     const norm = (type === 'receivable' || type === 'lent' || type === 'me_deben') ? 'receivable' : 'payable';
     if (typeof onOpenAddDebt === 'function') {
       onOpenAddDebt(norm);
-    } else if (typeof setIsNewDebtModalOpenProp === 'function') {
-      setIsNewDebtModalOpenProp(true);
-    } else {
-      setDebtModalInitialType(norm);
-      setIsDebtModalOpen(true);
+    } else if (typeof onOpenAddLoan === 'function') {
+      onOpenAddLoan(norm);
+    } else if (financeActions && typeof financeActions.openAddDebt === 'function') {
+      financeActions.openAddDebt(norm);
+    } else if (financeActions && typeof financeActions.openAddLoan === 'function') {
+      financeActions.openAddLoan(norm);
+    } else if (financeActions && typeof financeActions.handleOpenAddDebt === 'function') {
+      financeActions.handleOpenAddDebt(norm);
+    } else if (financeActions && typeof financeActions.handleOpenAddLoan === 'function') {
+      financeActions.handleOpenAddLoan(norm);
+    } else if (typeof onAddDebtOrLoan === 'function') {
+      onAddDebtOrLoan(norm);
     }
   };
 
   const handleOpenRecurringModal = () => {
     if (typeof onOpenAddRecurring === 'function') {
       onOpenAddRecurring();
-    } else if (typeof setIsRecurringModalOpenProp === 'function') {
-      setIsRecurringModalOpenProp(true);
-    } else {
-      setIsRecurringModalOpen(true);
+    } else if (financeActions && typeof financeActions.openAddRecurring === 'function') {
+      financeActions.openAddRecurring();
+    } else if (financeActions && typeof financeActions.handleOpenAddRecurring === 'function') {
+      financeActions.handleOpenAddRecurring();
+    } else if (financeActions && typeof financeActions.handleOpenRecurring === 'function') {
+      financeActions.handleOpenRecurring();
     }
   };
 
   const handleOpenTxModal = (type = 'expense') => {
     const norm = (type === 'income' || type === 'ingreso') ? 'income' : 'expense';
-    if (financeActions && typeof financeActions.handleOpenAddTransaction === 'function') {
+    if (typeof onOpenTransaction === 'function') {
+      onOpenTransaction(norm);
+    } else if (typeof onOpenAddTransaction === 'function') {
+      onOpenAddTransaction(norm);
+    } else if (financeActions && typeof financeActions.openAddTransaction === 'function') {
+      financeActions.openAddTransaction(norm);
+    } else if (financeActions && typeof financeActions.handleOpenAddTransaction === 'function') {
       financeActions.handleOpenAddTransaction(norm);
     } else if (financeActions && typeof financeActions.handleOpenTransaction === 'function') {
       financeActions.handleOpenTransaction(norm);
-    } else if (typeof onOpenAddTransaction === 'function') {
-      onOpenAddTransaction(norm);
-    } else if (typeof onOpenTransaction === 'function') {
-      onOpenTransaction(norm);
-    } else if (typeof setIsTransactionModalOpenProp === 'function') {
-      setIsTransactionModalOpenProp(true);
-    } else {
-      setTxModalDefaultType(norm);
-      setIsTransactionModalOpen(true);
     }
-  };
-
-  const handleSaveDebt = (newItem) => {
-    if (typeof onAddDebtOrLoan === 'function') {
-      onAddDebtOrLoan(newItem);
-    } else if (typeof onSaveDebt === 'function') {
-      onSaveDebt(newItem);
-    } else {
-      try {
-        const raw = localStorage.getItem('finanzas_debts_v3') || localStorage.getItem('app_loans') || '[]';
-        const list = JSON.parse(raw);
-        const next = [newItem, ...list];
-        localStorage.setItem('finanzas_debts_v3', JSON.stringify(next));
-        localStorage.setItem('app_loans', JSON.stringify(next));
-        localStorage.setItem('presu_debts_and_loans', JSON.stringify(next));
-        window.dispatchEvent(new CustomEvent('debts-updated', { detail: next }));
-      } catch (e) {}
-    }
-    setIsDebtModalOpen(false);
-  };
-
-  const handleSaveRecurring = (newItem) => {
-    if (typeof onAddRecurring === 'function') {
-      onAddRecurring(newItem);
-    } else if (typeof onSaveRecurring === 'function') {
-      onSaveRecurring(newItem);
-    } else {
-      try {
-        const raw = localStorage.getItem('subscriptions') || localStorage.getItem('app_recurring') || '[]';
-        const list = JSON.parse(raw);
-        const next = [newItem, ...list];
-        localStorage.setItem('subscriptions', JSON.stringify(next));
-        localStorage.setItem('app_recurring', JSON.stringify(next));
-        window.dispatchEvent(new CustomEvent('recurring-updated', { detail: next }));
-      } catch (e) {}
-    }
-    setIsRecurringModalOpen(false);
-  };
-
-  const handleSaveTransaction = (newTx) => {
-    if (typeof onAddTransaction === 'function') {
-      onAddTransaction(newTx);
-    } else if (typeof onSaveTransaction === 'function') {
-      onSaveTransaction(newTx);
-    } else {
-      try {
-        const raw = localStorage.getItem('presu_transactions') || '[]';
-        const list = JSON.parse(raw);
-        const next = [newTx, ...list];
-        localStorage.setItem('presu_transactions', JSON.stringify(next));
-        window.dispatchEvent(new CustomEvent('transactions-updated', { detail: next }));
-      } catch (e) {}
-    }
-    setIsTransactionModalOpen(false);
   };
 
   // 1-4. CÁLCULO ESTRICTO DE PATRIMONIO TOTAL (ECUACIÓN PATRIMONIAL)
@@ -981,23 +929,89 @@ export default function Dashboard({
     return transactions.filter(t => {
       if (!t.date) return false;
       const d = new Date(t.date + 'T00:00:00');
-      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+      if (d.getFullYear() !== currentYear || d.getMonth() !== currentMonth) return false;
+      if (selectedDay && String(t.date).split('T')[0] !== String(selectedDay).split('T')[0]) return false;
+      return true;
     });
-  }, [transactions, currentYear, currentMonth]);
+  }, [transactions, currentYear, currentMonth, selectedDay]);
 
-  const displayTransactions = monthlyTransactions || scopedTransactions;
+  const displayTransactions = useMemo(() => {
+    if (selectedDay) {
+      const targetDay = String(selectedDay).split('T')[0];
+      return (transactions || []).filter(t => t && t.date && String(t.date).split('T')[0] === targetDay);
+    }
+    return monthlyTransactions || scopedTransactions;
+  }, [transactions, monthlyTransactions, scopedTransactions, selectedDay]);
 
-  // 6. CÁLCULO DE MÉTRICAS MENSUALES Y FLUJO SEMANAL
-  const totalIncome = toSafeNumber(monthlyStats.totalIncome);
-  const totalExpense = toSafeNumber(monthlyStats.totalExpense);
-  const netBalance = monthlyStats.netBalance !== undefined 
-    ? toSafeNumber(monthlyStats.netBalance) 
-    : calculateNetFlow(totalIncome, totalExpense);
+  const isTransferTx = (t) => Boolean(
+    t && (
+      t.isTransfer ||
+      t.is_transfer ||
+      t.type === 'transfer' ||
+      t.type === 'transferencia' ||
+      t.categoryId === 'cat-transfer' ||
+      t.category_id === 'cat-transfer' ||
+      t.subcategoryId === 'sub-transfer-in' ||
+      t.subcategoryId === 'sub-transfer-out'
+    )
+  );
+
+  // 6. CÁLCULO DE MÉTRICAS MENSUALES O DIARIAS Y FLUJO SEMANAL
+  const totalIncome = useMemo(() => {
+    if (selectedDay) {
+      return scopedTransactions
+        .filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t))
+        .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
+    }
+    return toSafeNumber(monthlyStats.totalIncome);
+  }, [selectedDay, scopedTransactions, monthlyStats.totalIncome]);
+
+  const totalExpense = useMemo(() => {
+    if (selectedDay) {
+      return scopedTransactions
+        .filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t))
+        .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
+    }
+    return toSafeNumber(monthlyStats.totalExpense);
+  }, [selectedDay, scopedTransactions, monthlyStats.totalExpense]);
+
+  const netBalance = selectedDay 
+    ? calculateNetFlow(totalIncome, totalExpense)
+    : (monthlyStats.netBalance !== undefined ? toSafeNumber(monthlyStats.netBalance) : calculateNetFlow(totalIncome, totalExpense));
   const availableLiquidBalance = toSafeNumber(monthlyStats.availableLiquidBalance);
   const savingsRate = calculateSavingsRate(totalIncome, totalExpense);
   const freeCash = Math.max(0, netBalance);
 
+  const bentoPeriodLabel = selectedDay
+    ? `Día ${parseInt(selectedDay.split('-')[2], 10)} · ${(MONTH_NAMES?.[selectedDate.getMonth()] || '').slice(0, 3)}`
+    : (currentMonthLabel || (MONTH_NAMES?.[selectedDate.getMonth()] ? `${MONTH_NAMES[selectedDate.getMonth()]} ${selectedDate.getFullYear()}` : 'Mes en curso'));
+
   const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
+  const [currentPeriod, setCurrentPeriod] = useState(selectedDay ? 'day' : 'month');
+
+  useEffect(() => {
+    if (selectedDay && currentPeriod !== 'day') {
+      setCurrentPeriod('day');
+    } else if (!selectedDay && currentPeriod === 'day') {
+      setCurrentPeriod('month');
+    }
+  }, [selectedDay]);
+
+  const periodOptions = useMemo(() => [
+    { id: 'month', label: 'Mensual' },
+    { id: 'week', label: 'Semanal' },
+    { id: 'day', label: 'Diario' }
+  ], []);
+
+  const handlePeriodChange = (newPeriod) => {
+    setCurrentPeriod(newPeriod);
+    if (newPeriod === 'month') {
+      if (typeof onSelectDay === 'function') onSelectDay(null);
+    } else if (newPeriod === 'day') {
+      const today = new Date().toISOString().split('T')[0];
+      if (typeof onSelectDay === 'function') onSelectDay(selectedDay || today);
+    }
+  };
 
   const weeklyCashFlow = useMemo(() => {
     const weeks = [
@@ -1039,6 +1053,21 @@ export default function Dashboard({
 
     return { weeks, maxVal };
   }, [scopedTransactions]);
+
+  // Datos agregados formateados para PillBarChart (Actividad de Gastos por Semana)
+  const weeklyExpensesChartData = useMemo(() => {
+    const currentDayNum = selectedDay ? parseInt(selectedDay.split('-')[2], 10) : new Date().getDate();
+    const isCurrentMonth = selectedDate.getMonth() === new Date().getMonth() && selectedDate.getFullYear() === new Date().getFullYear();
+
+    return weeklyCashFlow.weeks.map((w) => {
+      const isActive = isCurrentMonth && currentDayNum >= w.start && currentDayNum <= w.end;
+      return {
+        label: w.name,
+        value: w.expense,
+        active: isActive
+      };
+    });
+  }, [weeklyCashFlow, selectedDay, selectedDate]);
 
   // Manejadores seguros para categorías y cuentas
   const handleAddCategory = (cat) => {
@@ -1110,7 +1139,10 @@ export default function Dashboard({
     monthly_income: (
       <MonthlyIncomeWidget
         totalIncome={totalIncome}
-        incomeCount={monthlyStats.incomeCount || 0}
+        incomeCount={selectedDay 
+          ? scopedTransactions.filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t)).length
+          : (monthlyStats.incomeCount || 0)
+        }
         formatMoney={formatMoney}
       />
     ),
@@ -1119,7 +1151,10 @@ export default function Dashboard({
     monthly_expense: (
       <MonthlyExpenseWidget
         totalExpense={totalExpense}
-        expenseCount={monthlyStats.expenseCount || 0}
+        expenseCount={selectedDay
+          ? scopedTransactions.filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t)).length
+          : (monthlyStats.expenseCount || 0)
+        }
         formatMoney={formatMoney}
       />
     ),
@@ -1133,13 +1168,25 @@ export default function Dashboard({
       />
     ),
 
-    // 8. Flujo de caja semanal
+    // 8. Flujo de caja semanal / Actividad de gastos (PillBarChart)
     weekly_cashflow: (
+      <PillBarChart
+        data={weeklyExpensesChartData}
+        title="Actividad de Gastos"
+        subtitle={`Egresos por semana · ${bentoPeriodLabel}`}
+        formatMoney={formatMoney}
+        height={180}
+      />
+    ),
+    weekly_cashflow_classic: (
       <WeeklyCashflowWidget
         weeklyCashFlow={weeklyCashFlow}
         hoveredWeekIndex={hoveredWeekIndex}
         setHoveredWeekIndex={setHoveredWeekIndex}
         formatMoney={formatMoney}
+        currentPeriod={currentPeriod}
+        setPeriod={handlePeriodChange}
+        periodOptions={periodOptions}
       />
     ),
 
@@ -1195,6 +1242,7 @@ export default function Dashboard({
         onNavigateToTab={navigateToTab}
         setActiveTab={navigateToTab}
         trm={trm}
+        formatMoney={formatMoney}
       />
     ),
 
@@ -1211,34 +1259,16 @@ export default function Dashboard({
       />
     ),
 
-    // Alias retrocompatibles para configuración previa
-    pagos_recurrentes: (
-      <RecurringPaymentsWidget
-        recurringPayments={recurringPayments}
-        subscriptions={subscriptions}
-        formatMoney={formatMoney}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenAddRecurring={handleOpenRecurringModal}
-        setIsRecurringModalOpen={handleOpenRecurringModal}
-      />
-    ),
-    recurring: (
-      <RecurringPaymentsWidget
-        recurringPayments={recurringPayments}
-        subscriptions={subscriptions}
-        formatMoney={formatMoney}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenAddRecurring={handleOpenRecurringModal}
-        setIsRecurringModalOpen={handleOpenRecurringModal}
-      />
-    ),
-
-    // Balance general
+    // 13. Balance general
     balance_general: (
       <BalanceWidget
-        monthlyStats={monthlyStats}
+        monthlyStats={{
+          ...monthlyStats,
+          availableLiquidBalance: availableLiquidBalance,
+          totalIncome: totalIncome,
+          totalExpense: totalExpense,
+          netBalance: netBalance
+        }}
         selectedDate={selectedDate}
         selectedDay={selectedDay}
         onSelectDay={onSelectDay}
@@ -1246,151 +1276,30 @@ export default function Dashboard({
         txCount={scopedTransactions.length}
       />
     ),
-    balance: (
-      <BalanceWidget
-        monthlyStats={monthlyStats}
-        selectedDate={selectedDate}
-        selectedDay={selectedDay}
-        onSelectDay={onSelectDay}
-        onOpenCalendar={onOpenCalendar}
-        txCount={scopedTransactions.length}
-      />
-    ),
 
-    // Gastos por categoría
-    gastos_categoria: (
-      <CategoriesWidget
-        transactions={transactions}
-        categories={categories}
-        selectedDate={selectedDate}
-        selectedDay={selectedDay}
-        onOpenCalendar={onOpenCalendar}
-        financeActions={financeActions}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-      />
-    ),
-    charts: (
-      <CategoriesWidget
-        transactions={transactions}
-        categories={categories}
-        selectedDate={selectedDate}
-        selectedDay={selectedDay}
-        onOpenCalendar={onOpenCalendar}
-        financeActions={financeActions}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-      />
-    ),
+    // 14. Presupuesto
+    budget: <BudgetWidget monthlyStats={monthlyStats} />,
 
-    // Mis cuentas
-    mis_cuentas: (
-      <AccountsWidget
-        accounts={accounts}
-        transactions={transactions}
-        trm={trm}
-        onNavigateToTab={onNavigateToTab}
-        onSelectCreditCardDetail={onSelectCreditCardDetail}
+    // 15. Bento metrics grid
+    bento_metrics: (
+      <BentoMetricsGrid
+        netWorth={netWorthCOP}
+        totalAssets={totalAssetsCOP}
+        totalPayable={debtsAndLoansMetrics.totalPayableCOP}
+        periodLabel={bentoPeriodLabel}
+        monthlyIncome={totalIncome}
+        monthlyExpenses={totalExpense}
+        savingsRate={savingsRate}
         formatMoney={formatMoney}
-      />
-    ),
-    accounts: (
-      <AccountsWidget
-        accounts={accounts}
-        transactions={transactions}
-        trm={trm}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onSelectCreditCardDetail={onSelectCreditCardDetail}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // Movimientos recientes
-    movimientos_recientes: (
-      <TransactionsWidget
-        transactions={displayTransactions}
-        financeActions={financeActions}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenTransaction={handleOpenTxModal}
-        onOpenAddTransaction={handleOpenTxModal}
-        setIsTransactionModalOpen={handleOpenTxModal}
-        setIsAddTransactionOpen={handleOpenTxModal}
-        formatMoney={formatMoney}
-      />
-    ),
-    recent_transactions: (
-      <TransactionsWidget
-        transactions={displayTransactions}
-        financeActions={financeActions}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenTransaction={handleOpenTxModal}
-        onOpenAddTransaction={handleOpenTxModal}
-        setIsTransactionModalOpen={handleOpenTxModal}
-        setIsAddTransactionOpen={handleOpenTxModal}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // Presupuesto y metas
-    presupuesto_metas: <GoalsWidget monthlyStats={monthlyStats} />,
-    budget: <GoalsWidget monthlyStats={monthlyStats} />,
-
-    // Alias retrocompatibles para configuración previa
-    patrimonio_total: (
-      <NetWorthWidget
-        netWorthCOP={netWorthCOP}
-        totalAssetsCOP={totalAssetsCOP}
-        totalPayableCOP={debtsAndLoansMetrics.totalPayableCOP}
-        isNetWorthPositive={isNetWorthPositive}
-        formatMoney={formatMoney}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-      />
-    ),
-    patrimonio: (
-      <NetWorthWidget
-        netWorthCOP={netWorthCOP}
-        totalAssetsCOP={totalAssetsCOP}
-        totalPayableCOP={debtsAndLoansMetrics.totalPayableCOP}
-        isNetWorthPositive={isNetWorthPositive}
-        formatMoney={formatMoney}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-      />
-    ),
-    inversiones: (
-      <InvestmentsWidget
-        investmentsMetrics={investmentsMetrics}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        formatMoney={formatMoney}
-      />
-    ),
-    prestamos_deudas: (
-      <DebtsWidget
-        debtsAndLoansMetrics={debtsAndLoansMetrics}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenAddDebt={handleOpenDebtModal}
-        onOpenAddLoan={handleOpenDebtModal}
-        setIsNewDebtModalOpen={handleOpenDebtModal}
-        formatMoney={formatMoney}
-      />
-    ),
-    prestamos: (
-      <DebtsWidget
-        debtsAndLoansMetrics={debtsAndLoansMetrics}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenAddDebt={handleOpenDebtModal}
-        onOpenAddLoan={handleOpenDebtModal}
-        setIsNewDebtModalOpen={handleOpenDebtModal}
-        formatMoney={formatMoney}
+        onHeroClick={() => navigateToTab('accounts')}
+        onIncomeClick={() => navigateToTab('transactions')}
+        onExpenseClick={() => navigateToTab('transactions')}
       />
     )
+  };
+
+  const getWidget = (id) => {
+    return WIDGET_REGISTRY[normalizeWidgetId(id)] || WIDGET_REGISTRY[id] || null;
   };
 
   const WIDGET_COMPONENTS = WIDGET_REGISTRY;
@@ -1411,6 +1320,7 @@ export default function Dashboard({
   const draggedIndexRef = useRef(null);
   const widgetsRef = useRef(widgets);
   const isReorderingRef = useRef(isReordering);
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     widgetsRef.current = widgets;
@@ -1448,6 +1358,7 @@ export default function Dashboard({
   }, [serializedCandidateConfig]);
 
   useEffect(() => {
+    let isMounted = true;
     const handleSync = (e) => {
       if (isReorderingRef.current) return;
       try {
@@ -1457,7 +1368,11 @@ export default function Dashboard({
         const nextStr = JSON.stringify(next);
         const currStr = JSON.stringify(widgetsRef.current);
         if (nextStr !== currStr) {
-          setWidgets(next);
+          queueMicrotask(() => {
+            if (isMounted && !isReorderingRef.current) {
+              setWidgets(next);
+            }
+          });
         }
       } catch (_) {}
     };
@@ -1467,12 +1382,34 @@ export default function Dashboard({
     window.addEventListener('presu_widget_order_updated', handleSync);
     window.addEventListener('storage', handleSync);
     return () => {
+      isMounted = false;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
       window.removeEventListener('monety_widgets_order_v2_updated', handleSync);
       window.removeEventListener('monety_widgets_config_updated', handleSync);
       window.removeEventListener('presu_widget_order_updated', handleSync);
       window.removeEventListener('storage', handleSync);
     };
   }, []);
+
+  // Disparador háptico seguro contra bloqueos de intervención del navegador
+  const triggerHaptic = (pattern = 50) => {
+    try {
+      if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        if (typeof document !== 'undefined' && typeof document.hasFocus === 'function' && !document.hasFocus()) {
+          return;
+        }
+        if (typeof navigator.userActivation !== 'undefined' && !navigator.userActivation.hasBeenActive) {
+          return;
+        }
+        navigator.vibrate(pattern);
+      }
+    } catch (_) {
+      // Silenciar intervención de seguridad del navegador
+    }
+  };
 
   // Handlers para detección de pulsación prolongada (500ms)
   const handlePressStart = (index = null) => {
@@ -1489,11 +1426,7 @@ export default function Dashboard({
         draggedIndexRef.current = pressedIndexRef.current;
         setDraggedIndex(pressedIndexRef.current);
       }
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try {
-          navigator.vibrate(50);
-        } catch (_) {}
-      }
+      triggerHaptic(50);
     }, 500);
   };
 
@@ -1519,7 +1452,7 @@ export default function Dashboard({
           const norm = normalizeWidgetId(w.id);
           if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
         }
-        return Boolean(WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)]);
+        return Boolean(getWidget(w.id));
       });
 
       const sourceItem = visibleList[currentIndex];
@@ -1543,11 +1476,7 @@ export default function Dashboard({
       return updated;
     });
 
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try {
-        navigator.vibrate(20);
-      } catch (_) {}
-    }
+    triggerHaptic(20);
 
     draggedIndexRef.current = targetIndex;
     setDraggedIndex(targetIndex);
@@ -1595,17 +1524,39 @@ export default function Dashboard({
 
   // Manejadores Táctiles (Touch Events) para Móviles / Pantallas Táctiles
   const handleTouchStart = (e, index) => {
+    // Si se interactúa con un elemento interactivo o con scroll horizontal interno, no capturar para reorganización
+    if (e.target && typeof e.target.closest === 'function') {
+      if (e.target.closest('button, a, input, select, textarea, [data-no-drag], .overflow-x-auto, .no-scrollbar')) {
+        return;
+      }
+    }
+    if (e.touches && e.touches[0]) {
+      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
     if (isReorderingRef.current || isReordering) {
       draggedIndexRef.current = index;
       setDraggedIndex(index);
+      triggerHaptic(25);
     } else {
       handlePressStart(index);
     }
   };
 
   const handleTouchMove = (e) => {
-    if (!isReorderingRef.current && !isReordering) {
-      handlePressEnd();
+    if (!isReorderingRef.current) {
+      if (touchStartPosRef.current && e.touches && e.touches[0]) {
+        const diffY = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
+        const diffX = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
+        if (diffY > 10 || diffX > 10) {
+          handlePressEnd();
+          return;
+        }
+      }
+      return;
+    }
+
+    // Solo prevenir scroll vertical si el usuario está arrastrando activamente desde la manija
+    if (draggedIndexRef.current === null || draggedIndexRef.current === undefined) {
       return;
     }
 
@@ -1657,30 +1608,31 @@ export default function Dashboard({
   const handleToggleVisibility = (e, widgetId, newVisible) => {
     if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
 
-    setWidgets((prevWidgets) => {
-      const updated = prevWidgets.map((w) => {
-        if (w.id === widgetId || normalizeWidgetId(w.id) === normalizeWidgetId(widgetId)) {
-          return { ...w, visible: newVisible };
-        }
-        return w;
-      });
+    const currentList = widgetsRef.current || widgets;
+    const normTarget = normalizeWidgetId(widgetId);
+    let found = false;
 
-      // Si se restaura (newVisible: true), devolverlo al inicio como solicita el requerimiento
-      if (newVisible) {
-        const targetIdx = updated.findIndex(
-          (w) => w.id === widgetId || normalizeWidgetId(w.id) === normalizeWidgetId(widgetId)
-        );
-        if (targetIdx > 0) {
-          const [restoredItem] = updated.splice(targetIdx, 1);
-          updated.unshift(restoredItem);
-        }
+    let updated = currentList.map((w) => {
+      if (w.id === widgetId || normalizeWidgetId(w.id) === normTarget) {
+        found = true;
+        return { ...w, visible: newVisible, hidden: !newVisible };
       }
-
-      localStorage.setItem('monety_widgets_order_v2', JSON.stringify(updated));
-      saveStoredWidgetsConfig(updated, null);
-      if (onSaveWidgets) onSaveWidgets(updated);
-      return updated;
+      return w;
     });
+
+    // Si se está restaurando un widget que no estaba en la lista guardada, buscarlo en DEFAULT_WIDGETS_CONFIG
+    if (!found && newVisible) {
+      const defWidget = DEFAULT_WIDGETS_CONFIG.find(dw => dw.id === widgetId || normalizeWidgetId(dw.id) === normTarget);
+      if (defWidget) {
+        updated.push({ ...defWidget, visible: true, hidden: false });
+      }
+    }
+
+    widgetsRef.current = updated;
+    setWidgets(updated);
+    localStorage.setItem('monety_widgets_order_v2', JSON.stringify(updated));
+    saveStoredWidgetsConfig(updated, null);
+    if (onSaveWidgets) onSaveWidgets(updated);
   };
 
   const visibleWidgets = widgets.filter(w => {
@@ -1690,58 +1642,54 @@ export default function Dashboard({
     if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
       if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
     }
-    return Boolean(WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)]);
+    return Boolean(getWidget(w.id));
   });
 
-  const hiddenWidgets = widgets.filter((w) => !w.visible);
+  const hiddenWidgets = useMemo(() => {
+    const list = widgets.filter((w) => w.visible === false || w.hidden === true);
+    const visibleIds = new Set(visibleWidgets.map(w => normalizeWidgetId(w.id)));
+    const existingHiddenIds = new Set(list.map(w => normalizeWidgetId(w.id)));
 
-  const getWidget = (id) => {
+    DEFAULT_WIDGETS_CONFIG.forEach(dw => {
+      const norm = normalizeWidgetId(dw.id);
+      if (norm === 'trm' || norm === 'trm_oficial') return;
+      if (allowedWidgetIds && Array.isArray(allowedWidgetIds) && !allowedWidgetIds.includes(norm)) return;
+      if (!visibleIds.has(norm) && !existingHiddenIds.has(norm)) {
+        list.push({ ...dw, visible: false, hidden: true });
+      }
+    });
+    return list;
+  }, [widgets, visibleWidgets, allowedWidgetIds]);
+
+  const isWideWidget = (id) => {
+    if (!id) return false;
     const norm = normalizeWidgetId(id);
-    return WIDGET_COMPONENTS[id] || WIDGET_COMPONENTS[norm] || null;
+    const wideIds = [
+      'my_accounts', 'mis_cuentas', 'accounts',
+      'weekly_cashflow', 'pill_bar_chart', 'weekly_cashflow_classic',
+      'recent_movements', 'movimientos_recientes', 'recent_transactions',
+      'expenses_category', 'gastos_categoria', 'charts',
+      'bento_metrics', 'bento'
+    ];
+    return wideIds.includes(norm) || wideIds.includes(id);
   };
 
-  const isWidgetVisible = (id) => {
-    const norm = normalizeWidgetId(id);
-    if (norm === 'trm' || norm === 'trm_oficial' || id === 'trm' || id === 'trm_oficial') return false;
-    if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
-      if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(id)) return false;
-    }
-    const found = widgets.find(w => w.id === id || normalizeWidgetId(w.id) === norm);
-    return found ? Boolean(found.visible) : false;
-  };
-
-  const renderedWidgetIds = useMemo(() => new Set([
-    'net_worth', 'patrimonio', 'patrimonio_total',
-    'investments', 'inversiones',
-    'debts', 'prestamos', 'prestamos_deudas',
-    'trm', 'trm_oficial',
-    'liquid_balance', 'balance', 'balance_general',
-    'monthly_income',
-    'monthly_expense',
-    'savings_rate',
-    'weekly_cashflow',
-    'recent_movements', 'movimientos_recientes', 'recent_transactions',
-    'expenses_category', 'gastos_categoria', 'charts',
-    'my_accounts', 'mis_cuentas', 'accounts',
-    'recurring_payments', 'pagos_recurrentes', 'recurring',
-    'budget', 'presupuesto_metas'
-  ]), []);
-
-  const renderWidgetWrapper = (id) => {
+  const renderWidgetWrapper = (id, index) => {
     const comp = getWidget(id);
     if (!comp) return null;
-    const index = visibleWidgets.findIndex(w => w.id === id || normalizeWidgetId(w.id) === normalizeWidgetId(id));
+    const idx = index !== undefined ? index : visibleWidgets.findIndex(w => w.id === id || normalizeWidgetId(w.id) === normalizeWidgetId(id));
     return (
       <div
         key={id}
-        onMouseDown={index >= 0 ? () => handlePressStart(index) : undefined}
+        data-widget-index={idx}
+        onMouseDown={idx >= 0 ? () => handlePressStart(idx) : undefined}
         onMouseUp={handlePressEnd}
         onMouseLeave={handlePressEnd}
-        onTouchStart={index >= 0 ? (e) => handleTouchStart(e, index) : undefined}
+        onTouchStart={idx >= 0 ? (e) => handleTouchStart(e, idx) : undefined}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        className="w-full"
+        className={`w-full touch-pan-y ${isWideWidget(id) ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'}`}
       >
         {comp}
       </div>
@@ -1768,43 +1716,54 @@ export default function Dashboard({
       )}
 
       {isReordering ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full touch-none select-none">
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full items-start touch-pan-y select-none ${className || ''}`}>
           {visibleWidgets.map((w, index) => {
-            const widgetComponent = WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)];
+            const widgetComponent = getWidget(w.id);
             if (!widgetComponent) return null;
 
-            const isFull = ['my_accounts', 'weekly_cashflow'].includes(w.id) || ['my_accounts', 'weekly_cashflow'].includes(normalizeWidgetId(w.id));
+            const isWide = isWideWidget(w.id);
             const isJigglingAlt = index % 2 === 1;
 
             return (
               <div 
                 key={w.id} 
                 data-widget-index={index}
-                draggable={isReordering}
-                onMouseDown={() => handlePressStart(index)}
-                onMouseUp={handlePressEnd}
-                onMouseLeave={handlePressEnd}
-                onTouchStart={(e) => handleTouchStart(e, index)}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onTouchCancel={handleTouchEnd}
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDrop={handleDrop}
-                onDragEnd={handleDragEnd}
-                className={`relative transition-transform duration-150 ${isFull ? 'col-span-full' : 'col-span-1'} ${
+                className={`relative transition-transform duration-150 ${isWide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'} w-full ${
                   isJigglingAlt ? 'animate-jiggle-alt' : 'animate-jiggle'
-                } cursor-grab active:cursor-grabbing select-none touch-none ${
+                } select-none touch-pan-y ${
                   draggedIndex === index ? 'opacity-40 scale-[0.98]' : 'hover:scale-[1.01]'
                 }`}
               >
+                {/* Manija de arrastre restringida para móvil y PC: único sensor táctil para reordenar */}
+                <div
+                  data-drag-handle="true"
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    handleTouchStart(e, index);
+                  }}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
+                  className="absolute -top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/95 dark:bg-zinc-800 text-white shadow-xl border border-white/20 cursor-grab active:cursor-grabbing touch-none select-none pointer-events-auto"
+                  title="Arrastra desde aquí para mover el widget"
+                  aria-label="Manija para mover widget"
+                >
+                  <GripVertical className="w-3.5 h-3.5 opacity-90 text-slate-300" />
+                  <span className="text-[11px] font-bold tracking-tight">Mover</span>
+                </div>
+
                 {/* Botón flotante para ocultar widget en modo reorganización */}
                 <button
                   type="button"
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
                   onClick={(e) => handleToggleVisibility(e, w.id, false)}
-                  className="absolute -top-2 -right-2 z-20 w-7 h-7 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer border-2 border-white dark:border-slate-900 pointer-events-auto"
+                  className="absolute -top-2.5 -right-2.5 z-30 w-7 h-7 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer border-2 border-white dark:border-slate-900 pointer-events-auto"
                   title="Ocultar widget"
                   aria-label="Ocultar widget"
                 >
@@ -1818,139 +1777,65 @@ export default function Dashboard({
             );
           })}
         </div>
-      ) : className ? (
-        <div className={className}>
-          {visibleWidgets.map((w) => {
-            const widgetComponent = WIDGET_COMPONENTS[w.id] || WIDGET_COMPONENTS[normalizeWidgetId(w.id)];
-            if (!widgetComponent) return null;
-            return <div key={w.id}>{widgetComponent}</div>;
-          })}
-        </div>
       ) : (
-        <div className="w-full flex flex-col gap-4 sm:gap-5 lg:gap-6">
-          {/* Fila Superior: Resumen Patrimonial (Patrimonio, Inversiones, Deudas) */}
-          {(isWidgetVisible('net_worth') || isWidgetVisible('investments') || isWidgetVisible('debts')) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full">
-              {isWidgetVisible('net_worth') && renderWidgetWrapper('net_worth')}
-              {isWidgetVisible('investments') && renderWidgetWrapper('investments')}
-              {isWidgetVisible('debts') && renderWidgetWrapper('debts')}
-            </div>
-          )}
-
-          {/* 1. Fila de Métricas de Flujo (Simetría en 4 Columnas) */}
-          {(isWidgetVisible('liquid_balance') || isWidgetVisible('monthly_income') || isWidgetVisible('monthly_expense') || isWidgetVisible('savings_rate')) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 w-full">
-              {isWidgetVisible('liquid_balance') && renderWidgetWrapper('liquid_balance')}
-              {isWidgetVisible('monthly_income') && renderWidgetWrapper('monthly_income')}
-              {isWidgetVisible('monthly_expense') && renderWidgetWrapper('monthly_expense')}
-              {isWidgetVisible('savings_rate') && renderWidgetWrapper('savings_rate')}
-            </div>
-          )}
-
-          {/* 2. Zona Central en 2 Secciones (Proporción 2/3 y 1/3 en Desktop) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 w-full items-start">
-            {/* Columna Izquierda (lg:col-span-2): Flujo de caja semanal y Movimientos Recientes */}
-            <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5 lg:gap-6">
-              {isWidgetVisible('weekly_cashflow') && renderWidgetWrapper('weekly_cashflow')}
-              {isWidgetVisible('recent_movements') && renderWidgetWrapper('recent_movements')}
-            </div>
-
-            {/* Columna Derecha (lg:col-span-1): Tus Gastos, Mis Cuentas y Gasto Fijo Proyectado / Pagos Recurrentes */}
-            <div className="lg:col-span-1 flex flex-col gap-4 sm:gap-5 lg:gap-6">
-              {isWidgetVisible('expenses_category') && renderWidgetWrapper('expenses_category')}
-              {isWidgetVisible('my_accounts') && renderWidgetWrapper('my_accounts')}
-              {isWidgetVisible('recurring_payments') && renderWidgetWrapper('recurring_payments')}
-              {isWidgetVisible('budget') && renderWidgetWrapper('budget')}
-            </div>
-          </div>
-
-          {/* Widgets adicionales (si existieran widgets personalizados adicionales fuera de los principales) */}
-          {visibleWidgets
-            .filter(w => !renderedWidgetIds.has(w.id) && !renderedWidgetIds.has(normalizeWidgetId(w.id)))
-            .map((w) => renderWidgetWrapper(w.id))}
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full items-start touch-pan-y ${className || ''}`}>
+          {visibleWidgets.map((w, index) => renderWidgetWrapper(w.id, index))}
         </div>
       )}
 
-      {/* Bandeja de widgets ocultos (solo visible mientras isReordering sea true) */}
-      {isReordering && hiddenWidgets.length > 0 && (
-        <div className="w-full mt-6 p-4 sm:p-5 rounded-3xl border border-dashed border-slate-300 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 backdrop-blur-md transition-all animate-fadeIn">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <EyeOff className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
-              Widgets ocultos ({hiddenWidgets.length})
-            </h4>
+      {/* Bandeja de widgets ocultos (visible durante reorganización) */}
+      {isReordering && (
+        <div className="w-full mt-6 p-4 sm:p-5 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-slate-50/70 dark:bg-white/5 backdrop-blur-md transition-all animate-fadeIn">
+          <div className="flex items-center justify-between gap-2 mb-3 px-1">
+            <div className="flex items-center gap-2">
+              <EyeOff className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                Widgets ocultos {hiddenWidgets.length > 0 ? `(${hiddenWidgets.length})` : ''}
+              </h4>
+            </div>
+            {hiddenWidgets.length === 0 && (
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                Todos los widgets están visibles
+              </span>
+            )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {hiddenWidgets.map((hw) => {
-              const label = hw.label || hw.name || hw.id;
-              return (
-                <div
-                  key={hw.id}
-                  className="inline-flex items-center gap-2 pl-3.5 pr-1.5 py-1.5 rounded-full bg-white dark:bg-[#121622] border border-slate-200 dark:border-white/10 shadow-2xs text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 transition-all group"
-                >
-                  <span>{label}</span>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onClick={(e) => handleToggleVisibility(e, hw.id, true)}
-                    className="flex items-center justify-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-600 text-emerald-600 hover:text-white transition-all cursor-pointer font-bold text-[11px]"
-                    title={`Restaurar widget ${label}`}
-                    aria-label={`Restaurar widget ${label}`}
+          {hiddenWidgets.length > 0 ? (
+            <div className="flex flex-wrap gap-2.5">
+              {hiddenWidgets.map((hw) => {
+                const label = hw.label || hw.name || hw.id;
+                const IconComponent = WIDGET_ICON_MAP[hw.icon] || Wallet;
+                return (
+                  <div
+                    key={hw.id}
+                    className="inline-flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 transition-all group"
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                    <Plus className="w-3 h-3 stroke-[2.5]" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                    <IconComponent className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate max-w-[160px]">{label}</span>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => handleToggleVisibility(e, hw.id, true)}
+                      className="flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500 text-emerald-600 hover:text-white dark:text-emerald-400 dark:hover:text-white transition-all cursor-pointer font-bold text-[11px]"
+                      title={`Restaurar widget ${label}`}
+                      aria-label={`Restaurar widget ${label}`}
+                    >
+                      <Plus className="w-3 h-3 stroke-[2.5]" />
+                      <span>+ Mostrar</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-slate-400 py-1 px-1">
+              Todos los widgets están activos. Para ocultar alguno, pulsa el botón rojo en la esquina del widget mientras reorganizas.
+            </p>
+          )}
         </div>
       )}
 
-      {/* Modal de Préstamos y Deudas declarado en el Dashboard */}
-      {isDebtModalOpen && (
-        <NewDebtModal
-          isOpen={isDebtModalOpen}
-          initialType={debtModalInitialType}
-          defaultType={debtModalInitialType}
-          onClose={() => setIsDebtModalOpen(false)}
-          onSave={handleSaveDebt}
-        />
-      )}
-
-      {/* Modal de Pagos Recurrentes declarado en el Dashboard */}
-      {isRecurringModalOpen && (
-        <NewRecurringModal
-          isOpen={isRecurringModalOpen}
-          onClose={() => setIsRecurringModalOpen(false)}
-          onSave={handleSaveRecurring}
-          accounts={accounts}
-          categories={categories}
-          onAddCategory={onAddCategory}
-          onAddSubcategory={onAddSubcategory}
-          trm={trmValue}
-        />
-      )}
-
-      {/* Modal de Nueva Transacción / Movimiento declarado en el Dashboard */}
-      {isTransactionModalOpen && (
-        <NewTransactionModal
-          isOpen={isTransactionModalOpen}
-          defaultType={txModalDefaultType}
-          defaultDate={selectedDay || new Date().toISOString().split('T')[0]}
-          onClose={() => setIsTransactionModalOpen(false)}
-          onSave={handleSaveTransaction}
-          accounts={accounts}
-          categories={categories}
-          onAddCategory={onAddCategory}
-          onAddSubcategory={onAddSubcategory}
-          onUpdateSubcategory={onUpdateSubcategory}
-          onDeleteSubcategory={onDeleteSubcategory}
-          onAddAccount={onAddAccount}
-          trm={trmValue}
-        />
-      )}
+      {/* Fin de los widgets modulares del Dashboard */}
     </>
   );
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import AddTransactionModal from './AddTransactionModal';
 import TransferModal from './TransferModal';
 import AddLoanModal from './AddLoanModal';
@@ -18,12 +19,13 @@ import { DEFAULT_WIDGETS_CONFIG } from '../../utils/widgetsConfig';
  * Orquestador centralizado de todos los modales, overlays y diálogos emergentes de la aplicación.
  */
 export default function ModalContainer({
+  modalControls,
   financeData = {},
   financeActions = {},
   ...rest
 }) {
   // Soporte directo para objetos agrupados (financeData, financeActions) y props individuales
-  const merged = { ...financeData, ...financeActions, ...rest };
+  const merged = { ...financeData, ...financeActions, ...rest, ...(modalControls || rest.modalControls || {}) };
 
   const {
     // Flags y setters de visibilidad
@@ -109,92 +111,165 @@ export default function ModalContainer({
     handleRestoreBackup,
     handleResetData
   } = merged;
+
+  const isTxOpen = Boolean(
+    merged.isAddTransactionOpen ||
+    merged.isTxOpen ||
+    merged.isAddTxOpen ||
+    merged.isTransactionModalOpen ||
+    merged.isNewTxModalOpen
+  );
+  const isLoanOpen = Boolean(
+    merged.isAddLoanOpen ||
+    merged.isLoanOpen ||
+    merged.isDebtModalOpen ||
+    merged.isAddDebtOpen ||
+    merged.isNewDebtModalOpen
+  );
+  const isRecurringOpen = Boolean(
+    merged.isAddRecurringOpen ||
+    merged.isRecurringOpen ||
+    merged.isRecurringModalOpen ||
+    merged.isNewRecurringModalOpen
+  );
+  const isTransferOpen = Boolean(
+    merged.isTransferOpen ||
+    merged.isTransferModalOpen
+  );
+  const isInvestmentOpen = Boolean(
+    merged.isAddInvestmentOpen ||
+    merged.isInvestmentOpen ||
+    merged.isNewInvestmentModalOpen
+  );
+
+  const closeTx = () => {
+    if (typeof merged.closeAddTransaction === 'function') merged.closeAddTransaction();
+    else if (typeof merged.closeTx === 'function') merged.closeTx();
+    else if (typeof merged.closeTransactionModal === 'function') merged.closeTransactionModal();
+    else if (typeof merged.handleCloseTransaction === 'function') merged.handleCloseTransaction();
+    if (typeof merged.setIsAddTxOpen === 'function') merged.setIsAddTxOpen(false);
+    if (typeof merged.setIsAddTransactionOpen === 'function') merged.setIsAddTransactionOpen(false);
+    if (typeof merged.setIsNewTxModalOpen === 'function') merged.setIsNewTxModalOpen(false);
+  };
+
+  const closeLoan = () => {
+    if (typeof merged.closeAddLoan === 'function') merged.closeAddLoan();
+    else if (typeof merged.closeLoan === 'function') merged.closeLoan();
+    else if (typeof merged.closeAddDebt === 'function') merged.closeAddDebt();
+    else if (typeof merged.closeDebtModal === 'function') merged.closeDebtModal();
+    else if (typeof merged.handleCloseLoan === 'function') merged.handleCloseLoan();
+    if (typeof merged.setIsAddLoanOpen === 'function') merged.setIsAddLoanOpen(false);
+    if (typeof merged.setIsNewDebtModalOpen === 'function') merged.setIsNewDebtModalOpen(false);
+  };
+
+  const closeRecurring = () => {
+    if (typeof merged.closeAddRecurring === 'function') merged.closeAddRecurring();
+    else if (typeof merged.closeRecurring === 'function') merged.closeRecurring();
+    else if (typeof merged.closeRecurringModal === 'function') merged.closeRecurringModal();
+    else if (typeof merged.handleCloseRecurring === 'function') merged.handleCloseRecurring();
+    if (typeof merged.setIsAddRecurringOpen === 'function') merged.setIsAddRecurringOpen(false);
+    if (typeof merged.setIsNewRecurringModalOpen === 'function') merged.setIsNewRecurringModalOpen(false);
+  };
+
+  const closeTransfer = () => {
+    if (typeof merged.closeTransfer === 'function') merged.closeTransfer();
+    else if (typeof merged.closeTransferModal === 'function') merged.closeTransferModal();
+    else if (typeof merged.handleCloseTransfer === 'function') merged.handleCloseTransfer();
+    if (typeof merged.setIsTransferModalOpen === 'function') merged.setIsTransferModalOpen(false);
+  };
+
+  const closeInvestment = () => {
+    if (typeof merged.closeInvestment === 'function') merged.closeInvestment();
+    else if (typeof merged.closeInvestmentModal === 'function') merged.closeInvestmentModal();
+    else if (typeof merged.handleCloseInvestment === 'function') merged.handleCloseInvestment();
+    if (typeof merged.setIsAddInvestmentOpen === 'function') merged.setIsAddInvestmentOpen(false);
+    if (typeof merged.setIsNewInvestmentModalOpen === 'function') merged.setIsNewInvestmentModalOpen(false);
+  };
+
   return (
     <>
       {/* 1. Modal Global para Nuevo Movimiento (AddTransactionModal) */}
-      {isAddTxOpen && (
-        <AddTransactionModal
-          isOpen={isAddTxOpen}
-          onClose={() => setIsAddTxOpen && setIsAddTxOpen(false)}
-          onSave={handleSaveTransaction}
-          onAddTransaction={handleAddTransaction}
-          accounts={accounts}
-          categories={categories}
-          onAddCategory={handleAddCategory}
-          onAddSubcategory={handleAddSubcategory}
-          onUpdateSubcategory={handleUpdateSubcategory}
-          onDeleteSubcategory={handleDeleteSubcategory}
-          onAddAccount={handleAddAccount}
-          defaultDate={selectedDay || new Date().toISOString().split('T')[0]}
-          defaultType={txDefaultType || 'expense'}
-          trm={trm}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {isTxOpen && (
+          <AddTransactionModal
+            isOpen={isTxOpen}
+            onClose={merged.closeAddTransaction || merged.closeTx || merged.closeTransactionModal || closeTx}
+            onSave={handleSaveTransaction}
+            onAddTransaction={handleAddTransaction}
+            accounts={accounts}
+            categories={categories}
+            onAddCategory={handleAddCategory}
+            onAddSubcategory={handleAddSubcategory}
+            onUpdateSubcategory={handleUpdateSubcategory}
+            onDeleteSubcategory={handleDeleteSubcategory}
+            onAddAccount={handleAddAccount}
+            defaultDate={selectedDay || new Date().toISOString().split('T')[0]}
+            defaultType={txDefaultType || 'expense'}
+            trm={trm}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 2. Modal Global para Transferencia entre Cuentas */}
-      {isTransferModalOpen && (
-        <TransferModal
-          isOpen={isTransferModalOpen}
-          onClose={() => setIsTransferModalOpen && setIsTransferModalOpen(false)}
-          accounts={accounts}
-          transactions={transactions}
-          onTransfer={async (transferData) => {
-            if (handleExecuteTransfer) await handleExecuteTransfer(transferData);
-            if (setIsTransferModalOpen) setIsTransferModalOpen(false);
-          }}
-          trm={trm}
-        />
-      )}
+      <TransferModal
+        isOpen={isTransferOpen}
+        onClose={merged.closeTransfer || merged.closeTransferModal || closeTransfer}
+        accounts={accounts}
+        transactions={transactions}
+        onTransfer={async (transferData) => {
+          if (handleExecuteTransfer) await handleExecuteTransfer(transferData);
+          closeTransfer();
+        }}
+        trm={trm}
+      />
 
       {/* 3. Modal Global para Nueva Inversión */}
-      {(isAddInvestmentOpen || isNewInvestmentModalOpen) && (
-        <AddInvestmentModal
-          isOpen={isAddInvestmentOpen || isNewInvestmentModalOpen}
-          onClose={() => {
-            if (setIsAddInvestmentOpen) setIsAddInvestmentOpen(false);
-            if (setIsNewInvestmentModalOpen) setIsNewInvestmentModalOpen(false);
-          }}
-          onSave={(newInv) => {
-            if (handleAddInvestment) handleAddInvestment(newInv);
-            if (setIsAddInvestmentOpen) setIsAddInvestmentOpen(false);
-            if (setIsNewInvestmentModalOpen) setIsNewInvestmentModalOpen(false);
-            if (handleTabChange) handleTabChange('investments');
-          }}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {isInvestmentOpen && (
+          <AddInvestmentModal
+            isOpen={isInvestmentOpen}
+            onClose={merged.closeInvestment || merged.closeInvestmentModal || closeInvestment}
+            onSave={(newInv) => {
+              if (handleAddInvestment) handleAddInvestment(newInv);
+              closeInvestment();
+              if (handleTabChange) handleTabChange('investments');
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 4. Modal Global para Nuevo Préstamo o Deuda */}
-      {isAddLoanOpen && (
-        <AddLoanModal
-          isOpen={isAddLoanOpen}
-          initialType={addLoanInitialType}
-          defaultType={addLoanInitialType}
-          onClose={() => setIsAddLoanOpen && setIsAddLoanOpen(false)}
-          onSave={(newItem) => {
-            if (handleAddDebtOrLoan) handleAddDebtOrLoan(newItem);
-            if (setIsAddLoanOpen) setIsAddLoanOpen(false);
-            if (handleTabChange) handleTabChange('debts');
-          }}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {isLoanOpen && (
+          <AddLoanModal
+            isOpen={isLoanOpen}
+            initialType={addLoanInitialType}
+            defaultType={addLoanInitialType}
+            onClose={merged.closeAddLoan || merged.closeLoan || merged.closeAddDebt || merged.closeDebtModal || closeLoan}
+            onSave={(newItem) => {
+              if (handleAddDebtOrLoan) handleAddDebtOrLoan(newItem);
+              closeLoan();
+              if (handleTabChange) handleTabChange('debts');
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 5. Modal Global para Nuevo Pago Recurrente */}
-      {isAddRecurringOpen && (
-        <AddRecurringModal
-          isOpen={isAddRecurringOpen}
-          onClose={() => setIsAddRecurringOpen && setIsAddRecurringOpen(false)}
-          onSave={(newItem) => {
-            if (handleAddRecurring) handleAddRecurring(newItem);
-            if (setIsAddRecurringOpen) setIsAddRecurringOpen(false);
-            if (handleTabChange) handleTabChange('recurring');
-          }}
-          accounts={accounts}
-          categories={categories}
-          onAddCategory={handleAddCategory}
-          onAddSubcategory={handleAddSubcategory}
-          trm={trm}
-        />
-      )}
+      <AddRecurringModal
+        isOpen={isRecurringOpen}
+        onClose={merged.closeAddRecurring || merged.closeRecurring || merged.closeRecurringModal || closeRecurring}
+        onSave={(newItem) => {
+          if (handleAddRecurring) handleAddRecurring(newItem);
+          closeRecurring();
+          if (handleTabChange) handleTabChange('recurring');
+        }}
+        accounts={accounts}
+        categories={categories}
+        onAddCategory={handleAddCategory}
+        onAddSubcategory={handleAddSubcategory}
+        trm={trm}
+      />
 
       {/* 6. Modal Selector de Mes / Año de Escritorio */}
       {showMonthPicker && (
@@ -204,7 +279,6 @@ export default function ModalContainer({
           selectedDate={selectedDate}
           onChangeMonth={(newDate) => {
             if (setSelectedDate) setSelectedDate(newDate);
-            if (setSelectedDay) setSelectedDay(null);
           }}
           selectedDay={selectedDay}
           onSelectDay={(day) => setSelectedDay && setSelectedDay(day)}

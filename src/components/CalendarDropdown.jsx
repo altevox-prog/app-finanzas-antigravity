@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Eye } from 'lucide-react';
+﻿import React, { useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Eye, Check } from 'lucide-react';
 import { MONTH_NAMES } from '../data/initialData';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useBackHandler } from '../hooks/useBackHandler';
@@ -230,7 +230,7 @@ export default function CalendarDropdown({
                 style={{ color: cell.isSelected ? '#ffffff' : 'var(--text-main)' }}
                 className={`h-8 relative flex flex-col items-center justify-center rounded-xl text-xs font-semibold transition-all group active:scale-90 ${
                   cell.isSelected
-                    ? 'bg-[#007AFF] text-white font-black shadow-xs'
+                    ? 'bg-[#007AFF] text-white font-black shadow-sm'
                     : cell.isToday
                       ? 'bg-blue-500/15 text-[#007AFF] font-bold ring-1 ring-[#007AFF]/40'
                       : 'hover:bg-black/5 dark:hover:bg-white/5'
@@ -283,17 +283,22 @@ export default function CalendarDropdown({
                 <button
                   type="button"
                   onClick={() => onSelectDay(null)}
-                  className="p-1.5 opacity-60 hover:opacity-100 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                  className="p-1.5 opacity-60 hover:opacity-100 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                   title="Quitar filtro de día"
                 >
                   <X className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-2.5 py-1 bg-[#007AFF] text-white text-[11px] font-bold rounded-xl shadow-xs active:scale-95"
+                  onClick={() => {
+                    if (onSelectDay) onSelectDay(selectedDay);
+                    onClose();
+                  }}
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-xl shadow-sm active:scale-95 flex items-center gap-1 cursor-pointer"
+                  title="Ver movimientos de este día"
                 >
-                  Listo
+                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Ver este día</span>
                 </button>
               </div>
             </div>
@@ -307,6 +312,20 @@ export default function CalendarDropdown({
             </div>
           )}
 
+          {selectedDay && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelectDay) onSelectDay(selectedDay);
+                onClose();
+              }}
+              className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all active:scale-98 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Ver este día ({selectedDay.split('-')[2]} de {MONTH_NAMES[parseInt(selectedDay.split('-')[1]) - 1]})</span>
+            </button>
+          )}
+
           {/* Botón Ver Todo el Mes */}
           <button
             type="button"
@@ -314,7 +333,7 @@ export default function CalendarDropdown({
               onSelectDay(null);
               onClose();
             }}
-            className="w-full py-2 font-bold rounded-xl text-xs transition-all active:scale-98 flex items-center justify-center gap-1.5 border"
+            className="w-full py-2 font-bold rounded-xl text-xs transition-all active:scale-98 flex items-center justify-center gap-1.5 border cursor-pointer"
             style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
           >
             <Eye className="w-3.5 h-3.5 opacity-60" />

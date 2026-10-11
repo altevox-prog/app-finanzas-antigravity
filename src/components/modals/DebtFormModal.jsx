@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { 
   HandCoins, 
   ArrowUpRight, 
@@ -232,7 +233,7 @@ export default function DebtFormModal({
         {/* Cabecera FIJA */}
         <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-xs ${
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm ${
               type === 'receivable' ? 'bg-[#34C759]' : 'bg-[#FF3B30]'
             }`}>
               <HandCoins className="w-5 h-5" />
@@ -263,7 +264,7 @@ export default function DebtFormModal({
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Cuerpo con SCROLL interno */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
+          <div className="flex-1 overflow-y-auto scroll-touch p-6 space-y-4 overscroll-contain">
             {error && (
               <div className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold">
                 {error}
@@ -271,37 +272,42 @@ export default function DebtFormModal({
             )}
 
             {/* Selector de Tipo: Me Deben vs Debo */}
-            <div className="ios-segmented w-full p-1 rounded-2xl flex">
-              <button
-                type="button"
-                onClick={() => setType('receivable')}
-                className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  type === 'receivable'
-                    ? 'bg-[#34C759] text-white shadow-xs font-bold'
-                    : 'opacity-60 hover:opacity-100'
-                }`}
-              >
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                <span>Me Deben (Por Cobrar)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setType('payable')}
-                className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  type === 'payable'
-                    ? 'bg-[#FF3B30] text-white shadow-xs font-bold'
-                    : 'opacity-60 hover:opacity-100'
-                }`}
-              >
-                <ArrowDownLeft className="w-3.5 h-3.5" />
-                <span>Debo (Por Pagar)</span>
-              </button>
+            <div className="relative flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-white/10 select-none">
+              {[
+                { id: 'receivable', label: 'Me Deben (Por Cobrar)', icon: ArrowUpRight, activeClass: 'text-emerald-600 dark:text-emerald-400 font-bold', bgClass: 'bg-emerald-500/15 dark:bg-emerald-500/20 border-emerald-500/30' },
+                { id: 'payable', label: 'Debo (Por Pagar)', icon: ArrowDownLeft, activeClass: 'text-rose-600 dark:text-rose-400 font-bold', bgClass: 'bg-rose-500/15 dark:bg-rose-500/20 border-rose-500/30' }
+              ].map((tab) => {
+                const isActive = type === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setType(tab.id)}
+                    className={`relative z-10 flex-1 py-2 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer rounded-xl ${
+                      isActive ? tab.activeClass : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeLoanTypeTab"
+                        transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                        className={`absolute inset-0 rounded-xl border shadow-sm ${tab.bgClass}`}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center justify-center gap-1.5">
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Campos del Formulario */}
             <div className="space-y-3.5">
               <div>
-                <label className="block text-[11px] font-semibold opacity-70 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                   Nombre de la Persona o Entidad *
                 </label>
                 <input
@@ -310,18 +316,17 @@ export default function DebtFormModal({
                   placeholder={type === 'receivable' ? 'ej: Carlos Mendoza, Andrés...' : 'ej: Banco Santander, Tarjeta Visa...'}
                   value={name}
                   onChange={(e) => { setName(e.target.value); setError(''); }}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF]"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                     Monto Base Total ($ COP) *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs opacity-50 font-bold">$</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs opacity-50 font-bold">$</span>
                     <input
                       type="text"
                       inputMode="decimal"
@@ -330,25 +335,24 @@ export default function DebtFormModal({
                       value={totalAmount}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => { setTotalAmount(formatCurrencyInput(e.target.value, enableDecimals)); setError(''); }}
-                      className="w-full text-xs pl-7 pr-3 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF] font-bold"
-                      style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                      className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-bold font-mono tabular-nums"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                     Número de Cuotas
                   </label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min="1"
                     placeholder="1"
                     value={installments}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setInstallments(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF]"
-                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                    className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                   />
                 </div>
               </div>
@@ -558,33 +562,32 @@ export default function DebtFormModal({
               {/* Fecha de Inicio y Tasa de Interés */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                     Fecha de Inicio / Desembolso
                   </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF]"
-                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                    className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                     Tasa de Interés Total (%)
                   </label>
                   <div className="relative">
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       min="0"
                       placeholder="0"
                       value={interestRate}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setInterestRate(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF]"
-                      style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                      className="w-full h-11 text-xs sm:text-sm pl-3.5 pr-8 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                     />
                     <Percent className="w-3.5 h-3.5 opacity-40 absolute right-3 top-1/2 -translate-y-1/2" />
                   </div>
@@ -660,7 +663,7 @@ export default function DebtFormModal({
             </button>
             <button
               type="submit"
-              className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-xs active:scale-95 transition-transform cursor-pointer ${
+              className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer ${
                 type === 'receivable' ? 'bg-[#34C759] hover:bg-emerald-600' : 'bg-[#FF3B30] hover:bg-red-600'
               }`}
             >

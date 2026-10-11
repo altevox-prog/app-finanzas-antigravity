@@ -3,6 +3,8 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import { saveInvestmentsToStorage } from '../services/storageService';
 import { toSafeNumber } from '../utils/financeMath';
 import { toast } from '../utils/toast';
+import { ensureUUID } from '../services/syncEngine';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 function getInitialInvestments() {
   const saved = localStorage.getItem('presu_investments') ||
@@ -98,6 +100,11 @@ export function useInvestments(isResettingRef) {
       saveInvestmentsToStorage(next);
       return next;
     });
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('investments').delete().eq('id', ensureUUID(invId)).catch(() => {});
+    }
+
     toast.info('Elemento eliminado');
   }, []);
 

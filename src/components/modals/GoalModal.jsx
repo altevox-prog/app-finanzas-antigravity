@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Target, 
@@ -29,9 +30,10 @@ export default function GoalModal({
   goal = null,
   editingGoal = null,
   accounts = [],
-  formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`
+  formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
+  disableBackHandler = false
 }) {
-  useBackHandler(isOpen, onClose);
+  useBackHandler(isOpen && !disableBackHandler, onClose);
 
   const activeGoal = goal || editingGoal;
 
@@ -165,20 +167,32 @@ export default function GoalModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-lg bg-white dark:bg-[#12141C] rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[90vh] shadow-2xl overflow-hidden animate-slide-up border border-slate-200/80 dark:border-white/10">
-        {/* Cabecera FIJA */}
-        <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl flex items-center justify-center text-white shrink-0 bg-emerald-500 shadow-xs">
-              <Target className="w-5 h-5" />
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }
+      }}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-200/80 dark:border-white/[0.08] my-auto"
+      >
+        {/* Encabezado (Header) */}
+        <div className="flex-shrink-0 p-5 border-b border-slate-100 dark:border-white/[0.08] flex justify-between items-center">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+              <Target className="w-5 h-5 text-emerald-500" />
             </div>
-            <div>
-              <h3 className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
+            <div className="truncate">
+              <h3 className="font-semibold text-sm sm:text-base text-slate-900 dark:text-zinc-100 leading-tight truncate">
                 {activeGoal ? 'Editar Meta de Ahorro' : 'Nueva Meta de Ahorro'}
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
                 Planifica tu objetivo, cuotas y recordatorios automáticos
               </p>
             </div>
@@ -186,26 +200,30 @@ export default function GoalModal({
 
           <button
             type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             title="Cerrar"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Formulario con Scroll Interno */}
+        {/* Cuerpo del Formulario (Body) */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
+          <div className="flex-1 overflow-y-auto scroll-touch p-5 space-y-4">
             {error && (
-              <div className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold">
+              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold">
                 {error}
               </div>
             )}
 
             {/* Nombre de la Meta */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Nombre de la Meta *
               </label>
               <input
@@ -214,45 +232,47 @@ export default function GoalModal({
                 placeholder="Ej. Fondo de emergencia, Vacaciones, Casa propia..."
                 value={name}
                 onChange={(e) => { setName(e.target.value); setError(''); }}
-                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
               />
             </div>
 
             {/* Monto Objetivo y Ahorrado Actual */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Monto Objetivo ($ COP) *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs opacity-50 font-bold">$</span>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs opacity-50 font-mono font-bold">$</span>
                   <input
                     type="number"
+                    inputMode="decimal"
                     required
                     min="1"
                     placeholder="0"
                     value={targetAmount}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => { setTargetAmount(e.target.value); setError(''); }}
-                    className="w-full text-xs pl-7 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-bold"
+                    className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Ahorrado Actual ($ COP)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs opacity-50 font-bold">$</span>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs opacity-50 font-mono font-bold">$</span>
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     placeholder="0"
                     value={currentAmount}
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => setCurrentAmount(e.target.value)}
-                    className="w-full text-xs pl-7 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                   />
                 </div>
               </div>
@@ -260,7 +280,7 @@ export default function GoalModal({
 
             {/* Cuenta de Destino */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                 <span>Cuenta de destino</span>
                 <span className="text-[10px] text-slate-400 font-normal">Dónde se guardará el ahorro</span>
               </label>
@@ -268,7 +288,7 @@ export default function GoalModal({
                 <select
                   value={targetAccountId}
                   onChange={(e) => setTargetAccountId(e.target.value)}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 cursor-pointer"
                 >
                   <option value="">-- Sin asignar / Cuenta manual --</option>
                   {activeAccounts.map((acc) => (
@@ -283,30 +303,31 @@ export default function GoalModal({
             {/* Plazo en Meses y Día de Notificación */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-emerald-500" />
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Plazo en meses</span>
                 </label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   min="1"
                   max="120"
                   value={months}
                   onChange={(e) => handleMonthsChange(e.target.value)}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                  <Bell className="w-3 h-3 text-amber-500" />
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
+                  <Bell className="w-3.5 h-3.5 text-amber-500" />
                   <span>Día de notificación</span>
                 </label>
                 <select
                   value={notificationDay}
                   onChange={(e) => setNotificationDay(Number(e.target.value))}
                   disabled={!notifyEnabled}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-40 cursor-pointer"
+                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 disabled:opacity-40 cursor-pointer"
                 >
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                     <option key={d} value={d}>
@@ -317,15 +338,18 @@ export default function GoalModal({
               </div>
             </div>
 
-            {/* Checkbox de activación de recordatorios */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5">
-              <div className="flex items-center gap-2">
+            {/* Checkbox de activación de recordatorios - Fila táctil interactiva */}
+            <div 
+              onClick={() => setNotifyEnabled(!notifyEnabled)}
+              className="min-h-[48px] p-3.5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/70 transition-colors bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-white/[0.08] select-none"
+            >
+              <div className="flex items-center gap-2.5">
                 <Bell className={`w-4 h-4 ${notifyEnabled ? 'text-amber-500' : 'text-slate-400'}`} />
                 <div>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100 block">
                     Activar recordatorio mensual
                   </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block font-mono">
                     Recibe una alerta cada día {notificationDay} para abonar tu cuota
                   </span>
                 </div>
@@ -333,82 +357,88 @@ export default function GoalModal({
               <input
                 type="checkbox"
                 checked={notifyEnabled}
-                onChange={(e) => setNotifyEnabled(e.target.checked)}
-                className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer"
+                readOnly
+                className="w-4.5 h-4.5 rounded-md text-emerald-600 focus:ring-emerald-500 pointer-events-none"
               />
             </div>
 
             {/* Fecha Límite Opcional */}
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-slate-400" />
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 <span>Fecha límite estimada</span>
               </label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono"
               />
             </div>
 
             {/* TARJETA VISUAL: CÁLCULO DINÁMICO DE CUOTA MENSUAL */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/30 space-y-2.5">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-white/[0.08] space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   Cuota Mensual Sugerida
                 </span>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300">
                   {months} {months === 1 ? 'mes' : 'meses'}
                 </span>
               </div>
 
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">
                   {formatMoney(monthlyInstallment)}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">/ mes</span>
+                <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">/ mes</span>
               </div>
 
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono leading-relaxed">
                 Fórmula: ({formatMoney(Number(targetAmount) || 0)} obj - {formatMoney(Number(currentAmount) || 0)} actual) ÷ {months} meses = {formatMoney(monthlyInstallment)} mensuales.
               </p>
 
               {selectedAccount && (
-                <div className="pt-1 border-t border-emerald-500/20 flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">
+                <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                   <Wallet className="w-3.5 h-3.5 shrink-0" />
-                  <span>Destino de ahorro: <strong>{selectedAccount.name}</strong></span>
+                  <span>Destino de ahorro: <strong className="text-slate-900 dark:text-zinc-100">{selectedAccount.name}</strong></span>
                 </div>
               )}
 
               {notifyEnabled && (
-                <div className="flex items-center gap-1.5 text-[10px] text-amber-700 dark:text-amber-300 font-medium">
-                  <Bell className="w-3 h-3 shrink-0" />
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium font-mono">
+                  <Bell className="w-3.5 h-3.5 shrink-0" />
                   <span>Alerta programada para el <strong>día {notificationDay}</strong> de cada mes.</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Pie de página FIJO */}
-          <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-[#181B26] border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
+          {/* Pie (Footer / Botones) */}
+          <div className="flex-shrink-0 p-4 border-t border-slate-100 dark:border-white/[0.08] flex justify-end gap-3 bg-zinc-50 dark:bg-zinc-900/50">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+              }}
+              className="h-11 px-4 text-xs sm:text-sm font-semibold rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-xs active:scale-95 transition-transform cursor-pointer bg-emerald-500 hover:bg-emerald-600"
+              className="h-11 px-5 text-xs sm:text-sm font-bold text-white rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center"
             >
-              {activeGoal ? 'Guardar Cambios' : 'Crear Meta de Ahorro'}
+              {activeGoal ? 'Guardar Cambios' : 'Guardar Meta'}
             </button>
           </div>
         </form>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

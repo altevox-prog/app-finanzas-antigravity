@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   LayoutDashboard,
@@ -12,14 +12,13 @@ import {
   TrendingUp,
   Plus,
   Settings,
-  Sun,
-  Moon,
   Lock,
   Sparkles,
   ChevronRight
 } from 'lucide-react';
 import SyncStatusBadge from '../SyncStatusBadge';
 import AppLogo from '../AppLogo';
+import Avatar from '../ui/Avatar';
 
 /**
  * DesktopSidebar
@@ -28,6 +27,7 @@ import AppLogo from '../AppLogo';
  * badge de sincronización en la nube, toggle de tema y tarjeta de perfil.
  */
 export default function DesktopSidebar({
+  modalControls,
   activeTab = 'dashboard',
   setActiveTab,
   onTabChange,
@@ -42,6 +42,8 @@ export default function DesktopSidebar({
   onOpenNewTransaction,
   onOpenRecurring,
   onOpenLoan,
+  onOpenDebt,
+  onAddDebtOrLoan,
   onOpenInvestment,
   setIsOpen,
   userProfile,
@@ -131,7 +133,7 @@ export default function DesktopSidebar({
 
   return (
     <aside 
-      className={`${className} w-64 xl:w-72 h-screen sticky top-0 flex-col justify-between p-5 border-r border-slate-200/80 dark:border-white/5 bg-white/70 dark:bg-[#090A0F]/90 backdrop-blur-xl z-30 select-none shrink-0 transition-all`}
+      className={`${className} w-64 xl:w-72 h-screen sticky top-0 flex-col justify-between p-5 border-r border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-[#09090b]/90 backdrop-blur-xl z-30 select-none shrink-0 transition-all`}
     >
       {/* SECCIÓN SUPERIOR: Logo + Botón Acción + Navegación */}
       <div className="space-y-6">
@@ -155,7 +157,7 @@ export default function DesktopSidebar({
           id="desktop-btn-new-transaction"
           type="button"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-98 transition-all cursor-pointer relative"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 hover:shadow-md cursor-pointer select-none relative"
         >
           <Plus className={`w-5 h-5 transition-transform duration-200 ${isMenuOpen ? 'rotate-45' : ''}`} />
           <span>Nuevo movimiento</span>
@@ -166,21 +168,30 @@ export default function DesktopSidebar({
           <>
             <div 
               className="fixed inset-0 z-[9980] bg-black/20 backdrop-blur-[2px]" 
-              onClick={() => setIsMenuOpen(false)} 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsMenuOpen(false);
+              }} 
             />
             <div 
-              className="fixed left-6 top-32 z-[9990] w-64 bg-white dark:bg-[#121622] border border-slate-200 dark:border-white/10 rounded-2xl p-2 shadow-2xl space-y-1 animate-slide-up pointer-events-auto"
+              className="fixed left-6 top-32 z-[9990] w-64 bg-white dark:bg-[#27272a] border border-slate-200 dark:border-white/[0.08] rounded-2xl p-2 shadow-2xl space-y-1 animate-slide-up pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Opción Movimiento (Gasto o ingreso) */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setIsMenuOpen(false);
-                  if (typeof setIsOpen === 'function') setIsOpen(false);
-                  handleOpenTransaction();
+                  if (modalControls && typeof modalControls.openAddTransaction === 'function') {
+                    modalControls.openAddTransaction('expense');
+                  } else {
+                    handleOpenTransaction();
+                  }
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
               >
                 <ArrowUpDown className="w-4 h-4 text-emerald-500" />
                 <span>Registrar gasto o ingreso</span>
@@ -189,12 +200,17 @@ export default function DesktopSidebar({
               {/* Opción Transferencia */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setIsMenuOpen(false);
-                  if (typeof setIsOpen === 'function') setIsOpen(false);
-                  if (typeof onOpenTransfer === 'function') onOpenTransfer();
+                  if (modalControls && typeof modalControls.openTransfer === 'function') {
+                    modalControls.openTransfer();
+                  } else if (typeof onOpenTransfer === 'function') {
+                    onOpenTransfer();
+                  }
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
               >
                 <ArrowLeftRight className="w-4 h-4 text-blue-500" />
                 <span>Transferencia entre cuentas</span>
@@ -203,13 +219,19 @@ export default function DesktopSidebar({
               {/* Opción Pagos Recurrentes */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setIsMenuOpen(false);
-                  if (typeof setIsOpen === 'function') setIsOpen(false);
-                  if (typeof onOpenRecurring === 'function') onOpenRecurring();
-                  else handleTab('recurring');
+                  if (modalControls && typeof modalControls.openAddRecurring === 'function') {
+                    modalControls.openAddRecurring();
+                  } else if (typeof onOpenRecurring === 'function') {
+                    onOpenRecurring();
+                  } else {
+                    handleTab('recurring');
+                  }
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
               >
                 <CalendarSync className="w-4 h-4 text-purple-500" />
                 <span>Suscripción o recurrente</span>
@@ -218,13 +240,25 @@ export default function DesktopSidebar({
               {/* Opción Préstamo o Deuda */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setIsMenuOpen(false);
-                  if (typeof setIsOpen === 'function') setIsOpen(false);
-                  if (typeof onOpenLoan === 'function') onOpenLoan();
-                  else handleTab('debts');
+                  if (modalControls && typeof modalControls.openAddLoan === 'function') {
+                    modalControls.openAddLoan('payable');
+                  } else if (modalControls && typeof modalControls.openAddDebt === 'function') {
+                    modalControls.openAddDebt('payable');
+                  } else if (typeof onOpenLoan === 'function') {
+                    onOpenLoan();
+                  } else if (typeof onOpenDebt === 'function') {
+                    onOpenDebt();
+                  } else if (typeof onAddDebtOrLoan === 'function') {
+                    onAddDebtOrLoan();
+                  } else {
+                    handleTab('debts');
+                  }
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
               >
                 <HandCoins className="w-4 h-4 text-amber-500" />
                 <span>Préstamo o deuda</span>
@@ -233,13 +267,21 @@ export default function DesktopSidebar({
               {/* Opción Inversión */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setIsMenuOpen(false);
-                  if (typeof setIsOpen === 'function') setIsOpen(false);
-                  if (typeof onOpenInvestment === 'function') onOpenInvestment();
-                  else handleTab('investments');
+                  if (modalControls && typeof modalControls.openAddInvestment === 'function') {
+                    modalControls.openAddInvestment();
+                  } else if (modalControls && typeof modalControls.openInvestment === 'function') {
+                    modalControls.openInvestment();
+                  } else if (typeof onOpenInvestment === 'function') {
+                    onOpenInvestment();
+                  } else {
+                    handleTab('investments');
+                  }
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
               >
                 <TrendingUp className="w-4 h-4 text-indigo-500" />
                 <span>Registrar inversión</span>
@@ -264,7 +306,7 @@ export default function DesktopSidebar({
                 onClick={() => handleTab(item.id)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition-all cursor-pointer group ${
                   isActive
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 shadow-xs'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -286,38 +328,27 @@ export default function DesktopSidebar({
         </nav>
       </div>
 
-      {/* SECCIÓN INFERIOR: Modo Oscuro, TRM, Perfil y Ajustes */}
+      {/* SECCIÓN INFERIOR: Sincronización, Perfil y Ajustes */}
       <div className="pt-4 border-t border-slate-200/80 dark:border-white/5 space-y-3">
-        {/* Estado de Sincronización en la Nube */}
-        <div className="px-1 flex justify-start">
+        {/* Estado de Sincronización en la Nube y Bloqueo de sesión */}
+        <div className="px-1 flex items-center justify-between">
           <SyncStatusBadge 
             syncStatus={syncStatus}
             isCloudEnabled={isCloudEnabled}
             user={syncUser}
             onOpenAuth={onOpenAuth} 
           />
-        </div>
 
-        {/* Toggle de Modo Claro / Oscuro y Bloqueo */}
-        <div className="flex items-center justify-between px-1">
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Cambiar tema claro / oscuro"
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-            <span>{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-            title="Bloquear sesión"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+              title="Bloquear sesión"
+            >
+              <Lock className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Tarjeta de Perfil y Acceso a Ajustes */}
@@ -328,15 +359,14 @@ export default function DesktopSidebar({
           title="Abrir configuración y perfil"
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs">
-              {userProfile?.photo ? (
-                <img src={userProfile.photo} alt={userProfile.name} className="w-full h-full object-cover" />
-              ) : userProfile?.initials && userProfile.initials !== 'US' ? (
-                userProfile.initials
-              ) : (
-                <img src="/icon-192x192.png" alt="Monety" className="w-full h-full object-cover" />
-              )}
-            </div>
+            <Avatar
+              src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo}
+              name={syncUser?.user_metadata?.full_name || userProfile?.name}
+              email={syncUser?.email || userProfile?.email}
+              size="md"
+              showStatus={Boolean(syncUser?.id && syncUser?.id !== 'local-user')}
+              isOnline={Boolean(syncUser?.id && syncUser?.id !== 'local-user')}
+            />
             <div className="min-w-0 text-left flex-1">
               <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                 {userProfile?.name || 'Usuario'}

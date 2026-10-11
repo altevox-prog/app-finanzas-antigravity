@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   KeyRound, 
@@ -215,7 +215,7 @@ export default function SecuritySettings() {
 
           <button
             type="submit"
-            className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+            className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors cursor-pointer"
           >
             Guardar PIN
           </button>

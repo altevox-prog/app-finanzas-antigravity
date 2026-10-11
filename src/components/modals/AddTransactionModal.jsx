@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import TransactionForm from '../TransactionForm';
 import { INITIAL_ACCOUNTS, INITIAL_CATEGORIES } from '../../data/initialData';
 
@@ -52,7 +53,16 @@ export default function AddTransactionModal({
   }
 
   const content = (
-    <div className="relative z-[99999]">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && typeof onClose === 'function') onClose();
+      }}
+    >
       <TransactionForm
         {...rest}
         accounts={accounts}
@@ -64,7 +74,7 @@ export default function AddTransactionModal({
         defaultDate={defaultDate}
         defaultType={defaultType}
       />
-    </div>
+    </motion.div>
   );
 
   return typeof document !== 'undefined' ? createPortal(content, document.body) : content;

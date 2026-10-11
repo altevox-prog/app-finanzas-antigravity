@@ -117,7 +117,10 @@ export default function ViewRouter({
           onSelectDay={setSelectedDay}
           onOpenCalendar={() => setIsCalendarOpen && setIsCalendarOpen(true)}
           onNavigateToTab={handleTabChange}
-          onOpenTransaction={handleOpenTransaction}
+          onOpenTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}
+          onOpenAddTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}
+          onOpenAddDebt={merged.openAddDebt || merged.openDebtModal || merged.handleOpenAddDebt || handleOpenAddDebt}
+          onOpenAddLoan={merged.openAddLoan || merged.openLoanModal || merged.handleOpenAddLoan || handleOpenAddLoan}
           onAddTransaction={handleAddTransaction}
           onAddDebtOrLoan={handleAddDebtOrLoan}
           onAddRecurring={handleAddRecurring}
@@ -129,16 +132,15 @@ export default function ViewRouter({
           onDeleteSubcategory={handleDeleteSubcategory}
           onAddAccount={handleAddAccount}
           onSelectCreditCardDetail={setSelectedCreditCardDetail}
-          onOpenAddRecurring={() => {
-            if (setIsAddRecurringOpen) setIsAddRecurringOpen(true);
-            if (setIsNewRecurringModalOpen) setIsNewRecurringModalOpen(true);
-          }}
+          onOpenAddRecurring={merged.openAddRecurring || merged.handleOpenRecurring || handleOpenRecurring}
           currentMonthLabel={currentMonthLabel}
           trm={trm}
           widgetsConfig={widgets}
           widgets={widgets}
           onCustomizeWidgets={() => setIsEditWidgetsModalOpen && setIsEditWidgetsModalOpen(true)}
-          onSaveWidgets={(newCfg) => setWidgets && setWidgets(newCfg)}
+          onSaveWidgets={(newCfg) => {
+            if (setWidgets) queueMicrotask(() => setWidgets(newCfg));
+          }}
         />
       )}
 
@@ -146,7 +148,7 @@ export default function ViewRouter({
       {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
         <TransactionsView
           key={`transactions-list-${tabResetKeys?.transactions || 0}`}
-          transactions={monthlyTransactions}
+          transactions={monthlyTransactions && monthlyTransactions.length > 0 ? monthlyTransactions : transactions}
           onAddTransaction={handleAddTransaction}
           onDeleteTransaction={handleDeleteTransaction}
           onUpdateTransaction={handleUpdateTransaction}
@@ -160,9 +162,10 @@ export default function ViewRouter({
           currentMonthLabel={currentMonthLabel}
           selectedDay={selectedDay}
           onSelectDay={setSelectedDay}
-          onOpenTransaction={handleOpenTransaction}
-          onOpenAddTransaction={handleOpenTransaction}
-          setIsAddTransactionOpen={setIsAddTxOpen}
+          modalControls={merged.modalControls || merged}
+          onOpenTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}
+          onOpenAddTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}
+          setIsAddTransactionOpen={merged.setIsAddTransactionOpen || merged.setIsAddTxOpen || setIsAddTxOpen}
           trm={trm}
         />
       )}
@@ -197,15 +200,19 @@ export default function ViewRouter({
           onAddDisbursement={handleAddDisbursement}
           onDeletePayment={handleDeletePayment}
           onDeleteDebtOrLoan={handleDeleteDebtOrLoan}
-          onOpenAddDebt={(type = 'payable') => handleOpenAddDebt && handleOpenAddDebt(type)}
-          onOpenAddLoan={(type = 'receivable') => handleOpenAddLoan && handleOpenAddLoan(type)}
+          modalControls={merged.modalControls || merged}
+          onOpenAddDebt={(type = 'payable') => (merged.openAddDebt || merged.openDebtModal || merged.handleOpenAddDebt || handleOpenAddDebt)?.(type)}
+          onOpenAddLoan={(type = 'receivable') => (merged.openAddLoan || merged.openLoanModal || merged.handleOpenAddLoan || handleOpenAddLoan)?.(type)}
           setIsAddLoanOpen={(val) => {
             if (typeof val === 'string') {
               const target = (val === 'payable' || val === 'borrowed' || val === 'debo') ? 'payable' : 'receivable';
-              if (setAddLoanInitialType) setAddLoanInitialType(target);
-              if (setIsAddLoanOpen) setIsAddLoanOpen(true);
+              if (merged.setLoanType) merged.setLoanType(target);
+              else if (setAddLoanInitialType) setAddLoanInitialType(target);
+              if (merged.openAddLoan) merged.openAddLoan(target);
+              else if (setIsAddLoanOpen) setIsAddLoanOpen(true);
             } else {
-              if (setIsAddLoanOpen) setIsAddLoanOpen(Boolean(val));
+              if (merged.setIsAddLoanOpen) merged.setIsAddLoanOpen(Boolean(val));
+              else if (setIsAddLoanOpen) setIsAddLoanOpen(Boolean(val));
             }
           }}
         />
@@ -216,9 +223,11 @@ export default function ViewRouter({
         <InvestmentsView
           key={`investments-${tabResetKeys?.investments || 0}`}
           investments={investments}
+          accounts={accounts}
           onAddInvestment={handleAddInvestment}
           onUpdateInvestment={handleUpdateInvestment}
           onDeleteInvestment={handleDeleteInvestment}
+          onAddTransaction={handleAddTransaction}
           trm={trm}
         />
       )}

@@ -1,7 +1,10 @@
-import React from 'react';
-import { Calendar, ChevronDown } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { Calendar, ChevronDown, Bell } from 'lucide-react';
 import Header from '../Header';
 import SyncStatusBadge from '../SyncStatusBadge';
+import Avatar from '../ui/Avatar';
+import NotificationCenter from '../NotificationCenter';
+import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
 
 const TAB_TITLES = {
   dashboard: 'Panel financiero',
@@ -19,7 +22,7 @@ const TAB_TITLES = {
  * Cabecera unificada de la aplicación:
  * - Barra de estado iOS simulada (en móvil emulado / tablet)
  * - Cabecera móvil con notificaciones, perfil y estadísticas rápidas (< lg)
- * - Cabecera panorámica de escritorio con título dinámico de sección, selector de fecha y TRM (>= lg)
+ * - Cabecera panorámica de escritorio con título dinámico de sección, selector de fecha, campana de notificaciones y TRM (>= lg)
  */
 export default function AppHeader({
   activeTab = 'dashboard',
@@ -45,10 +48,28 @@ export default function AppHeader({
   isCloudEnabled = false,
   syncUser = null,
   accounts = [],
+  investments = [],
   subscriptions = [],
   debtsAndLoans = [],
   savingsGoals = []
 }) {
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+
+  // Hook unificado para evaluación de vencimientos y alertas financieras
+  const {
+    alerts,
+    activeAlerts,
+    unreadCount,
+    dismissAlert,
+    markAllAsRead
+  } = useFinancialDueAlerts({
+    accounts,
+    investments,
+    debtsAndLoans,
+    subscriptions,
+    savingsGoals
+  });
+
   const handleOpenPicker = () => {
     if (onOpenMonthPicker) onOpenMonthPicker();
     else if (setShowMonthPicker) setShowMonthPicker(true);
@@ -61,7 +82,7 @@ export default function AppHeader({
     <>
       {/* Barra de Estado iOS simulada para móviles en tablet reducida (< lg) */}
       <div 
-        className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between px-7 pt-3 pb-1 text-xs font-semibold select-none shrink-0 z-40 bg-slate-50/90 dark:bg-[#090A0F]/90 text-slate-900 dark:text-slate-100`} 
+        className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between px-7 pt-3 pb-1 text-xs font-semibold select-none shrink-0 z-40 bg-slate-50/90 dark:bg-[#09090b]/90 text-slate-900 dark:text-slate-100`} 
         style={{ backgroundColor: 'var(--header-bg)', color: 'var(--text-main)' }}
       >
         <span className="text-[11px] font-bold">9:41</span>
@@ -81,6 +102,7 @@ export default function AppHeader({
         <Header 
           monthlyStats={monthlyStats} 
           userProfile={userProfile}
+          syncUser={syncUser}
           theme={theme}
           onToggleTheme={onToggleTheme}
           onOpenProfile={onOpenProfile}
@@ -88,6 +110,7 @@ export default function AppHeader({
           onOpenAuth={onOpenAuth}
           onLogout={onLogout}
           accounts={accounts}
+          investments={investments}
           subscriptions={subscriptions}
           debtsAndLoans={debtsAndLoans}
           savingsGoals={savingsGoals}
@@ -95,7 +118,7 @@ export default function AppHeader({
       </div>
 
       {/* Top Header Panorámico de Escritorio (visible en lg:) */}
-      <header className={`${desktopOnlyClass} border-b border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-md sticky top-0 z-20 shrink-0 select-none`}>
+      <header className={`${desktopOnlyClass} border-b border-slate-200/80 dark:border-white/[0.08] bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-20 shrink-0 select-none`}>
         <div className="max-w-[1550px] w-full mx-auto px-6 py-4.5 flex sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -106,12 +129,12 @@ export default function AppHeader({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* Selector de Mes Interactivo */}
             <button
               type="button"
               onClick={handleOpenPicker}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/80 dark:border-white/10 shadow-2xs group"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/80 dark:border-white/[0.08] shadow-sm group"
               title="Abrir selector de mes y año"
             >
               <Calendar className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
@@ -131,15 +154,59 @@ export default function AppHeader({
 
             {/* TRM Oficial Automatizado (No editable) */}
             <div 
-              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 select-none shadow-2xs"
+              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/[0.08] text-xs font-semibold text-slate-700 dark:text-slate-300 select-none shadow-sm"
               title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>TRM Oficial: ${Number(trm).toLocaleString('es-CO')} COP</span>
             </div>
+
+            {/* Botón de Campana de Notificaciones en Escritorio */}
+            <button
+              type="button"
+              onClick={() => setIsNotificationCenterOpen(true)}
+              className="p-2 rounded-xl text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 relative transition-colors cursor-pointer"
+              title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"}
+              aria-label="Centro de notificaciones"
+            >
+              <Bell className="w-4.5 h-4.5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Avatar de Perfil en Header Desktop */}
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              className="flex items-center justify-center p-0.5 rounded-full cursor-pointer transition-transform active:scale-95 ml-1 select-none focus:outline-none"
+              title={`Perfil - ${userProfile?.name || 'Usuario'}`}
+              aria-label={`Perfil - ${userProfile?.name || 'Usuario'}`}
+            >
+              <Avatar 
+                src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
+                name={syncUser?.user_metadata?.full_name || userProfile?.name} 
+                email={syncUser?.email || userProfile?.email}
+                size="sm" 
+                showStatus={Boolean(syncUser?.id && syncUser?.id !== 'local-user')} 
+                isOnline={Boolean(syncUser?.id && syncUser?.id !== 'local-user')}
+              />
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Modal / Drawer Centro de Notificaciones (Escritorio) */}
+      <NotificationCenter
+        isOpen={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+        notifications={alerts}
+        activeNotifications={activeAlerts}
+        onDismiss={dismissAlert}
+        onMarkAllAsRead={markAllAsRead}
+      />
     </>
   );
 }

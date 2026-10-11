@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   PlusCircle, 
   ArrowUpRight, 
@@ -7,6 +8,7 @@ import {
   CheckCircle,
   Camera,
   Trash2,
+  X,
   Image as ImageIcon
 } from 'lucide-react';
 import CategoryCombobox from './CategoryCombobox';
@@ -15,6 +17,8 @@ import AccountCombobox from './AccountCombobox';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { usePrivacy } from '../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../utils/currencyFormatter';
+import { supabase, isSupabaseConfigured, getSupabaseUser } from '../services/supabaseClient';
+import { toast } from '../utils/toast';
 
 export default function TransactionForm({ 
   accounts: propAccounts, 
@@ -72,6 +76,8 @@ export default function TransactionForm({
   const [note, setNote] = useState(editingMovement?.note || '');
   const [receiptImage, setReceiptImage] = useState(editingMovement?.receiptImage || null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const fileInputRef = useRef(null);
 
   // Sincronizar campos cuando se provee un movimiento a editar
@@ -191,10 +197,18 @@ export default function TransactionForm({
     }
   }, [accounts, accountId]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
+    if (submittingRef.current || isSubmitting) return;
+
     const numAmount = parseFormattedAmount(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
     const rateNum = currency === 'COP' ? 1 : (parseFloat(exchangeRate) || 1);
     const calculatedAmount = currency === 'COP' ? numAmount : (numAmount * rateNum);
@@ -204,27 +218,102 @@ export default function TransactionForm({
 
     const cat = categories.find(c => c && c.id === categoryId);
     const subcat = Array.isArray(cat?.subcategories) ? cat.subcategories.find(s => s && s.id === subcategoryId) : null;
-    const acc = accounts.find(a => a && a.id === accountId);
+    const acc = accounts.find(a => a && a.id === accountId) || accounts[0];
+    const selectedAccountId = accountId || acc?.id || '';
+    const categoryName = cat ? cat.name : 'General';
+    const transactionType = type; // 'expense' | 'income'
+    const transactionDate = date ? (date.includes('T') ? date : `${date}T12:00:00.000Z`) : new Date().toISOString();
+
+    const newTxId = editingMovement?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now()));
 
     const newTx = {
-      id: editingMovement?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now())),
+      id: newTxId,
       date,
-      type,
+      type: transactionType,
       amount: finalAmount,
       originalCurrency: currency,
       originalAmount: numAmount,
       exchangeRate: currency === 'COP' ? 1 : rateNum,
       categoryId: categoryId || cat?.id || '',
-      categoryName: cat ? cat.name : 'General',
+      categoryName,
       subcategoryId: subcat ? subcat.id : null,
       subcategoryName: subcat ? subcat.name : null,
-      accountId: accountId || acc?.id || '',
+      accountId: selectedAccountId,
       accountName: acc ? acc.name : 'Principal',
       note: note.trim(),
       receiptImage: receiptImage || null
     };
 
-    onAddTransaction(newTx);
+    // 1. Conexión de red directa con Supabase (Petición HTTP en Network tab)
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const user = await getSupabaseUser();
+        if (user && user.id) {
+          const insertPayload = {
+            id: newTxId,
+            user_id: user.id,
+            account_id: selectedAccountId,
+            amount: finalAmount,
+            type: transactionType, // 'expense' | 'income'
+            category: categoryName,
+            notes: note.trim() || '',
+            date: transactionDate
+          };
+
+          let { data, error } = await supabase
+            .from('transactions')
+            .insert([insertPayload]);
+
+          // Si el esquema de Supabase usa la columna 'category_id' en lugar de 'category'
+          if (error && error.message && error.message.includes('category')) {
+            const fallbackPayload = {
+              ...insertPayload,
+              category_id: categoryId || null
+            };
+            delete fallbackPayload.category;
+            const res = await supabase.from('transactions').insert([fallbackPayload]);
+            data = res.data;
+            error = res.error;
+          }
+
+          if (error) {
+            console.error('Error al guardar transacción en Supabase:', error.message || error);
+            toast.error(`Error Supabase: ${error.message || 'No se pudo guardar la transacción'}`);
+          } else {
+            console.log('Transacción persistida exitosamente en Supabase:', data);
+          }
+
+          // Actualizar el saldo de la cuenta exactamente una sola vez en Supabase
+          if (selectedAccountId && acc) {
+            const currentAccBalance = Number(acc.balance ?? acc.initialBalance ?? 0);
+            const newAccountBalance = transactionType === 'expense'
+              ? (currentAccBalance - finalAmount)
+              : (currentAccBalance + finalAmount);
+
+            const { error: accError } = await supabase
+              .from('accounts')
+              .update({
+                balance: newAccountBalance,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', selectedAccountId)
+              .eq('user_id', user.id);
+
+            if (accError) {
+              console.error('Error al actualizar cuenta en Supabase:', accError.message || accError);
+            }
+          }
+        }
+      } catch (cloudErr) {
+        console.error('Excepción de red al interactuar con Supabase:', cloudErr);
+      }
+    }
+
+    // 2. Modificación del estado local reactivo
+    if (typeof onAddTransaction === 'function') {
+      onAddTransaction(newTx);
+    }
+
     setAmount('');
     setCurrency('COP');
     setExchangeRate(String(trm || 4000));
@@ -233,47 +322,56 @@ export default function TransactionForm({
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
+      setIsSubmitting(false);
+      submittingRef.current = false;
       if (onClose) onClose();
     }, 700);
   };
 
   const renderFormFields = () => (
     <>
-      {/* iOS Segmented Control para Gasto / Ingreso */}
-      <div className="ios-segmented w-full flex justify-center p-1 rounded-2xl">
-        <button
-          type="button"
-          onClick={() => setType('expense')}
-          className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
-            type === 'expense' 
-              ? 'ios-segmented-btn-active text-[#FF3B30] shadow-xs scale-[1.02]' 
-              : 'opacity-60'
-          }`}
-        >
-          <ArrowDownRight className="w-4 h-4" />
-          <span>Gasto</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setType('income')}
-          className={`ios-segmented-btn flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
-            type === 'income' 
-              ? 'ios-segmented-btn-active text-[#34C759] shadow-xs scale-[1.02]' 
-              : 'opacity-60'
-          }`}
-        >
-          <ArrowUpRight className="w-4 h-4" />
-          <span>Ingreso</span>
-        </button>
+      {/* Selector Segmentado Animado Tipo iOS/macOS para Gasto / Ingreso */}
+      <div className="relative flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/50">
+        {['expense', 'income'].map((tabType) => {
+          const isActive = type === tabType;
+          const label = tabType === 'expense' ? 'Gasto' : 'Ingreso';
+          const Icon = tabType === 'expense' ? ArrowDownRight : ArrowUpRight;
+          const activeColor = tabType === 'expense' 
+            ? 'bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/30' 
+            : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+
+          return (
+            <button
+              key={tabType}
+              type="button"
+              onClick={() => setType(tabType)}
+              className={`relative flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-colors duration-150 z-10 flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+                isActive 
+                  ? (tabType === 'expense' ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-emerald-600 dark:text-emerald-400 font-extrabold') 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="activeTransactionTypeTab"
+                  transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                  className={`absolute inset-0 rounded-xl shadow-sm -z-10 ${activeColor}`}
+                />
+              )}
+              <Icon className="w-4 h-4" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Monto Prominente estilo iOS y Selector de Moneda */}
       <div>
-        <label className="block text-[11px] font-bold opacity-60 uppercase tracking-wider mb-1">
+        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
           Monto ({currency === 'COP' ? '$ COP' : currency}) *
         </label>
         <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 font-black text-lg">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 font-black text-lg text-slate-900 dark:text-zinc-100">
             {currency === 'EUR' ? '€' : '$'}
           </span>
           <input
@@ -284,12 +382,7 @@ export default function TransactionForm({
             value={amount}
             onFocus={(e) => e.target.select()}
             onChange={(e) => setAmount(formatCurrencyInput(e.target.value, enableDecimals))}
-            className="w-full pl-8 pr-3 py-3 border border-transparent rounded-2xl text-[24px] font-bold focus:outline-none focus:ring-2 transition-all tabular-nums"
-            style={{ 
-              backgroundColor: 'var(--bg-input)', 
-              color: 'var(--text-main)',
-              caretColor: type === 'expense' ? '#FF3B30' : '#34C759'
-            }}
+            className="w-full pl-8 pr-3.5 h-12 text-2xl font-bold font-mono tracking-tight bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all tabular-nums"
           />
         </div>
 
@@ -315,10 +408,10 @@ export default function TransactionForm({
                     setExchangeRate('1');
                   }
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-emerald-500 text-white shadow-xs font-bold scale-[1.02]'
-                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-white/10'
+                    ? 'bg-emerald-600 text-white shadow-sm font-bold scale-[1.02]'
+                    : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200/70 dark:hover:bg-zinc-700'
                 }`}
               >
                 {c.label}
@@ -329,7 +422,7 @@ export default function TransactionForm({
 
         {/* Lógica de Conversión y Tasa de Cambio (TRM) Oficial Automática */}
         {currency !== 'COP' && (
-          <div className="mt-2.5 p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-500/20 space-y-2 animate-fadeIn">
+          <div className="mt-2.5 p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-500/20 space-y-2 animate-fadeIn">
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
@@ -345,7 +438,7 @@ export default function TransactionForm({
                   type="text"
                   readOnly
                   value={`TRM del día: $${Number(exchangeRate || trm || 4050).toLocaleString('es-CO')} COP (Sincronizada automáticamente)`}
-                  className="w-full px-3.5 py-2 text-xs font-semibold rounded-xl border border-emerald-200/80 dark:border-emerald-500/30 bg-emerald-100/50 dark:bg-white/5 text-emerald-900 dark:text-emerald-200 focus:outline-none cursor-default select-none tabular-nums"
+                  className="w-full h-11 px-3.5 text-xs font-semibold rounded-lg border border-emerald-200/80 dark:border-emerald-500/30 bg-emerald-100/50 dark:bg-white/5 text-emerald-900 dark:text-emerald-200 focus:outline-none cursor-default select-none tabular-nums"
                 />
               </div>
             </div>
@@ -362,7 +455,7 @@ export default function TransactionForm({
       {/* Categoría y Subcategoría */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1">
+          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
             Categoría Principal *
           </label>
           <CategoryCombobox
@@ -375,7 +468,7 @@ export default function TransactionForm({
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1">
+          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
             Subcategoría
           </label>
           <SubcategoryCombobox
@@ -394,7 +487,7 @@ export default function TransactionForm({
       {/* Cuenta y Fecha */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1">
+          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
             Cuenta / Método *
           </label>
           <AccountCombobox
@@ -406,7 +499,7 @@ export default function TransactionForm({
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1">
+          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
             Fecha *
           </label>
           <input
@@ -414,15 +507,14 @@ export default function TransactionForm({
             required
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2.5 border border-transparent rounded-xl text-xs font-semibold focus:outline-none"
-            style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+            className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
           />
         </div>
       </div>
 
       {/* Nota Opcional */}
       <div>
-        <label className="block text-[11px] font-semibold opacity-60 mb-1">
+        <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
           Nota o Detalle Opcional
         </label>
         <div className="relative">
@@ -431,17 +523,16 @@ export default function TransactionForm({
             placeholder="ej: Almuerzo de trabajo, Mercado del mes..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full pl-8 pr-3 py-2.5 border border-transparent rounded-xl text-xs font-medium focus:outline-none transition-all"
-            style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+            className="w-full h-11 pl-9 pr-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
           />
-          <FileText className="w-3.5 h-3.5 opacity-40 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <FileText className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
 
       {/* Adjuntar Foto del Recibo / Factura */}
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-[11px] font-semibold opacity-60">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
             Foto de Recibo o Factura
           </label>
           {receiptImage && (
@@ -475,7 +566,7 @@ export default function TransactionForm({
           </button>
         ) : (
           <div 
-            className="p-2.5 rounded-xl border flex items-center gap-3 shadow-2xs"
+            className="p-2.5 rounded-xl border flex items-center gap-3 shadow-sm"
             style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
           >
             <div className="w-13 h-13 rounded-lg overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 bg-black/5 relative">
@@ -518,64 +609,75 @@ export default function TransactionForm({
 
   if (isModal) {
     return (
-      <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
-        <div className="w-full max-w-lg lg:max-w-xl mx-auto my-auto bg-white dark:bg-[#12141C] rounded-t-3xl sm:rounded-3xl flex flex-col max-h-[85vh] sm:max-h-[90vh] shadow-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden animate-slide-up">
-          {/* Cabecera FIJA */}
-          <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-lg text-slate-900 dark:text-white">Nuevo Movimiento</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Ingresa tus finanzas al instante</p>
-            </div>
+      <div 
+        className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-slide-up pointer-events-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cabecera FIJA */}
+        <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Nuevo Movimiento</h3>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Ingresa tus finanzas al instante</p>
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer"
+              title="Cerrar modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Formulario envolviendo cuerpo y footer */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Cuerpo con SCROLL interno automático */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
+            {renderFormFields()}
+
+            <AnimatePresence>
+              {showSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2.5 rounded-xl shadow-sm"
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  <span>¡Movimiento guardado exitosamente!</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Pie de página FIJO SIEMPRE VISIBLE */}
+          <div className="shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-zinc-900/90 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-end gap-3">
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                className="h-11 px-4 rounded-lg font-medium text-sm text-slate-700 dark:text-zinc-300 hover:bg-slate-200/60 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
               >
-                ✕
+                Cancelar
               </button>
             )}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`flex-1 sm:flex-initial px-6 h-11 rounded-lg font-medium text-sm transition-all shadow-sm active:scale-[0.99] flex items-center justify-center gap-2 text-white cursor-pointer ${
+                type === 'expense'
+                  ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-500/20'
+                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'
+              } ${isSubmitting ? 'opacity-70 pointer-events-none' : ''}`}
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>{isSubmitting ? 'Guardando...' : `Registrar ${type === 'expense' ? 'Gasto' : 'Ingreso'}`}</span>
+            </button>
           </div>
-
-          {/* Formulario envolviendo cuerpo y footer */}
-          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {/* Cuerpo con SCROLL interno automático */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
-              {renderFormFields()}
-
-              {showSuccess && (
-                <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#34C759] bg-emerald-500/15 border border-[#34C759]/30 px-3 py-2.5 rounded-xl animate-slide-up">
-                  <CheckCircle className="w-4 h-4 text-[#34C759]" />
-                  <span>¡Movimiento guardado exitosamente!</span>
-                </div>
-              )}
-            </div>
-
-            {/* Pie de página FIJO SIEMPRE VISIBLE */}
-            <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-[#181B26] border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
-              {onClose && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-              )}
-              <button
-                type="submit"
-                className={`flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-xs active:scale-95 text-white cursor-pointer ${
-                  type === 'expense'
-                    ? 'bg-[#FF3B30] hover:bg-red-600 shadow-red-500/25'
-                    : 'bg-[#34C759] hover:bg-emerald-600 shadow-emerald-500/25'
-                }`}
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Registrar {type === 'expense' ? 'Gasto' : 'Ingreso'}</span>
-              </button>
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
     );
   }
@@ -595,22 +697,31 @@ export default function TransactionForm({
         <div className="pt-2">
           <button
             type="submit"
-            className={`w-full py-3 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-sm active:scale-98 text-white cursor-pointer ${
+            disabled={isSubmitting}
+            className={`w-full h-11 rounded-lg font-medium text-sm transition-all shadow-sm active:scale-[0.99] flex items-center justify-center gap-2 text-white cursor-pointer ${
               type === 'expense'
-                ? 'bg-[#FF3B30] hover:bg-red-600 shadow-red-500/25'
-                : 'bg-[#34C759] hover:bg-emerald-600 shadow-emerald-500/25'
-            }`}
+                ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-500/20'
+                : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'
+            } ${isSubmitting ? 'opacity-70 pointer-events-none' : ''}`}
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Registrar {type === 'expense' ? 'Gasto' : 'Ingreso'}</span>
+            <span>{isSubmitting ? 'Guardando...' : `Registrar ${type === 'expense' ? 'Gasto' : 'Ingreso'}`}</span>
           </button>
         </div>
-        {showSuccess && (
-          <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#34C759] bg-emerald-500/15 border border-[#34C759]/30 px-3 py-2.5 rounded-xl animate-slide-up">
-            <CheckCircle className="w-4 h-4 text-[#34C759]" />
-            <span>¡Movimiento guardado exitosamente!</span>
-          </div>
-        )}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex items-center justify-center gap-2 text-xs font-bold text-[#34C759] bg-emerald-500/15 border border-[#34C759]/30 px-3 py-2.5 rounded-xl shadow-sm"
+            >
+              <CheckCircle className="w-4 h-4 text-[#34C759]" />
+              <span>¡Movimiento guardado exitosamente!</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </form>
     </div>
   );

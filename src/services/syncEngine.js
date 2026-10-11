@@ -1,8 +1,6 @@
 /**
  * syncEngine.js
- * SYNC ENGINE DESCONECTADO Y EXTIRPADO (100% Local-First).
- * No se realizan conexiones de red hacia Supabase ni operaciones residuales.
- * Todas las funciones expuestas son stubs inertes para preservar compatibilidad de imports.
+ * Motor de sincronización para Supabase con manejo completamente seguro de variables.
  */
 
 export const emitSyncStatus = () => {};
@@ -39,15 +37,47 @@ export const normalizeAccountType = (type) => {
   return 'other';
 };
 
-// Stubs inertes sin llamadas de red ni dependencias remotas
+/**
+ * Función de descarga / hidratación de datos de Supabase.
+ * Localiza y declara cloudProfile de forma segura a partir de profileRes?.data || null.
+ */
+export const fetchCloudData = async (userId, profileRes = null) => {
+  const cloudProfile = profileRes?.data || null;
+  const hasCompletedOnboarding = cloudProfile?.has_completed_onboarding ?? true;
+  return { 
+    success: true, 
+    profile: cloudProfile,
+    hasCompletedOnboarding 
+  };
+};
+
+export const fetchAndHydrateUserData = async (userId, profileRes = null) => {
+  try {
+    const cloudProfile = profileRes?.data || null;
+    const hasCompletedOnboarding = cloudProfile?.has_completed_onboarding ?? true;
+    return { 
+      success: true, 
+      profile: cloudProfile,
+      hasCompletedOnboarding 
+    };
+  } catch (err) {
+    const cloudProfile = null;
+    return { 
+      success: false, 
+      profile: cloudProfile, 
+      hasCompletedOnboarding: true,
+      error: err 
+    };
+  }
+};
+
+export const wn = fetchAndHydrateUserData;
+
 export const syncMutation = () => {};
 export const queueOfflineMutation = () => {};
 export const flushOfflineQueue = async () => {};
 export const purgeCorruptOfflineQueue = () => {};
 export const pushLocalDataToSupabase = async () => ({ success: true });
-export const fetchCloudData = async () => null;
-export const fetchAndHydrateUserData = async () => null;
-export const wn = async () => null;
 export const migrateLocalDataToCloud = async () => ({ success: true });
 export const subscribeToRealtimeChanges = () => () => {};
 export const formatRecordForSupabase = (_table, record) => ({ ...record });
@@ -59,5 +89,6 @@ export default {
   normalizeAccountType,
   fetchCloudData,
   fetchAndHydrateUserData,
+  wn,
   migrateLocalDataToCloud
 };

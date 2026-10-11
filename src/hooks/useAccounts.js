@@ -7,6 +7,7 @@ import { generateUUID } from '../utils/recordMerger';
 import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { toast } from '../utils/toast';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 function getInitialAccounts() {
   try {
@@ -57,7 +58,7 @@ export function useAccounts({
     const id = (newAcc.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newAcc.id))
       ? newAcc.id
       : generateUUID();
-    const parsedInitialBalance = toSafeNumber(newAcc.initialBalance ?? newAcc.balance ?? 0);
+    const parsedInitialBalance = toSafeNumber(newAcc.initialBalance ?? newAcc.initial_balance ?? newAcc.balance ?? newAcc.currentBalance ?? 0);
     const normalizedAcc = {
       ...newAcc,
       id,
@@ -65,8 +66,10 @@ export function useAccounts({
       type: normalizeAccountType(newAcc.type),
       currency: (newAcc.currency || 'COP').toUpperCase(),
       initialBalance: parsedInitialBalance,
+      initial_balance: parsedInitialBalance,
       balance: parsedInitialBalance,
       currentBalance: parsedInitialBalance,
+      current_balance: parsedInitialBalance,
       color: newAcc.color || '#007AFF',
       icon: newAcc.icon || 'Building2',
       updated_at: new Date().toISOString()
@@ -82,6 +85,29 @@ export function useAccounts({
       localStorage.setItem('presu_accounts', JSON.stringify(nextAccs));
       saveAccountsToStorage(nextAccs);
       setAccounts(nextAccs);
+
+      // Sincronización inmediata directa con Supabase si está autenticado
+      if (isSupabaseConfigured && supabase) {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user?.id) {
+            supabase.from('accounts').upsert({
+              id: ensureUUID(normalizedAcc.id),
+              user_id: user.id,
+              name: normalizedAcc.name,
+              type: normalizedAcc.type,
+              currency: normalizedAcc.currency,
+              balance: normalizedAcc.balance,
+              initial_balance: normalizedAcc.initial_balance,
+              icon: normalizedAcc.icon,
+              color: normalizedAcc.color,
+              updated_at: normalizedAcc.updated_at
+            }, { onConflict: 'id' }).catch((e) => {
+              console.warn('[useAccounts] Advertencia upsert Supabase:', e);
+            });
+          }
+        }).catch(() => {});
+      }
+
       toast.success('Cuenta guardada correctamente');
       return normalizedAcc;
     } catch (localErr) {
@@ -96,7 +122,14 @@ export function useAccounts({
   // Actualizar cuenta existente
   const handleUpdateAccount = useCallback(async (updatedAcc) => {
     const existing = accounts.find((a) => a.id === updatedAcc.id) || {};
-    const parsedInitialBalance = toSafeNumber(updatedAcc.initialBalance ?? existing.initialBalance ?? 0);
+    const parsedInitialBalance = toSafeNumber(
+      updatedAcc.initialBalance ?? 
+      updatedAcc.initial_balance ?? 
+      updatedAcc.balance ?? 
+      existing.initialBalance ?? 
+      existing.initial_balance ?? 
+      existing.balance ?? 0
+    );
     const activeTxs = getActiveTransactions();
     const liveBalance = getAccountNativeBalance({ ...existing, ...updatedAcc, initialBalance: parsedInitialBalance }, activeTxs, trm);
 
@@ -108,8 +141,10 @@ export function useAccounts({
       type: normalizeAccountType(updatedAcc.type || existing.type),
       currency: (updatedAcc.currency || existing.currency || 'COP').toUpperCase(),
       initialBalance: parsedInitialBalance,
+      initial_balance: parsedInitialBalance,
       balance: liveBalance,
       currentBalance: liveBalance,
+      current_balance: liveBalance,
       color: updatedAcc.color || existing.color || '#007AFF',
       icon: updatedAcc.icon || existing.icon || 'Building2',
       updated_at: new Date().toISOString()
@@ -127,6 +162,29 @@ export function useAccounts({
           prev.map((t) => (t.accountId === normalizedAcc.id ? { ...t, accountName: normalizedAcc.name } : t))
         );
       }
+
+      // Sincronización inmediata directa con Supabase si está autenticado
+      if (isSupabaseConfigured && supabase) {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user?.id) {
+            supabase.from('accounts').upsert({
+              id: ensureUUID(normalizedAcc.id),
+              user_id: user.id,
+              name: normalizedAcc.name,
+              type: normalizedAcc.type,
+              currency: normalizedAcc.currency,
+              balance: normalizedAcc.balance,
+              initial_balance: normalizedAcc.initial_balance,
+              icon: normalizedAcc.icon,
+              color: normalizedAcc.color,
+              updated_at: normalizedAcc.updated_at
+            }, { onConflict: 'id' }).catch((e) => {
+              console.warn('[useAccounts] Advertencia upsert Supabase:', e);
+            });
+          }
+        }).catch(() => {});
+      }
+
       toast.success('Cuenta guardada correctamente');
       return normalizedAcc;
     } catch (localErr) {
@@ -154,6 +212,11 @@ export function useAccounts({
           saveTransactionsToStorage(nextTxs);
           return nextTxs;
         });
+      }
+
+      if (isSupabaseConfigured && supabase) {
+        supabase.from('accounts').delete().eq('id', canonicalId).catch(() => {});
+        supabase.from('transactions').delete().eq('account_id', canonicalId).catch(() => {});
       }
 
       toast.success('Cuenta eliminada correctamente');

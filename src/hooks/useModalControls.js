@@ -26,35 +26,103 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [profileResetKey, setProfileResetKey] = useState(0);
 
-  // Handlers de conveniencia
-  const handleOpenTransaction = useCallback((type = 'expense') => {
-    const safeType = type === 'income' ? 'income' : 'expense';
+  // Setters defensivos y robustos
+  const setIsAddTransactionOpen = useCallback((val) => {
+    if (typeof val === 'string') {
+      const safeType = (val === 'income' || val === 'ingreso') ? 'income' : 'expense';
+      setTxDefaultType(safeType);
+      setIsAddTxOpen(true);
+    } else {
+      setIsAddTxOpen(Boolean(val));
+    }
+  }, []);
+
+  const setIsTxOpen = setIsAddTransactionOpen;
+  const setIsTransactionModalOpen = setIsAddTransactionOpen;
+  const setIsNewTxModalOpen = setIsAddTransactionOpen;
+
+  const setIsAddLoanOpenAlias = useCallback((val) => {
+    if (typeof val === 'string') {
+      const norm = (val === 'payable' || val === 'borrowed' || val === 'debo' || val === 'debt') ? 'payable' : 'receivable';
+      setAddLoanInitialType(norm);
+      setIsAddLoanOpen(true);
+    } else {
+      setIsAddLoanOpen(Boolean(val));
+    }
+  }, []);
+
+  const setIsLoanOpen = setIsAddLoanOpenAlias;
+  const setIsAddDebtOpen = setIsAddLoanOpenAlias;
+  const setIsDebtModalOpen = setIsAddLoanOpenAlias;
+  const setIsNewDebtModalOpen = setIsAddLoanOpenAlias;
+
+  // Handlers de apertura obligatoria (con o sin argumento)
+  const openAddTransaction = useCallback((type = 'expense') => {
+    const safeType = (typeof type === 'string' && (type === 'income' || type === 'ingreso')) ? 'income' : 'expense';
     setTxDefaultType(safeType);
     setIsAddTxOpen(true);
   }, []);
 
-  const handleOpenAddLoan = useCallback((type = 'receivable') => {
-    const norm = (type === 'payable' || type === 'borrowed' || type === 'debo') ? 'payable' : 'receivable';
+  const openTransactionModal = openAddTransaction;
+  const handleOpenTransaction = openAddTransaction;
+  const handleOpenAddTransaction = openAddTransaction;
+
+  const openAddLoan = useCallback((type = 'payable') => {
+    const norm = (typeof type === 'string' && (type === 'receivable' || type === 'lent' || type === 'me_deben' || type === 'loan')) ? 'receivable' : 'payable';
     setAddLoanInitialType(norm);
     setIsAddLoanOpen(true);
   }, []);
 
-  const handleOpenAddDebt = useCallback((type = 'payable') => {
-    const norm = (type === 'receivable' || type === 'lent' || type === 'me_deben') ? 'receivable' : 'payable';
+  const openAddDebt = useCallback((type = 'payable') => {
+    const norm = (typeof type === 'string' && (type === 'receivable' || type === 'lent' || type === 'me_deben' || type === 'loan')) ? 'receivable' : 'payable';
     setAddLoanInitialType(norm);
     setIsAddLoanOpen(true);
   }, []);
+
+  const openLoanModal = openAddLoan;
+  const openDebtModal = openAddDebt;
+  const handleOpenAddLoan = openAddLoan;
+  const handleOpenAddDebt = openAddDebt;
 
   const handleOpenTransfer = useCallback(() => {
     setIsTransferModalOpen(true);
   }, []);
 
+  const openTransfer = handleOpenTransfer;
+
   const handleOpenRecurring = useCallback(() => {
     setIsAddRecurringOpen(true);
   }, []);
 
+  const openAddRecurring = handleOpenRecurring;
+
   const handleOpenInvestment = useCallback(() => {
     setIsAddInvestmentOpen(true);
+  }, []);
+
+  const openInvestment = handleOpenInvestment;
+  const openAddInvestment = handleOpenInvestment;
+  const handleOpenAddInvestment = handleOpenInvestment;
+
+  // Handlers de cierre convenientes
+  const handleCloseTransaction = useCallback(() => {
+    setIsAddTxOpen(false);
+  }, []);
+
+  const handleCloseLoan = useCallback(() => {
+    setIsAddLoanOpen(false);
+  }, []);
+
+  const handleCloseRecurring = useCallback(() => {
+    setIsAddRecurringOpen(false);
+  }, []);
+
+  const handleCloseTransfer = useCallback(() => {
+    setIsTransferModalOpen(false);
+  }, []);
+
+  const handleCloseInvestment = useCallback(() => {
+    setIsAddInvestmentOpen(false);
   }, []);
 
   const handleOpenSettings = useCallback(() => {
@@ -91,20 +159,53 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
   const modalFlags = {
     isAddTxOpen,
     setIsAddTxOpen,
+    isTxOpen: isAddTxOpen,
+    setIsTxOpen,
+    isAddTransactionOpen: isAddTxOpen,
+    setIsAddTransactionOpen,
+    isTransactionModalOpen: isAddTxOpen,
+    setIsTransactionModalOpen,
+    isNewTxModalOpen: isAddTxOpen,
+    setIsNewTxModalOpen,
     txDefaultType,
     setTxDefaultType,
+    setTransactionType: setTxDefaultType,
+
+    isTransferOpen: isTransferModalOpen,
+    setIsTransferOpen: setIsTransferModalOpen,
     isTransferModalOpen,
     setIsTransferModalOpen,
-    isAddInvestmentOpen,
-    setIsAddInvestmentOpen,
-    isNewInvestmentModalOpen: isAddInvestmentOpen,
-    setIsNewInvestmentModalOpen: setIsAddInvestmentOpen,
+
     isAddLoanOpen,
     setIsAddLoanOpen,
+    isLoanOpen: isAddLoanOpen,
+    setIsLoanOpen,
+    isDebtModalOpen: isAddLoanOpen,
+    setIsDebtModalOpen,
+    isAddDebtOpen: isAddLoanOpen,
+    setIsAddDebtOpen,
+    isNewDebtModalOpen: isAddLoanOpen,
+    setIsNewDebtModalOpen,
     addLoanInitialType,
     setAddLoanInitialType,
+    setLoanType: setAddLoanInitialType,
+
     isAddRecurringOpen,
     setIsAddRecurringOpen,
+    isRecurringOpen: isAddRecurringOpen,
+    setIsRecurringOpen: setIsAddRecurringOpen,
+    isRecurringModalOpen: isAddRecurringOpen,
+    setIsRecurringModalOpen: setIsAddRecurringOpen,
+    isNewRecurringModalOpen: isAddRecurringOpen,
+    setIsNewRecurringModalOpen: setIsAddRecurringOpen,
+
+    isAddInvestmentOpen,
+    setIsAddInvestmentOpen,
+    isInvestmentOpen: isAddInvestmentOpen,
+    setIsInvestmentOpen: setIsAddInvestmentOpen,
+    isNewInvestmentModalOpen: isAddInvestmentOpen,
+    setIsNewInvestmentModalOpen: setIsAddInvestmentOpen,
+
     isCalendarOpen,
     setIsCalendarOpen,
     selectedCreditCardDetail,
@@ -118,34 +219,78 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
     isExportModalOpen,
     setIsExportModalOpen,
     isGoalModalOpen,
-    setIsGoalModalOpen
+    setIsGoalModalOpen,
+
+    // Handlers incluidos en modalFlags
+    openAddTransaction,
+    openTransactionModal,
+    handleOpenTransaction,
+    handleOpenAddTransaction,
+    openAddLoan,
+    openAddDebt,
+    openLoanModal,
+    openDebtModal,
+    handleOpenAddLoan,
+    handleOpenAddDebt,
+    openTransfer,
+    handleOpenTransfer,
+    openAddRecurring,
+    handleOpenRecurring,
+    openInvestment,
+    handleOpenInvestment
   };
 
   return {
+    // Flags
     isAddTxOpen,
     setIsAddTxOpen,
+    isTxOpen: isAddTxOpen,
+    setIsTxOpen,
     isAddTransactionOpen: isAddTxOpen,
-    setIsAddTransactionOpen: setIsAddTxOpen,
+    setIsAddTransactionOpen,
+    isTransactionModalOpen: isAddTxOpen,
+    setIsTransactionModalOpen,
     isNewTxModalOpen: isAddTxOpen,
-    setIsNewTxModalOpen: setIsAddTxOpen,
+    setIsNewTxModalOpen,
     txDefaultType,
     setTxDefaultType,
+    setTransactionType: setTxDefaultType,
+
+    isTransferOpen: isTransferModalOpen,
+    setIsTransferOpen: setIsTransferModalOpen,
     isTransferModalOpen,
     setIsTransferModalOpen,
+
     isAddLoanOpen,
     setIsAddLoanOpen,
+    isLoanOpen: isAddLoanOpen,
+    setIsLoanOpen,
+    isDebtModalOpen: isAddLoanOpen,
+    setIsDebtModalOpen,
+    isAddDebtOpen: isAddLoanOpen,
+    setIsAddDebtOpen,
     addLoanInitialType,
     setAddLoanInitialType,
+    setLoanType: setAddLoanInitialType,
     isNewDebtModalOpen: isAddLoanOpen,
-    setIsNewDebtModalOpen: setIsAddLoanOpen,
+    setIsNewDebtModalOpen,
+
     isAddRecurringOpen,
     setIsAddRecurringOpen,
+    isRecurringOpen: isAddRecurringOpen,
+    setIsRecurringOpen: setIsAddRecurringOpen,
+    isRecurringModalOpen: isAddRecurringOpen,
+    setIsRecurringModalOpen: setIsAddRecurringOpen,
     isNewRecurringModalOpen: isAddRecurringOpen,
     setIsNewRecurringModalOpen: setIsAddRecurringOpen,
+
     isAddInvestmentOpen,
     setIsAddInvestmentOpen,
+    isInvestmentOpen: isAddInvestmentOpen,
+    setIsInvestmentOpen: setIsAddInvestmentOpen,
     isNewInvestmentModalOpen: isAddInvestmentOpen,
     setIsNewInvestmentModalOpen: setIsAddInvestmentOpen,
+
     isSettingsOpen,
     setIsSettingsOpen,
     isProfileOpen: isSettingsOpen,
@@ -162,13 +307,55 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
     setIsGoalModalOpen,
     profileResetKey,
     setProfileResetKey,
+
     // Handlers
+    openAddTransaction,
+    openTransactionModal,
     handleOpenTransaction,
+    handleOpenAddTransaction,
+    handleCloseTransaction,
+    closeAddTransaction: handleCloseTransaction,
+    closeTx: handleCloseTransaction,
+    closeTransactionModal: handleCloseTransaction,
+    handleCloseAddTransaction: handleCloseTransaction,
+
+    openAddLoan,
+    openAddDebt,
+    openLoanModal,
+    openDebtModal,
     handleOpenAddLoan,
     handleOpenAddDebt,
+    handleCloseLoan,
+    closeAddLoan: handleCloseLoan,
+    closeLoan: handleCloseLoan,
+    closeAddDebt: handleCloseLoan,
+    closeDebtModal: handleCloseLoan,
+    handleCloseAddLoan: handleCloseLoan,
+    handleCloseAddDebt: handleCloseLoan,
+
+    openTransfer,
     handleOpenTransfer,
+    handleCloseTransfer,
+    closeTransfer: handleCloseTransfer,
+    closeTransferModal: handleCloseTransfer,
+
+    openAddRecurring,
     handleOpenRecurring,
+    handleCloseRecurring,
+    closeAddRecurring: handleCloseRecurring,
+    closeRecurring: handleCloseRecurring,
+    closeRecurringModal: handleCloseRecurring,
+    handleOpenAddRecurring: handleOpenRecurring,
+    handleCloseAddRecurring: handleCloseRecurring,
+
+    openInvestment,
+    openAddInvestment,
     handleOpenInvestment,
+    handleOpenAddInvestment,
+    handleCloseInvestment,
+    closeInvestment: handleCloseInvestment,
+    closeInvestmentModal: handleCloseInvestment,
+
     handleOpenSettings,
     handleOpenProfile,
     handleCloseAllModals,

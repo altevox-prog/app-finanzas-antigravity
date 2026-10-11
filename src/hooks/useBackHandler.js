@@ -10,38 +10,48 @@ export function useBackHandler(isOpen, onClose) {
   onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.history) return;
+    if (typeof window === 'undefined' || !window.history || !isOpen) return;
 
-    if (isOpen) {
-      let isPopped = false;
-      try {
-        window.history.pushState({ modalOpen: true }, '');
-      } catch (e) {
-        console.warn('History pushState no soportado:', e);
+    const modalId = `modal_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const mountTime = Date.now();
+    let isPopped = false;
+
+    try {
+      window.history.pushState({ modalOpen: true, modalId }, '');
+    } catch (e) {
+      console.warn('History pushState no soportado:', e);
+    }
+
+    const handlePopState = (event) => {
+      // 1. Evitar auto-cierre prematuro por popstates espurios durante el ciclo de montaje (< 120ms)
+      if (Date.now() - mountTime < 120) {
+        return;
       }
 
-      const handlePopState = () => {
-        isPopped = true;
-        if (onCloseRef.current) {
-          onCloseRef.current();
-        }
-      };
+      // 2. Si el estado del historial aún contiene este modalId, no es una navegación hacia atrás
+      if (event.state?.modalId === modalId) {
+        return;
+      }
 
-      window.addEventListener('popstate', handlePopState);
+      isPopped = true;
+      if (typeof onCloseRef.current === 'function') {
+        onCloseRef.current();
+      }
+    };
 
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-        // Si el modal se cerró por UI (botón X, cancelar o guardar) y no por popstate,
-        // revertimos la entrada de historial para mantener el stack limpio
-        try {
-          if (!isPopped && window.history?.state?.modalOpen) {
-            window.history.back();
-          }
-        } catch (e) {
-          // ignore
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // Revertir historial solo si se cerró por UI externa y el tope del stack aún es este modal
+      try {
+        if (!isPopped && window.history?.state?.modalId === modalId) {
+          window.history.back();
         }
-      };
-    }
+      } catch (e) {
+        // ignore
+      }
+    };
   }, [isOpen]);
 }
 

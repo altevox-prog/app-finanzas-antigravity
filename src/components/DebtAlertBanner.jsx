@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { 
   Clock, 
   AlertTriangle, 
@@ -24,7 +24,7 @@ export default function DebtAlertBanner({
         return (
           <div
             key={alert.id}
-            className={`p-3.5 sm:p-4 rounded-2xl border transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            className={`p-3.5 sm:p-4 rounded-2xl border transition-all shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
               isReceivable
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100'
                 : 'bg-rose-500/10 border-rose-500/30 text-rose-950 dark:text-rose-100'
@@ -33,7 +33,7 @@ export default function DebtAlertBanner({
             {/* Lado izquierdo: Icono + Título + Mensaje */}
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs mt-0.5 ${
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm mt-0.5 ${
                   isReceivable
                     ? 'bg-emerald-600 text-white'
                     : 'bg-rose-600 text-white'
@@ -92,7 +92,7 @@ export default function DebtAlertBanner({
               <button
                 type="button"
                 onClick={() => onReview && onReview(alert)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer ${
                   isReceivable
                     ? 'bg-emerald-600 hover:bg-emerald-500'
                     : 'bg-rose-600 hover:bg-rose-500'

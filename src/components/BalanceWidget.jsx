@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { 
   Eye, 
   EyeOff, 
@@ -62,7 +62,7 @@ export default function BalanceWidget({
         <button
           type="button"
           onClick={onOpenCalendar}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-sm active:scale-95 transition-all cursor-pointer shrink-0"
           title="Abrir selector de fecha y mes"
         >
           <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { DollarSign, X, Check, Sparkles, TrendingUp } from 'lucide-react';
 
 const COMMON_TRM_PRESETS = [3900, 4000, 4100, 4200, 4400];
@@ -133,7 +133,7 @@ export default function EditTRMModal({
                   }}
                   className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
                     Number(trmInput) === preset
-                      ? 'bg-emerald-500 text-white shadow-xs'
+                      ? 'bg-emerald-500 text-white shadow-sm'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >

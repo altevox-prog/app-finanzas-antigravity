@@ -1,23 +1,18 @@
-/**
- * Fachada Supabase en modo 100% Local-First.
- * No genera conexiones a la nube ni almacena credenciales remotas.
- */
-
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 export { supabase, isSupabaseConfigured };
 
 export const getSupabaseConfig = () => ({
-  url: '',
-  key: '',
-  isConfigured: false
+  url: import.meta.env?.VITE_SUPABASE_URL || '',
+  key: import.meta.env?.VITE_SUPABASE_ANON_KEY || '',
+  isConfigured: isSupabaseConfigured
 });
 
 export const updateSupabaseCredentials = () => {};
 
 export const getSupabaseConfigStatus = () => ({
-  isConfigured: false,
-  url: null
+  isConfigured: isSupabaseConfigured,
+  url: import.meta.env?.VITE_SUPABASE_URL || null
 });
 
 export default supabase;

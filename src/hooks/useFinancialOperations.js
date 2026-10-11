@@ -69,9 +69,13 @@ export function useFinancialOperations({
 
     if (setAccounts && Array.isArray(accounts) && accounts.length > 0) {
       const updatedAccounts = accounts.map((acc) => {
-        const liveBalance = getAccountNativeBalance(acc, updatedTxs, trm);
+        const baseInitial = acc.initialBalance !== undefined 
+          ? acc.initialBalance 
+          : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
+        const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, updatedTxs, trm);
         return {
           ...acc,
+          initialBalance: baseInitial,
           balance: liveBalance,
           currentBalance: liveBalance,
           updated_at: new Date().toISOString()

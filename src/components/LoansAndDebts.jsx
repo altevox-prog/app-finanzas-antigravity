@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { 
   HandCoins, 
   ArrowUpRight, 
@@ -21,6 +22,7 @@ import AddDebtPaymentModal from './AddDebtPaymentModal';
 import AddDisbursementModal from './AddDisbursementModal';
 import { calculateElapsedMonths } from '../utils/debtAlerts';
 import { toSafeNumber, calculateDebtStats } from '../utils/financeMath';
+import SegmentedControl from './common/SegmentedControl';
 
 export default function LoansAndDebts({
   debtsAndLoans,
@@ -34,6 +36,7 @@ export default function LoansAndDebts({
   onOpenAddDebt,
   onOpenAddLoan,
   setIsAddLoanOpen,
+  modalControls,
   initialTab = 'receivable'
 }) {
   const { formatMoney } = usePrivacy();
@@ -53,6 +56,26 @@ export default function LoansAndDebts({
     const targetType = (activeTab === 'payable' || activeTab === 'borrowed' || activeTab === 'debo') 
       ? 'payable' 
       : 'receivable';
+
+    if (modalControls) {
+      if (targetType === 'payable') {
+        if (typeof modalControls.openAddDebt === 'function') {
+          modalControls.openAddDebt('payable');
+          return;
+        } else if (typeof modalControls.openAddLoan === 'function') {
+          modalControls.openAddLoan('payable');
+          return;
+        }
+      } else {
+        if (typeof modalControls.openAddLoan === 'function') {
+          modalControls.openAddLoan('receivable');
+          return;
+        } else if (typeof modalControls.openAddDebt === 'function') {
+          modalControls.openAddDebt('receivable');
+          return;
+        }
+      }
+    }
 
     if (activeTab === 'payable') {
       if (onOpenAddDebt) {
@@ -86,7 +109,14 @@ export default function LoansAndDebts({
   const filteredItems = safeLoans.filter(item => item.type === activeTab);
 
   const calculateItemStats = (item) => {
-    const base = toSafeNumber(item.principalAmount || item.totalAmount);
+    const base = toSafeNumber(
+      item.total_amount ?? 
+      item.totalAmount ?? 
+      item.amount ?? 
+      item.principalAmount ?? 
+      item.remaining_amount ?? 
+      item.remainingAmount ?? 0
+    );
     const rate = toSafeNumber(item.interestRate);
     const insurance = toSafeNumber(item.insuranceFee);
 
@@ -202,7 +232,7 @@ export default function LoansAndDebts({
           <button
             type="button"
             onClick={handleOpenCreateModal}
-            className={`px-3.5 py-2 text-xs font-bold text-white rounded-xl shadow-xs active:scale-95 flex items-center justify-center gap-1.5 shrink-0 self-stretch sm:self-auto transition-transform cursor-pointer ${
+            className={`px-3.5 py-2 text-xs font-bold text-white rounded-xl shadow-sm active:scale-95 flex items-center justify-center gap-1.5 shrink-0 self-stretch sm:self-auto transition-transform cursor-pointer ${
               activeTab === 'receivable' ? 'bg-[#34C759] hover:bg-emerald-600' : 'bg-[#FF3B30] hover:bg-red-600'
             }`}
           >
@@ -211,41 +241,27 @@ export default function LoansAndDebts({
           </button>
         </div>
 
-        {/* iOS Segmented Control (ancho completo) */}
-        <div className="ios-segmented w-full mb-4">
-          <button
-            type="button"
-            onClick={() => setActiveTab('receivable')}
-            className={`ios-segmented-btn flex-1 py-2 flex items-center justify-center gap-1.5 ${
-              activeTab === 'receivable' ? 'ios-segmented-btn-active text-[#34C759] font-bold shadow-xs' : 'opacity-60'
-            }`}
-          >
-            <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
-            <span>Me Deben</span>
-            <span 
-              className="text-[11px] px-2 py-0.5 rounded-full font-bold ml-1 tabular-nums"
-              style={{ backgroundColor: 'var(--pill-bg)', color: 'var(--text-main)' }}
-            >
-              {debtsAndLoans.filter(d => d.type === 'receivable').length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('payable')}
-            className={`ios-segmented-btn flex-1 py-2 flex items-center justify-center gap-1.5 ${
-              activeTab === 'payable' ? 'ios-segmented-btn-active text-[#FF3B30] font-bold shadow-xs' : 'opacity-60'
-            }`}
-          >
-            <ArrowDownLeft className="w-3.5 h-3.5 shrink-0" />
-            <span>Debo</span>
-            <span 
-              className="text-[11px] px-2 py-0.5 rounded-full font-bold ml-1 tabular-nums"
-              style={{ backgroundColor: 'var(--pill-bg)', color: 'var(--text-main)' }}
-            >
-              {debtsAndLoans.filter(d => d.type === 'payable').length}
-            </span>
-          </button>
+        {/* Segmented Control: Me Deben vs Debo */}
+        <div className="w-full mb-4">
+          <SegmentedControl
+            options={[
+              { 
+                id: 'receivable', 
+                label: 'Me Deben', 
+                icon: ArrowUpRight, 
+                count: debtsAndLoans.filter(d => d.type === 'receivable').length
+              },
+              { 
+                id: 'payable', 
+                label: 'Debo', 
+                icon: ArrowDownLeft, 
+                count: debtsAndLoans.filter(d => d.type === 'payable').length
+              }
+            ]}
+            value={activeTab}
+            onChange={setActiveTab}
+            size="md"
+          />
         </div>
 
         {/* Resumen de Métricas Móvil con Alto Contraste */}
@@ -259,14 +275,14 @@ export default function LoansAndDebts({
               <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400 tracking-normal truncate">
                 {activeTab === 'receivable' ? 'Saldo por Cobrar Pendiente' : 'Saldo por Pagar Pendiente'}
               </span>
-              <span className={`text-[11px] sm:text-[12px] font-semibold px-2.5 py-0.5 rounded-full shrink-0 tabular-nums ${
+              <span className={`text-[11px] sm:text-[12px] font-semibold font-mono tracking-tight px-2.5 py-0.5 rounded-full shrink-0 tabular-nums ${
                 activeTab === 'receivable' ? 'bg-emerald-500/15 text-[#34C759]' : 'bg-red-500/15 text-[#FF3B30]'
               }`}>
                 {tabTotals.pendingCount} pendiente{tabTotals.pendingCount !== 1 ? 's' : ''}
               </span>
             </div>
 
-            <div className={`text-[28px] sm:text-[32px] font-bold tracking-tight truncate my-1 tabular-nums leading-tight ${
+            <div className={`text-[28px] sm:text-[32px] font-bold font-mono tracking-tight truncate my-1 tabular-nums leading-tight ${
               activeTab === 'receivable' ? 'text-[#34C759]' : 'text-[#FF3B30]'
             }`}>
               {formatCurrency(tabTotals.outstandingBalance)}
@@ -274,9 +290,9 @@ export default function LoansAndDebts({
 
             {tabTotals.remainingInterest > 0 && (
               <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <span>Cap: <strong className="text-slate-700 dark:text-slate-200">{formatCurrency(tabTotals.remainingCapital)}</strong></span>
+                <span>Cap: <strong className="text-slate-700 dark:text-slate-200 font-bold font-mono tracking-tight tabular-nums">{formatCurrency(tabTotals.remainingCapital)}</strong></span>
                 <span>•</span>
-                <span>Intereses acum.: <strong className="text-amber-500">{formatCurrency(tabTotals.remainingInterest)}</strong></span>
+                <span>Intereses acum.: <strong className="text-amber-500 font-bold font-mono tracking-tight tabular-nums">{formatCurrency(tabTotals.remainingInterest)}</strong></span>
               </div>
             )}
 
@@ -284,7 +300,7 @@ export default function LoansAndDebts({
             <div className="mt-2.5 pt-2 border-t space-y-1.5" style={{ borderColor: 'var(--border-color)' }}>
               <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
                 <span className="opacity-60">Liquidado de esta sección</span>
-                <span className="font-bold">
+                <span className="font-bold font-mono tracking-tight tabular-nums">
                   {tabTotals.totalToPay > 0 
                     ? `${Math.min(100, Math.round((tabTotals.totalPaid / tabTotals.totalToPay) * 100))}%`
                     : '0%'}
@@ -312,13 +328,13 @@ export default function LoansAndDebts({
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 block truncate">
                 {activeTab === 'receivable' ? 'Total Prestado' : 'Total Compromiso'}
               </span>
-              <span className="text-sm sm:text-base font-black truncate block mt-0.5" style={{ color: 'var(--text-main)' }}>
+              <span className="text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums truncate block mt-0.5" style={{ color: 'var(--text-main)' }}>
                 {formatCurrency(tabTotals.totalToPay)}
               </span>
               <div className="text-[10px] opacity-75 mt-1 space-y-0.5">
-                <div>Abonado: <span className="text-[#34C759] font-bold">{formatCurrency(tabTotals.totalPaid)}</span></div>
+                <div>Abonado: <span className="text-[#34C759] font-bold font-mono tracking-tight tabular-nums">{formatCurrency(tabTotals.totalPaid)}</span></div>
                 <div className="text-[9px] text-slate-500 dark:text-slate-400">
-                  Cap: {formatCurrency(tabTotals.totalCapitalPaid)} | Int: {formatCurrency(tabTotals.totalInterestPaid)}
+                  Cap: <span className="font-mono tabular-nums">{formatCurrency(tabTotals.totalCapitalPaid)}</span> | Int: <span className="font-mono tabular-nums">{formatCurrency(tabTotals.totalInterestPaid)}</span>
                 </div>
               </div>
             </div>
@@ -331,7 +347,7 @@ export default function LoansAndDebts({
                 <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 block truncate">
                   Cuentas Pagadas
                 </span>
-                <span className="text-sm sm:text-base font-black truncate block mt-0.5" style={{ color: 'var(--text-main)' }}>
+                <span className="text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums truncate block mt-0.5" style={{ color: 'var(--text-main)' }}>
                   {tabTotals.paidCount} de {filteredItems.length}
                 </span>
               </div>
@@ -360,7 +376,7 @@ export default function LoansAndDebts({
             <button
               type="button"
               onClick={handleOpenCreateModal}
-              className={`px-4 py-2 text-xs font-bold text-white rounded-xl shadow-xs active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1.5 ${
+              className={`px-4 py-2 text-xs font-bold text-white rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1.5 ${
                 activeTab === 'receivable' ? 'bg-[#34C759] hover:bg-emerald-600' : 'bg-[#FF3B30] hover:bg-red-600'
               }`}
             >

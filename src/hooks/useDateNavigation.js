@@ -28,6 +28,8 @@ export function useDateNavigation(initialDate = new Date()) {
     return selectedDate instanceof Date ? selectedDate.getMonth() : new Date().getMonth();
   }, [selectedDate]);
 
+  const filterMode = selectedDay ? 'day' : 'month';
+
   const currentMonthLabel = useMemo(() => {
     return `${MONTH_NAMES[selectedMonth] || ''} ${selectedYear}`;
   }, [selectedMonth, selectedYear]);
@@ -80,6 +82,7 @@ export function useDateNavigation(initialDate = new Date()) {
     selectedYear,
     selectedDay,
     setSelectedDay,
+    filterMode,
     showMonthPicker,
     setShowMonthPicker,
     currentMonthLabel,

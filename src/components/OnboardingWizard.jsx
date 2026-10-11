@@ -13,14 +13,17 @@ import {
   Building2, 
   Upload, 
   Coins,
-  Percent
+  Percent,
+  Mail
 } from 'lucide-react';
 import { formatCurrencyInput, parseFormattedAmount, setEnableDecimals } from '../utils/currencyFormatter';
 import AppLogo from './AppLogo';
 import { setHasCompletedOnboarding } from '../utils/userProfileHelper';
 import { signInWithGoogle } from '../services/supabaseClient';
+import AuthModal from './AuthModal';
 
 export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
+  const [showAuthModal, setShowAuthModal] = useState(false);
   // Paso actual del Wizard (1: Preferencias y Seguridad, 2: Cuentas Iniciales)
   const [step, setStep] = useState(1);
 
@@ -284,14 +287,14 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-slate-900/40 dark:bg-[#07090E] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div className="min-h-[100dvh] w-full bg-slate-900/40 dark:bg-zinc-950 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       {/* Fondo con brillo difuminado */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#121622] rounded-3xl sm:rounded-4xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-white/10 my-auto">
+      <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-white/[0.08] my-auto">
         
         {/* Barra de progreso de 2 pasos */}
         <div className="mb-6">
@@ -347,7 +350,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
               <button
                 type="button"
                 onClick={() => signInWithGoogle()}
-                className="w-full py-2.5 px-4 font-medium flex items-center justify-center gap-3 rounded-xl bg-white text-gray-800 hover:bg-gray-100 dark:bg-slate-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                className="w-full py-2.5 px-4 font-medium flex items-center justify-center gap-3 rounded-xl bg-white text-gray-800 hover:bg-gray-100 dark:bg-slate-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path
@@ -370,12 +373,29 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
                 <span>Continuar con Google</span>
               </button>
 
+              {/* Botón Acceso con Correo y Contraseña */}
+              <button
+                type="button"
+                onClick={() => setShowAuthModal(true)}
+                className="w-full py-2.5 px-4 font-medium flex items-center justify-center gap-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-[0.98] cursor-pointer text-xs font-semibold"
+              >
+                <Mail className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>Ingresar o Registrarse con Correo</span>
+              </button>
+
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-200 dark:border-white/10"></div>
                 <span className="flex-shrink mx-3 text-[10px] uppercase font-bold text-slate-400">o continuar en modo local privado</span>
                 <div className="flex-grow border-t border-slate-200 dark:border-white/10"></div>
               </div>
             </div>
+
+            {showAuthModal && (
+              <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+              />
+            )}
 
             <div className="space-y-3.5">
               {/* Nombre de Usuario */}
@@ -412,7 +432,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
                     onClick={() => handleCurrencyChange('COP')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       selectedCurrency === 'COP'
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
                     }`}
                   >
@@ -425,7 +445,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
                     onClick={() => handleCurrencyChange('USD')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       selectedCurrency === 'USD'
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
                     }`}
                   >
@@ -590,7 +610,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
                 onClick={handleSetDefaultBalances}
                 className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                   !startFromScratch
-                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-2xs'
+                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-sm'
                     : 'bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-600 dark:text-slate-300'
                 }`}
               >

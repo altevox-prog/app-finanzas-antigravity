@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -23,7 +23,11 @@ import {
   ChevronDown,
   ChevronUp,
   LayoutGrid,
-  List
+  List,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  ArrowDownLeft
 } from 'lucide-react';
 import { 
   INVESTMENT_CATEGORIES, 
@@ -38,14 +42,18 @@ import {
   toSafeNumber, 
   convertUSDtoCOP, 
   convertCOPtoUSD,
-  calculateMonthlyLoanReturn 
+  calculateMonthlyLoanReturn,
+  calculateCDTMaturityReturn
 } from '../utils/financeMath';
+import { toast } from '../utils/toast';
 
 export default function InvestmentsView({
   investments = [],
+  accounts = [],
   onAddInvestment,
   onUpdateInvestment,
   onDeleteInvestment,
+  onAddTransaction,
   trm = 4050
 }) {
   const { formatMoney, isPrivacyMode, enableDecimals } = usePrivacy();
@@ -101,9 +109,95 @@ export default function InvestmentsView({
   const [quickUpdateItem, setQuickUpdateItem] = useState(null);
   const [quickUpdateValue, setQuickUpdateValue] = useState('');
 
+  // Estado para modal de Liquidación de CDT
+  const [liquidatingCDT, setLiquidatingCDT] = useState(null);
+  const [liquidationAccountId, setLiquidationAccountId] = useState('');
+  const [liquidationDate, setLiquidationDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [isSubmittingLiquidation, setIsSubmittingLiquidation] = useState(false);
+
+  const handleOpenLiquidation = (inv, stats) => {
+    setLiquidatingCDT({ inv, stats });
+    const defaultAcc = (accounts || []).find(a => a.type !== 'card' && a.type !== 'credit') || accounts[0];
+    setLiquidationAccountId(defaultAcc ? String(defaultAcc.id) : '');
+    setLiquidationDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleConfirmLiquidation = () => {
+    if (!liquidatingCDT) return;
+    const { inv, stats } = liquidatingCDT;
+    const selectedAccount = (accounts || []).find(a => String(a.id) === String(liquidationAccountId));
+    
+    if (!selectedAccount && accounts.length > 0) {
+      toast.error('Por favor selecciona una cuenta bancaria de destino');
+      return;
+    }
+
+    setIsSubmittingLiquidation(true);
+    try {
+      const maturityTotal = Number(stats?.maturityTotal || inv.investedAmount || 0);
+      const netGain = Number(stats?.netReturn || 0);
+      const invested = Number(inv.investedAmount || inv.buyPrice || 0);
+
+      // 1. Crear transacción contable de ingreso para abonar saldo en la cuenta destino
+      if (onAddTransaction) {
+        const txDate = liquidationDate || new Date().toISOString().split('T')[0];
+        const tx = {
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now()),
+          date: txDate,
+          type: 'income',
+          amount: maturityTotal,
+          accountId: selectedAccount ? selectedAccount.id : null,
+          accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
+          category: 'Rendimientos / Inversiones',
+          categoryId: 'cat-inversiones',
+          note: `Liquidación CDT: ${inv.name} (Capital: $${Number(invested).toLocaleString('es-CO')} + Rendimiento neto: $${Number(netGain).toLocaleString('es-CO')})`
+        };
+        onAddTransaction(tx);
+      }
+
+      // 2. Actualizar estado de la inversión a 'liquidated' para archivarla
+      if (onUpdateInvestment) {
+        onUpdateInvestment({
+          ...inv,
+          status: 'liquidated',
+          isLiquidated: true,
+          liquidatedAt: liquidationDate || new Date().toISOString().split('T')[0],
+          liquidatedAmount: maturityTotal,
+          liquidatedAccountId: selectedAccount ? selectedAccount.id : null,
+          currentAmount: 0
+        });
+      }
+
+      // 3. Notificación Toast exitosa
+      const formattedTotal = `$${Number(maturityTotal).toLocaleString('es-CO')}`;
+      toast.success(`CDT liquidado exitosamente. Se abonaron ${formattedTotal} a tu cuenta.`);
+
+      setLiquidatingCDT(null);
+    } catch (err) {
+      console.error('Error al liquidar CDT:', err);
+      toast.error('Ocurrió un error al liquidar el CDT.');
+    } finally {
+      setIsSubmittingLiquidation(false);
+    }
+  };
+
+  // Clave estable de símbolos cotizables en bolsa para evitar peticiones repetidas innecesarias
+  const tickersKey = useMemo(() => {
+    if (!Array.isArray(investments)) return '';
+    return investments
+      .filter(i => {
+        const type = i.assetType || i.category;
+        return type !== 'cdt' && type !== 'fixed' && type !== 'loan' && i.subType !== 'private_loan' && i.subType !== 'bond';
+      })
+      .map(i => (i.ticker || i.symbol || (i.name && i.name.length <= 5 && !i.name.includes(' ') ? i.name : '')).toUpperCase().trim())
+      .filter(Boolean)
+      .sort()
+      .join(',');
+  }, [investments]);
+
   // Consulta de cotizaciones en tiempo real
-  const handleRefreshQuotes = async () => {
-    if (!investments || investments.length === 0) return;
+  const handleRefreshQuotes = useCallback(async () => {
+    if (!investments || investments.length === 0 || !tickersKey) return;
     setIsRefreshing(true);
     try {
       const quotes = await fetchBatchMarketPrices(investments);
@@ -116,14 +210,14 @@ export default function InvestmentsView({
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [investments, tickersKey]);
 
-  // Consulta automática al montar o cambiar cantidad de inversiones
+  // Consulta automática al montar o si cambian los tickers del portafolio
   useEffect(() => {
-    if (investments.length > 0) {
+    if (tickersKey) {
       handleRefreshQuotes();
     }
-  }, [investments.length]);
+  }, [tickersKey, handleRefreshQuotes]);
 
   /**
    * Calcula las métricas individuales de cada posición de inversión
@@ -206,6 +300,7 @@ export default function InvestmentsView({
     let totalCostUSD = 0;
 
     investments.forEach((inv) => {
+      if (inv.status === 'liquidated' || inv.isLiquidated) return;
       const m = calculatePositionMetrics(inv);
       totalValueCOP += m.currentValueCOP;
       totalCostCOP += m.totalCostCOP;
@@ -232,6 +327,7 @@ export default function InvestmentsView({
   // Inversiones filtradas según categoría
   const filteredInvestments = useMemo(() => {
     return investments.filter(inv => {
+      if (inv.status === 'liquidated' || inv.isLiquidated) return false;
       if (selectedCategoryFilter === 'all') return true;
       return inv.category === selectedCategoryFilter || inv.assetType === selectedCategoryFilter;
     });
@@ -282,6 +378,7 @@ export default function InvestmentsView({
   const allocationByCategory = useMemo(() => {
     return INVESTMENT_CATEGORIES.map(cat => {
       const catTotalCOP = investments
+        .filter(inv => inv.status !== 'liquidated' && !inv.isLiquidated)
         .filter(inv => inv.category === cat.id || inv.assetType === cat.id)
         .reduce((sum, inv) => {
           const m = calculatePositionMetrics(inv);
@@ -317,20 +414,58 @@ export default function InvestmentsView({
 
   const renderInvestmentCard = (inv, m = calculatePositionMetrics(inv)) => {
     const isPrivateLoan = inv.subType === 'private_loan' || inv.assetType === 'loan';
+    const isCDT = !isPrivateLoan && (
+      inv.assetType === 'cdt' || 
+      inv.assetType === 'fixed_income' || 
+      inv.category === 'CDT' || 
+      inv.category === 'fixed' || 
+      inv.subType === 'cdt'
+    );
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isMatured = isCDT && Boolean(inv.dueDate) && todayStr >= inv.dueDate;
+
+    let cdtTermDays = 0;
+    let cdtStats = null;
+    if (isCDT) {
+      const invested = Number(inv.investedAmount || inv.buyPrice || inv.currentAmount || 0);
+      const rate = Number(inv.interestRate || 0);
+      
+      if (inv.startDate && inv.dueDate) {
+        const start = new Date(inv.startDate + 'T00:00:00');
+        const due = new Date(inv.dueDate + 'T00:00:00');
+        cdtTermDays = Math.max(1, Math.round((due - start) / (1000 * 60 * 60 * 24)));
+      } else if (inv.termDays) {
+        cdtTermDays = Number(inv.termDays);
+      } else if (inv.dueDate) {
+        const createdRaw = inv.created_at || inv.createdAt;
+        const start = createdRaw ? new Date(createdRaw) : new Date();
+        const due = new Date(inv.dueDate + 'T00:00:00');
+        cdtTermDays = Math.max(1, Math.round((due - start) / (1000 * 60 * 60 * 24)));
+      }
+      if (!cdtTermDays || cdtTermDays <= 0) cdtTermDays = 180;
+
+      cdtStats = calculateCDTMaturityReturn(invested, rate, cdtTermDays, 0.04);
+    }
+
     const assetTypeLabel = 
       isPrivateLoan ? 'Préstamo a Tercero' :
       inv.subType === 'bond' || inv.assetType === 'bond' ? 'Bono' :
       inv.assetType === 'crypto' || inv.category === 'crypto' ? 'Cripto' :
       inv.assetType === 'stock' || inv.category === 'variable' ? 'Acción US' :
       inv.assetType === 'etf' ? 'ETF' :
-      inv.assetType === 'cdt' || inv.category === 'fixed' ? 'CDT' :
+      isCDT ? 'CDT' :
       inv.assetType === 'fund' || inv.category === 'liquidity' ? 'Fondo' : 'Inversión';
 
     return (
       <div
         key={inv.id}
-        className="p-4 sm:p-5 rounded-2xl border shadow-xs space-y-3.5 transition-all hover:border-emerald-500/30"
-        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
+        className={`p-4 sm:p-5 rounded-2xl border shadow-sm space-y-3.5 transition-all ${
+          isMatured 
+            ? 'border-amber-500/40 bg-amber-500/[0.03] dark:bg-amber-500/[0.04]' 
+            : 'hover:border-emerald-500/30'
+        }`}
+        style={{ backgroundColor: isMatured ? undefined : 'var(--bg-card)', borderColor: isMatured ? undefined : 'var(--border-color)' }}
       >
         {/* 1. CABECERA DE LA TARJETA */}
         <div className="flex items-center justify-between gap-2">
@@ -354,6 +489,12 @@ export default function InvestmentsView({
                 <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
                   {assetTypeLabel}
                 </span>
+                {isMatured && (
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shrink-0">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Vencido / Por liquidar</span>
+                  </span>
+                )}
                 {inv.institution && (
                   <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                     {inv.institution}
@@ -368,16 +509,22 @@ export default function InvestmentsView({
 
           <div className="flex items-center gap-2 shrink-0">
             {/* Badge de Rendimiento (Fintech) */}
-            <div className={`px-2.5 py-1 rounded-xl text-xs font-extrabold tabular-nums border ${
+            <div className={`px-2.5 py-1 rounded-xl text-xs font-bold font-mono tracking-tight tabular-nums border ${
               isPrivateLoan
                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                : m.isPositive 
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                : isCDT
+                  ? isMatured 
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                  : m.isPositive 
+                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                    : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
             }`}>
               {isPrivateLoan 
                 ? `+${Number(inv.monthlyRate || 0).toFixed(1)}% M.V.`
-                : `${m.isPositive ? '+' : ''}${m.pnlPercentage.toFixed(2)}%`
+                : isCDT
+                  ? `+${Number(inv.interestRate || 0).toFixed(2)}% E.A.`
+                  : `${m.isPositive ? '+' : ''}${m.pnlPercentage.toFixed(2)}%`
               }
             </div>
 
@@ -422,14 +569,14 @@ export default function InvestmentsView({
         {/* 2. CUERPO DE LA TARJETA: Valor Actual Grande y Conversión a COP */}
         <div className="space-y-0.5 pt-1">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-2xl sm:text-[26px] font-black tracking-tight tabular-nums text-slate-900 dark:text-white leading-none">
+            <span className="text-2xl sm:text-[26px] font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100 leading-none">
               {m.currency === 'USD' 
                 ? `${formatInvestMoney(m.currentValueUSD, 'USD')} USD`
                 : `${formatInvestMoney(m.currentValueCOP, 'COP')} COP`
               }
             </span>
             {m.shares > 0 && (
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono tabular-nums tracking-tight">
                 ({m.shares.toLocaleString('es-CO', { maximumFractionDigits: 4 })} {m.ticker || 'unidades'})
               </span>
             )}
@@ -437,7 +584,7 @@ export default function InvestmentsView({
 
           {/* Conversión Automática a COP */}
           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            ≈ {formatInvestMoney(m.currentValueCOP, 'COP')} COP{' '}
+            <span className="font-mono tabular-nums tracking-tight">≈ {formatInvestMoney(m.currentValueCOP, 'COP')} COP</span>{' '}
             <span className="opacity-70 font-mono text-[11px]">(TRM: {formatInvestMoney(trm || 4050, 'COP')})</span>
           </div>
         </div>
@@ -449,10 +596,10 @@ export default function InvestmentsView({
             <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               Invertido (Costo)
             </span>
-            <span className="font-bold text-slate-900 dark:text-white tabular-nums block mt-0.5">
+            <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums block mt-0.5">
               {formatInvestMoney(m.totalCostUSD, 'USD')} USD
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums">
               ≈ {formatInvestMoney(m.totalCostCOP, 'COP')} COP
             </span>
           </div>
@@ -462,12 +609,12 @@ export default function InvestmentsView({
             <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               Ganancia / Pérdida
             </span>
-            <span className={`font-bold tabular-nums block mt-0.5 ${
+            <span className={`font-bold font-mono tracking-tight tabular-nums block mt-0.5 ${
               m.isPositive ? 'text-emerald-500' : 'text-rose-500'
             }`}>
               {m.pnlUSD >= 0 ? '+' : ''}{formatInvestMoney(m.pnlUSD, 'USD')} USD
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums">
               ≈ {m.pnlCOP >= 0 ? '+' : ''}{formatInvestMoney(m.pnlCOP, 'COP')} COP
             </span>
           </div>
@@ -477,17 +624,75 @@ export default function InvestmentsView({
             <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               Precio Actual vs Compra
             </span>
-            <span className="font-bold text-slate-900 dark:text-white tabular-nums block mt-0.5">
+            <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums block mt-0.5">
               Actual: {formatInvestMoney(m.currentPrice, m.currency)}
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums">
               Compra: {formatInvestMoney(m.buyPrice, m.currency)}
             </span>
           </div>
         </div>
 
-        {/* Info adicional para CDTs si aplica */}
-        {inv.interestRate && !isPrivateLoan && (
+        {/* Info y Liquidación para CDTs */}
+        {isCDT && isMatured && cdtStats && (
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>CDT Vencido el {inv.dueDate}</span>
+              </span>
+              <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                {cdtTermDays} días ({inv.interestRate}% E.A.)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-1 border-t border-amber-500/20">
+              <div>
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Capital inicial</span>
+                <span className="font-bold text-slate-900 dark:text-white font-mono tabular-nums">
+                  {formatInvestMoney(Number(inv.investedAmount || inv.buyPrice || 0), inv.currency || 'COP')}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Ganancia neta (retefuente 4%)</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                  +{formatInvestMoney(cdtStats.netReturn, inv.currency || 'COP')}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Total liquidable</span>
+                <span className="font-extrabold text-amber-700 dark:text-amber-300 font-mono tabular-nums">
+                  {formatInvestMoney(cdtStats.maturityTotal, inv.currency || 'COP')}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleOpenLiquidation(inv, cdtStats)}
+              className="w-full mt-1.5 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-98 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Liquidar a cuenta</span>
+            </button>
+          </div>
+        )}
+
+        {/* Info para CDTs vigentes (no vencidos) */}
+        {isCDT && !isMatured && inv.interestRate && (
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 pt-0.5 font-medium flex-wrap gap-1">
+            <span>Tasa: <strong className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{inv.interestRate}% E.A.</strong></span>
+            {inv.dueDate && (
+              <span>Vence: <strong className="text-slate-700 dark:text-slate-200">{inv.dueDate}</strong> ({cdtTermDays}d)</span>
+            )}
+            {cdtStats && (
+              <span className="hidden sm:inline">Rendimiento proyectado: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold tabular-nums">+{formatInvestMoney(cdtStats.netReturn, inv.currency || 'COP')}</strong></span>
+            )}
+          </div>
+        )}
+
+        {/* Info adicional para otros activos de renta fija (ej. Bonos) */}
+        {!isCDT && !isPrivateLoan && inv.interestRate && (
           <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 pt-0.5 font-medium">
             <span>Tasa: <strong className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{inv.interestRate}% E.A.</strong></span>
             {inv.dueDate && (
@@ -510,7 +715,7 @@ export default function InvestmentsView({
             </div>
             <div className="text-right">
               <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-normal">Rendimiento Proyectado</span>
-              <span className="font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+              <span className="font-extrabold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
                 +{formatInvestMoney(calculateMonthlyLoanReturn(inv.investedAmount, inv.monthlyRate), inv.currency || 'COP')} / mes
               </span>
               {inv.paymentDay && (
@@ -570,7 +775,7 @@ export default function InvestmentsView({
                 setEditingInvestment(null);
                 setIsFormModalOpen(true);
               }}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Nueva inversión</span>
@@ -589,15 +794,15 @@ export default function InvestmentsView({
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
                 Patrimonio en Inversiones Total
               </span>
-              <div className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums mt-1 text-slate-900 dark:text-white">
+              <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums mt-1 text-slate-900 dark:text-zinc-100">
                 {formatMoney(portfolioMetrics.totalValueCOP, 'COP')}
               </div>
             </div>
 
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 font-medium">
-              <span>≈ {formatMoney(portfolioMetrics.totalValueUSD, 'USD')}</span>
+              <span className="font-mono tabular-nums tracking-tight">≈ {formatMoney(portfolioMetrics.totalValueUSD, 'USD')}</span>
               <span>•</span>
-              <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+              <span className="font-mono tabular-nums tracking-tight text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
                 TRM: {formatInvestMoney(trm || 4050, 'COP')}
               </span>
             </div>
@@ -612,7 +817,7 @@ export default function InvestmentsView({
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
                 Ganancia / Pérdida Total (PnL Histórico)
               </span>
-              <div className={`text-2xl sm:text-3xl font-black tracking-tight tabular-nums mt-1 ${
+              <div className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums mt-1 ${
                 portfolioMetrics.isPositive ? 'text-emerald-500' : 'text-rose-500'
               }`}>
                 {portfolioMetrics.isPositive ? '+' : ''}{formatMoney(portfolioMetrics.netGainCOP, 'COP')}
@@ -620,7 +825,7 @@ export default function InvestmentsView({
             </div>
 
             <div className="mt-2 flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-extrabold tabular-nums border ${
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono tracking-tight tabular-nums border ${
                 portfolioMetrics.isPositive 
                   ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                   : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
@@ -628,7 +833,7 @@ export default function InvestmentsView({
                 {portfolioMetrics.isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                 {portfolioMetrics.isPositive ? '+' : ''}{portfolioMetrics.totalPercentage.toFixed(2)}%
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium tabular-nums">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono tracking-tight tabular-nums">
                 ({portfolioMetrics.isPositive ? '+' : ''}{formatMoney(portfolioMetrics.netGainUSD, 'USD')})
               </span>
             </div>
@@ -681,7 +886,7 @@ export default function InvestmentsView({
           onClick={() => setSelectedCategoryFilter('all')}
           className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
             selectedCategoryFilter === 'all'
-              ? 'bg-emerald-600 text-white shadow-xs'
+              ? 'bg-emerald-600 text-white shadow-sm'
               : 'bg-white dark:bg-[#121622] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
           }`}
         >
@@ -700,7 +905,7 @@ export default function InvestmentsView({
               onClick={() => setSelectedCategoryFilter(cat.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
                 isSelected
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-white dark:bg-[#121622] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
               }`}
             >
@@ -722,7 +927,7 @@ export default function InvestmentsView({
               onClick={() => setViewGrouping('flat')}
               className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewGrouping === 'flat'
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -734,7 +939,7 @@ export default function InvestmentsView({
               onClick={() => setViewGrouping('by_institution')}
               className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 viewGrouping === 'by_institution'
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
@@ -772,7 +977,7 @@ export default function InvestmentsView({
                 setEditingInvestment(null);
                 setIsFormModalOpen(true);
               }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs active:scale-95 cursor-pointer"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 cursor-pointer"
             >
               Agregar inversión
             </button>
@@ -804,7 +1009,7 @@ export default function InvestmentsView({
             return (
               <div 
                 key={bankName}
-                className="rounded-3xl border shadow-xs overflow-hidden transition-all"
+                className="rounded-3xl border shadow-sm overflow-hidden transition-all"
                 style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
               >
                 {/* Cabecera Consolidada del Banco (Clickeable para desplegar/contraer) */}
@@ -856,7 +1061,7 @@ export default function InvestmentsView({
                       <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                         Saldo Actual Consolidado
                       </span>
-                      <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white tabular-nums block mt-0.5">
+                      <span className="text-sm sm:text-base font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums block mt-0.5">
                         {formatInvestMoney(currentValue, viewCurrency)}
                       </span>
                     </div>
@@ -865,7 +1070,7 @@ export default function InvestmentsView({
                       <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                         Total Invertido
                       </span>
-                      <span className="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300 tabular-nums block mt-0.5">
+                      <span className="text-sm sm:text-base font-bold font-mono tracking-tight text-slate-700 dark:text-slate-300 tabular-nums block mt-0.5">
                         {formatInvestMoney(totalInvested, viewCurrency)}
                       </span>
                     </div>
@@ -874,11 +1079,11 @@ export default function InvestmentsView({
                       <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                         Ganancia Total Acumulada
                       </span>
-                      <span className={`text-sm sm:text-base font-black tabular-nums block mt-0.5 ${
+                      <span className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums block mt-0.5 ${
                         isGainPositive ? 'text-emerald-500' : 'text-rose-500'
                       }`}>
                         {isGainPositive ? '+' : ''}{formatInvestMoney(netGain, viewCurrency)}
-                        <span className="text-xs font-bold ml-1 sm:hidden">
+                        <span className="text-xs font-bold font-mono tracking-tight ml-1 sm:hidden">
                           ({isGainPositive ? '+' : ''}{gainPercent.toFixed(1)}%)
                         </span>
                       </span>
@@ -974,12 +1179,141 @@ export default function InvestmentsView({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs active:scale-95"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-sm active:scale-95"
                 >
                   Actualizar
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Confirmación y Liquidación de CDT a Cuenta */}
+      {liquidatingCDT && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
+          onClick={() => !isSubmittingLiquidation && setLiquidatingCDT(null)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 animate-modal-pop text-slate-900 dark:text-white"
+          >
+            {/* Cabecera del modal */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-white/[0.08]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <ArrowDownLeft className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Liquidar CDT a Cuenta
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    {liquidatingCDT.inv?.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isSubmittingLiquidation}
+                onClick={() => setLiquidatingCDT(null)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Desglose financiero del CDT */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-white/[0.06] space-y-2 text-xs">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                <span>Capital invertido:</span>
+                <span className="font-semibold font-mono tabular-nums text-slate-900 dark:text-slate-200">
+                  ${Number(liquidatingCDT.inv?.investedAmount || liquidatingCDT.inv?.buyPrice || 0).toLocaleString('es-CO')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
+                <span>Rendimiento neto (+):</span>
+                <span className="font-semibold font-mono tabular-nums">
+                  +${Number(liquidatingCDT.stats?.netReturn || 0).toLocaleString('es-CO')}
+                </span>
+              </div>
+              {Number(liquidatingCDT.stats?.taxWithheld || 0) > 0 && (
+                <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                  <span>Retención en la fuente (4%):</span>
+                  <span className="font-mono tabular-nums">
+                    -${Number(liquidatingCDT.stats.taxWithheld).toLocaleString('es-CO')}
+                  </span>
+                </div>
+              )}
+              <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between">
+                <span className="font-bold text-slate-900 dark:text-white">Total a abonar:</span>
+                <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+                  ${Number(liquidatingCDT.stats?.maturityTotal || 0).toLocaleString('es-CO')}
+                </span>
+              </div>
+            </div>
+
+            {/* Formulario: Cuenta destino y Fecha */}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Cuenta de destino para abonar saldo *
+                </label>
+                {accounts && accounts.length > 0 ? (
+                  <select
+                    value={liquidationAccountId}
+                    onChange={(e) => setLiquidationAccountId(e.target.value)}
+                    disabled={isSubmittingLiquidation}
+                    className="w-full text-xs sm:text-sm font-medium px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.type === 'savings' ? 'Ahorros' : acc.type === 'checking' ? 'Corriente' : acc.type || 'Cuenta'})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
+                    No se encontraron cuentas bancarias registradas. El ingreso se registrará de forma general.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Fecha de liquidación *
+                </label>
+                <input
+                  type="date"
+                  value={liquidationDate}
+                  onChange={(e) => setLiquidationDate(e.target.value)}
+                  disabled={isSubmittingLiquidation}
+                  className="w-full text-xs sm:text-sm font-medium px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isSubmittingLiquidation}
+                onClick={() => setLiquidatingCDT(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingLiquidation}
+                onClick={handleConfirmLiquidation}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{isSubmittingLiquidation ? 'Liquidando...' : 'Confirmar Liquidación'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Receipt, Calendar, CreditCard, Tag, ChevronRight, PieChart, ArrowRight } from 'lucide-react';
 import { usePrivacy } from '../context/PrivacyContext';
 import { safeNumber } from '../utils/financeMath';
@@ -264,7 +264,7 @@ export default function ReportsAndCharts({
           handleNav('transactions');
         }
       }}
-      className="min-h-[140px] p-5 sm:p-6 rounded-3xl border shadow-xs flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group relative overflow-hidden"
+      className="min-h-[140px] p-5 sm:p-6 rounded-3xl border shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group relative overflow-hidden"
       style={{ 
         backgroundColor: 'var(--bg-card, #ffffff)', 
         borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
@@ -316,7 +316,7 @@ export default function ReportsAndCharts({
                 const circumference = 2 * Math.PI * 38; // ~238.76
                 let accumulatedPercent = 0;
 
-                return categoryExpenses.map((cat) => {
+                return categoryExpenses.map((cat, index) => {
                   const percent = cat.exactPercent;
                   const strokeLength = (percent / 100) * circumference;
                   const gap = categoryExpenses.length > 1 ? 1.8 : 0;
@@ -328,7 +328,7 @@ export default function ReportsAndCharts({
 
                   return (
                     <circle
-                      key={cat.id}
+                      key={cat.id || index}
                       cx="50"
                       cy="50"
                       r="38"
@@ -390,13 +390,13 @@ export default function ReportsAndCharts({
             </div>
           ) : (
             <div className="flex-1 flex flex-col justify-center gap-1.5 pl-2 min-w-0">
-              {topCategories.slice(0, 3).map((cat) => {
+              {topCategories.slice(0, 3).map((cat, index) => {
                 const displayEmoji = getCategoryEmoji(cat, cat.name);
                 const isHovered = hoveredCategoryId === cat.id;
 
                 return (
                   <div 
-                    key={cat.id} 
+                    key={cat.id || cat.name || index} 
                     role="button"
                     tabIndex={0}
                     onClick={(e) => {
@@ -530,12 +530,12 @@ export default function ReportsAndCharts({
                   Sin gastos registrados en este período.
                 </div>
               ) : (
-                categoryExpenses.map((cat) => {
+                categoryExpenses.map((cat, index) => {
                   const displayEmoji = getCategoryEmoji(cat, cat.name);
 
                   return (
                     <div
-                      key={cat.id}
+                      key={cat.id || cat.name || index}
                       role="button"
                       tabIndex={0}
                       onClick={() => {
@@ -723,7 +723,7 @@ export default function ReportsAndCharts({
                           className="p-2.5 rounded-2xl border flex items-center justify-between bg-slate-50/60 dark:bg-white/[0.03] border-slate-200/60 dark:border-white/5"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center shrink-0 shadow-2xs text-base select-none">
+                            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center shrink-0 shadow-sm text-base select-none">
                               <span>{subEmoji}</span>
                             </div>
                             <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">

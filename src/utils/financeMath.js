@@ -103,16 +103,14 @@ export const calculateAccountBalance = (account, transactions = []) => {
   if (!account) return 0;
 
   let baseBalance = 0;
-  if (account.initialBalance !== undefined && toSafeNumber(account.initialBalance) !== 0) {
+  if (account.initialBalance !== undefined) {
     baseBalance = toSafeNumber(account.initialBalance);
-  } else if (account.initial_balance !== undefined && toSafeNumber(account.initial_balance) !== 0) {
+  } else if (account.initial_balance !== undefined) {
     baseBalance = toSafeNumber(account.initial_balance);
-  } else if (account.balance !== undefined && toSafeNumber(account.balance) !== 0) {
+  } else if (account.balance !== undefined) {
     baseBalance = toSafeNumber(account.balance);
-  } else if (account.saldo !== undefined && toSafeNumber(account.saldo) !== 0) {
-    baseBalance = toSafeNumber(account.saldo);
   } else {
-    baseBalance = toSafeNumber(account.initialBalance ?? account.initial_balance ?? account.balance ?? account.saldo ?? 0);
+    baseBalance = toSafeNumber(account.saldo ?? 0);
   }
 
   const txs = Array.isArray(transactions) ? transactions : [];

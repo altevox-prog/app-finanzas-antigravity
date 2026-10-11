@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { 
   Pencil, 
   Trash2, 
@@ -33,7 +33,16 @@ export default function DebtCard({
   const hasBrand = hasBrandIcon(displayName);
 
   // Lógica de acumulación de capital e intereses
-  const totalPrincipal = toSafeNumber(stats?.totalPrincipal ?? stats?.base ?? debt.principalAmount ?? debt.totalAmount ?? 0);
+  const totalPrincipal = toSafeNumber(
+    stats?.totalPrincipal ?? 
+    stats?.base ?? 
+    debt.total_amount ?? 
+    debt.totalAmount ?? 
+    debt.amount ?? 
+    debt.principalAmount ?? 
+    debt.remaining_amount ?? 
+    debt.remainingAmount ?? 0
+  );
   const payments = Array.isArray(debt.payments) ? debt.payments : [];
 
   const debtStats = calculateDebtStats(totalPrincipal, payments, {
@@ -53,7 +62,7 @@ export default function DebtCard({
 
   return (
     <div
-      className="rounded-2xl border p-4 transition-all shadow-xs"
+      className="rounded-2xl border p-4 transition-all shadow-sm"
       style={{
         backgroundColor: 'var(--bg-card)',
         borderColor: 'var(--border-color)',
@@ -131,7 +140,7 @@ export default function DebtCard({
           <span className="font-semibold uppercase tracking-wider">
             {isReceivable ? 'Saldo Restante por Cobrar' : 'Saldo Restante por Pagar'}
           </span>
-          <span className="tabular-nums">
+          <span className="font-mono tabular-nums tracking-tight">
             {stats.isPaid 
               ? '✓ Liquidado' 
               : isReceivable
@@ -141,7 +150,7 @@ export default function DebtCard({
         </div>
 
         {/* Número Principal Grande y Destacado */}
-        <div className={`text-[22px] sm:text-[25px] font-extrabold tracking-tight tabular-nums leading-none ${
+        <div className={`text-[22px] sm:text-[25px] font-bold font-mono tracking-tight tabular-nums leading-none ${
           stats.isPaid 
             ? 'text-[#34C759]' 
             : isReceivable 
@@ -153,7 +162,7 @@ export default function DebtCard({
 
         {stats.remainingInterest > 0 && (
           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            Cap. pendiente: <span className="font-semibold" style={{ color: 'var(--text-main)' }}>{formatCurrency(stats.remainingCapital)}</span> + Int. causados: <span className="text-amber-500 font-semibold">{formatCurrency(stats.remainingInterest)}</span>
+            Cap. pendiente: <span className="font-bold font-mono tracking-tight tabular-nums" style={{ color: 'var(--text-main)' }}>{formatCurrency(stats.remainingCapital)}</span> + Int. causados: <span className="text-amber-500 font-bold font-mono tracking-tight tabular-nums">{formatCurrency(stats.remainingInterest)}</span>
           </div>
         )}
 
@@ -161,37 +170,37 @@ export default function DebtCard({
         <div className="pt-2 border-t grid grid-cols-3 gap-2 text-[11px] text-slate-500 dark:text-slate-400" style={{ borderColor: 'var(--border-color)' }}>
           <div>
             <span className="block opacity-75">Capital Inicial</span>
-            <span className="font-bold tabular-nums" style={{ color: 'var(--text-main)' }}>{formatCurrency(stats.base)}</span>
+            <span className="font-bold font-mono tracking-tight tabular-nums" style={{ color: 'var(--text-main)' }}>{formatCurrency(stats.base)}</span>
           </div>
           <div>
             <span className="block opacity-75">
               {stats.monthsElapsed > 0 ? `Int. Causados (${stats.monthsElapsed}m)` : 'Intereses Estim.'}
             </span>
-            <span className="font-bold tabular-nums" style={{ color: 'var(--text-main)' }}>
+            <span className="font-bold font-mono tracking-tight tabular-nums" style={{ color: 'var(--text-main)' }}>
               {formatCurrency(stats.accruedInterest || (stats.interestAmount + (stats.insurance || 0)))}
             </span>
           </div>
           <div>
             <span className="block opacity-75">Total Pagado</span>
-            <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(stats.totalPaid)}</span>
+            <span className="font-bold font-mono tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">{formatCurrency(stats.totalPaid)}</span>
           </div>
         </div>
 
         {/* Badges de Desglose Acumulado: Capital amortizado vs Intereses pagados */}
         <div className="pt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
-          <span className="px-2 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+          <span className="px-2 py-0.5 rounded-md font-bold font-mono tracking-tight tabular-nums bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
             Cap. amortizado: {formatCurrency(stats.totalCapitalPaid ?? stats.totalPaid)}
           </span>
-          <span className="px-2 py-0.5 rounded-md font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+          <span className="px-2 py-0.5 rounded-md font-bold font-mono tracking-tight tabular-nums bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
             Intereses pagados: {formatCurrency(stats.totalInterestPaid ?? 0)}
           </span>
           {stats.remainingInterest > 0 && (
-            <span className="px-2 py-0.5 rounded-md font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+            <span className="px-2 py-0.5 rounded-md font-bold font-mono tracking-tight tabular-nums bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
               Int. pendientes: {formatCurrency(stats.remainingInterest)}
             </span>
           )}
           {stats.monthsElapsed > 0 && (
-            <span className="px-2 py-0.5 rounded-md font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+            <span className="px-2 py-0.5 rounded-md font-bold font-mono tracking-tight tabular-nums bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
               {stats.monthsElapsed} {stats.monthsElapsed === 1 ? 'mes transcurrido' : 'meses transcurridos'}
             </span>
           )}
@@ -206,9 +215,9 @@ export default function DebtCard({
             <span className="font-medium text-slate-600 dark:text-slate-400">
               {isReceivable ? 'Capital recuperado' : 'Capital amortizado'}
             </span>
-            <span className="font-bold text-slate-900 dark:text-white tabular-nums">
+            <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums">
               {formatMoneyVal(paidPrincipal)} / {formatMoneyVal(totalPrincipal)}{' '}
-              <span className="text-emerald-500 ml-1">
+              <span className="text-emerald-500 ml-1 font-mono tabular-nums">
                 ({Math.round((paidPrincipal / (totalPrincipal || 1)) * 100)}%)
               </span>
             </span>
@@ -231,7 +240,7 @@ export default function DebtCard({
                 <span>Intereses pagados al banco / prestamista</span>
               )}
             </span>
-            <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+            <span className="font-bold font-mono tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
               {formatMoneyVal(paidInterest)} {isReceivable ? 'cobrados' : 'pagados'}
             </span>
           </div>
@@ -263,7 +272,7 @@ export default function DebtCard({
           <button
             type="button"
             onClick={() => onAddPayment && onAddPayment(debt)}
-            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer ${
               isReceivable 
                 ? 'bg-emerald-600 hover:bg-emerald-700' 
                 : 'bg-rose-600 hover:bg-rose-700'
@@ -283,7 +292,7 @@ export default function DebtCard({
           <button
             type="button"
             onClick={() => onAddDisbursement && onAddDisbursement(debt)}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+            className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
             title="Prestar más dinero / Añadir desembolso adicional"
           >
             <HandCoins className="w-3.5 h-3.5 shrink-0" />
@@ -329,10 +338,10 @@ export default function DebtCard({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-bold text-blue-600 dark:text-blue-400">
+                      <span className="font-bold font-mono tracking-tight tabular-nums text-blue-600 dark:text-blue-400">
                         Desembolso #{dIdx + 1}: +{formatCurrency(d.amount)}
                       </span>
-                      <span className="text-[10px] text-blue-500 font-mono">
+                      <span className="text-[10px] text-blue-500 font-mono tracking-tight tabular-nums">
                         (Capital extra)
                       </span>
                     </div>
@@ -366,10 +375,10 @@ export default function DebtCard({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-slate-800 dark:text-slate-100">
+                        <span className="font-bold font-mono tracking-tight tabular-nums text-slate-800 dark:text-slate-100">
                           Abono #{idx + 1}: {formatCurrency(tot)}
                         </span>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums">
                           {breakdownText}
                         </span>
                       </div>

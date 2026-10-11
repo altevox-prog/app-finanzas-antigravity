@@ -34,6 +34,7 @@ import { useNavigationTabs } from './hooks/useNavigationTabs';
 import { useFinancialOperations } from './hooks/useFinancialOperations';
 import { useModalControls } from './hooks/useModalControls';
 import { useDataSync } from './hooks/useDataSync';
+import { useScrollRestoration } from './hooks/useScrollRestoration';
 
 export default function App() {
   const { formatMoney } = usePrivacy();
@@ -343,21 +344,39 @@ export default function App() {
     completeOnboarding
   });
 
-  // Sincronización en segundo plano con Supabase (Desconectado / Modo 100% Local-First)
+  // Sincronización en segundo plano con Supabase (Local-First Cloud Sync)
   const {
     syncStatus,
     syncUser,
     isCloudEnabled,
     pushLocalToCloud,
     pullCloudToLocal
-  } = useDataSync();
+  } = useDataSync({
+    accounts,
+    setAccounts,
+    transactions,
+    setTransactions,
+    debtsAndLoans,
+    setDebtsAndLoans,
+    investments,
+    setInvestments,
+    recurringPayments,
+    setRecurringPayments,
+    budgets,
+    setBudgets,
+    categories,
+    setCategories,
+    savingsGoals,
+    setSavingsGoals,
+    userProfile,
+    setUserProfile
+  });
 
   // Cierre preventivo de menús y modales al cambiar de pestaña
   const handleCloseOverlaysOnTabChange = useCallback(() => {
     handleCloseAllModals();
     setIsEditWidgetsModalOpen(false);
-    setSelectedDay(null);
-  }, [handleCloseAllModals, setIsEditWidgetsModalOpen, setSelectedDay]);
+  }, [handleCloseAllModals, setIsEditWidgetsModalOpen]);
 
   // Gestión centralizada de pestañas, scroll y reseteos
   const {
@@ -375,6 +394,9 @@ export default function App() {
     onTabChange: handleCloseOverlaysOnTabChange,
     onOpenProfile: handleOpenProfile
   });
+
+  // Restauración y persistencia ergonómica de posición de scroll por pestaña (Principio 9)
+  useScrollRestoration(activeTab, mainContentRef);
 
   // Cálculos derivados y métricas analíticas memorizadas
   const {
@@ -599,29 +621,32 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-[100dvh] bg-slate-100 dark:bg-[#06070A] text-slate-900 dark:text-slate-100 flex ${
+    <div className={`min-h-[100dvh] bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-slate-100 flex ${
       isForcedMobile ? 'flex-col items-center justify-start p-2 sm:p-4' :
       isForcedDesktop ? 'flex-row items-stretch justify-start p-0' :
       'flex-col lg:flex-row items-center lg:items-stretch justify-start sm:justify-center lg:justify-start p-0 sm:p-4 md:p-6 lg:p-0'
     } transition-colors font-sans antialiased w-full overflow-x-hidden`}>
       {/* 1. BARRA LATERAL FIJA EN ESCRITORIO (Sidebar visible solo en lg:) */}
       <DesktopSidebar
+        modalControls={modalControls}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onTabChange={handleTabChange}
-        onOpenTransaction={handleOpenTransaction}
-        onOpenAddTx={handleOpenTransaction}
-        onAddExpense={() => handleOpenTransaction('expense')}
-        onAddIncome={() => handleOpenTransaction('income')}
-        onOpenTransfer={handleOpenTransfer}
-        onOpenAddTransaction={handleOpenTransaction}
-        onOpenNewTransaction={handleOpenTransaction}
-        isAddTransactionOpen={isAddTxOpen}
-        setIsAddTransactionOpen={setIsAddTxOpen}
-        onOpenRecurring={handleOpenRecurring}
-        onOpenLoan={() => handleOpenAddLoan('receivable')}
-        onOpenDebt={() => handleOpenAddDebt('payable')}
-        onOpenInvestment={handleOpenInvestment}
+        onOpenTransaction={() => modalControls.openAddTransaction('expense')}
+        onOpenAddTx={() => modalControls.openAddTransaction('expense')}
+        onAddExpense={() => modalControls.openAddTransaction('expense')}
+        onAddIncome={() => modalControls.openAddTransaction('income')}
+        onOpenTransfer={() => modalControls.openTransfer()}
+        onOpenAddTransaction={() => modalControls.openAddTransaction('expense')}
+        onOpenNewTransaction={() => modalControls.openAddTransaction('expense')}
+        isAddTransactionOpen={modalControls.isAddTxOpen}
+        setIsAddTransactionOpen={() => modalControls.openAddTransaction('expense')}
+        onOpenRecurring={() => modalControls.openAddRecurring()}
+        onOpenLoan={() => modalControls.openAddLoan('payable')}
+        onOpenDebt={() => modalControls.openAddLoan('payable')}
+        onOpenAddDebt={() => modalControls.openAddLoan('payable')}
+        onAddDebtOrLoan={() => modalControls.openAddLoan('payable')}
+        onOpenInvestment={() => modalControls.openAddInvestment()}
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -666,7 +691,7 @@ export default function App() {
             : isForcedDesktop 
             ? 'max-w-none h-screen rounded-none shadow-none border-0 overflow-hidden' 
             : 'sm:max-w-[440px] lg:max-w-none min-h-[100dvh] lg:h-screen sm:rounded-[40px] lg:rounded-none sm:shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:sm:shadow-[0_25px_70px_rgba(0,0,0,0.7)] lg:shadow-none sm:border-[8px] lg:border-0 sm:border-slate-300 dark:sm:border-slate-800 lg:overflow-hidden'
-        } flex flex-col justify-between relative transition-colors bg-[#F8FAFC] dark:bg-[#07090E] flex-1`}
+        } flex flex-col justify-between relative transition-colors bg-[#F8FAFC] dark:bg-zinc-950 flex-1`}
         style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
       >
         {/* Cabecera Unificada (Barra de estado iOS, Header Móvil y Header Panorámico de Escritorio) */}
@@ -698,6 +723,7 @@ export default function App() {
           isCloudEnabled={isCloudEnabled}
           syncUser={syncUser}
           accounts={accounts}
+          investments={investments}
           subscriptions={subscriptions}
           debtsAndLoans={debtsAndLoans}
           savingsGoals={savingsGoals}
@@ -711,6 +737,8 @@ export default function App() {
               tabResetKeys={tabResetKeys}
               financeData={financeData}
               financeActions={financeActions}
+              modalControls={modalControls}
+              {...modalControls}
             />
           </div>
         </main>
@@ -737,6 +765,7 @@ export default function App() {
           isOpen={isActionMenuOpen}
           onClose={() => setIsActionMenuOpen(false)}
           setIsOpen={setIsActionMenuOpen}
+          modalControls={modalControls}
           onAddExpense={() => handleOpenTransaction('expense')}
           onAddIncome={() => handleOpenTransaction('income')}
           onOpenTransaction={handleOpenTransaction}
@@ -752,9 +781,14 @@ export default function App() {
           onOpenTransfer={handleOpenTransfer}
           onOpenInvestment={handleOpenInvestment}
           onOpenRecurring={handleOpenRecurring}
+          onOpenAddRecurring={handleOpenRecurring}
           onOpenLoan={() => handleOpenAddLoan('receivable')}
+          onOpenAddLoan={() => handleOpenAddLoan('receivable')}
           onOpenDebt={() => handleOpenAddDebt('payable')}
+          onOpenAddDebt={() => handleOpenAddDebt('payable')}
+          onAddDebtOrLoan={() => handleOpenAddDebt('payable')}
           setActiveTab={handleTabChange}
+          financeActions={financeActions}
         />
 
         {/* Barra Home Indicator de iOS para Desktop (Oculta en lg:) */}
@@ -764,6 +798,8 @@ export default function App() {
 
         {/* Contenedor Orquestador de Modales y Overlays */}
         <ModalContainer
+          modalControls={modalControls}
+          {...modalControls}
           financeData={financeData}
           financeActions={financeActions}
         />
@@ -771,7 +807,7 @@ export default function App() {
         {/* Banner Flotante de Actualización PWA */}
         {hasPwaUpdate && (
           <div className="absolute top-3 left-3 right-3 sm:left-4 sm:right-4 z-50 animate-slide-up">
-            <div className="bg-slate-900/95 dark:bg-[#12141C]/95 border border-emerald-500/40 text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 ring-1 ring-emerald-500/20">
+            <div className="bg-slate-900/95 dark:bg-zinc-900/95 border border-emerald-500/40 text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 ring-1 ring-emerald-500/20">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -790,7 +826,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
                   Actualizar ahora
                 </button>

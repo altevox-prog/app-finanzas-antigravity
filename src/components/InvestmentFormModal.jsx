@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   TrendingUp, 
@@ -21,6 +21,7 @@ import { useBackHandler } from '../hooks/useBackHandler';
 import { fetchMarketPrice } from '../services/marketQuotesService';
 import { usePrivacy } from '../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../utils/currencyFormatter';
+import SegmentedControl from './common/SegmentedControl';
 import { 
   toSafeNumber, 
   calculateCDTMaturityReturn, 
@@ -133,15 +134,17 @@ export default function InvestmentFormModal({
     if (!sym) return;
     setIsFetchingPrice(true);
     try {
-      const price = await fetchMarketPrice(sym, assetType);
-      if (price !== null && !isNaN(price) && price > 0) {
-        setCurrentPrice(String(price));
+      const res = await fetchMarketPrice(sym, assetType);
+      const price = typeof res === 'object' && res !== null ? res.price : res;
+      if (price !== null && !isNaN(price) && Number(price) > 0) {
+        const numPrice = Number(price);
+        setCurrentPrice(String(numPrice));
         if (!buyPrice) {
-          setBuyPrice(String(price));
+          setBuyPrice(String(numPrice));
         }
         if (shares && parseFloat(shares) > 0) {
           const s = parseFloat(shares);
-          const curr = Math.round(s * price * 100) / 100;
+          const curr = Math.round(s * numPrice * 100) / 100;
           setCurrentAmount(String(curr));
           if (!investedAmount) {
             setInvestedAmount(String(curr));
@@ -363,7 +366,7 @@ export default function InvestmentFormModal({
                       type="button"
                       onClick={() => handleCategoryChange(cat.id)}
                       className={`p-2 rounded-xl text-left border flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
-                        isSelected ? 'ring-2 font-black shadow-xs' : 'opacity-70 hover:opacity-100'
+                        isSelected ? 'ring-2 font-black shadow-sm' : 'opacity-70 hover:opacity-100'
                       }`}
                       style={{
                         backgroundColor: isSelected ? `${cat.color}15` : 'var(--bg-input)',
@@ -412,7 +415,7 @@ export default function InvestmentFormModal({
                     type="button"
                     onClick={() => handleFetchQuote()}
                     disabled={!ticker.trim() || isFetchingPrice}
-                    className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs active:scale-95"
+                    className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm active:scale-95"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isFetchingPrice ? 'animate-spin' : ''}`} />
                     <span>{isFetchingPrice ? 'Buscando...' : 'Cotización'}</span>
@@ -438,7 +441,7 @@ export default function InvestmentFormModal({
                       onClick={() => handleSelectPreset(item.sym, item.name, item.type, item.cat)}
                       className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
                         ticker === item.sym 
-                          ? 'bg-emerald-600 text-white shadow-xs' 
+                          ? 'bg-emerald-600 text-white shadow-sm' 
                           : 'bg-slate-200/60 dark:bg-white/5 opacity-70 hover:opacity-100 text-slate-700 dark:text-slate-300'
                       }`}
                     >
@@ -579,26 +582,15 @@ export default function InvestmentFormModal({
             <label className="block text-[11px] font-bold opacity-70 mb-1">
               Moneda de origen *
             </label>
-            <div className="ios-segmented w-full flex p-0.5">
-              <button
-                type="button"
-                onClick={() => setCurrency('COP')}
-                className={`ios-segmented-btn flex-1 text-center py-1.5 text-xs font-bold transition-all ${
-                  currency === 'COP' ? 'ios-segmented-btn-active text-[#34C759]' : 'opacity-60'
-                }`}
-              >
-                COP
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrency('USD')}
-                className={`ios-segmented-btn flex-1 text-center py-1.5 text-xs font-bold transition-all ${
-                  currency === 'USD' ? 'ios-segmented-btn-active text-[#007AFF]' : 'opacity-60'
-                }`}
-              >
-                USD
-              </button>
-            </div>
+            <SegmentedControl
+              options={[
+                { id: 'COP', label: 'COP' },
+                { id: 'USD', label: 'USD' }
+              ]}
+              value={currency}
+              onChange={setCurrency}
+              size="sm"
+            />
           </div>
 
           {/* Montos: Invertido y Actual */}
@@ -677,7 +669,7 @@ export default function InvestmentFormModal({
                         onClick={() => setSubType(tab.id)}
                         className={`p-2 rounded-xl text-center text-xs font-bold transition-all border active:scale-95 cursor-pointer ${
                           isSelected
-                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm'
                             : 'border-slate-200/80 dark:border-white/10 opacity-70 hover:opacity-100'
                         }`}
                         style={{

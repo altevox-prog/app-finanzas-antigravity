@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Wallet, Building2, CreditCard, PiggyBank, Coins, DollarSign,
   Utensils, Home, Car, Zap, Film, HeartPulse, GraduationCap,
@@ -254,7 +254,7 @@ export default function CategoryIcon({
 
   return (
     <div 
-      className={`inline-flex items-center justify-center shrink-0 border shadow-2xs select-none transition-transform duration-200 ${containerDimensionClass} ${className}`}
+      className={`inline-flex items-center justify-center shrink-0 border shadow-sm select-none transition-transform duration-200 ${containerDimensionClass} ${className}`}
       style={{ 
         backgroundColor: containerBg, 
         borderColor: containerBorder,

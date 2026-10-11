@@ -8,9 +8,31 @@ function getInitialBudgets() {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && typeof parsed === 'object') {
+        const directLimit = localStorage.getItem('global_budget_limit');
+        const resolvedGlobal = directLimit !== null && directLimit !== undefined
+          ? (Number(directLimit) || 0)
+          : (Number(parsed.global) || 0);
         return {
-          global: Number(parsed.global) || 0,
+          global: resolvedGlobal,
           categories: parsed.categories && typeof parsed.categories === 'object' ? parsed.categories : {}
+        };
+      }
+    }
+    const directLimit = localStorage.getItem('global_budget_limit');
+    if (directLimit !== null && directLimit !== undefined) {
+      return {
+        global: Number(directLimit) || 0,
+        categories: {}
+      };
+    }
+    const userSettingsRaw = localStorage.getItem('user_settings');
+    if (userSettingsRaw) {
+      const parsedSettings = JSON.parse(userSettingsRaw);
+      const limit = parsedSettings?.global_budget_limit ?? parsedSettings?.global_budget;
+      if (limit !== undefined && limit !== null) {
+        return {
+          global: Number(limit) || 0,
+          categories: parsedSettings?.budgets?.categories || {}
         };
       }
     }
@@ -30,6 +52,9 @@ export function useBudgets(isResettingRef) {
       const serialized = JSON.stringify(budgets);
       localStorage.setItem(STORAGE_KEYS.BUDGETS, serialized);
       localStorage.setItem('budgets', serialized);
+      if (budgets?.global !== undefined) {
+        localStorage.setItem('global_budget_limit', String(Number(budgets.global) || 0));
+      }
     } catch (e) {
       console.error('Error guardando presupuestos:', e);
     }
@@ -37,9 +62,13 @@ export function useBudgets(isResettingRef) {
 
   // Actualizar presupuesto global
   const updateGlobalBudget = useCallback((amount) => {
+    const val = Number(amount) || 0;
+    try {
+      localStorage.setItem('global_budget_limit', String(val));
+    } catch {}
     setBudgets((prev) => ({
       ...prev,
-      global: Number(amount) || 0
+      global: val
     }));
   }, []);
 

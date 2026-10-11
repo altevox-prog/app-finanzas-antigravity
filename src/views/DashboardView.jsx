@@ -7,47 +7,55 @@ import Dashboard from '../components/Dashboard';
  * Vista principal del Dashboard financiero que integra alertas preventivas
  * de deudas y los widgets configurables de balance, presupuesto, métricas y accesos directos.
  */
-export default function DashboardView({
-  alerts = [],
-  onReviewAlert,
-  onDismissAlert,
-  formatMoney,
-  accounts = [],
-  investments = [],
-  debtsAndLoans = [],
-  transactions = [],
-  monthlyTransactions = [],
-  categories = [],
-  recurringPayments = [],
-  subscriptions = [],
-  monthlyStats = {},
-  selectedDate,
-  selectedDay,
-  onSelectDay,
-  onOpenCalendar,
-  onNavigateToTab,
-  onOpenTransaction,
-  onAddTransaction,
-  onAddDebtOrLoan,
-  onAddRecurring,
-  onDeleteTransaction,
-  onUpdateTransaction,
-  onAddCategory,
-  onAddSubcategory,
-  onUpdateSubcategory,
-  onDeleteSubcategory,
-  onAddAccount,
-  onSelectCreditCardDetail,
-  onOpenAddRecurring,
-  currentMonthLabel,
-  trm = 4050,
-  widgetsConfig,
-  widgets,
-  onCustomizeWidgets,
-  onSaveWidgets,
-  financeData = {},
-  financeActions = {}
-}) {
+export default function DashboardView(props) {
+  const {
+    modalControls = {},
+    onOpenAddDebt = () => {},
+    onOpenDebt = () => {},
+    onOpenAddLoan = () => {},
+    onOpenLoan = () => {},
+    alerts = [],
+    onReviewAlert,
+    onDismissAlert,
+    formatMoney,
+    accounts = [],
+    investments = [],
+    debtsAndLoans = [],
+    transactions = [],
+    monthlyTransactions = [],
+    categories = [],
+    recurringPayments = [],
+    subscriptions = [],
+    monthlyStats = {},
+    selectedDate,
+    selectedDay,
+    onSelectDay,
+    onOpenCalendar,
+    onNavigateToTab,
+    onOpenTransaction,
+    onOpenAddTransaction,
+    onAddTransaction,
+    onAddDebtOrLoan,
+    onAddRecurring,
+    onDeleteTransaction,
+    onUpdateTransaction,
+    onAddCategory,
+    onAddSubcategory,
+    onUpdateSubcategory,
+    onDeleteSubcategory,
+    onAddAccount,
+    onSelectCreditCardDetail,
+    onOpenAddRecurring,
+    currentMonthLabel,
+    trm = 4050,
+    widgetsConfig,
+    widgets,
+    onCustomizeWidgets,
+    onSaveWidgets,
+    financeData = {},
+    financeActions = {},
+    ...restProps
+  } = props;
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Banner preventivo de recordatorios y alertas para mañana */}
@@ -78,9 +86,12 @@ export default function DashboardView({
         onSelectDay={onSelectDay}
         onOpenCalendar={onOpenCalendar}
         onNavigateToTab={onNavigateToTab || financeActions?.handleTabChange || financeActions?.setActiveTab}
-        onOpenTransaction={onOpenTransaction || financeActions?.handleOpenAddTransaction || financeActions?.handleOpenTransaction}
+        onOpenTransaction={onOpenTransaction || onOpenAddTransaction || modalControls?.openAddTransaction || modalControls?.openTransactionModal || financeActions?.openAddTransaction || financeActions?.handleOpenTransaction}
+        onOpenAddTransaction={onOpenAddTransaction || onOpenTransaction || modalControls?.openAddTransaction || modalControls?.openTransactionModal || financeActions?.openAddTransaction || financeActions?.handleOpenTransaction}
         onAddTransaction={onAddTransaction}
         onAddDebtOrLoan={onAddDebtOrLoan}
+        onOpenAddDebt={onOpenAddDebt || onOpenDebt || modalControls?.openAddDebt || modalControls?.openAddLoan || financeActions?.openAddDebt || financeActions?.handleOpenAddDebt}
+        onOpenAddLoan={onOpenAddLoan || onOpenLoan || modalControls?.openAddLoan || modalControls?.openAddDebt || financeActions?.openAddLoan || financeActions?.handleOpenAddLoan}
         onAddRecurring={onAddRecurring}
         onDeleteTransaction={onDeleteTransaction}
         onUpdateTransaction={onUpdateTransaction}
@@ -90,7 +101,7 @@ export default function DashboardView({
         onDeleteSubcategory={onDeleteSubcategory}
         onAddAccount={onAddAccount}
         onSelectCreditCardDetail={onSelectCreditCardDetail}
-        onOpenAddRecurring={onOpenAddRecurring}
+        onOpenAddRecurring={onOpenAddRecurring || financeActions?.handleOpenAddRecurring || financeActions?.handleOpenRecurring}
         currentMonthLabel={currentMonthLabel}
         trm={trm}
         widgetsConfig={widgetsConfig || widgets}

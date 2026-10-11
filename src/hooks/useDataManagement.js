@@ -1,6 +1,8 @@
 import { useRef, useCallback } from 'react';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { saveAccountsToStorage } from '../services/storageService';
+import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
+import toast from '../utils/toast';
 
 /**
  * useDataManagement
@@ -42,34 +44,156 @@ export function useDataManagement({
   const internalIsResettingRef = useRef(false);
   const isResettingRef = externalIsResettingRef || internalIsResettingRef;
 
-  // 1. Reset de Fábrica Total y Purga Completa
+  // Helper para purgar datos locales de la app PRESERVANDO los tokens de Supabase Auth y banderas de tutorial/onboarding
+  const clearLocalDataPreservingAuth = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (window.localStorage) {
+        const isPreservedKey = (key) => {
+          if (!key) return false;
+          // Tokens y sesiones de autenticación (Supabase / OAuth)
+          if (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth')) return true;
+          // Preferencias de tutorial y onboarding para evitar que reaparezca tras el restablecimiento
+          if (
+            key === 'presu_tutorial_completed' ||
+            key === 'has_completed_tutorial' ||
+            key === 'tutorial_completed' ||
+            key === 'hasSeenTutorial' ||
+            key === 'tutorial_seen' ||
+            key === 'app_onboarding_completed' ||
+            key === 'has_completed_onboarding' ||
+            key === 'hasCompletedOnboarding' ||
+            key.startsWith('tutorial_completed_') ||
+            key.startsWith('presu_tutorial_completed_') ||
+            key.startsWith('has_completed_tutorial_') ||
+            key.startsWith('has_completed_onboarding_') ||
+            key.startsWith('hasCompletedOnboarding_')
+          ) {
+            return true;
+          }
+          return false;
+        };
+
+        const preservedData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && isPreservedKey(key)) {
+            preservedData[key] = localStorage.getItem(key);
+          }
+        }
+
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && !isPreservedKey(key)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+        Object.entries(preservedData).forEach(([key, val]) => {
+          if (val !== null) localStorage.setItem(key, val);
+        });
+
+        // Asegurar explícitamente en true todas las banderas de tutorial y onboarding completados
+        localStorage.setItem('presu_tutorial_completed', 'true');
+        localStorage.setItem('has_completed_tutorial', 'true');
+        localStorage.setItem('tutorial_completed', 'true');
+        localStorage.setItem('hasSeenTutorial', 'true');
+        localStorage.setItem('tutorial_seen', 'true');
+        localStorage.setItem('app_onboarding_completed', 'true');
+        localStorage.setItem('has_completed_onboarding', 'true');
+        localStorage.setItem('hasCompletedOnboarding', 'true');
+        const activeUserId = user?.id && user.id !== 'local-user' ? user.id : null;
+        if (activeUserId) {
+          localStorage.setItem(`presu_tutorial_completed_${activeUserId}`, 'true');
+          localStorage.setItem(`has_completed_tutorial_${activeUserId}`, 'true');
+          localStorage.setItem(`tutorial_completed_${activeUserId}`, 'true');
+          localStorage.setItem(`has_completed_onboarding_${activeUserId}`, 'true');
+          localStorage.setItem(`hasCompletedOnboarding_${activeUserId}`, 'true');
+        }
+      }
+
+      if (window.sessionStorage) {
+        const preservedSessionAuth = {};
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth'))) {
+            preservedSessionAuth[key] = sessionStorage.getItem(key);
+          }
+        }
+
+        const sessionKeysToRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && !key.startsWith('sb-') && !key.includes('auth-token') && !key.includes('supabase.auth')) {
+            sessionKeysToRemove.push(key);
+          }
+        }
+        sessionKeysToRemove.forEach((key) => sessionStorage.removeItem(key));
+
+        Object.entries(preservedSessionAuth).forEach(([key, val]) => {
+          if (val !== null) sessionStorage.setItem(key, val);
+        });
+      }
+    } catch (e) {
+      console.warn('Error clearing non-auth storage:', e);
+    }
+  }, [user]);
+
+  // 1. Reset de Datos (Preservando sesión activa y eliminando registros en Supabase)
   const handleFactoryReset = useCallback(async (skipConfirm = false) => {
     if (!skipConfirm) {
       let confirmed = false;
       try {
         confirmed = typeof window !== 'undefined' && typeof window.confirm === 'function'
           ? window.confirm(
-              '¿Estás seguro de restablecer Monety? Se borrarán todas las cuentas, inversiones, deudas, transacciones y configuraciones, y la app volverá a la pantalla de bienvenida.'
+              '¿Estás seguro de restablecer todos los datos? Se borrarán todas las transacciones, cuentas, deudas e inversiones en la nube y en este dispositivo. Tu sesión continuará activa.'
             )
           : true;
       } catch {
         confirmed = true;
       }
-      if (!confirmed) return;
+      if (!confirmed) return false;
     }
 
     try {
       if (isResettingRef) isResettingRef.current = true;
 
-      // Vaciado absoluto inmediato del almacenamiento web
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (e) {
-        console.warn('Error clearing storage:', e);
+      // 1. Borrado remoto real en Supabase para el usuario activo (SIN llamar a signOut)
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          const targetUserId = authData?.user?.id || (user?.id !== 'local-user' ? user?.id : null);
+
+          if (targetUserId) {
+            console.log('Eliminando registros de usuario en Supabase para:', targetUserId);
+            // Primero eliminar registros de tablas dependientes y luego accounts
+            await Promise.allSettled([
+              supabase.from('transactions').delete().eq('user_id', targetUserId),
+              supabase.from('debts').delete().eq('user_id', targetUserId),
+              supabase.from('recurring_payments').delete().eq('user_id', targetUserId),
+              supabase.from('investments').delete().eq('user_id', targetUserId),
+              supabase.from('savings_goals').delete().eq('user_id', targetUserId),
+              supabase.from('budgets').delete().eq('user_id', targetUserId),
+              supabase.from('categories').delete().eq('user_id', targetUserId),
+              supabase.from('accounts').delete().eq('user_id', targetUserId)
+            ]);
+
+            // Reintento de accounts por si hubo restricción de clave foránea previa
+            try {
+              await supabase.from('accounts').delete().eq('user_id', targetUserId);
+            } catch {}
+          }
+        } catch (cloudErr) {
+          console.warn('Error al eliminar datos en Supabase durante el reset:', cloudErr);
+        }
       }
 
-      // Resetear inmediatamente el estado en memoria de React a ceros absolutos
+      // 2. Limpieza de almacenamiento local preservando las claves de autenticación
+      clearLocalDataPreservingAuth();
+
+      // 3. Resetear inmediatamente el estado en memoria de React a ceros / arreglos vacíos
       if (resetTransactions) resetTransactions();
       if (resetAccounts) resetAccounts();
       if (resetDebts) resetDebts();
@@ -78,22 +202,21 @@ export function useDataManagement({
       if (resetSavingsGoals) resetSavingsGoals();
       if (resetBudgets) resetBudgets();
 
-      // Limpieza de Service Worker Caches
-      try {
-        if (typeof window !== 'undefined' && 'caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map((k) => caches.delete(k)));
-        }
-      } catch (e) {
-        console.warn('Error clearing caches:', e);
-      }
+      if (setTransactions) setTransactions([]);
+      if (setAccounts) setAccounts([]);
+      if (setDebtsAndLoans) setDebtsAndLoans([]);
+      if (setInvestments) setInvestments([]);
+      if (setRecurringPayments) setRecurringPayments([]);
+      if (setSavingsGoals) setSavingsGoals([]);
+      if (setCategories) setCategories([]);
+      if (setBudgets) setBudgets({ global: 0, categories: {} });
 
-      // Purga de bases de datos locales en IndexedDB
+      // 4. Limpieza de bases de datos locales en IndexedDB preservando auth
       try {
         if (typeof window !== 'undefined' && window.indexedDB && window.indexedDB.databases) {
           const dbs = await window.indexedDB.databases();
           for (const db of dbs) {
-            if (db.name) {
+            if (db.name && !db.name.includes('auth')) {
               window.indexedDB.deleteDatabase(db.name);
             }
           }
@@ -102,35 +225,68 @@ export function useDataManagement({
         console.warn('Error clearing IndexedDB:', e);
       }
 
-      // Purga final de seguridad en storage
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch {}
+      // 5. Restablecer flag de reseteo para permitir nuevas operaciones normales
+      if (isResettingRef) {
+        setTimeout(() => {
+          isResettingRef.current = false;
+        }, 500);
+      }
 
-      // Redirección forzada al root/onboarding descartando caché en memoria
-      if (typeof window !== 'undefined') {
-        window.location.replace('/');
+      // 6. Asegurar que el modal del tutorial permanezca cerrado y no se reactive tras el reseteo
+      if (setShowTutorial) {
+        setShowTutorial(false);
       }
+      localStorage.setItem('presu_tutorial_completed', 'true');
+      localStorage.setItem('has_completed_tutorial', 'true');
+      localStorage.setItem('tutorial_completed', 'true');
+      localStorage.setItem('hasSeenTutorial', 'true');
+      localStorage.setItem('tutorial_seen', 'true');
+      localStorage.setItem('app_onboarding_completed', 'true');
+      localStorage.setItem('has_completed_onboarding', 'true');
+      localStorage.setItem('hasCompletedOnboarding', 'true');
+      if (user?.id && user.id !== 'local-user') {
+        localStorage.setItem(`presu_tutorial_completed_${user.id}`, 'true');
+        localStorage.setItem(`has_completed_tutorial_${user.id}`, 'true');
+        localStorage.setItem(`tutorial_completed_${user.id}`, 'true');
+        localStorage.setItem(`has_completed_onboarding_${user.id}`, 'true');
+        localStorage.setItem(`hasCompletedOnboarding_${user.id}`, 'true');
+      }
+
+      // 7. Notificación de éxito al usuario manteniendo la pantalla y sesión activas
+      toast.success('Todos los datos han sido restablecidos');
+      return true;
     } catch (error) {
-      console.error('Error al restablecer de fábrica:', error);
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch {}
-      if (typeof window !== 'undefined') {
-        window.location.replace('/');
+      console.error('Error al restablecer datos:', error);
+      clearLocalDataPreservingAuth();
+      if (setShowTutorial) {
+        setShowTutorial(false);
       }
+      if (isResettingRef) {
+        isResettingRef.current = false;
+      }
+      toast.error('Error al restablecer los datos');
+      return false;
     }
   }, [
     isResettingRef,
+    user,
+    setShowTutorial,
+    clearLocalDataPreservingAuth,
     resetTransactions,
     resetAccounts,
     resetDebts,
     resetInvestments,
     resetRecurringPayments,
     resetSavingsGoals,
-    resetBudgets
+    resetBudgets,
+    setTransactions,
+    setAccounts,
+    setDebtsAndLoans,
+    setInvestments,
+    setRecurringPayments,
+    setSavingsGoals,
+    setCategories,
+    setBudgets
   ]);
 
   const handleFullReset = handleFactoryReset;

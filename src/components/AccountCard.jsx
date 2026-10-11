@@ -49,76 +49,52 @@ export default function AccountCard({
     const totalExpenses = cardTxs.filter(t => t?.type === 'expense').reduce((s, t) => s + safeNumber(t?.amount), 0);
     const totalPayments = cardTxs.filter(t => t?.type === 'income').reduce((s, t) => s + safeNumber(t?.amount), 0);
     const saldoRestante = Math.round(Math.max(0, (initialDebt + totalExpenses) - (initialCredit + totalPayments)) * 100) / 100;
+    const creditLimit = Number(account?.creditLimit) || 5000000;
+    const cupoDisponible = Math.max(0, creditLimit - saldoRestante);
 
     return (
       <div
         onClick={onClick}
-        className={`p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 shadow-xs transition-all ${
+        className={`p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm transition-all ${
           isCreditCard ? 'cursor-pointer hover:border-slate-300 dark:hover:border-white/20 active:scale-[0.995]' : 'hover:border-slate-300 dark:hover:border-white/15'
         }`}
       >
-        <div className="flex items-center justify-between gap-3">
-          {/* Logo / Marca */}
-          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0 flex items-center justify-center">
-            <BrandIcon 
-              name={account?.name || 'Cuenta'} 
-              size={40} 
-              type={account?.type}
-            />
-          </div>
-
-          {/* Datos principales */}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-slate-900 dark:text-white text-base truncate leading-snug">
-                {account?.name || 'Sin nombre'}
-              </h4>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 shrink-0">
-                {currency}
-              </span>
+        {/* Fila superior (Cabecera): Icono, Nombre, Badges a la izquierda; Controles a la derecha */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Izquierda: Icono + Nombre + Badges */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 shrink-0 flex items-center justify-center">
+              <BrandIcon 
+                name={account?.name || 'Cuenta'} 
+                size={22} 
+                type={account?.type}
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-              <span className="inline-block text-xs text-slate-500 dark:text-slate-400 font-medium">
-                {typeLabel}
-              </span>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 truncate leading-snug">
+                  {account?.name || 'Sin nombre'}
+                </h4>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] shrink-0">
+                  {currency}
+                </span>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 shrink-0">
+                  {typeLabel}
+                </span>
+              </div>
               {isInvestment && shares > 0 && (
-                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">
+                <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">
                   • {account?.ticker ? `${account.ticker} · ` : ''}{shares} {shares === 1 ? 'acción' : 'acciones'}{unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)} c/u` : ''}
-                </span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Saldo y controles */}
-          <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
-            <div className="text-right">
-              {isCreditCard ? (
-                <span className={`font-bold text-lg tabular-nums block ${
-                  saldoRestante > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-                }`}>
-                  {saldoRestante > 0 ? `-${formatMoney(saldoRestante)}` : formatMoney(0)}
-                </span>
-              ) : isForeignCurrency ? (
-                <>
-                  <span className="font-bold text-base sm:text-lg tabular-nums block text-slate-900 dark:text-white">
-                    {formatNativeCurrency(currentBalance, currency)}
-                  </span>
-                  <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 block tabular-nums">
-                    ≈ $ {Math.round(balanceInCop).toLocaleString('es-CO')} COP
-                  </span>
-                </>
-              ) : (
-                <span className={`font-bold text-lg tabular-nums block ${
-                  currentBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
-                }`}>
-                  {formatMoney(currentBalance)}
-                </span>
-              )}
-            </div>
-
-            {/* Controles de reordenamiento ↑ y ↓ */}
+          {/* Derecha: Botones de reordenamiento y edición */}
+          <div className="shrink-0 flex items-center gap-1">
             {(onMoveUp || onMoveDown) && (
-              <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-0.5">
                 <button
                   type="button"
                   disabled={isFirst}
@@ -126,7 +102,7 @@ export default function AccountCard({
                     e.stopPropagation();
                     if (onMoveUp) onMoveUp();
                   }}
-                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Subir posición"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
@@ -138,7 +114,7 @@ export default function AccountCard({
                     e.stopPropagation();
                     if (onMoveDown) onMoveDown();
                   }}
-                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
                   title="Bajar posición"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -146,7 +122,6 @@ export default function AccountCard({
               </div>
             )}
 
-            {/* Botón de editar */}
             {onEdit && (
               <button
                 type="button"
@@ -154,7 +129,7 @@ export default function AccountCard({
                   e.stopPropagation();
                   onEdit(account);
                 }}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer"
                 title="Editar cuenta"
               >
                 <Pencil className="w-4 h-4" />
@@ -162,6 +137,58 @@ export default function AccountCard({
             )}
           </div>
         </div>
+
+        {/* Fila inferior (Cuerpo de saldo): Contenedor independiente con mt-3 sin colisiones */}
+        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-baseline justify-between gap-2 flex-wrap">
+          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+            {isCreditCard ? 'Saldo utilizado / Deuda' : 'Saldo disponible'}
+          </span>
+          <div className="text-right">
+            {isCreditCard ? (
+              <span className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums block ${
+                saldoRestante > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+              }`}>
+                {saldoRestante > 0 ? `-${formatMoney(saldoRestante)}` : formatMoney(0)}
+              </span>
+            ) : isForeignCurrency ? (
+              <>
+                <span className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums block">
+                  {formatNativeCurrency(currentBalance, currency)}
+                </span>
+                <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 font-mono tracking-tight block tabular-nums">
+                  ≈ $ {Math.round(balanceInCop).toLocaleString('es-CO')} COP
+                </span>
+              </>
+            ) : (
+              <span className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums block ${
+                currentBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-zinc-100'
+              }`}>
+                {formatMoney(currentBalance)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Si es Tarjeta de Crédito: cupo disponible y deuda visible */}
+        {isCreditCard && (
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-medium">
+            <span className="flex items-center gap-1.5">
+              <span>Cupo disponible:</span>
+              <strong className="text-emerald-600 dark:text-emerald-400 font-bold font-mono tabular-nums">
+                {formatMoney(cupoDisponible)}
+              </strong>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span>Deuda:</span>
+              <strong className="text-rose-600 dark:text-rose-400 font-bold font-mono tabular-nums">
+                {saldoRestante > 0 ? formatMoney(saldoRestante) : formatMoney(0)}
+              </strong>
+            </span>
+            <span className="tabular-nums shrink-0 text-zinc-500 text-[11px] sm:text-xs hidden sm:inline">
+              Corte: día {account?.closingDate || account?.paymentDueDate || 17} • Pago: día {account?.paymentDueDate || 17}
+            </span>
+          </div>
+        )}
       </div>
     );
   } catch (error) {

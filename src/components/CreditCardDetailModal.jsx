@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { 
   CreditCard, 
   X, 
@@ -162,12 +162,10 @@ export default function CreditCardDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 animate-fadeIn">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 animate-fadeIn">
       <div 
-        className="rounded-t-[32px] sm:rounded-3xl w-full max-w-lg shadow-2xl border animate-slide-up flex flex-col max-h-[92vh] overflow-hidden"
+        className="rounded-t-[32px] sm:rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 animate-slide-up flex flex-col max-h-[92vh] overflow-hidden"
         style={{ 
-          backgroundColor: 'var(--modal-bg, #141414)', 
-          borderColor: 'var(--border-color, rgba(255,255,255,0.1))',
           color: 'var(--text-main, #ffffff)' 
         }}
       >
@@ -178,7 +176,7 @@ export default function CreditCardDetailModal({
         <div className="p-4 sm:p-5 flex items-center justify-between border-b gap-3" style={{ borderColor: 'var(--border-color)' }}>
           <div className="flex items-center gap-3 min-w-0">
             <div 
-              className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0 overflow-hidden"
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0 overflow-hidden"
               style={{ backgroundColor: card.color || '#AF52DE' }}
             >
               <BrandIcon name={card.name} size={24} fallback={<DynamicIcon name={card.icon || 'CreditCard'} size={20} />} />
@@ -227,11 +225,11 @@ export default function CreditCardDetailModal({
         </div>
 
         {/* Contenido Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto scroll-touch p-4 sm:p-5 space-y-4">
           
           {/* 1. SECCIÓN DESTACADA: SALDO RESTANTE POR PAGAR (DEUDA ACTUAL) */}
           <div 
-            className="p-4 sm:p-5 rounded-2xl border relative overflow-hidden space-y-2 shadow-xs"
+            className="p-4 sm:p-5 rounded-2xl border relative overflow-hidden space-y-2 shadow-sm"
             style={{ 
               backgroundColor: 'var(--bg-card)', 
               borderColor: isPaidOff ? '#34C75940' : '#FF3B3040' 
@@ -259,7 +257,7 @@ export default function CreditCardDetailModal({
             </div>
 
             {/* Número Principal Grande */}
-            <div className={`text-[26px] sm:text-[30px] font-extrabold tracking-tight tabular-nums leading-none ${
+            <div className={`text-[26px] sm:text-[30px] font-extrabold font-mono tracking-tight tabular-nums leading-none ${
               isPaidOff ? 'text-[#34C759]' : 'text-[#FF3B30]'
             }`}>
               {formatMoney(outstandingDebt)}
@@ -282,7 +280,7 @@ export default function CreditCardDetailModal({
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
                   Cupo Disponible
                 </span>
-                <span className="text-[20px] font-bold text-[#34C759] tracking-tight tabular-nums">
+                <span className="text-[20px] font-bold font-mono text-[#34C759] tracking-tight tabular-nums">
                   {formatMoney(availableCredit)}
                 </span>
               </div>
@@ -290,7 +288,7 @@ export default function CreditCardDetailModal({
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
                   Cupo Total
                 </span>
-                <span className="text-[14px] font-bold tabular-nums" style={{ color: 'var(--text-main)' }}>
+                <span className="text-[14px] font-bold font-mono tabular-nums" style={{ color: 'var(--text-main)' }}>
                   {formatMoney(creditLimit)}
                 </span>
               </div>
@@ -471,7 +469,7 @@ export default function CreditCardDetailModal({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-bold bg-[#34C759] hover:bg-emerald-600 text-white rounded-xl shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  className="px-4 py-1.5 text-xs font-bold bg-[#34C759] hover:bg-emerald-600 text-white rounded-xl shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Confirmar Pago</span>
@@ -494,43 +492,50 @@ export default function CreditCardDetailModal({
                 <p className="text-xs font-medium opacity-60">Sin consumos o abonos registrados aún</p>
               </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06]">
                 {cardTxs.map((tx) => {
                   const isIncome = tx.type === 'income';
                   return (
                     <div 
                       key={tx.id}
-                      className="p-2.5 rounded-xl border flex items-center justify-between gap-2"
-                      style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
+                      className="p-3 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors flex flex-col justify-center gap-1"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <BrandIcon
-                          name={tx.note || tx.categoryName || ''}
-                          size={18}
-                          wrapperClassName="w-7 h-7 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center shrink-0 overflow-hidden"
-                          fallback={
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                              isIncome ? 'bg-[#34C759]/15 text-[#34C759]' : 'bg-[#FF3B30]/15 text-[#FF3B30]'
-                            }`}>
-                              {isIncome ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-                            </div>
-                          }
-                        />
-                        <div className="min-w-0">
-                          <span className="text-xs font-semibold truncate block" style={{ color: 'var(--text-main)' }}>
+                      {/* Línea 1 (Superior): Concepto a la izq y Monto a la der */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 max-w-[65%]">
+                          <BrandIcon
+                            name={tx.note || tx.categoryName || ''}
+                            size={14}
+                            wrapperClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 overflow-hidden border border-slate-200/60 dark:border-white/[0.06]"
+                            fallback={
+                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                                isIncome ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                              }`}>
+                                {isIncome ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                              </div>
+                            }
+                          />
+                          <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100 truncate">
                             {tx.note || tx.categoryName || (isIncome ? 'Abono Tarjeta' : 'Compra con Tarjeta')}
                           </span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-normal">
-                            {tx.date} {tx.categoryName ? `• ${tx.categoryName}` : ''}
-                          </span>
                         </div>
+
+                        <span className={`text-xs font-bold font-mono tracking-tight tabular-nums shrink-0 whitespace-nowrap ${
+                          isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-zinc-100'
+                        }`}>
+                          {isIncome ? '+' : '-'}{formatMoney(tx.amount)}
+                        </span>
                       </div>
 
-                      <span className={`text-xs font-bold tabular-nums shrink-0 ${
-                        isIncome ? 'text-[#34C759]' : 'text-[#FF3B30]'
-                      }`}>
-                        {isIncome ? '+' : '-'}{formatMoney(tx.amount)}
-                      </span>
+                      {/* Línea 2 (Inferior): Categoría a la izq y Fecha a la der */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-slate-500 dark:text-zinc-400 truncate max-w-[65%]">
+                          {tx.categoryName || (isIncome ? 'Abono a deuda' : 'Consumo TC')}
+                        </span>
+                        <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono shrink-0">
+                          {tx.date}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}

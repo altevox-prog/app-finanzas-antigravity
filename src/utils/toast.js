@@ -4,30 +4,33 @@
  */
 
 export const toast = {
-  success: (message) => {
+  success: (message, options) => {
     if (typeof window !== 'undefined') {
+      const detail = typeof message === 'object' && message !== null
+        ? { type: 'success', id: Date.now() + Math.random(), ...message }
+        : { message, ...(typeof options === 'object' && options !== null ? options : {}), type: 'success', id: Date.now() + Math.random() };
       window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: { message, type: 'success', id: Date.now() + Math.random() }
-        })
+        new CustomEvent('app-toast', { detail })
       );
     }
   },
-  error: (message) => {
+  error: (message, options) => {
     if (typeof window !== 'undefined') {
+      const detail = typeof message === 'object' && message !== null
+        ? { type: 'error', id: Date.now() + Math.random(), ...message }
+        : { message, ...(typeof options === 'object' && options !== null ? options : {}), type: 'error', id: Date.now() + Math.random() };
       window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: { message, type: 'error', id: Date.now() + Math.random() }
-        })
+        new CustomEvent('app-toast', { detail })
       );
     }
   },
-  info: (message) => {
+  info: (message, options) => {
     if (typeof window !== 'undefined') {
+      const detail = typeof message === 'object' && message !== null
+        ? { type: 'info', id: Date.now() + Math.random(), ...message }
+        : { message, ...(typeof options === 'object' && options !== null ? options : {}), type: 'info', id: Date.now() + Math.random() };
       window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: { message, type: 'info', id: Date.now() + Math.random() }
-        })
+        new CustomEvent('app-toast', { detail })
       );
     }
   }

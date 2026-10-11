@@ -141,10 +141,10 @@ export default function RecurringView({
     return (
       <div
         key={item.id}
-        className={`p-4 rounded-2xl bg-white dark:bg-[#121622] border transition-all shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+        className={`p-4 rounded-2xl bg-white dark:bg-zinc-900/90 border transition-all shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
           isActive 
-            ? 'border-slate-200/80 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15' 
-            : 'border-slate-200/40 dark:border-white/5 opacity-60 bg-slate-50/50 dark:bg-white/[0.01]'
+            ? 'border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15' 
+            : 'border-slate-200/40 dark:border-white/[0.08] opacity-60 bg-slate-50/50 dark:bg-white/[0.01]'
         }`}
       >
         {/* Columna Izquierda: Icono + Detalles */}
@@ -152,7 +152,7 @@ export default function RecurringView({
           <BrandIcon
             name={item.name || item.categoryName || ''}
             size={24}
-            wrapperClassName="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0 shadow-2xs overflow-hidden border border-slate-200/50 dark:border-white/5"
+            wrapperClassName="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden border border-slate-200/50 dark:border-white/5"
             fallback={
               <CategoryIcon
                 category={categoryObj || item.categoryName}
@@ -205,13 +205,13 @@ export default function RecurringView({
         <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
           {/* Monto */}
           <div className="text-right">
-            <span className={`font-bold text-base tabular-nums whitespace-nowrap block leading-tight ${
+            <span className={`font-bold font-mono tracking-tight text-base tabular-nums whitespace-nowrap block leading-tight ${
               isExpense ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
             }`}>
               {isExpense ? '-' : '+'}{formatMoney(item.amount)}
             </span>
             {item.originalCurrency && item.originalCurrency !== 'COP' && (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 tabular-nums">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-tight tabular-nums">
                 ({Number(item.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.originalCurrency})
               </span>
             )}
@@ -268,7 +268,7 @@ export default function RecurringView({
             <button
               type="button"
               onClick={handleGoBack}
-              className="w-9 h-9 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-[#121622] shadow-2xs shrink-0"
+              className="w-9 h-9 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/60 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-sm shrink-0"
               aria-label="Volver"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -296,7 +296,7 @@ export default function RecurringView({
       </div>
 
       {/* B. Tarjeta de Resumen Mensual (KPI Card) */}
-      <div className="rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 p-5 shadow-sm relative overflow-hidden">
+      <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] p-5 shadow-sm relative overflow-hidden">
         {/* Halo esmeralda tenue */}
         <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full blur-3xl pointer-events-none opacity-20 dark:opacity-30 bg-emerald-500" />
 
@@ -307,7 +307,7 @@ export default function RecurringView({
         <div className="flex items-baseline gap-2 relative z-10 my-1">
           {hasActivePayments ? (
             <>
-              <span className="text-2xl sm:text-3xl font-extrabold tabular-nums tracking-tight text-slate-900 dark:text-white">
+              <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">
                 {formatMoney(totalMonthlyProjected)}
               </span>
               <span className="text-xs font-normal text-slate-500 dark:text-slate-400">

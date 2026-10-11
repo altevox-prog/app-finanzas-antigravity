@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Search, 
   Trash2, 
@@ -23,6 +24,7 @@ import AccountCombobox from './AccountCombobox';
 import CategoryIcon from './CategoryIcon';
 import FinancialIcon from './common/FinancialIcon';
 import BrandIcon from './BrandIcon';
+import SegmentedControl from './common/SegmentedControl';
 import { useBackHandler } from '../hooks/useBackHandler';
 
 export default function TransactionList({ 
@@ -45,6 +47,7 @@ export default function TransactionList({
   onOpenTransaction,
   onOpenAddTransaction,
   setIsAddTransactionOpen,
+  modalControls,
   trm = 4000
 }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,26 +120,44 @@ export default function TransactionList({
   // Sort transactions by date descending (newest first)
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
   const sortedTransactions = [...safeTransactions].sort((a, b) => {
-    return new Date(b.date + 'T00:00:00') - new Date(a.date + 'T00:00:00');
+    const dateA = a?.date ? String(a.date).split('T')[0] : (a?.created_at ? String(a.created_at).split('T')[0] : '');
+    const dateB = b?.date ? String(b.date).split('T')[0] : (b?.created_at ? String(b.created_at).split('T')[0] : '');
+    return new Date((dateB || '1970-01-01') + 'T00:00:00') - new Date((dateA || '1970-01-01') + 'T00:00:00');
   });
 
-  // Filter by day if selectedDay is active, plus search and type filters
+  // Filter by day if selectedDay is active, plus search, type, and account filters
   const filteredTransactions = sortedTransactions.filter((tx) => {
-    if (selectedDay && tx.date !== selectedDay) {
-      return false;
+    if (!tx) return false;
+    const txDate = tx.date ? String(tx.date).split('T')[0] : (tx.created_at ? String(tx.created_at).split('T')[0] : '');
+
+    if (selectedDay) {
+      const targetDay = String(selectedDay).split('T')[0];
+      if (txDate !== targetDay) {
+        return false;
+      }
     }
 
-    const matchesSearch = 
-      (tx.note && tx.note.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (tx.categoryName && tx.categoryName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (tx.subcategoryName && tx.subcategoryName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (tx.accountName && tx.accountName.toLowerCase().includes(searchTerm.toLowerCase()));
+    const searchLower = searchTerm.trim().toLowerCase();
+    const matchesSearch = !searchLower ||
+      (tx.note && String(tx.note).toLowerCase().includes(searchLower)) ||
+      (tx.notes && String(tx.notes).toLowerCase().includes(searchLower)) ||
+      (tx.description && String(tx.description).toLowerCase().includes(searchLower)) ||
+      (tx.category && String(tx.category).toLowerCase().includes(searchLower)) ||
+      (tx.categoryName && String(tx.categoryName).toLowerCase().includes(searchLower)) ||
+      (tx.subcategoryName && String(tx.subcategoryName).toLowerCase().includes(searchLower)) ||
+      (tx.accountName && String(tx.accountName).toLowerCase().includes(searchLower));
 
-    const matchesType = typeFilter === 'all' || tx.type === typeFilter;
-    const matchesAccount = accountFilter === 'all' || tx.accountId === accountFilter;
+    const rawType = String(tx.type || '').toLowerCase();
+    const normalizedTxType = (rawType === 'gasto' || rawType === 'expense') ? 'expense' : ((rawType === 'ingreso' || rawType === 'income') ? 'income' : rawType);
+    const matchesType = typeFilter === 'all' || normalizedTxType === typeFilter;
+
+    const txAccountId = tx.accountId || tx.account_id;
+    const matchesAccount = accountFilter === 'all' || txAccountId === accountFilter;
 
     return matchesSearch && matchesType && matchesAccount;
   });
+
+  console.log('[TransactionsView] Total recibidas:', transactions?.length, 'Filtradas para mostrar:', filteredTransactions?.length);
 
   const displayTransactions = limit ? filteredTransactions.slice(0, limit) : filteredTransactions;
 
@@ -253,7 +274,7 @@ export default function TransactionList({
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-[15px] sm:text-[18px] font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
+            <h2 className="text-[15px] sm:text-[18px] font-bold tracking-tight text-slate-900 dark:text-white">
               {isCompact ? 'Movimientos Recientes' : (selectedDay 
                 ? `Gastos del ${selectedDay.split('-')[2]} de ${MONTH_NAMES[parseInt(selectedDay.split('-')[1]) - 1]}` 
                 : 'Movimientos')} {!isCompact && `(${filteredTransactions.length})`}
@@ -289,11 +310,17 @@ export default function TransactionList({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (onOpenTransaction) onOpenTransaction();
-              else if (onOpenAddTransaction) onOpenAddTransaction();
-              else if (setIsAddTransactionOpen) setIsAddTransactionOpen(true);
+              if (modalControls && typeof modalControls.openAddTransaction === 'function') {
+                modalControls.openAddTransaction('expense');
+              } else if (onOpenTransaction) {
+                onOpenTransaction('expense');
+              } else if (onOpenAddTransaction) {
+                onOpenAddTransaction('expense');
+              } else if (setIsAddTransactionOpen) {
+                setIsAddTransactionOpen(true);
+              }
             }}
-            className={`${isCompact ? 'flex px-2.5 py-1 text-xs' : 'hidden lg:flex py-2 px-3.5 text-xs'} bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs active:scale-95 transition-all items-center gap-1.5 cursor-pointer shrink-0`}
+            className={`${isCompact ? 'flex px-2.5 py-1 text-xs' : 'flex py-2 px-3.5 text-xs'} bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-sm active:scale-95 transition-all items-center gap-1.5 cursor-pointer shrink-0`}
             title="Nuevo Movimiento"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -313,11 +340,7 @@ export default function TransactionList({
                 placeholder="Buscar por nota, categoría o cuenta..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border border-transparent focus:outline-none transition-all"
-                style={{ 
-                  backgroundColor: 'var(--bg-input)', 
-                  color: 'var(--text-main)'
-                }}
+                className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none transition-all"
               />
               {searchTerm && (
                 <button 
@@ -329,55 +352,40 @@ export default function TransactionList({
               )}
             </div>
 
-            {/* Segmented Control Tipo: Todos | Ingresos | Gastos */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="ios-segmented flex-1">
-                <button
-                  type="button"
-                  onClick={() => setTypeFilter('all')}
-                  className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
-                    typeFilter === 'all'
-                      ? 'bg-[#007AFF] text-white shadow-xs font-bold'
-                      : 'opacity-60 hover:opacity-100'
-                  }`}
-                  style={{ 
-                    backgroundColor: typeFilter === 'all' ? undefined : 'transparent', 
-                    color: typeFilter === 'all' ? '#FFFFFF' : 'var(--text-main)' 
-                  }}
-                >
-                  Todos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTypeFilter('income')}
-                  className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
-                    typeFilter === 'income'
-                      ? 'bg-[#34C759] text-white shadow-xs font-bold'
-                      : 'opacity-60 hover:opacity-100'
-                  }`}
-                  style={{ 
-                    backgroundColor: typeFilter === 'income' ? undefined : 'transparent', 
-                    color: typeFilter === 'income' ? '#FFFFFF' : 'var(--text-main)' 
-                  }}
-                >
-                  Ingresos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTypeFilter('expense')}
-                  className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
-                    typeFilter === 'expense'
-                      ? 'bg-[#FF3B30] text-white shadow-xs font-bold'
-                      : 'opacity-60 hover:opacity-100'
-                  }`}
-                  style={{ 
-                    backgroundColor: typeFilter === 'expense' ? undefined : 'transparent', 
-                    color: typeFilter === 'expense' ? '#FFFFFF' : 'var(--text-main)' 
-                  }}
-                >
-                  Gastos
-                </button>
+            {/* Segmented Control Tipo: Todos | Ingresos | Gastos y Selector de Período */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              <div className="flex-1">
+                <SegmentedControl
+                  options={[
+                    { id: 'all', label: 'Todos' },
+                    { id: 'income', label: 'Ingresos' },
+                    { id: 'expense', label: 'Gastos' }
+                  ]}
+                  value={typeFilter}
+                  onChange={setTypeFilter}
+                  size="md"
+                />
               </div>
+              {onSelectDay && (
+                <div className="w-full sm:w-44 shrink-0">
+                  <SegmentedControl
+                    options={[
+                      { id: 'month', label: 'Mes' },
+                      { id: 'day', label: selectedDay ? `Día ${selectedDay.split('-')[2]}` : 'Día' }
+                    ]}
+                    value={selectedDay ? 'day' : 'month'}
+                    onChange={(val) => {
+                      if (val === 'month') {
+                        onSelectDay(null);
+                      } else {
+                        const today = new Date().toISOString().split('T')[0];
+                        onSelectDay(selectedDay || today);
+                      }
+                    }}
+                    size="md"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Quick Filter Horizontal Scroll by Account */}
@@ -387,13 +395,9 @@ export default function TransactionList({
                 onClick={() => setAccountFilter('all')}
                 className={`px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all ${
                   accountFilter === 'all'
-                    ? 'bg-[#007AFF] text-white shadow-xs font-bold'
-                    : 'opacity-60 hover:opacity-100'
+                    ? 'bg-[#007AFF] text-white shadow-sm font-bold'
+                    : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 opacity-75 hover:opacity-100'
                 }`}
-                style={{ 
-                  backgroundColor: accountFilter === 'all' ? undefined : 'var(--bg-input)', 
-                  color: accountFilter === 'all' ? '#FFFFFF' : 'var(--text-main)' 
-                }}
               >
                 Todas
               </button>
@@ -404,13 +408,9 @@ export default function TransactionList({
                   onClick={() => setAccountFilter(acc.id)}
                   className={`px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 ${
                     accountFilter === acc.id
-                      ? 'bg-[#007AFF] text-white shadow-xs font-bold'
-                      : 'opacity-60 hover:opacity-100'
+                      ? 'bg-[#007AFF] text-white shadow-sm font-bold'
+                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 opacity-75 hover:opacity-100'
                   }`}
-                  style={{ 
-                    backgroundColor: accountFilter === acc.id ? undefined : 'var(--bg-input)', 
-                    color: accountFilter === acc.id ? '#FFFFFF' : 'var(--text-main)' 
-                  }}
                 >
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acc.color || '#007AFF' }} />
                   <span>{acc.name}</span>
@@ -423,11 +423,10 @@ export default function TransactionList({
       {/* Transaction List Items */}
       {displayTransactions.length === 0 ? (
         <div 
-          className="text-center py-8 px-4 border border-dashed rounded-2xl"
-          style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card-sub)' }}
+          className="text-center py-8 px-4 border border-dashed border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 rounded-2xl"
         >
           <Inbox className="w-8 h-8 opacity-30 mx-auto mb-2" />
-          <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+          <p className="text-xs font-bold text-slate-900 dark:text-white">
             {selectedDay ? 'No hay movimientos en este día' : 'Sin movimientos registrados este mes'}
           </p>
           <p className="text-[11px] opacity-50 mt-0.5">
@@ -449,7 +448,7 @@ export default function TransactionList({
                   else if (setIsAddTransactionOpen) setIsAddTransactionOpen(true);
                   else if (onOpenAddTransaction) onOpenAddTransaction();
                 }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Nuevo Movimiento</span>
@@ -458,7 +457,7 @@ export default function TransactionList({
             {selectedDay && onSelectDay && (
               <button
                 onClick={() => onSelectDay(null)}
-                className="px-3.5 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-xs active:scale-95 cursor-pointer"
+                className="px-3.5 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 cursor-pointer"
               >
                 Mostrar todo el mes
               </button>
@@ -466,7 +465,7 @@ export default function TransactionList({
           </div>
         </div>
       ) : (
-        <div className={`space-y-2 pr-0.5 ${isCompact ? '' : 'lg:max-h-[640px] lg:overflow-y-auto'}`}>
+        <div className={`rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06] ${isCompact ? '' : 'lg:max-h-[640px] lg:overflow-y-auto'}`}>
           {displayTransactions.map((tx) => {
             const isExpense = tx.type === 'expense';
             const categoryObj = categories.find(c => c.id === tx.categoryId);
@@ -476,105 +475,103 @@ export default function TransactionList({
               <div 
                 key={tx.id} 
                 onClick={() => setSelectedDetailTx(tx)}
-                className="p-3 flex items-center justify-between rounded-xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200/50 dark:border-white/5 hover:bg-slate-100/80 dark:hover:bg-white/[0.06] transition-all select-none gap-2 sm:gap-3 cursor-pointer active:scale-[0.99]"
+                className="min-h-[52px] p-3 sm:p-4 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex flex-col justify-center gap-1 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05]"
               >
-                {/* Columna Izquierda: Icono de categoría con su cápsula de color */}
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pr-1.5 sm:pr-2">
-                  <BrandIcon
-                    name={tx.note || tx.categoryName || ''}
-                    size={22}
-                    wrapperClassName="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0 shadow-2xs overflow-hidden"
-                    fallback={
-                      <CategoryIcon
-                        category={categoryObj || tx.categoryName}
-                        status={isExpense ? 'negative' : 'positive'}
-                        size={20}
-                        withBadge={true}
+                {/* Línea 1 (Superior): Concepto/Descripción a la izq y Monto a la der */}
+                <div className="flex items-center justify-between gap-2">
+                  {/* Izquierda: Icono de categoría + Concepto/Descripción */}
+                  <div className="flex items-center gap-2 min-w-0 max-w-[60%]">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60 dark:border-white/[0.06] shadow-sm">
+                      <BrandIcon
+                        name={tx.note || tx.categoryName || ''}
+                        size={14}
+                        fallback={
+                          <CategoryIcon
+                            category={categoryObj || tx.categoryName}
+                            status={isExpense ? 'negative' : 'positive'}
+                            size={14}
+                            withBadge={false}
+                          />
+                        }
                       />
-                    }
-                  />
-
-                  {/* Centro: Fila 1 Concepto/Nombre + Fila 2 Metadatos (Píldora cuenta + Subcategoría) */}
-                  <div className="flex flex-col min-w-0 flex-1">
-                    {/* Fila 1: Concepto/Nombre del movimiento */}
-                    <span className="font-semibold text-slate-900 dark:text-white text-sm truncate block leading-snug">
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
                       {tx.note || tx.categoryName}
                     </span>
-
-                    {/* Fila 2 (Metadatos limpios): Píldora de cuenta + Subcategoría */}
-                    <div className="flex items-center gap-1.5 pt-0.5 min-w-0">
-                      <span 
-                        className="font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 leading-none shrink-0 text-[11px] bg-white dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 shadow-2xs"
-                      >
-                        <BrandIcon 
-                          name={tx.accountName} 
-                          type={accountObj?.type} 
-                          size={13} 
-                          className="shrink-0"
-                          fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: accountObj?.color || '#10B981' }} />}
-                        />
-                        <span className="truncate max-w-[110px] sm:max-w-[150px]">{tx.accountName}</span>
-                      </span>
-
-                      {tx.subcategoryName && (
-                        <>
-                          <span className="opacity-40 shrink-0 text-xs text-slate-400">•</span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
-                            {tx.subcategoryName}
-                          </span>
-                        </>
-                      )}
-                    </div>
                   </div>
-                </div>
 
-                {/* Columna Derecha: Recibo + Bloque vertical de Monto y Fecha + Botón de editar */}
-                <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-                  {tx.receiptImage && (
+                  {/* Derecha: Monto monetario */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums whitespace-nowrap ${
+                      isExpense ? 'text-slate-900 dark:text-zinc-100' : 'text-emerald-600 dark:text-emerald-400'
+                    }`}>
+                      {isExpense ? '-' : '+'}{formatMoney(tx.amount)}
+                    </span>
+
+                    {/* Botón de acción / editar (en desktop / tablet) */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setViewingReceiptTx(tx);
+                        handleOpenEdit(tx);
                       }}
-                      className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-full transition-colors shrink-0 cursor-pointer mr-0.5"
-                      title="Ver recibo adjunto"
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg active:scale-95 transition-colors cursor-pointer hidden md:flex"
+                      title="Editar movimiento"
+                      aria-label="Editar"
                     >
-                      <Camera className="w-3 h-3" />
-                      <span className="hidden xs:inline">Recibo</span>
+                      <Pencil className="w-3.5 h-3.5" />
                     </button>
-                  )}
+                  </div>
+                </div>
 
-                  {/* Bloque vertical de Monto y Fecha */}
-                  <div className="flex flex-col items-end text-right">
-                    <span className={`text-base font-bold tracking-tight leading-tight tabular-nums whitespace-nowrap ${
-                      isExpense ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-                    }`}>
-                      {isExpense ? '-' : '+'}{formatMoney(tx.amount)}
+                {/* Línea 2 (Inferior): Badge compacto de cuenta a la izq y Fecha/hora a la der */}
+                <div className="flex items-center justify-between gap-2">
+                  {/* Izquierda: Badge de cuenta + subcategoría / recibo */}
+                  <div className="flex items-center gap-1.5 min-w-0 max-w-[60%]">
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 truncate inline-flex items-center gap-1.5">
+                      <BrandIcon 
+                        name={tx.accountName} 
+                        type={accountObj?.type} 
+                        size={11} 
+                        className="shrink-0"
+                        fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: accountObj?.color || '#10B981' }} />}
+                      />
+                      <span className="truncate">{tx.accountName}</span>
                     </span>
+
+                    {tx.subcategoryName && (
+                      <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono truncate hidden xs:inline">
+                        • {tx.subcategoryName}
+                      </span>
+                    )}
+
+                    {tx.receiptImage && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewingReceiptTx(tx);
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md hover:bg-emerald-500/20 transition-colors shrink-0 cursor-pointer"
+                        title="Ver recibo adjunto"
+                      >
+                        <Camera className="w-3 h-3" />
+                        <span className="hidden sm:inline">Recibo</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Derecha: Moneda original + Fecha/hora */}
+                  <div className="flex items-center gap-2 shrink-0">
                     {tx.originalCurrency && tx.originalCurrency !== 'COP' && (
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium tabular-nums whitespace-nowrap mt-0.5">
+                      <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono tabular-nums hidden sm:inline">
                         ({Number(tx.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {tx.originalCurrency})
                       </span>
                     )}
-                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-1 leading-none tabular-nums whitespace-nowrap">
+                    <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono shrink-0">
                       {formatTxDateClean(tx)}
                     </span>
                   </div>
-
-                  {/* Botón de acción / editar */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenEdit(tx);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg active:scale-95 transition-colors shrink-0 cursor-pointer"
-                    title="Editar movimiento"
-                    aria-label="Editar"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             );
@@ -584,7 +581,7 @@ export default function TransactionList({
 
       {/* Botón 'Ver todos los movimientos' al final de la lista */}
       {onViewAll && (
-        <div className="pt-2.5 border-t mt-2" style={{ borderColor: 'var(--border-color)' }}>
+        <div className="pt-2.5 border-t border-slate-200/80 dark:border-white/[0.08] mt-2">
           <button
             type="button"
             onMouseDown={(e) => e.stopPropagation()}
@@ -596,8 +593,7 @@ export default function TransactionList({
               }
               onViewAll();
             }}
-            className="w-full py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-emerald-600 dark:text-[#29D691] hover:bg-emerald-500/10 active:scale-98 transition-all cursor-pointer"
-            style={{ backgroundColor: 'var(--bg-card-sub)' }}
+            className="w-full py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-emerald-600 dark:text-[#29D691] bg-slate-100 dark:bg-zinc-800/80 hover:bg-emerald-500/10 active:scale-98 transition-all cursor-pointer"
           >
             <span>Ver todos los movimientos</span>
             <ArrowRight className="w-4 h-4" />
@@ -607,68 +603,54 @@ export default function TransactionList({
 
       {/* Modal para Editar Transacción */}
       {editingTx && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg bg-white dark:bg-[#12141C] rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh] shadow-2xl overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-slide-up">
             {/* Header Fijo */}
-            <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+            <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-lg text-slate-900 dark:text-white">Editar Transacción</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Modifica los detalles y recalcula balances</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Editar Transacción</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Modifica los detalles y recalcula balances</p>
               </div>
               <button 
                 type="button"
                 onClick={() => setEditingTx(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer"
+                title="Cerrar modal"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Cuerpo del Formulario con scroll independiente */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
-              {/* iOS Segmented Control: Gasto vs Ingreso */}
+              {/* Segmented Control: Gasto vs Ingreso */}
               <div className="flex justify-center">
-                <div className="ios-segmented w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditType('expense');
-                      const expCats = categories.filter(c => c.type === 'expense');
-                      if (expCats.length > 0) setEditCategoryId(expCats[0].id);
-                    }}
-                    className={`ios-segmented-btn flex-1 sm:flex-initial flex items-center justify-center gap-1 ${
-                      editType === 'expense' ? 'ios-segmented-btn-active text-[#FF3B30]' : 'text-slate-500'
-                    }`}
-                  >
-                    <ArrowDownRight className="w-3.5 h-3.5" />
-                    <span>Gasto</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditType('income');
-                      const incCats = categories.filter(c => c.type === 'income');
-                      if (incCats.length > 0) setEditCategoryId(incCats[0].id);
-                    }}
-                    className={`ios-segmented-btn flex-1 sm:flex-initial flex items-center justify-center gap-1 ${
-                      editType === 'income' ? 'ios-segmented-btn-active text-[#34C759]' : 'text-slate-500'
-                    }`}
-                  >
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                    <span>Ingreso</span>
-                  </button>
-                </div>
+                <SegmentedControl
+                  options={[
+                    { id: 'expense', label: 'Gasto', icon: ArrowDownRight },
+                    { id: 'income', label: 'Ingreso', icon: ArrowUpRight }
+                  ]}
+                  value={editType}
+                  onChange={(newType) => {
+                    setEditType(newType);
+                    const cats = categories.filter(c => c.type === newType);
+                    if (cats.length > 0) setEditCategoryId(cats[0].id);
+                  }}
+                  size="md"
+                  fullWidth={false}
+                  className="w-full sm:w-64"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Monto y Selector de Moneda */}
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                     Monto ({editOriginalCurrency === 'COP' ? '$ COP' : editOriginalCurrency}) *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 font-bold text-sm">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 font-black text-lg text-slate-900 dark:text-zinc-100">
                       {editOriginalCurrency === 'EUR' ? '€' : '$'}
                     </span>
                     <input
@@ -679,8 +661,7 @@ export default function TransactionList({
                       value={editAmount}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setEditAmount(formatCurrencyInput(e.target.value, enableDecimals))}
-                      className="w-full text-base font-black pl-8 pr-3.5 py-2.5 border border-transparent rounded-xl focus:outline-none tabular-nums"
-                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+                      className="w-full pl-8 pr-3.5 h-12 text-2xl font-bold font-mono tracking-tight bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all tabular-nums"
                     />
                   </div>
 
@@ -708,7 +689,7 @@ export default function TransactionList({
                           }}
                           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-emerald-500 text-white shadow-xs font-bold scale-[1.02]'
+                              ? 'bg-emerald-500 text-white shadow-sm font-bold scale-[1.02]'
                               : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200/70 dark:hover:bg-white/10'
                           }`}
                         >
@@ -752,20 +733,19 @@ export default function TransactionList({
 
                 {/* Fecha */}
                 <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">Fecha *</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Fecha *</label>
                   <input
                     type="date"
                     required
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full text-xs px-3 py-2.5 border border-transparent rounded-xl focus:outline-none"
-                    style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+                    className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
                   />
                 </div>
 
                 {/* Categoría Principal con CategoryCombobox */}
                 <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">Categoría Principal *</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Categoría Principal *</label>
                   <CategoryCombobox
                     categories={categories}
                     selectedCategoryId={editCategoryId}
@@ -785,7 +765,7 @@ export default function TransactionList({
 
                 {/* Subcategoría con SubcategoryCombobox */}
                 <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">Subcategoría</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Subcategoría</label>
                   <SubcategoryCombobox
                     subcategories={availableEditSubcategories}
                     selectedSubcategoryId={editSubcategoryId}
@@ -799,7 +779,7 @@ export default function TransactionList({
 
                 {/* Cuenta con AccountCombobox */}
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">Cuenta *</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Cuenta *</label>
                   <AccountCombobox
                     accounts={accounts}
                     selectedAccountId={editAccountId}
@@ -810,14 +790,13 @@ export default function TransactionList({
 
                 {/* Nota */}
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">Nota / Descripción</label>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Nota / Descripción</label>
                   <input
                     type="text"
                     value={editNote}
                     onChange={(e) => setEditNote(e.target.value)}
                     placeholder="Descripción del movimiento..."
-                    className="w-full text-xs px-3.5 py-2.5 border border-transparent rounded-xl focus:outline-none"
-                    style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+                    className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
                   />
                 </div>
 
@@ -846,8 +825,7 @@ export default function TransactionList({
                     <button
                       type="button"
                       onClick={() => editFileInputRef.current?.click()}
-                      className="w-full py-2 px-3 border border-dashed rounded-xl flex items-center justify-center gap-2 hover:border-[#007AFF] hover:bg-blue-50/50 dark:hover:bg-blue-900/20 active:scale-98 transition-all group cursor-pointer"
-                      style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card-sub)' }}
+                      className="w-full py-2 px-3 border border-dashed border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800/60 rounded-xl flex items-center justify-center gap-2 hover:border-[#007AFF] hover:bg-blue-50/50 dark:hover:bg-blue-900/20 active:scale-98 transition-all group cursor-pointer"
                     >
                       <Camera className="w-4 h-4 text-[#007AFF]" />
                       <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
@@ -856,10 +834,9 @@ export default function TransactionList({
                     </button>
                   ) : (
                     <div 
-                      className="p-2.5 rounded-xl border flex items-center gap-3 shadow-2xs"
-                      style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
+                      className="p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800/80 flex items-center gap-3 shadow-sm"
                     >
-                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 bg-black/5 relative">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-zinc-800 relative">
                         <img 
                           src={editReceiptImage} 
                           alt="Recibo adjunto" 
@@ -868,7 +845,7 @@ export default function TransactionList({
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                        <p className="text-xs font-bold truncate text-slate-900 dark:text-white">
                           Comprobante adjunto
                         </p>
                         <button
@@ -899,7 +876,7 @@ export default function TransactionList({
               </div>
 
               {/* Footer Fijo / Sticky */}
-              <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-[#181B26] border-t border-slate-200 dark:border-white/10 flex items-center justify-between gap-3">
+              <div className="shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-zinc-900/90 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -908,7 +885,7 @@ export default function TransactionList({
                       setEditingTx(null);
                     }
                   }}
-                  className="px-3.5 py-2.5 text-xs font-bold text-[#FF3B30] hover:bg-rose-500/10 rounded-xl transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  className="h-11 px-3.5 text-sm font-medium text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Eliminar</span>
@@ -918,13 +895,13 @@ export default function TransactionList({
                   <button
                     type="button"
                     onClick={() => setEditingTx(null)}
-                    className="px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                    className="h-11 px-4 rounded-lg font-medium text-sm text-slate-700 dark:text-zinc-300 hover:bg-slate-200/60 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-xs active:scale-95 cursor-pointer"
+                    className="h-11 px-5 rounded-lg font-medium text-sm transition-all shadow-sm active:scale-[0.99] flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
                   >
                     Guardar cambios
                   </button>
@@ -942,8 +919,7 @@ export default function TransactionList({
           onClick={() => setViewingReceiptTx(null)}
         >
           <div 
-            className="rounded-3xl p-5 max-w-sm w-full shadow-2xl border space-y-3.5 animate-slide-up"
-            style={{ backgroundColor: 'var(--modal-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+            className="rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white space-y-3.5 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -959,14 +935,13 @@ export default function TransactionList({
               <button
                 type="button"
                 onClick={() => setViewingReceiptTx(null)}
-                className="w-7 h-7 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 cursor-pointer"
-                style={{ backgroundColor: 'var(--bg-card-sub)' }}
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 opacity-60 hover:opacity-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="rounded-2xl overflow-hidden max-h-[55vh] bg-black/5 flex items-center justify-center border" style={{ borderColor: 'var(--border-color)' }}>
+            <div className="rounded-2xl overflow-hidden max-h-[55vh] bg-slate-100 dark:bg-zinc-800 flex items-center justify-center border border-slate-200/80 dark:border-white/[0.08]">
               <img 
                 src={viewingReceiptTx.receiptImage} 
                 alt="Foto del recibo" 
@@ -982,8 +957,7 @@ export default function TransactionList({
             <button
               type="button"
               onClick={() => setViewingReceiptTx(null)}
-              className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-              style={{ backgroundColor: 'var(--bg-card-sub)', color: 'var(--text-main)' }}
+              className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700 cursor-pointer"
             >
               Cerrar
             </button>
@@ -998,14 +972,13 @@ export default function TransactionList({
           onClick={() => setSelectedDetailTx(null)}
         >
           <div 
-            className="rounded-t-[32px] sm:rounded-3xl p-5 sm:p-6 max-w-sm sm:max-w-md w-full shadow-2xl border space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: 'var(--modal-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+            className="rounded-t-[32px] sm:rounded-2xl p-5 sm:p-6 max-w-sm sm:max-w-md w-full shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* iOS Handle */}
             <div className="w-10 h-1 bg-slate-500/30 rounded-full mx-auto sm:hidden shrink-0" />
 
-            <div className="flex items-center justify-between pb-2 border-b" style={{ borderColor: 'var(--border-color)' }}>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-white/[0.08]">
               <div>
                 <h4 className="text-base font-bold">Detalle del Movimiento</h4>
                 <p className="text-[11px] opacity-60">Información completa registrada</p>
@@ -1013,19 +986,18 @@ export default function TransactionList({
               <button
                 type="button"
                 onClick={() => setSelectedDetailTx(null)}
-                className="w-7 h-7 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 cursor-pointer text-sm font-bold"
-                style={{ backgroundColor: 'var(--bg-card-sub)' }}
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 opacity-60 hover:opacity-100 cursor-pointer text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
             {/* Hero con Monto y Tipo */}
-            <div className="text-center py-3.5 px-4 rounded-2xl border space-y-1" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
+            <div className="text-center py-3.5 px-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/50 space-y-1">
               <BrandIcon 
                 name={selectedDetailTx.note || selectedDetailTx.categoryName || ''} 
                 size={30} 
-                wrapperClassName="w-11 h-11 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center shadow-xs overflow-hidden mx-auto mb-2" 
+                wrapperClassName="w-11 h-11 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center shadow-sm overflow-hidden mx-auto mb-2" 
                 fallback={null} 
               />
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold mb-1" style={{
@@ -1076,7 +1048,7 @@ export default function TransactionList({
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
+              <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
                 <span className="opacity-60 font-medium">Categoría</span>
                 <span className="font-bold flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categories.find(c => c.id === selectedDetailTx.categoryId)?.color || '#007AFF' }} />
@@ -1085,13 +1057,13 @@ export default function TransactionList({
               </div>
 
               {selectedDetailTx.subcategoryName && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
+                <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
                   <span className="opacity-60 font-medium">Subcategoría / Etiqueta</span>
                   <span className="font-bold">{selectedDetailTx.subcategoryName}</span>
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
+              <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
                 <span className="opacity-60 font-medium">Cuenta / Tarjeta</span>
                 <span className="font-bold flex items-center gap-1.5">
                   <BrandIcon name={selectedDetailTx.accountName || 'Principal'} size={18} />
@@ -1099,13 +1071,13 @@ export default function TransactionList({
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl border" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
+              <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
                 <span className="opacity-60 font-medium">Fecha y Hora</span>
                 <span className="font-semibold tabular-nums">{formatTxDateTime(selectedDetailTx)}</span>
               </div>
 
               {selectedDetailTx.receiptImage && (
-                <div className="p-2.5 rounded-xl border space-y-1.5" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
+                <div className="p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40 space-y-1.5">
                   <span className="opacity-60 font-medium block">Comprobante / Recibo</span>
                   <div 
                     onClick={() => {
@@ -1113,8 +1085,7 @@ export default function TransactionList({
                       setSelectedDetailTx(null);
                       setViewingReceiptTx(imgTx);
                     }}
-                    className="relative rounded-lg overflow-hidden border max-h-36 cursor-pointer group flex items-center justify-center bg-black/10"
-                    style={{ borderColor: 'var(--border-color)' }}
+                    className="relative rounded-lg overflow-hidden border border-slate-200/80 dark:border-white/[0.08] max-h-36 cursor-pointer group flex items-center justify-center bg-slate-100 dark:bg-zinc-800"
                   >
                     <img src={selectedDetailTx.receiptImage} alt="Recibo" className="w-full h-36 object-cover group-hover:scale-105 transition-transform" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">
@@ -1134,7 +1105,7 @@ export default function TransactionList({
                   setSelectedDetailTx(null);
                   handleOpenEdit(txToEdit);
                 }}
-                className="py-2.5 px-3 bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+                className="py-2.5 px-3 bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 <span>Editar</span>

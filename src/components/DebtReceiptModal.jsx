@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+﻿import React, { useRef, useState, useEffect } from 'react';
 import { toPng } from 'html-to-image';
 import { 
   X, 
@@ -186,7 +186,7 @@ export default function DebtReceiptModal({
             {/* 1. Encabezado */}
             <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-4">
               <div className="flex items-center gap-3">
-                <AppLogo size="md" showText={false} iconClassName="rounded-xl shadow-2xs border border-slate-200/80" />
+                <AppLogo size="md" showText={false} iconClassName="rounded-xl shadow-sm border border-slate-200/80" />
                 <div>
                   <h4 className="text-xs font-black tracking-wider uppercase text-emerald-700">
                     Monety

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 /**
  * AppLogo - Isotipo y marca centralizada de Monety (Iguana / Letra 'A' 3D con destello esmeralda)
@@ -30,7 +30,7 @@ export default function AppLogo({
       className={`inline-flex items-center gap-2.5 select-none ${onClick ? 'cursor-pointer' : ''} ${className}`}
       onClick={onClick}
     >
-      <div className={`${currentSize.box} shrink-0 overflow-hidden shadow-xs flex items-center justify-center transition-transform hover:scale-105 ${iconClassName}`}>
+      <div className={`${currentSize.box} shrink-0 overflow-hidden shadow-sm flex items-center justify-center transition-transform hover:scale-105 ${iconClassName}`}>
         <img
           src="/icon-192x192.png"
           alt="Monety"

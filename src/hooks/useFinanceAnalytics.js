@@ -49,17 +49,32 @@ export function useFinanceAnalytics({
   // 1. Transacciones del mes seleccionado
   const monthlyTransactions = useMemo(() => {
     return (transactions || []).filter((tx) => {
-      if (!tx || !tx.date) return false;
-      const txDate = new Date(tx.date + 'T00:00:00');
+      if (!tx) return false;
+      const rawDateStr = tx.date ? String(tx.date).split('T')[0] : (tx.created_at ? String(tx.created_at).split('T')[0] : '');
+      if (!rawDateStr) return false;
+
+      const parts = rawDateStr.split('-');
+      if (parts.length >= 2) {
+        const txYear = parseInt(parts[0], 10);
+        const txMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+        if (!isNaN(txYear) && !isNaN(txMonth)) {
+          return txYear === year && txMonth === month;
+        }
+      }
+
+      const txDate = new Date(rawDateStr + 'T00:00:00');
       return txDate.getFullYear() === year && txDate.getMonth() === month;
     });
   }, [transactions, year, month]);
 
   // 2. Transacciones filtradas por día si el usuario seleccionó uno específico
   const scopedTransactions = useMemo(() => {
-    return selectedDay
-      ? monthlyTransactions.filter((tx) => tx.date === selectedDay)
-      : monthlyTransactions;
+    if (!selectedDay) return monthlyTransactions;
+    const targetDay = String(selectedDay).split('T')[0];
+    return monthlyTransactions.filter((tx) => {
+      if (!tx || !tx.date) return false;
+      return String(tx.date).split('T')[0] === targetDay;
+    });
   }, [monthlyTransactions, selectedDay]);
 
   // 3. Cálculos analíticos del periodo (ingresos, gastos, flujo neto, liquidez)

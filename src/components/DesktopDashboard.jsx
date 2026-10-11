@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import {
   Wallet,
   ArrowDownRight,
@@ -30,6 +30,7 @@ import {
   calculateNetFlow 
 } from '../utils/financeMath';
 import Dashboard from './Dashboard';
+import SegmentedControl from './common/SegmentedControl';
 
 export default function DesktopDashboard({
   transactions = [],
@@ -56,6 +57,23 @@ export default function DesktopDashboard({
 }) {
   const { formatMoney } = usePrivacy();
   const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
+  const [currentPeriod, setCurrentPeriod] = useState(selectedDay ? 'day' : 'month');
+
+  const periodOptions = [
+    { id: 'month', label: 'Mensual' },
+    { id: 'week', label: 'Semanal' },
+    { id: 'day', label: 'Diario' }
+  ];
+
+  const setPeriod = (newPeriod) => {
+    setCurrentPeriod(newPeriod);
+    if (newPeriod === 'month') {
+      if (onSelectDay) onSelectDay(null);
+    } else if (newPeriod === 'day') {
+      const today = new Date().toISOString().split('T')[0];
+      if (onSelectDay) onSelectDay(selectedDay || today);
+    }
+  };
 
   const handleAddTx = (e) => {
     if (e) {
@@ -158,102 +176,111 @@ export default function DesktopDashboard({
         widgetsConfig={widgets}
         widgets={widgets}
         onCustomizeWidgets={onCustomizeWidgets}
-        allowedWidgetIds={['net_worth', 'debts', 'investments', 'trm']}
+        allowedWidgetIds={['net_worth', 'debts', 'investments', 'liquid_balance', 'balance', 'trm']}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
       />
 
       {/* ============================================================== */}
-      {/* FILA 1: TARJETAS MÉTRICAS KPI (4 Columnas) */}
+      {/* FILA 1: TARJETAS MÉTRICAS KPI (4 Columnas Bento Grid) */}
       {/* ============================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {/* KPI 1: Patrimonio Líquido / Balance Neto */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-xs hover:border-slate-300 dark:hover:border-white/10 transition-all">
+        {/* KPI 1: Saldo Disponible Líquido */}
+        <div className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Saldo disponible líquido
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <Wallet className="w-4.5 h-4.5" />
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                Saldo disponible líquido
+              </span>
             </div>
           </div>
-          <div className="mt-2.5">
-            <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight">
+          <div className="mt-2">
+            <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums">
               {formatMoney(availableLiquidBalance)}
             </h3>
-            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-semibold">
-              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md ${
+            <div className="flex items-center gap-1.5 mt-2 text-xs font-medium">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium ${
                 netBalance >= 0 
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                  : 'bg-rose-500/10 text-rose-500'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                  : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20'
               }`}>
                 {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
               </span>
-              <span className="text-slate-400">balance del mes</span>
+              <span className="text-slate-400 dark:text-zinc-500">balance del mes</span>
             </div>
           </div>
         </div>
 
         {/* KPI 2: Ingresos del Mes */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-xs hover:border-slate-300 dark:hover:border-white/10 transition-all">
+        <div className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Ingresos del mes
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <ArrowDownRight className="w-4.5 h-4.5" />
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400">
+                <ArrowDownRight className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                Ingresos del mes
+              </span>
             </div>
           </div>
-          <div className="mt-2.5">
-            <h3 className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums tracking-tight">
+          <div className="mt-2">
+            <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
               +{formatMoney(totalIncome)}
             </h3>
-            <p className="text-[11px] font-medium text-slate-400 mt-1.5">
-              {monthlyStats.incomeCount || 0} movimientos de ingreso
-            </p>
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                {monthlyStats.incomeCount || 0} movimientos
+              </span>
+            </div>
           </div>
         </div>
 
         {/* KPI 3: Gastos del Mes */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-xs hover:border-slate-300 dark:hover:border-white/10 transition-all">
+        <div className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Gastos del mes
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
-              <ArrowUpRight className="w-4.5 h-4.5" />
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-rose-500/10 dark:bg-zinc-800 text-rose-600 dark:text-rose-400">
+                <ArrowUpRight className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                Gastos del mes
+              </span>
             </div>
           </div>
-          <div className="mt-2.5">
-            <h3 className="text-2xl font-extrabold text-rose-500 tabular-nums tracking-tight">
+          <div className="mt-2">
+            <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-rose-500 dark:text-rose-400 tabular-nums">
               -{formatMoney(totalExpense)}
             </h3>
-            <p className="text-[11px] font-medium text-slate-400 mt-1.5">
-              {monthlyStats.expenseCount || 0} compras y egresos
-            </p>
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                {monthlyStats.expenseCount || 0} compras y egresos
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* KPI 4: Tasa de Ahorro / Dinero Libre */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-xs hover:border-slate-300 dark:hover:border-white/10 transition-all">
+        {/* KPI 4: Tasa de Ahorro / Superávit */}
+        <div className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Tasa de ahorro y superávit
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-              <PiggyBank className="w-4.5 h-4.5" />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="flex items-baseline justify-between">
-              <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight">
-                {savingsRate}%
-              </h3>
-              <span className="text-xs font-bold text-teal-600 dark:text-teal-400 tabular-nums">
-                {formatMoney(freeCash)} libre
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-teal-500/10 dark:bg-zinc-800 text-teal-600 dark:text-teal-400">
+                <PiggyBank className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                Tasa de ahorro
               </span>
             </div>
-            {/* Barra de progreso de ahorro */}
-            <div className="w-full h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden mt-2">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 tabular-nums">
+              {formatMoney(freeCash)} libre
+            </span>
+          </div>
+          <div className="mt-2">
+            <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums">
+              {savingsRate}%
+            </h3>
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3">
               <div 
                 className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-700" 
                 style={{ width: `${Math.min(savingsRate, 100)}%` }} 
@@ -268,8 +295,8 @@ export default function DesktopDashboard({
       {/* ============================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Lado Izquierdo (Col-span 8, ~65%): Gráfica de Tendencia / Flujo de Caja */}
-        <div className="lg:col-span-8 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="lg:col-span-8 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
@@ -284,15 +311,27 @@ export default function DesktopDashboard({
               </p>
             </div>
 
-            {/* Leyenda interactiva */}
-            <div className="flex items-center gap-3 text-xs font-semibold">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span className="text-slate-600 dark:text-slate-300">Ingresos</span>
+            <div className="flex items-center gap-3">
+              {/* Selector de período con SegmentedControl */}
+              <div className="w-56 sm:w-60">
+                <SegmentedControl
+                  options={periodOptions}
+                  value={currentPeriod}
+                  onChange={setPeriod}
+                  size="sm"
+                />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                <span className="text-slate-600 dark:text-slate-300">Gastos</span>
+
+              {/* Leyenda interactiva */}
+              <div className="hidden sm:flex items-center gap-3 text-xs font-semibold">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span className="text-slate-600 dark:text-slate-300">Ingresos</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                  <span className="text-slate-600 dark:text-slate-300">Gastos</span>
+                </div>
               </div>
             </div>
           </div>
@@ -327,14 +366,14 @@ export default function DesktopDashboard({
                       {/* Barra Ingreso */}
                       <div className="w-3.5 sm:w-5 bg-slate-100 dark:bg-white/5 rounded-t-xl overflow-hidden flex items-end">
                         <div
-                          className="w-full bg-emerald-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-xs"
+                          className="w-full bg-emerald-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-sm"
                           style={{ height: `${incomeHeight}px` }}
                         />
                       </div>
                       {/* Barra Gasto */}
                       <div className="w-3.5 sm:w-5 bg-slate-100 dark:bg-white/5 rounded-t-xl overflow-hidden flex items-end">
                         <div
-                          className="w-full bg-rose-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-xs"
+                          className="w-full bg-rose-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-sm"
                           style={{ height: `${expenseHeight}px` }}
                         />
                       </div>
@@ -371,7 +410,7 @@ export default function DesktopDashboard({
       {/* ============================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Lado Izquierdo (Col-span 4, ~35%): Billeteras y Cuentas */}
-        <div className="lg:col-span-4 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-4">
+        <div className="lg:col-span-4 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
@@ -407,27 +446,27 @@ export default function DesktopDashboard({
                 <div
                   key={acc.id}
                   onClick={() => onNavigateToTab?.('accounts')}
-                  className="p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] hover:bg-slate-100/90 dark:hover:bg-white/[0.05] transition-all flex items-center justify-between cursor-pointer group"
+                  className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:border-slate-300 dark:hover:border-white/20 shadow-sm transition-all flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-xs">
-                      <BrandIcon name={acc.name} type={acc.type} color={acc.color} size={22} />
+                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+                      <BrandIcon name={acc.name} type={acc.type} color={acc.color} size={20} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-emerald-500 transition-colors">
+                        <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate group-hover:text-emerald-500 transition-colors">
                           {acc.name}
                         </h4>
-                        <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-slate-200/60 dark:bg-white/10 text-slate-500 dark:text-slate-400">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06]">
                           {acc.currency || 'COP'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <span>
-                          {acc.type === 'bank' ? 'Bancaria' : acc.type === 'wallet' ? 'Billetera' : isCard ? 'Tarjeta de crédito' : isInvestment ? 'Inversión' : 'Efectivo'}
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                        <span className="text-xs font-medium px-1.5 py-0.2 rounded bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400">
+                          {acc.type === 'bank' ? 'Bancaria' : acc.type === 'wallet' ? 'Billetera' : isCard ? 'Tarjeta' : isInvestment ? 'Inversión' : 'Efectivo'}
                         </span>
                         {isInvestment && shares > 0 && (
-                          <span className="text-emerald-500 font-semibold truncate">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold truncate">
                             • {shares} acc{unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)}` : ''}
                           </span>
                         )}
@@ -438,31 +477,31 @@ export default function DesktopDashboard({
                   <div className="text-right shrink-0">
                     {isForeign && !isCard ? (
                       <>
-                        <span className="text-xs sm:text-sm font-extrabold tabular-nums block text-slate-900 dark:text-white">
+                        <span className="text-xs sm:text-sm font-bold font-mono tracking-tight tabular-nums block text-slate-900 dark:text-zinc-100">
                           {formatNativeCurrency(currentBal, currency)}
                         </span>
-                        <span className="text-[10px] text-slate-400 block tabular-nums">
+                        <span className="text-[10px] text-slate-500 dark:text-zinc-400 block tabular-nums">
                           ≈ $ {Math.round(copBal).toLocaleString('es-CO')} COP
                         </span>
                       </>
                     ) : isCard ? (
                       <>
-                        <span className={`text-xs sm:text-sm font-extrabold tabular-nums block ${
-                          currentBal < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                        <span className={`text-xs sm:text-sm font-bold font-mono tracking-tight tabular-nums block ${
+                          currentBal < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
                         }`}>
                           {currentBal < 0 ? `-${formatMoney(Math.abs(currentBal))}` : 'Sin deuda'}
                         </span>
+                        {acc.creditLimit && (
+                          <span className="text-[10px] text-zinc-500 font-mono tabular-nums block">
+                            Cupo: {formatMoney(acc.creditLimit)}
+                          </span>
+                        )}
                       </>
                     ) : (
-                      <span className={`text-xs sm:text-sm font-extrabold tabular-nums block ${
-                        currentBal < 0 ? 'text-rose-500' : 'text-slate-900 dark:text-white'
+                      <span className={`text-xs sm:text-sm font-bold font-mono tracking-tight tabular-nums block ${
+                        currentBal < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-zinc-100'
                       }`}>
                         {formatMoney(currentBal)}
-                      </span>
-                    )}
-                    {isCard && acc.creditLimit && (
-                      <span className="text-[10px] text-slate-400">
-                        Cupo: {formatMoney(acc.creditLimit)}
                       </span>
                     )}
                   </div>
@@ -482,7 +521,7 @@ export default function DesktopDashboard({
         </div>
 
         {/* Lado Derecho (Col-span 8, ~65%): Tabla Detallada de Movimientos */}
-        <div className="lg:col-span-8 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-4">
+        <div className="lg:col-span-8 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
@@ -570,7 +609,7 @@ export default function DesktopDashboard({
                         </td>
 
                         {/* Monto */}
-                        <td className="py-3 pr-2 text-right font-bold tabular-nums">
+                        <td className="py-3 pr-2 text-right font-bold font-mono tracking-tight tabular-nums">
                           <span className={isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}>
                             {isInc ? '+' : '-'}{formatMoney(tx.amount)}
                           </span>

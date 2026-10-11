@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { 
   CreditCard, 
   Wallet, 
@@ -201,14 +201,17 @@ export default function AccountsAndCategories({
     }
 
     const normalizedType = normalizeAccountType(editAccType);
+    const numericBalance = parseFloat(initBal) || 0;
     const updated = {
       ...editingAccount,
       name: editAccName.trim(),
       type: normalizedType,
       currency: editAccCurrency || 'COP',
-      initialBalance: initBal,
-      balance: initBal,
-      currentBalance: initBal,
+      balance: numericBalance,
+      initial_balance: numericBalance,
+      current_balance: numericBalance,
+      initialBalance: numericBalance,
+      currentBalance: numericBalance,
       color: editAccColor,
       icon: editAccIcon,
       ...(normalizedType === 'credit' || editAccType === 'card' ? {
@@ -256,14 +259,17 @@ export default function AccountsAndCategories({
     }
 
     const normalizedType = normalizeAccountType(newAccType);
+    const numericNewBalance = parseFloat(initBal) || 0;
     const newAcc = {
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('acc-' + Date.now()),
       name: newAccName.trim(),
       type: normalizedType,
       currency: newAccCurrency || 'COP',
-      initialBalance: initBal,
-      balance: initBal,
-      currentBalance: initBal,
+      balance: numericNewBalance,
+      initial_balance: numericNewBalance,
+      current_balance: numericNewBalance,
+      initialBalance: numericNewBalance,
+      currentBalance: numericNewBalance,
       color: newAccColor,
       icon: iconName,
       ...(normalizedType === 'credit' || newAccType === 'card' ? {
@@ -297,14 +303,14 @@ export default function AccountsAndCategories({
     <div className="space-y-6">
       
       {/* CUENTAS BANCARIAS Y EFECTIVO */}
-      <section className="ios-card p-4 sm:p-5">
+      <section className="bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {(onBack || fromSettings) && (
               <button
                 type="button"
                 onClick={handleGoBack}
-                className="w-9 h-9 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-[#121622] shadow-2xs shrink-0"
+                className="w-9 h-9 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-[#121622] shadow-sm shrink-0"
                 aria-label="Volver"
                 title="Volver"
               >
@@ -325,7 +331,7 @@ export default function AccountsAndCategories({
           <button
             type="button"
             onClick={() => setShowAddAccount(!showAddAccount)}
-            className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-xs active:scale-95 shrink-0 cursor-pointer"
+            className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
             title={showAddAccount ? 'Cerrar' : 'Nueva Cuenta'}
           >
             <Plus className={`w-4 h-4 transition-transform duration-200 ${showAddAccount ? 'rotate-45' : ''}`} />
@@ -366,7 +372,7 @@ export default function AccountsAndCategories({
                   <div className="rounded-2xl bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 p-4 transition-all">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
                           <BrandIcon name={newAccName} size={40} type={newAccType} />
                         </div>
                         <div className="min-w-0">
@@ -432,7 +438,7 @@ export default function AccountsAndCategories({
                           onClick={() => setNewAccCurrency(item.code)}
                           className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
                             newAccCurrency === item.code
-                              ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                              ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm'
                               : 'border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
                           }`}
                         >
@@ -479,7 +485,7 @@ export default function AccountsAndCategories({
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                         {(newAccType === 'card' || newAccType === 'credit')
                           ? 'Deuda actual / Saldo utilizado (opcional)'
                           : `Saldo inicial (${newAccCurrency}) *`
@@ -487,13 +493,14 @@ export default function AccountsAndCategories({
                       </label>
                       <input
                         type="number"
+                        inputMode="decimal"
                         step="any"
                         min="0"
                         placeholder="0"
                         value={newAccBalance}
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => setNewAccBalance(e.target.value)}
-                        className="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF] font-bold"
+                        className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
                       />
                     </div>
                   </div>
@@ -574,43 +581,46 @@ export default function AccountsAndCategories({
 
                   {/* Campos especiales si es Tarjeta de Crédito */}
                   {(newAccType === 'card' || newAccType === 'credit') && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 animate-fadeIn">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40 animate-fadeIn">
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Cupo Total ($ COP) *</label>
+                        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Cupo Total ($ COP) *</label>
                         <input
                           type="number"
+                          inputMode="decimal"
                           step="any"
                           min="1"
                           required
                           placeholder="5000000"
                           value={newAccCreditLimit}
                           onChange={(e) => setNewAccCreditLimit(e.target.value)}
-                          className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF] font-bold"
+                          className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Día Límite de Pago *</label>
+                        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Día Límite de Pago *</label>
                         <input
                           type="number"
+                          inputMode="numeric"
                           min="1"
                           max="31"
                           required
                           placeholder="ej: 17"
                           value={newAccPaymentDueDate}
                           onChange={(e) => setNewAccPaymentDueDate(e.target.value)}
-                          className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                          className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Día de Corte (Opcional)</label>
+                        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Día de Corte (Opcional)</label>
                         <input
                           type="number"
+                          inputMode="numeric"
                           min="1"
                           max="31"
                           placeholder="ej: 25"
                           value={newAccClosingDate}
                           onChange={(e) => setNewAccClosingDate(e.target.value)}
-                          className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                          className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                         />
                       </div>
                     </div>
@@ -628,7 +638,7 @@ export default function AccountsAndCategories({
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
+                    className="px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     Guardar Cuenta
                   </button>
@@ -639,24 +649,24 @@ export default function AccountsAndCategories({
         )}
 
         {/* Tarjeta de Saldo Total (Estilo Fintech Bento) */}
-        <div className="bg-slate-100/60 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-3.5 flex items-center justify-between gap-3">
+        <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 mb-4 flex items-center justify-between gap-3 shadow-sm">
           <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-normal block">
+            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 tracking-normal block">
               Patrimonio en Cuentas
             </span>
-            <div className="text-2xl sm:text-3xl font-bold tabular-nums text-slate-900 dark:text-white mt-0.5 tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 mt-0.5 tabular-nums">
               {formatMoney(totalAvailableWealth)}
             </div>
           </div>
           <div className="text-right shrink-0">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-normal block tabular-nums bg-slate-200/60 dark:bg-white/5 px-2.5 py-1 rounded-lg">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] tracking-normal block tabular-nums">
               {accounts.length} {accounts.length === 1 ? 'cuenta' : 'cuentas'}
             </span>
           </div>
         </div>
 
         {/* Tarjetas de Cuenta Individuales (Estilo Fintech Bento) */}
-        <div className="grid grid-cols-1 gap-2.5">
+        <div className="grid grid-cols-1 gap-3">
           {accountsWithBalance.map((acc, index) => {
             const currency = acc?.currency || 'COP';
             const balance = Number(acc?.currentBalance ?? (acc?.balance ?? (acc?.initialBalance ?? 0)));
@@ -699,72 +709,45 @@ export default function AccountsAndCategories({
               <div
                 key={acc?.id || `acc-${index}`}
                 onClick={isCreditCard ? handleCardClick : undefined}
-                className={`p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 shadow-xs transition-all ${
+                className={`p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm transition-all ${
                   isCreditCard ? 'cursor-pointer hover:border-slate-300 dark:hover:border-white/20 active:scale-[0.995]' : 'hover:border-slate-300 dark:hover:border-white/15'
                 }`}
               >
-                {/* Fila Horizontal Compacta */}
-                <div className="flex items-center justify-between gap-3">
-                  {/* Izquierda: Contenedor de icono cuadrado redondeado con logo real */}
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 overflow-hidden shrink-0 flex items-center justify-center">
-                    <BrandIcon 
-                      name={acc?.name || 'Cuenta'} 
-                      size={40} 
-                      type={acc?.type}
-                    />
-                  </div>
-
-                  {/* Centro: Nombre de la cuenta, moneda y etiqueta sutil */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-slate-900 dark:text-white text-base truncate leading-snug">
-                        {acc?.name || 'Sin nombre'}
-                      </h4>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 shrink-0">
-                        {currency}
-                      </span>
+                {/* Fila superior (Cabecera): Icono, Nombre, Badges a la izquierda; Controles a la derecha */}
+                <div className="flex items-center justify-between gap-2">
+                  {/* Izquierda: Contenedor de icono + Nombre + Badges */}
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 shrink-0 flex items-center justify-center">
+                      <BrandIcon 
+                        name={acc?.name || 'Cuenta'} 
+                        size={22} 
+                        type={acc?.type}
+                      />
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                      <span className="inline-block text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        {typeLabel}
-                      </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 truncate leading-snug">
+                          {acc?.name || 'Sin nombre'}
+                        </h4>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] shrink-0">
+                          {currency}
+                        </span>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 shrink-0">
+                          {typeLabel}
+                        </span>
+                      </div>
                       {isInvestment && shares > 0 && (
-                        <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">
+                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">
                           • {acc?.ticker ? `${acc.ticker} · ` : ''}{shares} {shares === 1 ? 'acción' : 'acciones'}{unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)} c/u` : ''}
-                        </span>
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Derecha: Saldo estilo Binance + controles de reordenar + botón de editar */}
-                  <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
-                    <div className="text-right">
-                      {isCreditCard ? (
-                        <span className={`font-bold text-lg tabular-nums block ${
-                          saldoRestante > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-                        }`}>
-                          {saldoRestante > 0 ? `-${formatMoney(saldoRestante)}` : formatMoney(0)}
-                        </span>
-                      ) : isForeignCurrency ? (
-                        <>
-                          <span className="font-bold text-base sm:text-lg tabular-nums block text-slate-900 dark:text-white">
-                            {formatNativeCurrency(balance, currency)}
-                          </span>
-                          <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 block tabular-nums">
-                            ≈ $ {Math.round(balanceInCop).toLocaleString('es-CO')} COP (TRM: ${Number(trm || 4000).toLocaleString('es-CO')})
-                          </span>
-                        </>
-                      ) : (
-                        <span className={`font-bold text-lg tabular-nums block ${
-                          balance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
-                        }`}>
-                          {formatMoney(balance)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Controles de reordenamiento ↑ y ↓ */}
-                    <div className="flex flex-col gap-0.5">
+                  {/* Derecha: Controles de reordenar + botón de editar */}
+                  <div className="shrink-0 flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       <button
                         type="button"
                         disabled={index === 0}
@@ -772,7 +755,7 @@ export default function AccountsAndCategories({
                           e.stopPropagation();
                           handleMoveAccount(index, 'up');
                         }}
-                        className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
                         title="Subir posición"
                         aria-label="Subir posición"
                       >
@@ -785,7 +768,7 @@ export default function AccountsAndCategories({
                           e.stopPropagation();
                           handleMoveAccount(index, 'down');
                         }}
-                        className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-white/10 rounded-md transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
                         title="Bajar posición"
                         aria-label="Bajar posición"
                       >
@@ -799,7 +782,7 @@ export default function AccountsAndCategories({
                         e.stopPropagation();
                         handleOpenEditAccount(acc);
                       }}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors cursor-pointer"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer"
                       title="Editar cuenta"
                     >
                       <Pencil className="w-4 h-4" />
@@ -807,16 +790,53 @@ export default function AccountsAndCategories({
                   </div>
                 </div>
 
-                {/* Si es Tarjeta de Crédito: muestra debajo en una línea limpia el cupo disponible y la fecha de corte */}
+                {/* Fila inferior (Cuerpo de saldo): Contenedor independiente con mt-3 sin colisiones */}
+                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-baseline justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
+                    {isCreditCard ? 'Saldo utilizado / Deuda' : 'Saldo disponible'}
+                  </span>
+                  <div className="text-right">
+                    {isCreditCard ? (
+                      <span className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums block ${
+                        saldoRestante > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                      }`}>
+                        {saldoRestante > 0 ? `-${formatMoney(saldoRestante)}` : formatMoney(0)}
+                      </span>
+                    ) : isForeignCurrency ? (
+                      <>
+                        <span className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums block">
+                          {formatNativeCurrency(balance, currency)}
+                        </span>
+                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 font-mono tracking-tight block tabular-nums">
+                          ≈ $ {Math.round(balanceInCop).toLocaleString('es-CO')} COP
+                        </span>
+                      </>
+                    ) : (
+                      <span className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums block ${
+                        balance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-zinc-100'
+                      }`}>
+                        {formatMoney(balance)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Si es Tarjeta de Crédito: cupo disponible y deuda visible */}
                 {isCreditCard && (
-                  <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    <span className="flex items-center gap-1 truncate">
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-medium">
+                    <span className="flex items-center gap-1.5">
                       <span>Cupo disponible:</span>
-                      <strong className="text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">
+                      <strong className="text-emerald-600 dark:text-emerald-400 font-bold font-mono tabular-nums">
                         {formatMoney(cupoDisponible)}
                       </strong>
                     </span>
-                    <span className="tabular-nums shrink-0 text-slate-400 dark:text-slate-500 text-[11px] sm:text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span>Deuda:</span>
+                      <strong className="text-rose-600 dark:text-rose-400 font-bold font-mono tabular-nums">
+                        {saldoRestante > 0 ? formatMoney(saldoRestante) : formatMoney(0)}
+                      </strong>
+                    </span>
+                    <span className="tabular-nums shrink-0 text-zinc-500 text-[11px] sm:text-xs hidden sm:inline">
                       Corte: día {acc.closingDate || acc.paymentDueDate || 17} • Pago: día {acc.paymentDueDate || 17}
                     </span>
                   </div>
@@ -881,7 +901,7 @@ export default function AccountsAndCategories({
                 <div className="rounded-2xl bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 p-4 transition-all">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
                         <BrandIcon name={editAccName} size={40} type={editAccType} />
                       </div>
                       <div className="min-w-0">
@@ -947,7 +967,7 @@ export default function AccountsAndCategories({
                         onClick={() => setEditAccCurrency(item.code)}
                         className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
                           editAccCurrency === item.code
-                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm'
                             : 'border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
                         }`}
                       >
@@ -998,7 +1018,7 @@ export default function AccountsAndCategories({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                       {(editAccType === 'card' || editAccType === 'credit')
                         ? 'Deuda actual / Saldo utilizado (opcional)'
                         : `Saldo inicial (${editAccCurrency}) *`
@@ -1006,13 +1026,14 @@ export default function AccountsAndCategories({
                     </label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="any"
                       required
                       placeholder="0"
                       value={editAccBalance}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => setEditAccBalance(e.target.value)}
-                      className="w-full text-sm font-black px-3.5 py-2 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007AFF] bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white tabular-nums"
+                      className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
                     />
                   </div>
                 </div>
@@ -1093,43 +1114,46 @@ export default function AccountsAndCategories({
 
                 {/* Campos especiales si es Tarjeta de Crédito */}
                 {(editAccType === 'card' || editAccType === 'credit') && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40 animate-fadeIn">
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Cupo Total ($ COP) *</label>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Cupo Total ($ COP) *</label>
                       <input
                         type="number"
+                        inputMode="decimal"
                         step="any"
                         min="1"
                         required
                         placeholder="5000000"
                         value={editAccCreditLimit}
                         onChange={(e) => setEditAccCreditLimit(e.target.value)}
-                        className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF] font-bold tabular-nums"
+                        className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Día Límite de Pago *</label>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Día Límite de Pago *</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         max="31"
                         required
                         placeholder="ej: 17"
                         value={editAccPaymentDueDate}
                         onChange={(e) => setEditAccPaymentDueDate(e.target.value)}
-                        className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                        className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Día de Corte (Opcional)</label>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Día de Corte (Opcional)</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         max="31"
                         placeholder="ej: 25"
                         value={editAccClosingDate}
                         onChange={(e) => setEditAccClosingDate(e.target.value)}
-                        className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                        className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
                       />
                     </div>
                   </div>
@@ -1162,7 +1186,7 @@ export default function AccountsAndCategories({
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                    className="px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>Guardar Cuenta</span>

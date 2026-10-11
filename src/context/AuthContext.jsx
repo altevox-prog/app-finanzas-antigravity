@@ -4,86 +4,112 @@ import { supabase, isSupabaseConfigured, signInWithGoogle, signOutUser, signOutS
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // Modelo 100% Local-First: usuario local sin dependencias remotas ni sesiones en la nube
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('presu_local_user') || localStorage.getItem('user_profile') || localStorage.getItem('user');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          id: 'local-user',
-          email: parsed?.email || 'local@device',
-          user_metadata: {
-            full_name: parsed?.name || parsed?.full_name || 'Usuario'
-          }
-        };
-      }
-    } catch {}
-    return {
-      id: 'local-user',
-      email: 'local@device',
-      user_metadata: {
-        full_name: 'Usuario'
-      }
-    };
-  });
+  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
+    if (!isSupabaseConfigured || !supabase) {
+      setLoading(false);
+      return;
+    }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
+    let isMounted = true;
+
+    // 1. Resolver sesión persistida inicial al cargar o hacer F5
+    supabase.auth.getSession().then(({ data: { session: initialSession }, error }) => {
+      if (!isMounted) return;
+      if (error) {
+        console.warn('[AuthContext] Error obteniendo sesión:', error);
       }
-    }).catch(() => {});
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        setUser({
-          id: 'local-user',
-          email: 'local@device',
-          user_metadata: {
-            full_name: 'Usuario'
-          }
-        });
+      setSession(initialSession || null);
+      setUser(initialSession?.user || null);
+      setLoading(false);
+    }).catch((err) => {
+      if (isMounted) {
+        console.warn('[AuthContext] Fallo al verificar sesión:', err);
+        setLoading(false);
       }
     });
 
+    // 2. Suscripción a cambios de autenticación en tiempo real
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (!isMounted) return;
+      setSession(currentSession || null);
+      setUser(currentSession?.user || null);
+      setLoading(false);
+    });
+
     return () => {
+      isMounted = false;
       subscription?.unsubscribe();
     };
   }, []);
 
+  const signInWithEmail = async (email, password) => {
+    if (!supabase) return { data: null, error: new Error('Supabase no configurado') };
+    setAuthError(null);
+    const res = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (res.error) setAuthError(res.error.message);
+    return res;
+  };
+
+  const signUpWithEmail = async (email, password, metadata = {}) => {
+    if (!supabase) return { data: null, error: new Error('Supabase no configurado') };
+    setAuthError(null);
+    const res = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: metadata }
+    });
+    if (res.error) setAuthError(res.error.message);
+    return res;
+  };
+
+  const signInWithOtp = async (email) => {
+    if (!supabase) return { data: null, error: new Error('Supabase no configurado') };
+    setAuthError(null);
+    const res = await supabase.auth.signInWithOtp({ email: email.trim() });
+    if (res.error) setAuthError(res.error.message);
+    return res;
+  };
+
+  const resetPassword = async (email) => {
+    if (!supabase) return { data: null, error: new Error('Supabase no configurado') };
+    setAuthError(null);
+    const res = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
+    });
+    if (res.error) setAuthError(res.error.message);
+    return res;
+  };
+
+  const signOut = async () => {
+    if (isSupabaseConfigured && supabase) {
+      await signOutSupabase();
+    }
+    setUser(null);
+    setSession(null);
+    return { error: null };
+  };
+
   const value = {
     user,
     setUser,
-    session: null,
-    setSession: () => {},
-    loading: false, // 100% Local-First: carga instantánea sin demoras ni peticiones de red
+    session,
+    setSession,
+    loading,
     isConfigured: isSupabaseConfigured,
-    authError: null,
-    setAuthError: () => {},
-    signInWithEmail: async () => ({ data: null, error: null }),
-    signUpWithEmail: async () => ({ data: null, error: null }),
-    signInWithOtp: async () => ({ data: null, error: null }),
+    authError,
+    setAuthError,
+    signInWithEmail,
+    signUpWithEmail,
+    signInWithOtp,
     signInWithGoogle,
-    signOut: async () => {
-      if (isSupabaseConfigured && supabase) {
-        await signOutSupabase();
-      }
-      setUser({
-        id: 'local-user',
-        email: 'local@device',
-        user_metadata: {
-          full_name: 'Usuario'
-        }
-      });
-      return { error: null };
-    },
+    signOut,
     signOutUser,
-    resetPassword: async () => ({ data: null, error: null })
+    resetPassword
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

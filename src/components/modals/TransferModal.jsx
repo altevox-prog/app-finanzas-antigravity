@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeftRight, 
@@ -136,6 +136,8 @@ export default function TransferModal({
     }, 400);
   };
 
+  if (!isOpen) return null;
+
   const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
       <div 
@@ -145,7 +147,7 @@ export default function TransferModal({
         {/* Cabecera */}
         <div className="shrink-0 px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-color)' }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-[#007AFF] shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-[#007AFF] shadow-sm">
               <ArrowLeftRight className="w-5 h-5" />
             </div>
             <div>
@@ -265,7 +267,7 @@ export default function TransferModal({
 
             {/* Monto a transferir */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Monto a transferir ({fromCurrency}) *
               </label>
               <div className="relative">
@@ -306,7 +308,7 @@ export default function TransferModal({
             {/* Fecha y Nota */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                   Fecha *
                 </label>
                 <input
@@ -320,7 +322,7 @@ export default function TransferModal({
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                   Nota / Motivo (Opcional)
                 </label>
                 <input

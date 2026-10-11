@@ -114,6 +114,20 @@ export default function DesktopMonthPicker({
     onClose();
   };
 
+  // Aplicar el día seleccionado y cerrar
+  const handleApplyDay = () => {
+    if (selectedDay) {
+      if (onChangeMonth) {
+        const parts = selectedDay.split('-');
+        if (parts.length === 3) {
+          onChangeMonth(new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1));
+        }
+      }
+      if (onSelectDay) onSelectDay(selectedDay);
+    }
+    onClose();
+  };
+
   // Selección de día
   const handleDayClick = (dateStr) => {
     if (onSelectDay) {
@@ -344,38 +358,67 @@ export default function DesktopMonthPicker({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onSelectDay && onSelectDay(null)}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors"
-              title="Quitar filtro de día"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => onSelectDay && onSelectDay(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                title="Quitar filtro de día"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyDay}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                title="Ver movimientos de este día"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Ver este día</span>
+              </button>
+            </div>
           </div>
         )}
 
         {/* Acciones Rápidas Inferiores: Ir a Hoy / Mes Actual y Ver Todo el Mes */}
-        <div className="pt-2 border-t border-slate-100 dark:border-white/5 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={handleGoToToday}
-            className="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            title="Ir a la fecha de hoy"
-          >
-            <Clock className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Ir a Hoy</span>
-          </button>
+        <div className="pt-2 border-t border-slate-100 dark:border-white/5 space-y-2">
+          {selectedDay && (
+            <button
+              type="button"
+              onClick={handleApplyDay}
+              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+              title="Filtrar por este día seleccionado"
+            >
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>Ver este día ({selectedDay.split('-')[2]} de {MONTH_NAMES[parseInt(selectedDay.split('-')[1], 10) - 1]})</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={handleViewAllMonth}
-            className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
-            title="Ver transacciones de todo el mes"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>Ver Todo el Mes</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleGoToToday}
+              className="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              title="Ir a la fecha de hoy"
+            >
+              <Clock className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Ir a Hoy</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleViewAllMonth}
+              className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                selectedDay 
+                  ? 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300' 
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20'
+              }`}
+              title="Ver transacciones de todo el mes"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Ver Todo el Mes</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

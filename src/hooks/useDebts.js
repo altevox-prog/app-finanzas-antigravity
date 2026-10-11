@@ -4,6 +4,8 @@ import { INITIAL_DEBTS_AND_LOANS } from '../data/initialData';
 import { saveDebtsToStorage, saveAccountsToStorage, saveTransactionsToStorage } from '../services/storageService';
 import { calculateElapsedMonths } from '../utils/debtAlerts';
 import { toast } from '../utils/toast';
+import { ensureUUID } from '../services/syncEngine';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 function getInitialDebts() {
   const saved = localStorage.getItem('user_debts') ||
@@ -443,6 +445,10 @@ export function useDebts({
         saveTransactionsToStorage(nextTxs);
         return nextTxs;
       });
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('debts').delete().eq('id', ensureUUID(itemId)).catch(() => {});
     }
 
     toast.info('Elemento eliminado');

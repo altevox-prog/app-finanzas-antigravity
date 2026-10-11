@@ -7,6 +7,8 @@ import { generateUUID } from '../utils/recordMerger';
 import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { toast } from '../utils/toast';
+import { createDemoTransactions, seedTestTransactions } from '../utils/seedData';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const TX_LEGACY_ID_MAP = {
   'acc-1': '00000001-0000-4000-8000-000000000001',
@@ -56,10 +58,11 @@ function getInitialTransactions() {
         return result;
       }
     }
-    return INITIAL_TRANSACTIONS || [];
+    // Si no existe ninguna clave en localStorage (primera vez absoluta), retornar vacío o demo
+    return [];
   } catch (e) {
     console.error('Error parseando transacciones:', e);
-    return INITIAL_TRANSACTIONS || [];
+    return [];
   }
 }
 
@@ -142,11 +145,15 @@ export function useTransactions({
         localStorage.setItem('presu_accounts', JSON.stringify(updatedAccounts));
         saveAccountsToStorage(updatedAccounts);
       } else {
-        // Sincronizar saldos nativos de cuentas actualizadas
+        // Sincronizar saldos nativos de cuentas actualizadas sin duplicar descuentos
         const updatedAccounts = accounts.map((acc) => {
-          const liveBalance = getAccountNativeBalance(acc, updated, trm);
+          const baseInitial = acc.initialBalance !== undefined 
+            ? acc.initialBalance 
+            : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
+          const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, updated, trm);
           return {
             ...acc,
+            initialBalance: baseInitial,
             balance: liveBalance,
             currentBalance: liveBalance,
             updated_at: new Date().toISOString()
@@ -185,12 +192,16 @@ export function useTransactions({
       return null;
     }
 
-    // Ajuste retroactivo en saldos de cuentas
+    // Ajuste retroactivo en saldos de cuentas sin duplicar descuentos
     if (setAccounts && Array.isArray(accounts) && accounts.length > 0) {
       const nextAccounts = accounts.map((acc) => {
-        const liveBalance = getAccountNativeBalance(acc, updated, trm);
+        const baseInitial = acc.initialBalance !== undefined 
+          ? acc.initialBalance 
+          : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
+        const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, updated, trm);
         return {
           ...acc,
+          initialBalance: baseInitial,
           balance: liveBalance,
           currentBalance: liveBalance,
           updated_at: new Date().toISOString()
@@ -222,9 +233,13 @@ export function useTransactions({
     // Revertir y ajustar saldos en las cuentas
     if (setAccounts && Array.isArray(accounts) && accounts.length > 0) {
       const nextAccounts = accounts.map((acc) => {
-        const liveBalance = getAccountNativeBalance(acc, updated, trm);
+        const baseInitial = acc.initialBalance !== undefined 
+          ? acc.initialBalance 
+          : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
+        const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, updated, trm);
         return {
           ...acc,
+          initialBalance: baseInitial,
           balance: liveBalance,
           currentBalance: liveBalance,
           updated_at: new Date().toISOString()
@@ -233,6 +248,10 @@ export function useTransactions({
       setAccounts(nextAccounts);
       localStorage.setItem('presu_accounts', JSON.stringify(nextAccounts));
       saveAccountsToStorage(nextAccounts);
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('transactions').delete().eq('id', ensureUUID(txId)).catch(() => {});
     }
 
     toast.info('Elemento eliminado');

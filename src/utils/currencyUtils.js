@@ -85,7 +85,11 @@ export function getAccountNativeBalance(account, transactions = [], trm = 4050) 
     const accCurrency = account?.currency || 'COP';
     const accId = account?.id;
     const accName = account?.name;
-    const initial = safeNumber(account.initialBalance ?? account.balance ?? account.saldo ?? 0);
+    const initial = safeNumber(
+      account.initialBalance !== undefined 
+        ? account.initialBalance 
+        : (account.initial_balance !== undefined ? account.initial_balance : (account.balance ?? account.saldo ?? 0))
+    );
 
     const accTxs = Array.isArray(transactions) 
       ? transactions.filter(t => {

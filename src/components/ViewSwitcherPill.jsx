@@ -25,7 +25,7 @@ export default function ViewSwitcherPill({
 
   return (
     <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 select-none print:hidden">
-      <div className="bg-slate-900/95 dark:bg-[#121622]/95 backdrop-blur-md border border-slate-700/60 dark:border-white/10 text-white rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 transition-all ring-1 ring-white/10">
+      <div className="bg-slate-900/95 dark:bg-zinc-900/95 backdrop-blur-md border border-slate-700/60 dark:border-white/[0.08] text-white rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 transition-all ring-1 ring-white/10">
         
         {/* Barra compacta cuando está colapsado */}
         <div className="flex items-center gap-1.5">

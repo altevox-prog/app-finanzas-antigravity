@@ -38,50 +38,50 @@ export default function BudgetWidget({
 
   return (
     <div 
-      className="p-4 sm:p-5 rounded-3xl border shadow-sm transition-all relative overflow-hidden bg-white dark:bg-[#12141C] border-slate-200/80 dark:border-white/10"
+      className="p-4 sm:p-5 rounded-2xl border shadow-sm transition-all relative overflow-hidden bg-white dark:bg-zinc-900/90 border-slate-200/80 dark:border-white/[0.08]"
     >
       <div className="flex items-center justify-between mb-3.5 gap-2">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div 
-            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0"
           >
-            <Target className="w-4 h-4" />
+            <Target className="w-4 h-4 text-emerald-500" />
           </div>
-          <div>
-            <h3 className="text-[14px] sm:text-[15px] font-bold text-slate-900 dark:text-slate-100 leading-tight">
+          <div className="truncate">
+            <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 leading-tight truncate">
               Meta y Presupuesto
             </h3>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+            <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
               Consumo mensual de ingresos
             </p>
           </div>
         </div>
 
         <span 
-          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 tabular-nums shrink-0 ${statusBadgeClasses}`}
+          className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300 flex items-center gap-1 tabular-nums shrink-0"
         >
-          {isHealthy && <CheckCircle2 className="w-3 h-3" />}
-          {isWarning && <AlertTriangle className="w-3 h-3" />}
-          {isExceeded && <AlertTriangle className="w-3 h-3" />}
-          {statusLabel}
+          {isHealthy && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+          {isWarning && <AlertTriangle className="w-3 h-3 text-amber-500" />}
+          {isExceeded && <AlertTriangle className="w-3 h-3 text-rose-500" />}
+          <span>{clampedPercent}% • {statusLabel}</span>
         </span>
       </div>
 
       {/* Barra de Progreso del Presupuesto */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs font-semibold tabular-nums">
-          <span className="text-slate-600 dark:text-slate-400 text-[12px] font-medium">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs font-mono font-medium tabular-nums">
+          <span className="text-slate-500 dark:text-zinc-400">
             {clampedPercent}% ejecutado
           </span>
-          <span className={`font-bold text-[12px] ${statusTextClasses}`}>
+          <span className={`font-semibold ${statusTextClasses}`}>
             {isExceeded ? 'Excedido en ' + formatMoney(totalExpense - totalIncome) : 'Margen: ' + formatMoney(remaining)}
           </span>
         </div>
 
-        {/* Fondo de barra: bg-slate-200 en claro para contraste perfecto sobre blanco */}
-        <div className="w-full h-2.5 rounded-full overflow-hidden p-0.5 bg-slate-200 dark:bg-slate-800">
+        {/* Riel y Relleno de Progreso estandarizados */}
+        <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3 mb-2">
           <div 
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded-full transition-all duration-500 ease-out"
             style={{ 
               width: `${Math.max(4, clampedPercent)}%`, 
               backgroundColor: progressBarColor 
@@ -91,16 +91,16 @@ export default function BudgetWidget({
       </div>
 
       {/* Desglose inferior */}
-      <div className="grid grid-cols-2 gap-2 mt-3.5 pt-3 border-t border-slate-200/80 dark:border-white/10 text-xs">
+      <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200/80 dark:border-white/[0.08] text-xs">
         <div>
-          <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium block">Total Gastado</span>
-          <span className="text-[14px] font-bold text-rose-600 dark:text-rose-400 tabular-nums block mt-0.5">
+          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono block">Total Gastado</span>
+          <span className="text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums text-rose-600 dark:text-rose-400 block mt-0.5">
             {formatMoney(totalExpense)}
           </span>
         </div>
         <div className="text-right">
-          <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium block">Capacidad / Ingresos</span>
-          <span className="text-[14px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums block mt-0.5">
+          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono block">Capacidad / Ingresos</span>
+          <span className="text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400 block mt-0.5">
             {formatMoney(totalIncome)}
           </span>
         </div>

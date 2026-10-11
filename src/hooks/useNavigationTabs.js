@@ -65,11 +65,6 @@ export function useNavigationTabs({
     }
   }, []);
 
-  // Efecto de scroll hacia arriba cada vez que activeTab cambia
-  useEffect(() => {
-    scrollToTop();
-  }, [activeTab, scrollToTop]);
-
   // Manejador centralizado de cambio de pestaña
   const handleTabChange = useCallback((rawTab, fromSource = null) => {
     let tab = rawTab === 'loans' ? 'debts' : rawTab;
@@ -78,6 +73,12 @@ export function useNavigationTabs({
     }
     if (tab === 'inicio') {
       tab = 'dashboard';
+    }
+
+    // Si se pulsa la pestaña actualmente activa, scroll suave/inmediato al tope
+    if (tab === activeTab) {
+      scrollToTop();
+      return;
     }
 
     if (fromSource === 'settings') {
@@ -107,9 +108,8 @@ export function useNavigationTabs({
       return;
     }
 
-    scrollToTop();
     setActiveTab(tab);
-  }, [onTabChange, onOpenProfile, scrollToTop]);
+  }, [activeTab, onTabChange, onOpenProfile, scrollToTop, setActiveTab]);
 
   // Retorno desde sub-vistas hacia ajustes o dashboard
   const handleGoBackFromSubView = useCallback(() => {
