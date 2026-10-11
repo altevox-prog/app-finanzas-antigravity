@@ -38,7 +38,40 @@ import { useScrollRestoration } from './hooks/useScrollRestoration';
 
 export default function App() {
   const { formatMoney } = usePrivacy();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
+
+  // Cierre de sesión seguro y desacoplado de la pantalla de bloqueo por PIN
+  const handleGlobalLogout = useCallback(async () => {
+    try {
+      if (typeof signOut === 'function') {
+        await signOut();
+      }
+      try {
+        if (typeof window !== 'undefined') {
+          Object.keys(localStorage).forEach((key) => {
+            if (
+              key.startsWith('sb-') ||
+              key.includes('supabase') ||
+              key.includes('auth-token')
+            ) {
+              localStorage.removeItem(key);
+            }
+          });
+          sessionStorage.clear();
+        }
+      } catch (storageErr) {
+        console.warn('Error limpiando auth tokens en storage:', storageErr);
+      }
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+    }
+  }, [signOut]);
   const { theme, setTheme, handleToggleTheme } = useTheme();
 
   // Gestión centralizada de modales, visibilidad y superposiciones

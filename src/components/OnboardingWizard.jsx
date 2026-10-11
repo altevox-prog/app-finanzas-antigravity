@@ -287,14 +287,14 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-slate-900/40 dark:bg-zinc-950 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div className="min-h-screen w-full bg-slate-100 dark:bg-zinc-950 flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-y-auto">
       {/* Fondo con brillo difuminado */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-white/[0.08] my-auto">
+      <div className="relative w-full max-w-md lg:max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200/80 dark:border-white/[0.08] my-auto">
         
         {/* Barra de progreso de 2 pasos */}
         <div className="mb-6">
@@ -397,7 +397,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
               />
             )}
 
-            <div className="space-y-3.5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
               {/* Nombre de Usuario */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
                 <div className="flex items-center justify-between">
@@ -456,7 +456,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
               </div>
 
               {/* PIN de Seguridad */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2 lg:col-span-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Lock className="w-4 h-4 text-blue-500" />
@@ -642,7 +642,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
                 </p>
               </div>
             ) : (
-              <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
                 {/* Tarjeta de Cuenta 1: Efectivo */}
                 <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
                   <div className="flex items-center justify-between">
@@ -716,7 +716,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
                     />
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
             {/* Botones de Finalización */}

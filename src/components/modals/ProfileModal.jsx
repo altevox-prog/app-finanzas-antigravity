@@ -102,7 +102,8 @@ export default function ProfileModal({
   onFactoryReset,
   onOpenTutorial,
   onNavigateToRecurring,
-  onManualCloudSync
+  onManualCloudSync,
+  onLogout
 }) {
   const { formatMoney, enableDecimals, toggleEnableDecimals } = usePrivacy();
   const { user, setUser, signOut } = useAuth();
@@ -796,18 +797,35 @@ export default function ProfileModal({
   const handleFullLogout = async () => {
     setIsLoggingOut(true);
     try {
-      if (isSupabaseConfigured && supabase) {
-        await supabase.auth.signOut();
+      if (typeof onLogout === 'function') {
+        await onLogout();
+      } else {
+        if (typeof signOut === 'function') {
+          await signOut();
+        } else if (isSupabaseConfigured && supabase) {
+          await supabase.auth.signOut();
+        }
+        try {
+  if (typeof window !== 'undefined') {
+    localStorage.clear();
+    sessionStorage.clear();
+  }
+} catch (storageErr) {
+  console.warn('Error limpiando storage:', storageErr);
+}
+        setShowLogoutConfirm(false);
+        if (typeof onClose === 'function') onClose();
+        showToast('Sesión cerrada exitosamente.');
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
       }
-      if (typeof signOut === 'function') {
-        await signOut();
-      }
-      setShowLogoutConfirm(false);
-      onClose();
-      showToast('Sesión cerrada exitosamente.');
     } catch (err) {
       console.error('Error al cerrar sesión:', err);
       showToast('Error al cerrar sesión', true);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     } finally {
       setIsLoggingOut(false);
     }
@@ -2788,7 +2806,7 @@ export default function ProfileModal({
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-fadeIn">
           <div 
-            className="w-full max-w-sm rounded-3xl border border-slate-200 dark:border-white/10 shadow-2xl p-5 flex flex-col items-center text-center animate-slide-up bg-white dark:bg-[#12141C]"
+            className="w-full max-w-sm rounded-3xl border border-slate-200/80 dark:border-white/[0.08] shadow-2xl p-5 flex flex-col items-center text-center animate-slide-up bg-white dark:bg-zinc-900"
           >
             <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-3 text-rose-500">
               <LogOut className="w-6 h-6" />

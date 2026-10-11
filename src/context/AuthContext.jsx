@@ -86,11 +86,32 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    if (isSupabaseConfigured && supabase) {
-      await signOutSupabase();
+    try {
+      if (isSupabaseConfigured && supabase) {
+        await signOutSupabase();
+      }
+    } catch (err) {
+      console.warn('Error en supabase signOut:', err);
+    } finally {
+      try {
+        if (typeof window !== 'undefined') {
+          Object.keys(localStorage).forEach((key) => {
+            if (
+              key.startsWith('sb-') ||
+              key.includes('supabase.auth.token') ||
+              key.includes('supabase-auth')
+            ) {
+              localStorage.removeItem(key);
+            }
+          });
+          sessionStorage.clear();
+        }
+      } catch (storageErr) {
+        console.warn('Error limpiando auth tokens en storage:', storageErr);
+      }
+      setUser(null);
+      setSession(null);
     }
-    setUser(null);
-    setSession(null);
     return { error: null };
   };
 

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   LayoutDashboard,
@@ -13,6 +13,7 @@ import {
   Plus,
   Settings,
   Lock,
+  LogOut,
   Sparkles,
   ChevronRight
 } from 'lucide-react';
@@ -54,6 +55,7 @@ export default function DesktopSidebar({
   onOpenSettings,
   onOpenProfile,
   onOpenAuth,
+  onLock,
   onLogout,
   syncStatus = 'idle',
   isCloudEnabled = false,
@@ -339,16 +341,28 @@ export default function DesktopSidebar({
             onOpenAuth={onOpenAuth} 
           />
 
-          {onLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-              title="Bloquear sesión"
-            >
-              <Lock className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center gap-0.5">
+            {onLock && (
+              <button
+                type="button"
+                onClick={onLock}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-amber-500 transition-colors cursor-pointer"
+                title="Bloquear pantalla con PIN"
+              >
+                <Lock className="w-4 h-4" />
+              </button>
+            )}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                title="Cerrar sesión"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tarjeta de Perfil y Acceso a Ajustes */}

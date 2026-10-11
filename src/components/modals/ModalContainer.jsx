@@ -109,7 +109,8 @@ export default function ModalContainer({
     handleTabChange,
     setFromSettings,
     handleRestoreBackup,
-    handleResetData
+    handleResetData,
+    onLogout
   } = merged;
 
   const isTxOpen = Boolean(
@@ -387,6 +388,7 @@ export default function ModalContainer({
         onManualCloudSync={merged.pushLocalToCloud}
         syncStatus={merged.syncStatus}
         user={user}
+        onLogout={onLogout}
       />
 
       {/* 11. Modal / Overlay del Tutorial rápido */}
