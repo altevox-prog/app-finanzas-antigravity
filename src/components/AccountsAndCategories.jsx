@@ -1,15 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   CreditCard, 
-  Wallet, 
-  Building2, 
   Plus, 
-  Pencil, 
-  X,
-  ChevronUp,
-  ChevronDown,
-  TrendingUp,
-  DollarSign,
   ArrowLeft
 } from 'lucide-react';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -17,14 +9,11 @@ import { useBackHandler } from '../hooks/useBackHandler';
 import CreditCardDetailModal from './CreditCardDetailModal';
 import AddAccountModal from './accounts/modals/AddAccountModal';
 import EditAccountModal from './accounts/modals/EditAccountModal';
-import BrandIcon from './BrandIcon';
+import AccountCard from './accounts/components/AccountCard';
 import { 
   getAccountNativeBalance, 
-  formatNativeCurrency, 
-  convertToCOP,
   safeNumber
 } from '../utils/currencyUtils';
-import { normalizeAccountType } from '../services/syncEngine';
 
 export default function AccountsAndCategories({ 
   accounts = [], 
@@ -147,6 +136,16 @@ export default function AccountsAndCategories({
     setEditingAccount(null);
   };
 
+  const handleDeleteAccount = (accId) => {
+    const accToDelete = accounts.find(a => a.id === accId);
+    const accName = accToDelete ? accToDelete.name : 'esta cuenta';
+    if (window.confirm(`¿Estás seguro de eliminar la cuenta "${accName}"?`)) {
+      if (onDeleteAccount) {
+        onDeleteAccount(accId);
+      }
+    }
+  };
+
   const handleCreateAccount = (newAcc) => {
     if (onAddAccount) {
       onAddAccount(newAcc);
@@ -220,183 +219,28 @@ export default function AccountsAndCategories({
 
         {/* Tarjetas de Cuenta Individuales (Estilo Fintech Bento) */}
         <div className="grid grid-cols-1 gap-3">
-          {accountsWithBalance.map((acc, index) => {
-            const currency = acc?.currency || 'COP';
-            const balance = Number(acc?.currentBalance ?? (acc?.balance ?? (acc?.initialBalance ?? 0)));
-            const shares = Number(acc?.shares || 0);
-            const unitPrice = Number(acc?.unitPrice || 0);
-            const rate = currency === 'USD' ? Number(trm || 4000) : currency === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1;
-            const balanceInCop = Number(acc?.copEquivalent) || (balance * rate);
-
-            const isCreditCard = acc?.type === 'card' || acc?.type === 'credit';
-            const isInvestment = acc?.type === 'investment';
-            const isForeignCurrency = currency === 'USD' || currency === 'EUR';
-
-            const typeLabel = 
-              acc?.type === 'cash' ? 'Efectivo' :
-              (acc?.type === 'card' || acc?.type === 'credit') ? 'Tarjeta de Crédito' :
-              acc?.type === 'savings' ? 'Ahorros' :
-              acc?.type === 'investment' ? 'Inversión / Acciones' : 'Cuenta Bancaria';
-
-            // Cálculos específicos para Tarjeta de Crédito
-            const cardTxs = Array.isArray(transactions) ? transactions.filter(t => t?.accountId === acc?.id) : [];
-            const initialDebt = balance < 0 ? Math.abs(balance) : 0;
-            const initialCredit = balance > 0 ? balance : 0;
-            const totalExpenses = cardTxs.filter(t => t?.type === 'expense').reduce((s, t) => s + safeNumber(t?.amount), 0);
-            const totalPayments = cardTxs.filter(t => t?.type === 'income').reduce((s, t) => s + safeNumber(t?.amount), 0);
-            const saldoRestante = Math.max(0, (initialDebt + totalExpenses) - (initialCredit + totalPayments));
-            const creditLimit = Number(acc?.creditLimit) || 5000000;
-            const cupoDisponible = Math.max(0, creditLimit - saldoRestante);
-
-            const handleCardClick = () => {
-              if (isCreditCard) {
+          {accountsWithBalance.map((acc, index) => (
+            <AccountCard
+              key={acc?.id || `acc-${index}`}
+              account={acc}
+              index={index}
+              isFirst={index === 0}
+              isLast={index === accountsWithBalance.length - 1}
+              onMoveUp={() => handleMoveAccount(index, 'up')}
+              onMoveDown={() => handleMoveAccount(index, 'down')}
+              onEdit={() => setEditingAccount(acc)}
+              onDelete={() => handleDeleteAccount(acc?.id)}
+              onSelectCard={() => {
                 if (onOpenCreditCardDetail) {
                   onOpenCreditCardDetail(acc);
                 } else {
                   setLocalSelectedCard(acc);
                 }
-              }
-            };
-
-            return (
-              <div
-                key={acc?.id || `acc-${index}`}
-                onClick={isCreditCard ? handleCardClick : undefined}
-                className={`p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm transition-all ${
-                  isCreditCard ? 'cursor-pointer hover:border-slate-300 dark:hover:border-white/20 active:scale-[0.995]' : 'hover:border-slate-300 dark:hover:border-white/15'
-                }`}
-              >
-                {/* Fila superior (Cabecera): Icono, Nombre, Badges a la izquierda; Controles a la derecha */}
-                <div className="flex items-center justify-between gap-2">
-                  {/* Izquierda: Contenedor de icono + Nombre + Badges */}
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 shrink-0 flex items-center justify-center">
-                      <BrandIcon 
-                        name={acc?.name || 'Cuenta'} 
-                        size={22} 
-                        type={acc?.type}
-                      />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 truncate leading-snug">
-                          {acc?.name || 'Sin nombre'}
-                        </h4>
-                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] shrink-0">
-                          {currency}
-                        </span>
-                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 shrink-0">
-                          {typeLabel}
-                        </span>
-                      </div>
-                      {isInvestment && shares > 0 && (
-                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">
-                          • {acc?.ticker ? `${acc.ticker} · ` : ''}{shares} {shares === 1 ? 'acción' : 'acciones'}{unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)} c/u` : ''}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Derecha: Controles de reordenar + botón de editar */}
-                  <div className="shrink-0 flex items-center gap-1">
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        type="button"
-                        disabled={index === 0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveAccount(index, 'up');
-                        }}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
-                        title="Subir posición"
-                        aria-label="Subir posición"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={index === accountsWithBalance.length - 1}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveAccount(index, 'down');
-                        }}
-                        className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
-                        title="Bajar posición"
-                        aria-label="Bajar posición"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEditAccount(acc);
-                      }}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer"
-                      title="Editar cuenta"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Fila inferior (Cuerpo de saldo): Contenedor independiente con mt-3 sin colisiones */}
-                <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-baseline justify-between gap-2 flex-wrap">
-                  <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-                    {isCreditCard ? 'Saldo utilizado / Deuda' : 'Saldo disponible'}
-                  </span>
-                  <div className="text-right">
-                    {isCreditCard ? (
-                      <span className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums block ${
-                        saldoRestante > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-                      }`}>
-                        {saldoRestante > 0 ? `-${formatMoney(saldoRestante)}` : formatMoney(0)}
-                      </span>
-                    ) : isForeignCurrency ? (
-                      <>
-                        <span className="text-xl sm:text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums block">
-                          {formatNativeCurrency(balance, currency)}
-                        </span>
-                        <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 font-mono tracking-tight block tabular-nums">
-                          ≈ $ {Math.round(balanceInCop).toLocaleString('es-CO')} COP
-                        </span>
-                      </>
-                    ) : (
-                      <span className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums block ${
-                        balance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-zinc-100'
-                      }`}>
-                        {formatMoney(balance)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Si es Tarjeta de Crédito: cupo disponible y deuda visible */}
-                {isCreditCard && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs text-zinc-500 font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <span>Cupo disponible:</span>
-                      <strong className="text-emerald-600 dark:text-emerald-400 font-bold font-mono tabular-nums">
-                        {formatMoney(cupoDisponible)}
-                      </strong>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span>Deuda:</span>
-                      <strong className="text-rose-600 dark:text-rose-400 font-bold font-mono tabular-nums">
-                        {saldoRestante > 0 ? formatMoney(saldoRestante) : formatMoney(0)}
-                      </strong>
-                    </span>
-                    <span className="tabular-nums shrink-0 text-zinc-500 text-[11px] sm:text-xs hidden sm:inline">
-                      Corte: día {acc.closingDate || acc.paymentDueDate || 17} • Pago: día {acc.paymentDueDate || 17}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              }}
+              transactions={transactions}
+              trm={trm}
+            />
+          ))}
 
           {accounts.length === 0 && (
             <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-slate-400">
