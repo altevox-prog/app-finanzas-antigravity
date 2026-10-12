@@ -39,7 +39,7 @@ import BalanceWidget from './BalanceWidget';
 import BudgetWidget from './BudgetWidget';
 import ReportsAndCharts from './ReportsAndCharts';
 import AccountsWidgetComponent from './AccountsWidget';
-import { RecentMovementsWidget, TransactionsWidget } from './RecentMovementsWidget';
+import RecentMovementsSection, { RecentMovementsWidget, TransactionsWidget } from './dashboard/RecentMovementsSection';
 import BentoMetricsGrid from './common/BentoMetricsGrid';
 import WeeklyExpensesChart from './dashboard/WeeklyExpensesChart';
 import BalanceCardsWidget, {
@@ -320,9 +320,9 @@ export function AccountsWidget(props) {
 }
 
 // ============================================================================
-// SUBCOMPONENTE 5: WIDGET DE MOVIMIENTOS RECIENTES
+// SUBCOMPONENTE 5: WIDGET DE MOVIMIENTOS RECIENTES (Modularizado)
 // ============================================================================
-export { RecentMovementsWidget, TransactionsWidget };
+export { RecentMovementsSection, RecentMovementsWidget, TransactionsWidget };
 
 // ============================================================================
 // SUBCOMPONENTE 6: WIDGET DE PAGOS RECURRENTES
@@ -1068,29 +1068,14 @@ export default function Dashboard({
 
     // 11. Últimos movimientos
     recent_movements: (
-      <TransactionsWidget
+      <RecentMovementsSection
         transactions={displayTransactions}
-        financeActions={financeActions}
-        onDeleteTransaction={onDeleteTransaction}
-        onUpdateTransaction={onUpdateTransaction}
-        onAddCategory={handleAddCategory}
-        onAddSubcategory={handleAddSubcategory}
-        onUpdateSubcategory={onUpdateSubcategory}
-        onDeleteSubcategory={onDeleteSubcategory}
-        onAddAccount={handleAddAccount}
-        categories={categories}
-        accounts={accounts}
-        currentMonthLabel={currentMonthLabel}
-        selectedDay={selectedDay}
-        onSelectDay={onSelectDay}
         onViewAll={() => navigateToTab('transactions')}
+        setActiveTab={navigateToTab}
+        onNavigateToTab={navigateToTab}
+        onSelectTransaction={handleOpenTxModal}
         onOpenTransaction={handleOpenTxModal}
         onOpenAddTransaction={handleOpenTxModal}
-        setIsTransactionModalOpen={handleOpenTxModal}
-        setIsAddTransactionOpen={handleOpenTxModal}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        trm={trm}
         formatMoney={formatMoney}
       />
     ),

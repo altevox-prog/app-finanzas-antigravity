@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Activity, Plus, ArrowRight } from 'lucide-react';
 
 /**
@@ -184,5 +184,6 @@ export function RecentMovementsWidget({
   );
 }
 
+export { default as RecentMovementsSection } from './dashboard/RecentMovementsSection';
 export const TransactionsWidget = RecentMovementsWidget;
 export default RecentMovementsWidget;
