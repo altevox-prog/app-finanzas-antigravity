@@ -42,6 +42,12 @@ import AccountsWidgetComponent from './AccountsWidget';
 import { RecentMovementsWidget, TransactionsWidget } from './RecentMovementsWidget';
 import BentoMetricsGrid from './common/BentoMetricsGrid';
 import WeeklyExpensesChart from './dashboard/WeeklyExpensesChart';
+import BalanceCardsWidget, {
+  LiquidBalanceWidget,
+  MonthlyIncomeWidget,
+  MonthlyExpenseWidget,
+  SavingsRateWidget
+} from './dashboard/BalanceCardsWidget';
 import SegmentedControl from './common/SegmentedControl';
 import { MONTH_NAMES } from '../data/initialData';
 
@@ -477,157 +483,15 @@ export function TRMWidget({ trm = 4050 }) {
 }
 
 // ============================================================================
-// SUBCOMPONENTE 8: WIDGET DE SALDO DISPONIBLE LÍQUIDO (KPI Compacto)
+// SUBCOMPONENTES 8 A 11: WIDGETS DE BALANCES Y CUENTAS (Modularizados)
 // ============================================================================
-export function LiquidBalanceWidget({
-  availableLiquidBalance = 0,
-  netBalance = 0,
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`
-}) {
-  return (
-    <div 
-      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full select-none"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
-            <Wallet className="w-4 h-4" />
-          </div>
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
-            Saldo disponible
-          </span>
-        </div>
-      </div>
-      <div className="mt-2 min-w-0">
-        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums truncate leading-tight">
-          {formatMoney(availableLiquidBalance)}
-        </h3>
-        <div className="flex items-center gap-1.5 mt-2 text-xs font-medium truncate">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium ${
-            netBalance >= 0 
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-              : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20'
-          }`}>
-            {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
-          </span>
-          <span className="text-slate-400 dark:text-zinc-500 truncate hidden xs:inline">mes</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// SUBCOMPONENTE 9: WIDGET DE INGRESO DEL MES (KPI Compacto)
-// ============================================================================
-export function MonthlyIncomeWidget({
-  totalIncome = 0,
-  incomeCount = 0,
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`
-}) {
-  return (
-    <div 
-      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full group"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-500/10 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400">
-            <ArrowDownRight className="w-4 h-4" />
-          </div>
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
-            Ingreso del mes
-          </span>
-        </div>
-      </div>
-      <div className="mt-2 min-w-0">
-        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums truncate leading-tight">
-          +{formatMoney(totalIncome)}
-        </h3>
-        <div className="flex items-center gap-1.5 mt-2">
-          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 truncate">
-            {incomeCount || 0} ingresos
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// SUBCOMPONENTE 10: WIDGET DE GASTO DEL MES (KPI Compacto)
-// ============================================================================
-export function MonthlyExpenseWidget({
-  totalExpense = 0,
-  expenseCount = 0,
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`
-}) {
-  return (
-    <div 
-      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full group"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-rose-500/10 dark:bg-zinc-800 text-rose-600 dark:text-rose-400">
-            <ArrowUpRight className="w-4 h-4" />
-          </div>
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
-            Gasto del mes
-          </span>
-        </div>
-      </div>
-      <div className="mt-2 min-w-0">
-        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-rose-500 dark:text-rose-400 tabular-nums truncate leading-tight">
-          -{formatMoney(totalExpense)}
-        </h3>
-        <div className="flex items-center gap-1.5 mt-2">
-          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 truncate">
-            {expenseCount || 0} egresos
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// SUBCOMPONENTE 11: WIDGET DE TASA DE AHORRO / SUPERÁVIT (KPI Compacto)
-// ============================================================================
-export function SavingsRateWidget({
-  savingsRate = 0,
-  freeCash = 0,
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`
-}) {
-  return (
-    <div 
-      className="bg-white dark:bg-zinc-900/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.08] transition-all flex flex-col justify-between h-full group"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-teal-500/10 dark:bg-zinc-800 text-teal-600 dark:text-teal-400">
-            <PiggyBank className="w-4 h-4" />
-          </div>
-          <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wider truncate">
-            Tasa de ahorro
-          </span>
-        </div>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 tabular-nums">
-          {formatMoney(freeCash)} libre
-        </span>
-      </div>
-      <div className="mt-2 min-w-0">
-        <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums leading-tight">
-          {savingsRate}%
-        </h3>
-        <div className="w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3">
-          <div 
-            className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-700" 
-            style={{ width: `${Math.min(Math.max(savingsRate, 0), 100)}%` }} 
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+export { 
+  BalanceCardsWidget, 
+  LiquidBalanceWidget, 
+  MonthlyIncomeWidget, 
+  MonthlyExpenseWidget, 
+  SavingsRateWidget 
+};
 
 // ============================================================================
 // SUBCOMPONENTE 12: WIDGET DE FLUJO DE CAJA SEMANAL
@@ -1280,6 +1144,28 @@ export default function Dashboard({
         onIncomeClick={() => navigateToTab('transactions')}
         onExpenseClick={() => navigateToTab('transactions')}
       />
+    ),
+
+    // 16. Cuadrícula consolidada de tarjetas de balance
+    balance_cards: (
+      <BalanceCardsWidget
+        availableLiquidBalance={availableLiquidBalance}
+        netBalance={netBalance}
+        totalIncome={totalIncome}
+        incomeCount={selectedDay 
+          ? scopedTransactions.filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t)).length
+          : (monthlyStats.incomeCount || 0)
+        }
+        totalExpense={totalExpense}
+        expenseCount={selectedDay
+          ? scopedTransactions.filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t)).length
+          : (monthlyStats.expenseCount || 0)
+        }
+        savingsRate={savingsRate}
+        freeCash={freeCash}
+        accounts={accounts}
+        formatMoney={formatMoney}
+      />
     )
   };
 
@@ -1654,7 +1540,8 @@ export default function Dashboard({
       'weekly_cashflow', 'pill_bar_chart', 'weekly_cashflow_classic',
       'recent_movements', 'movimientos_recientes', 'recent_transactions',
       'expenses_category', 'gastos_categoria', 'charts',
-      'bento_metrics', 'bento'
+      'bento_metrics', 'bento',
+      'balance_cards'
     ];
     return wideIds.includes(norm) || wideIds.includes(id);
   };
