@@ -38,6 +38,7 @@ import { usePrivacy } from '../context/PrivacyContext';
 import InvestmentFormModal from './InvestmentFormModal';
 import BrandIcon from './BrandIcon';
 import useInvestmentQuotes from './investments/hooks/useInvestmentQuotes';
+import useInvestmentLiquidation from './investments/hooks/useInvestmentLiquidation';
 import { 
   toSafeNumber, 
   convertUSDtoCOP, 
@@ -45,7 +46,6 @@ import {
   calculateMonthlyLoanReturn,
   calculateCDTMaturityReturn
 } from '../utils/financeMath';
-import { toast } from '../utils/toast';
 
 export default function InvestmentsView({
   investments = [],
@@ -113,77 +113,22 @@ export default function InvestmentsView({
   const [quickUpdateItem, setQuickUpdateItem] = useState(null);
   const [quickUpdateValue, setQuickUpdateValue] = useState('');
 
-  // Estado para modal de Liquidación de CDT
-  const [liquidatingCDT, setLiquidatingCDT] = useState(null);
-  const [liquidationAccountId, setLiquidationAccountId] = useState('');
-  const [liquidationDate, setLiquidationDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [isSubmittingLiquidation, setIsSubmittingLiquidation] = useState(false);
-
-  const handleOpenLiquidation = (inv, stats) => {
-    setLiquidatingCDT({ inv, stats });
-    const defaultAcc = (accounts || []).find(a => a.type !== 'card' && a.type !== 'credit') || accounts[0];
-    setLiquidationAccountId(defaultAcc ? String(defaultAcc.id) : '');
-    setLiquidationDate(new Date().toISOString().split('T')[0]);
-  };
-
-  const handleConfirmLiquidation = () => {
-    if (!liquidatingCDT) return;
-    const { inv, stats } = liquidatingCDT;
-    const selectedAccount = (accounts || []).find(a => String(a.id) === String(liquidationAccountId));
-    
-    if (!selectedAccount && accounts.length > 0) {
-      toast.error('Por favor selecciona una cuenta bancaria de destino');
-      return;
-    }
-
-    setIsSubmittingLiquidation(true);
-    try {
-      const maturityTotal = Number(stats?.maturityTotal || inv.investedAmount || 0);
-      const netGain = Number(stats?.netReturn || 0);
-      const invested = Number(inv.investedAmount || inv.buyPrice || 0);
-
-      // 1. Crear transacción contable de ingreso para abonar saldo en la cuenta destino
-      if (onAddTransaction) {
-        const txDate = liquidationDate || new Date().toISOString().split('T')[0];
-        const tx = {
-          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now()),
-          date: txDate,
-          type: 'income',
-          amount: maturityTotal,
-          accountId: selectedAccount ? selectedAccount.id : null,
-          accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
-          category: 'Rendimientos / Inversiones',
-          categoryId: 'cat-inversiones',
-          note: `Liquidación CDT: ${inv.name} (Capital: $${Number(invested).toLocaleString('es-CO')} + Rendimiento neto: $${Number(netGain).toLocaleString('es-CO')})`
-        };
-        onAddTransaction(tx);
-      }
-
-      // 2. Actualizar estado de la inversión a 'liquidated' para archivarla
-      if (onUpdateInvestment) {
-        onUpdateInvestment({
-          ...inv,
-          status: 'liquidated',
-          isLiquidated: true,
-          liquidatedAt: liquidationDate || new Date().toISOString().split('T')[0],
-          liquidatedAmount: maturityTotal,
-          liquidatedAccountId: selectedAccount ? selectedAccount.id : null,
-          currentAmount: 0
-        });
-      }
-
-      // 3. Notificación Toast exitosa
-      const formattedTotal = `$${Number(maturityTotal).toLocaleString('es-CO')}`;
-      toast.success(`CDT liquidado exitosamente. Se abonaron ${formattedTotal} a tu cuenta.`);
-
-      setLiquidatingCDT(null);
-    } catch (err) {
-      console.error('Error al liquidar CDT:', err);
-      toast.error('Ocurrió un error al liquidar el CDT.');
-    } finally {
-      setIsSubmittingLiquidation(false);
-    }
-  };
+  // Liquidación de CDT (Custom Hook)
+  const {
+    liquidatingCDT,
+    liquidationAccountId,
+    setLiquidationAccountId,
+    liquidationDate,
+    setLiquidationDate,
+    isSubmittingLiquidation,
+    handleOpenLiquidation,
+    handleCloseLiquidation,
+    handleConfirmLiquidation
+  } = useInvestmentLiquidation({
+    accounts,
+    onAddTransaction,
+    onUpdateInvestment
+  });
 
 
   /**
@@ -1160,7 +1105,7 @@ export default function InvestmentsView({
       {liquidatingCDT && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
-          onClick={() => !isSubmittingLiquidation && setLiquidatingCDT(null)}
+          onClick={() => !isSubmittingLiquidation && handleCloseLiquidation()}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
@@ -1184,7 +1129,7 @@ export default function InvestmentsView({
               <button
                 type="button"
                 disabled={isSubmittingLiquidation}
-                onClick={() => setLiquidatingCDT(null)}
+                onClick={handleCloseLiquidation}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
                 ✕
@@ -1266,7 +1211,7 @@ export default function InvestmentsView({
               <button
                 type="button"
                 disabled={isSubmittingLiquidation}
-                onClick={() => setLiquidatingCDT(null)}
+                onClick={handleCloseLiquidation}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
               >
                 Cancelar
