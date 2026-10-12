@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Search, 
-  Trash2, 
   Pencil, 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -15,7 +14,7 @@ import {
   Camera,
   Plus
 } from 'lucide-react';
-import { formatCurrency, MONTH_NAMES } from '../data/initialData';
+import { MONTH_NAMES } from '../data/initialData';
 import { usePrivacy } from '../context/PrivacyContext';
 import { getEnableDecimals } from '../utils/currencyFormatter';
 import CategoryIcon from './CategoryIcon';
@@ -23,7 +22,8 @@ import FinancialIcon from './common/FinancialIcon';
 import BrandIcon from './BrandIcon';
 import SegmentedControl from './common/SegmentedControl';
 import EditTransactionModal from './transactions/modals/EditTransactionModal';
-import { useBackHandler } from '../hooks/useBackHandler';
+import ReceiptModal from './transactions/modals/ReceiptModal';
+import TransactionDetailModal from './transactions/modals/TransactionDetailModal';
 
 export default function TransactionList({ 
   transactions, 
@@ -62,9 +62,6 @@ export default function TransactionList({
 
   // Edit Modal State
   const [editingTx, setEditingTx] = useState(null);
-
-  useBackHandler(Boolean(selectedDetailTx), () => setSelectedDetailTx(null));
-  useBackHandler(Boolean(viewingReceiptTx), () => setViewingReceiptTx(null));
 
   // Sort transactions by date descending (newest first)
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
@@ -117,27 +114,6 @@ export default function TransactionList({
   const handleSaveEdit = (updated) => {
     onUpdateTransaction(updated);
     setEditingTx(null);
-  };
-
-  const formatTxDateTime = (tx) => {
-    if (!tx.date) return '';
-    const parts = tx.date.split('-');
-    if (parts.length < 3) return tx.date;
-    const [y, m, d] = parts;
-    const monthIdx = parseInt(m, 10) - 1;
-    const monthName = MONTH_NAMES[monthIdx] ? MONTH_NAMES[monthIdx].slice(0, 3) : m;
-    const dayNum = parseInt(d, 10);
-
-    let timeStr = tx.time;
-    if (!timeStr) {
-      const hours = ['09:15', '11:30', '13:45', '14:30', '16:20', '18:10', '20:05'];
-      let hash = 0;
-      const str = tx.id || tx.date || '';
-      for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) % hours.length;
-      timeStr = hours[Math.abs(hash)];
-    }
-
-    return `${dayNum} ${monthName.charAt(0).toUpperCase() + monthName.slice(1)} · ${timeStr}`;
   };
 
   const formatTxDateClean = (tx) => {
@@ -518,219 +494,22 @@ export default function TransactionList({
 
       {/* Modal / Lightbox para Visualizar Comprobante de Recibo */}
       {viewingReceiptTx && (
-        <div 
-          className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn"
-          onClick={() => setViewingReceiptTx(null)}
-        >
-          <div 
-            className="rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white space-y-3.5 animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1 pr-2">
-                <h4 className="text-sm font-bold flex items-center gap-1.5 truncate">
-                  <Camera className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span className="truncate">Comprobante / Recibo</span>
-                </h4>
-                <p className="text-[11px] opacity-60 truncate">
-                  {viewingReceiptTx.note || viewingReceiptTx.categoryName} · {formatMoney(viewingReceiptTx.amount)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewingReceiptTx(null)}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 opacity-60 hover:opacity-100 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="rounded-2xl overflow-hidden max-h-[55vh] bg-slate-100 dark:bg-zinc-800 flex items-center justify-center border border-slate-200/80 dark:border-white/[0.08]">
-              <img 
-                src={viewingReceiptTx.receiptImage} 
-                alt="Foto del recibo" 
-                className="w-full h-auto object-contain max-h-[55vh]"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] opacity-60 pt-0.5">
-              <span>Fecha: {formatTxDateTime(viewingReceiptTx)}</span>
-              <span>Cuenta: {viewingReceiptTx.accountName}</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setViewingReceiptTx(null)}
-              className="w-full py-2.5 rounded-xl text-xs font-bold transition-colors bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700 cursor-pointer"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
+        <ReceiptModal
+          transaction={viewingReceiptTx}
+          onClose={() => setViewingReceiptTx(null)}
+        />
       )}
 
       {/* Modal de Detalle Completo de Transacción */}
       {selectedDetailTx && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-fadeIn"
-          onClick={() => setSelectedDetailTx(null)}
-        >
-          <div 
-            className="rounded-t-[32px] sm:rounded-2xl p-5 sm:p-6 max-w-sm sm:max-w-md w-full shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* iOS Handle */}
-            <div className="w-10 h-1 bg-slate-500/30 rounded-full mx-auto sm:hidden shrink-0" />
-
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-white/[0.08]">
-              <div>
-                <h4 className="text-base font-bold">Detalle del Movimiento</h4>
-                <p className="text-[11px] opacity-60">Información completa registrada</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDetailTx(null)}
-                className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 opacity-60 hover:opacity-100 cursor-pointer text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Hero con Monto y Tipo */}
-            <div className="text-center py-3.5 px-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/50 space-y-1">
-              <BrandIcon 
-                name={selectedDetailTx.note || selectedDetailTx.categoryName || ''} 
-                size={30} 
-                wrapperClassName="w-11 h-11 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center shadow-sm overflow-hidden mx-auto mb-2" 
-                fallback={null} 
-              />
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold mb-1" style={{
-                backgroundColor: selectedDetailTx.type === 'expense' ? 'rgba(255,59,48,0.15)' : 'rgba(52,199,89,0.15)',
-                color: selectedDetailTx.type === 'expense' ? '#FF3B30' : '#34C759'
-              }}>
-                {selectedDetailTx.type === 'expense' ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-                <span>{selectedDetailTx.type === 'expense' ? 'Gasto' : 'Ingreso'}</span>
-              </div>
-              <div className={`text-3xl font-extrabold tabular-nums tracking-tight ${
-                selectedDetailTx.type === 'expense' ? 'text-[#FF3B30]' : 'text-[#34C759]'
-              }`}>
-                {selectedDetailTx.type === 'expense' ? '-' : '+'}{formatMoney(selectedDetailTx.amount)}
-              </div>
-              {selectedDetailTx.originalCurrency && selectedDetailTx.originalCurrency !== 'COP' && (
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
-                  ({Number(selectedDetailTx.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedDetailTx.originalCurrency} @ ${Number(selectedDetailTx.exchangeRate || 1).toLocaleString('es-CO')} COP)
-                </p>
-              )}
-              <p className="text-xs font-semibold opacity-70">
-                {selectedDetailTx.note || selectedDetailTx.categoryName}
-              </p>
-            </div>
-
-            {/* Lista de Atributos */}
-            <div className="space-y-2 text-xs">
-              {/* Sección Multidivisa si aplica */}
-              {selectedDetailTx.originalCurrency && selectedDetailTx.originalCurrency !== 'COP' && (
-                <div className="p-3 rounded-xl border space-y-1.5 bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-500/20">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-emerald-800 dark:text-emerald-300">Divisa original</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
-                      {Number(selectedDetailTx.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {selectedDetailTx.originalCurrency}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
-                    <span>Tasa de cambio (TRM)</span>
-                    <span className="font-bold tabular-nums">
-                      $ {Number(selectedDetailTx.exchangeRate || 1).toLocaleString('es-CO')} COP
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-emerald-800 dark:text-emerald-300 pt-1 border-t border-emerald-200/40 dark:border-emerald-500/20">
-                    <span className="font-semibold">Equivalente en balance</span>
-                    <span className="font-extrabold tabular-nums">
-                      $ {Number(selectedDetailTx.amount || 0).toLocaleString('es-CO')} COP
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
-                <span className="opacity-60 font-medium">Categoría</span>
-                <span className="font-bold flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categories.find(c => c.id === selectedDetailTx.categoryId)?.color || '#007AFF' }} />
-                  {selectedDetailTx.categoryName || 'General'}
-                </span>
-              </div>
-
-              {selectedDetailTx.subcategoryName && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
-                  <span className="opacity-60 font-medium">Subcategoría / Etiqueta</span>
-                  <span className="font-bold">{selectedDetailTx.subcategoryName}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
-                <span className="opacity-60 font-medium">Cuenta / Tarjeta</span>
-                <span className="font-bold flex items-center gap-1.5">
-                  <BrandIcon name={selectedDetailTx.accountName || 'Principal'} size={18} />
-                  <span>{selectedDetailTx.accountName || 'Principal'}</span>
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40">
-                <span className="opacity-60 font-medium">Fecha y Hora</span>
-                <span className="font-semibold tabular-nums">{formatTxDateTime(selectedDetailTx)}</span>
-              </div>
-
-              {selectedDetailTx.receiptImage && (
-                <div className="p-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40 space-y-1.5">
-                  <span className="opacity-60 font-medium block">Comprobante / Recibo</span>
-                  <div 
-                    onClick={() => {
-                      const imgTx = selectedDetailTx;
-                      setSelectedDetailTx(null);
-                      setViewingReceiptTx(imgTx);
-                    }}
-                    className="relative rounded-lg overflow-hidden border border-slate-200/80 dark:border-white/[0.08] max-h-36 cursor-pointer group flex items-center justify-center bg-slate-100 dark:bg-zinc-800"
-                  >
-                    <img src={selectedDetailTx.receiptImage} alt="Recibo" className="w-full h-36 object-cover group-hover:scale-105 transition-transform" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">
-                      Toca para ampliar
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Acciones al pie */}
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const txToEdit = selectedDetailTx;
-                  setSelectedDetailTx(null);
-                  handleOpenEdit(txToEdit);
-                }}
-                className="py-2.5 px-3 bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                <span>Editar</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('¿Eliminar este movimiento permanentemente?')) {
-                    onDeleteTransaction(selectedDetailTx.id);
-                    setSelectedDetailTx(null);
-                  }
-                }}
-                className="py-2.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-[#FF3B30] border border-red-500/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Eliminar</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <TransactionDetailModal
+          transaction={selectedDetailTx}
+          categories={categories}
+          onClose={() => setSelectedDetailTx(null)}
+          onEdit={handleOpenEdit}
+          onDelete={onDeleteTransaction}
+          onViewReceipt={(tx) => setViewingReceiptTx(tx)}
+        />
       )}
     </div>
   );
