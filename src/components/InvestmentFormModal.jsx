@@ -1,8 +1,7 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   TrendingUp, 
-  ShieldCheck, 
   Coins, 
   Sparkles, 
   Layers, 
@@ -22,6 +21,7 @@ import { fetchMarketPrice } from '../services/marketQuotesService';
 import { usePrivacy } from '../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../utils/currencyFormatter';
 import SegmentedControl from './common/SegmentedControl';
+import FixedIncomeFields from './investments/modals/FixedIncomeFields';
 import { 
   toSafeNumber, 
   calculateCDTMaturityReturn, 
@@ -650,117 +650,22 @@ export default function InvestmentFormModal({
 
           {/* CAMPOS CONDICIONALES: Renta Fija */}
           {category === 'fixed' && (
-            <div className="space-y-3 animate-fadeIn">
-              {/* Selector / Tabs de Subtipo en Renta Fija */}
-              <div>
-                <label className="block text-[11px] font-bold opacity-70 mb-1.5">
-                  Subtipo de Renta Fija *
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'cdt', label: '🏛️ CDT Bancario' },
-                    { id: 'bond', label: '📜 Bono / General' }
-                  ].map((tab) => {
-                    const isSelected = subType === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setSubType(tab.id)}
-                        className={`p-2 rounded-xl text-center text-xs font-bold transition-all border active:scale-95 cursor-pointer ${
-                          isSelected
-                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                            : 'border-slate-200/80 dark:border-white/10 opacity-70 hover:opacity-100'
-                        }`}
-                        style={{
-                          backgroundColor: isSelected ? undefined : 'var(--bg-input)',
-                          color: isSelected ? undefined : 'var(--text-main)'
-                        }}
-                      >
-                        <span className="truncate block leading-tight">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Detalles CDT Bancario o Bono General */}
-              <div 
-                className="p-3.5 rounded-2xl border space-y-2.5 animate-fadeIn"
-                style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-              >
-                <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#34C759]">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>{subType === 'bond' ? 'Detalles del Bono / Renta Fija' : 'Detalles del CDT'}</span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
-                      Tasa (% E.A.)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="10.5"
-                      value={interestRate}
-                      onChange={(e) => setInterestRate(e.target.value)}
-                      className="w-full text-xs font-bold px-2 py-1.5 rounded-lg border border-transparent focus:outline-none"
-                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
-                      Apertura
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
-                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold opacity-60 mb-0.5">
-                      Vencimiento
-                    </label>
-                    <input
-                      type="date"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
-                      style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Cálculo en tiempo real de Días y Ganancia Estimada */}
-                {cdtTotalDays && (
-                  <div className="pt-2 border-t flex items-center justify-between text-[11px]" style={{ borderColor: 'var(--border-color)' }}>
-                    <div>
-                      <span className="opacity-60 block text-[9px] uppercase font-bold">Plazo</span>
-                      <span className={`font-black ${isMatured ? 'text-[#FF3B30]' : 'text-[#007AFF]'}`}>
-                        {isMatured 
-                          ? 'Vencido' 
-                          : `Vence en ${cdtDaysRemaining} días (${cdtTotalDays}d totales)`}
-                      </span>
-                    </div>
-
-                    {cdtEstimatedGain !== null && (
-                      <div className="text-right">
-                        <span className="opacity-60 block text-[9px] uppercase font-bold">Ganancia pactada</span>
-                        <span className="font-black text-[#34C759]">
-                          +{currency === 'USD' ? formatUSD(cdtEstimatedGain) : formatCurrency(cdtEstimatedGain)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            <FixedIncomeFields
+              subType={subType}
+              setSubType={setSubType}
+              interestRate={interestRate}
+              setInterestRate={setInterestRate}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              dueDate={dueDate}
+              setDueDate={setDueDate}
+              investedAmount={investedAmount}
+              currency={currency}
+              cdtTotalDays={cdtTotalDays}
+              cdtDaysRemaining={cdtDaysRemaining}
+              cdtEstimatedGain={cdtEstimatedGain}
+              isMatured={isMatured}
+            />
           )}
 
           {/* CAMPOS CONDICIONALES: Fondos de Liquidez / Fiducuentas */}
