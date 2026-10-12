@@ -38,7 +38,6 @@ import {
 import BalanceWidget from './BalanceWidget';
 import BudgetWidget from './BudgetWidget';
 import ReportsAndCharts from './ReportsAndCharts';
-import AccountsWidgetComponent from './AccountsWidget';
 import RecentMovementsSection, { RecentMovementsWidget, TransactionsWidget } from './dashboard/RecentMovementsSection';
 import BentoMetricsGrid from './common/BentoMetricsGrid';
 import WeeklyExpensesChart from './dashboard/WeeklyExpensesChart';
@@ -54,308 +53,31 @@ import { MONTH_NAMES } from '../data/initialData';
 import NetWorthWidget from './dashboard/widgets/NetWorthWidget';
 import DebtsWidget from './dashboard/widgets/DebtsWidget';
 import InvestmentsWidget from './dashboard/widgets/InvestmentsWidget';
+import AccountsWidget from './dashboard/widgets/AccountsWidget';
+import RecurringPaymentsWidget from './dashboard/widgets/RecurringPaymentsWidget';
+import TRMWidget from './dashboard/widgets/TRMWidget';
+import WeeklyCashflowWidget from './dashboard/widgets/WeeklyCashflowWidget';
 
 // ============================================================================
-// SUBCOMPONENTES 1 A 3: PATRIMONIO, DEUDAS E INVERSIONES (Modularizados)
-// ============================================================================
-export { NetWorthWidget, DebtsWidget, InvestmentsWidget };
-
-// ============================================================================
-// SUBCOMPONENTE 4: WIDGET DE MIS CUENTAS (Carrusel)
-// ============================================================================
-export function AccountsWidget(props) {
-  return <AccountsWidgetComponent {...props} />;
-}
-
-// ============================================================================
-// SUBCOMPONENTE 5: WIDGET DE MOVIMIENTOS RECIENTES (Modularizado)
-// ============================================================================
-export { RecentMovementsSection, RecentMovementsWidget, TransactionsWidget };
-
-// ============================================================================
-// SUBCOMPONENTE 6: WIDGET DE PAGOS RECURRENTES
-// ============================================================================
-export function RecurringPaymentsWidget({
-  recurringPayments = [],
-  subscriptions = [],
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`,
-  onNavigateToTab = () => {},
-  setActiveTab = null,
-  onOpenAddRecurring = null,
-  setIsRecurringModalOpen = null
-}) {
-  const handleNav = (tab = 'recurring') => {
-    if (typeof onNavigateToTab === 'function') onNavigateToTab(tab);
-    else if (typeof setActiveTab === 'function') setActiveTab(tab);
-  };
-
-  const handleAdd = (e) => {
-    if (e) {
-      if (typeof e.preventDefault === 'function') e.preventDefault();
-      if (typeof e.stopPropagation === 'function') e.stopPropagation();
-    }
-    if (typeof onOpenAddRecurring === 'function') {
-      onOpenAddRecurring();
-    } else if (typeof setIsRecurringModalOpen === 'function') {
-      setIsRecurringModalOpen(true);
-    } else {
-      handleNav('recurring');
-    }
-  };
-
-  const allRecurring = recurringPayments.length > 0 ? recurringPayments : subscriptions;
-  const activeRecurring = allRecurring.filter(r => r.isActive !== false);
-  const totalMonth = activeRecurring.reduce((sum, item) => {
-    const amt = safeNumber(item.amount);
-    if (item.type === 'income') return sum;
-    if (item.frequency === 'yearly') return sum + Math.round(amt / 12);
-    if (item.frequency === 'biweekly') return sum + (amt * 2);
-    if (item.frequency === 'weekly') return sum + Math.round(amt * 4.33);
-    return sum + amt;
-  }, 0);
-
-  return (
-    <div 
-      onClick={() => handleNav('recurring')}
-      className="min-h-[140px] p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
-    >
-      <div>
-        {/* Cabecera interna limpia ([📅] Gasto fijo proyectado) sin elementos flotantes externos */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <span className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 min-w-0">
-            <CalendarSync className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="truncate uppercase">GASTO FIJO PROYECTADO</span>
-          </span>
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onTouchStart={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleAdd(e);
-            }}
-            className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
-            title="Añadir nuevo pago recurrente"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Añadir</span>
-          </button>
-        </div>
-
-        {/* Cuerpo */}
-        <div className="mt-1">
-          {activeRecurring.length === 0 ? (
-            <div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Sin pagos activos
-              </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
-                No tienes suscripciones o pagos periódicos este mes.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100 leading-none">
-                  {formatMoney(totalMonth)}
-                </h3>
-                <span className="text-xs font-semibold text-slate-400">
-                  / mes
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                Total programado para el período
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Footer homogéneo */}
-      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-slate-400 font-medium">
-          Pagos periódicos
-        </span>
-        <button
-          type="button"
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleNav('recurring');
-          }}
-          className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 text-[11px] group-hover:translate-x-0.5 transition-transform hover:underline cursor-pointer"
-        >
-          <span>Gestionar</span>
-          <ArrowRight className="w-3 h-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// SUBCOMPONENTE 7: WIDGET TRM OFICIAL
-// ============================================================================
-export function TRMWidget({ trm = 4050 }) {
-  return (
-    <div className="flex items-center justify-between p-3 px-3.5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm select-none">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-          <TrendingUp className="w-4 h-4" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-900 dark:text-white">TRM Oficial</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">USD/COP</span>
-          </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-            Sincronizada automáticamente • Superfinanciera
-          </p>
-        </div>
-      </div>
-      <div className="text-right shrink-0">
-        <span className="text-sm font-extrabold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
-          ${Number(trm || 4050).toLocaleString('es-CO')}
-        </span>
-        <span className="text-[9px] text-slate-400 block font-semibold uppercase tracking-wider">COP</span>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// SUBCOMPONENTES 8 A 11: WIDGETS DE BALANCES Y CUENTAS (Modularizados)
+// WIDGETS SATÉLITE MODULARIZADOS (Re-exportaciones para compatibilidad)
 // ============================================================================
 export { 
+  NetWorthWidget, 
+  DebtsWidget, 
+  InvestmentsWidget,
+  AccountsWidget,
+  RecentMovementsSection, 
+  RecentMovementsWidget, 
+  TransactionsWidget,
+  RecurringPaymentsWidget,
+  TRMWidget,
+  WeeklyCashflowWidget,
   BalanceCardsWidget, 
   LiquidBalanceWidget, 
   MonthlyIncomeWidget, 
   MonthlyExpenseWidget, 
   SavingsRateWidget 
 };
-
-// ============================================================================
-// SUBCOMPONENTE 12: WIDGET DE FLUJO DE CAJA SEMANAL
-// ============================================================================
-export function WeeklyCashflowWidget({
-  weeklyCashFlow,
-  hoveredWeekIndex,
-  setHoveredWeekIndex,
-  formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`,
-  currentPeriod,
-  setPeriod,
-  periodOptions = [
-    { id: 'month', label: 'Mensual' },
-    { id: 'week', label: 'Semanal' },
-    { id: 'day', label: 'Diario' }
-  ]
-}) {
-  const weeks = weeklyCashFlow?.weeks || [];
-  const maxVal = weeklyCashFlow?.maxVal || 100000;
-
-  return (
-    <div 
-      className="p-5 sm:p-6 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4"
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-              Flujo de caja semanal
-            </h3>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Ingresos vs. gastos
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Distribución acumulada a lo largo del mes en curso
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {setPeriod && (
-            <div className="w-56 sm:w-60">
-              <SegmentedControl
-                options={periodOptions}
-                value={currentPeriod}
-                onChange={setPeriod}
-                size="sm"
-              />
-            </div>
-          )}
-
-          <div className="hidden sm:flex items-center gap-3 text-xs font-semibold">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <span className="text-slate-600 dark:text-slate-300">Ingresos</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              <span className="text-slate-600 dark:text-slate-300">Gastos</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="pt-2">
-        <div className="grid grid-cols-5 gap-2 sm:gap-4 h-48 sm:h-52 items-end pt-6 pb-2 px-2 border-b border-slate-100 dark:border-white/5">
-          {weeks.map((week, idx) => {
-            const incomeHeight = Math.max(6, Math.round((week.income / maxVal) * 160));
-            const expenseHeight = Math.max(6, Math.round((week.expense / maxVal) * 160));
-            const isHovered = hoveredWeekIndex === idx;
-
-            return (
-              <div
-                key={week.name}
-                onMouseEnter={() => setHoveredWeekIndex && setHoveredWeekIndex(idx)}
-                onMouseLeave={() => setHoveredWeekIndex && setHoveredWeekIndex(null)}
-                className={`flex flex-col items-center justify-end h-full group relative transition-all ${
-                  isHovered ? 'opacity-100' : 'hover:opacity-90'
-                }`}
-              >
-                {isHovered && (
-                  <div className="absolute -top-14 z-20 px-2.5 py-1.5 rounded-xl bg-slate-900 dark:bg-black text-white text-[11px] shadow-xl border border-white/10 pointer-events-none whitespace-nowrap animate-fadeIn flex flex-col gap-0.5">
-                    <span className="text-emerald-400 font-bold">+{formatMoney(week.income)}</span>
-                    <span className="text-rose-400 font-bold">-{formatMoney(week.expense)}</span>
-                  </div>
-                )}
-
-                <div className="flex items-end gap-1.5 sm:gap-2 w-full justify-center">
-                  <div className="w-3.5 sm:w-5 bg-slate-100 dark:bg-white/5 rounded-t-xl overflow-hidden flex items-end">
-                    <div
-                      className="w-full bg-emerald-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-sm"
-                      style={{ height: `${incomeHeight}px` }}
-                    />
-                  </div>
-                  <div className="w-3.5 sm:w-5 bg-slate-100 dark:bg-white/5 rounded-t-xl overflow-hidden flex items-end">
-                    <div
-                      className="w-full bg-rose-500 rounded-t-xl transition-all duration-700 group-hover:brightness-110 shadow-sm"
-                      style={{ height: `${expenseHeight}px` }}
-                    />
-                  </div>
-                </div>
-
-                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mt-2 block">
-                  {week.name}
-                </span>
-                <span className="text-[9px] text-slate-400 block -mt-0.5">
-                  {week.range}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const WIDGET_ICON_MAP = {
   Landmark,
