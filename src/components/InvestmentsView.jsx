@@ -37,6 +37,7 @@ import { usePrivacy } from '../context/PrivacyContext';
 import InvestmentFormModal from './InvestmentFormModal';
 import BrandIcon from './BrandIcon';
 import CDTLiquidationModal from './investments/components/CDTLiquidationModal';
+import InvestmentQuickUpdateModal from './investments/components/InvestmentQuickUpdateModal';
 import useInvestmentQuotes from './investments/hooks/useInvestmentQuotes';
 import useInvestmentLiquidation from './investments/hooks/useInvestmentLiquidation';
 import { 
@@ -1038,68 +1039,13 @@ export default function InvestmentsView({
       />
 
       {/* MODAL 2: Actualización Rápida de Valor de Mercado */}
-      {quickUpdateItem && (
-        <div 
-          className="fixed inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fadeIn"
-          onClick={() => setQuickUpdateItem(null)}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[340px] rounded-3xl shadow-2xl border p-5 animate-modal-pop space-y-3.5"
-            style={{ backgroundColor: 'var(--modal-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-          >
-            <div className="flex items-center justify-between pb-2 border-b" style={{ borderColor: 'var(--border-color)' }}>
-              <div>
-                <h4 className="text-sm font-extrabold">Actualizar Valor de Mercado</h4>
-                <p className="text-[10px] opacity-60 truncate max-w-[220px]">{quickUpdateItem.name}</p>
-              </div>
-              <button 
-                onClick={() => setQuickUpdateItem(null)}
-                className="w-6 h-6 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 text-xs font-bold"
-                style={{ backgroundColor: 'var(--bg-card-sub)' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveQuickValue} className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold opacity-70 mb-1">
-                  Nuevo Valor Actual ({quickUpdateItem.currency}) *
-                </label>
-                <input 
-                  type="number"
-                  step="any"
-                  min="0"
-                  required
-                  autoFocus
-                  value={quickUpdateValue}
-                  onChange={(e) => setQuickUpdateValue(e.target.value)}
-                  className="w-full text-base font-black px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none"
-                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setQuickUpdateItem(null)}
-                  className="px-3.5 py-2 text-xs font-semibold opacity-70 rounded-xl"
-                  style={{ backgroundColor: 'var(--bg-card-sub)' }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-sm active:scale-95"
-                >
-                  Actualizar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <InvestmentQuickUpdateModal
+        item={quickUpdateItem}
+        value={quickUpdateValue}
+        onChangeValue={setQuickUpdateValue}
+        onClose={() => setQuickUpdateItem(null)}
+        onConfirm={handleSaveQuickValue}
+      />
 
       {/* MODAL 3: Confirmación y Liquidación de CDT a Cuenta */}
       <CDTLiquidationModal
