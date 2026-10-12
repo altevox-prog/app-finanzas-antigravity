@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -37,7 +37,7 @@ import {
 import { usePrivacy } from '../context/PrivacyContext';
 import InvestmentFormModal from './InvestmentFormModal';
 import BrandIcon from './BrandIcon';
-import { fetchBatchMarketPrices } from '../services/marketQuotesService';
+import useInvestmentQuotes from './investments/hooks/useInvestmentQuotes';
 import { 
   toSafeNumber, 
   convertUSDtoCOP, 
@@ -96,10 +96,14 @@ export default function InvestmentsView({
     }));
   };
 
-  // Cotizaciones en vivo en tiempo real
-  const [livePrices, setLivePrices] = useState({});
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  // Cotizaciones en vivo en tiempo real (Custom Hook)
+  const {
+    livePrices,
+    isRefreshing,
+    lastRefreshedAt,
+    handleRefreshQuotes,
+    setLivePrices
+  } = useInvestmentQuotes({ investments });
 
   // Modal State for Add / Edit Investment
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -181,43 +185,6 @@ export default function InvestmentsView({
     }
   };
 
-  // Clave estable de símbolos cotizables en bolsa para evitar peticiones repetidas innecesarias
-  const tickersKey = useMemo(() => {
-    if (!Array.isArray(investments)) return '';
-    return investments
-      .filter(i => {
-        const type = i.assetType || i.category;
-        return type !== 'cdt' && type !== 'fixed' && type !== 'loan' && i.subType !== 'private_loan' && i.subType !== 'bond';
-      })
-      .map(i => (i.ticker || i.symbol || (i.name && i.name.length <= 5 && !i.name.includes(' ') ? i.name : '')).toUpperCase().trim())
-      .filter(Boolean)
-      .sort()
-      .join(',');
-  }, [investments]);
-
-  // Consulta de cotizaciones en tiempo real
-  const handleRefreshQuotes = useCallback(async () => {
-    if (!investments || investments.length === 0 || !tickersKey) return;
-    setIsRefreshing(true);
-    try {
-      const quotes = await fetchBatchMarketPrices(investments);
-      if (quotes && Object.keys(quotes).length > 0) {
-        setLivePrices(prev => ({ ...prev, ...quotes }));
-        setLastRefreshedAt(new Date());
-      }
-    } catch (e) {
-      console.warn('Error consultando cotizaciones en vivo:', e);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [investments, tickersKey]);
-
-  // Consulta automática al montar o si cambian los tickers del portafolio
-  useEffect(() => {
-    if (tickersKey) {
-      handleRefreshQuotes();
-    }
-  }, [tickersKey, handleRefreshQuotes]);
 
   /**
    * Calcula las métricas individuales de cada posición de inversión
