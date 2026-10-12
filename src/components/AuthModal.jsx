@@ -2,22 +2,18 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Cloud, 
-  Mail, 
-  ArrowRight, 
   X, 
-  AlertCircle, 
-  CheckCircle2, 
-  RefreshCw,
-  ArrowLeft
+  CheckCircle2 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useBackHandler } from '../hooks/useBackHandler';
 import AppLogo from './AppLogo';
-import { supabase, updateSupabaseCredentials } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { getURL } from '../utils/urlHelper';
 import EmailConfirmationSentStep from './auth/EmailConfirmationSentStep';
 import TwoFactorVerifyStep from './auth/TwoFactorVerifyStep';
 import AuthForm from './auth/components/AuthForm';
+import CustomSupabaseConfig from './auth/components/CustomSupabaseConfig';
 
 export default function AuthModal({ isOpen, onClose }) {
   useBackHandler(isOpen, onClose);
@@ -34,11 +30,6 @@ export default function AuthModal({ isOpen, onClose }) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'error' | 'success', message: '' }
-
-  // Supabase credentials configuration (for when .env is empty)
-  const [showCredsForm, setShowCredsForm] = useState(false);
-  const [customUrl, setCustomUrl] = useState('');
-  const [customKey, setCustomKey] = useState('');
 
   // 2FA state
   const [twoFactorCode, setTwoFactorCode] = useState('');
@@ -357,58 +348,7 @@ export default function AuthModal({ isOpen, onClose }) {
               isConfigured={isConfigured}
             >
               {/* Aviso opcional de configuración si Supabase aún no tiene URL */}
-              {!isConfigured && (
-                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      Supabase no conectado
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowCredsForm(!showCredsForm)}
-                      className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
-                    >
-                      {showCredsForm ? 'Ocultar' : 'Conectar Nube'}
-                    </button>
-                  </div>
-                  {showCredsForm ? (
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      if (customUrl && customKey) {
-                        updateSupabaseCredentials(customUrl, customKey);
-                      }
-                    }} className="space-y-2 pt-1 border-t border-amber-500/15">
-                      <input 
-                        type="url"
-                        required
-                        placeholder="https://xyz.supabase.co"
-                        value={customUrl}
-                        onChange={(e) => setCustomUrl(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-xs"
-                      />
-                      <input 
-                        type="text"
-                        required
-                        placeholder="Project Anon Key"
-                        value={customKey}
-                        onChange={(e) => setCustomKey(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-black/30 border border-slate-200 dark:border-white/10 text-xs font-mono"
-                      />
-                      <button
-                        type="submit"
-                        className="w-full py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-sm"
-                      >
-                        Guardar y Conectar Supabase
-                      </button>
-                    </form>
-                  ) : (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Puedes agregar tus variables en el archivo <code className="font-mono text-emerald-600">.env</code> o tocar 'Conectar Nube'.
-                    </p>
-                  )}
-                </div>
-              )}
+              <CustomSupabaseConfig isConfigured={isConfigured} />
 
               {/* Botón de Google OAuth */}
               {isConfigured && mode !== 'forgot' && (
