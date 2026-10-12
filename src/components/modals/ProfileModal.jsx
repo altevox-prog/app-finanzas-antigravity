@@ -64,6 +64,7 @@ import ProfileResetModal from './profile/ProfileResetModal';
 import ProfileLogoutModal from './profile/ProfileLogoutModal';
 import useProfileBackup from './profile/hooks/useProfileBackup';
 import useProfileDataActions from './profile/hooks/useProfileDataActions';
+import useProfileSecurity from './profile/hooks/useProfileSecurity';
 
 export default function ProfileModal({
   isOpen,
@@ -146,10 +147,6 @@ export default function ProfileModal({
     }
   }, [userProfile?.name]);
 
-  // PIN Setup State
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [pinError, setPinError] = useState('');
 
   // New Subscription Form State
   const [showAddSubForm, setShowAddSubForm] = useState(false);
@@ -245,6 +242,24 @@ export default function ProfileModal({
     onClose,
     showToast,
     user
+  });
+
+  // PIN & Biometrics Security via custom hook
+  const {
+    newPin,
+    setNewPin,
+    confirmPin,
+    setConfirmPin,
+    pinError,
+    setPinError,
+    handleTogglePin,
+    handleSavePin,
+    handleToggleBiometrics
+  } = useProfileSecurity({
+    securitySettings,
+    onUpdateSecurity,
+    setCurrentView,
+    showToast
   });
 
   // Manejador centralizado de tecla Volver / Popstate para navegación interna escalonada
@@ -389,132 +404,7 @@ export default function ProfileModal({
     showToast('Nombre actualizado.');
   };
 
-  // Toggle PIN
-  const handleTogglePin = () => {
-    if (securitySettings?.pinEnabled) {
-      onUpdateSecurity({
-        ...securitySettings,
-        pinEnabled: false,
-        pin: '',
-        biometricsEnabled: false
-      });
-      try {
-        localStorage.setItem('security_pin_enabled', 'false');
-        localStorage.setItem('security_pin_code', '');
-        localStorage.setItem('presu_app_locked', 'false');
-      } catch {}
-      showToast('Bloqueo por PIN desactivado.');
-    } else {
-      setNewPin('');
-      setConfirmPin('');
-      setPinError('');
-      setCurrentView('pin_setup');
-    }
-  };
 
-  const handleSavePin = (e) => {
-    e.preventDefault();
-    if (newPin.length < 4 || newPin.length > 6) {
-      setPinError('El PIN debe tener entre 4 y 6 dígitos numéricos.');
-      return;
-    }
-    if (newPin !== confirmPin) {
-      setPinError('Los PINs ingresados no coinciden.');
-      return;
-    }
-
-    onUpdateSecurity({
-      ...securitySettings,
-      pin: newPin,
-      pinEnabled: true
-    });
-    setCurrentView('main');
-    showToast('PIN de seguridad configurado y protección activada.');
-  };
-
-  // Toggle Biometrics with WebAuthn Registration
-  const handleToggleBiometrics = async () => {
-    if (securitySettings?.biometricsEnabled) {
-      onUpdateSecurity({
-        ...securitySettings,
-        biometricsEnabled: false
-      });
-      localStorage.setItem('security_biometric_enabled', 'false');
-      localStorage.removeItem('security_biometric_cred_id');
-      showToast('Autenticación biométrica desactivada.');
-      return;
-    }
-
-    // Requiere tener activo el PIN antes de habilitar la biometría
-    if (!securitySettings?.pinEnabled || !securitySettings?.pin || securitySettings.pin.length < 4) {
-      showToast('Debes configurar y activar primero un PIN de seguridad antes de habilitar la huella.', true);
-      return;
-    }
-
-    // 1. Verifica si window.PublicKeyCredential existe
-    if (typeof window === 'undefined' || !window.PublicKeyCredential || !navigator.credentials) {
-      showToast('Tu dispositivo o navegador no soporta autenticación biométrica en esta app', true);
-      return;
-    }
-
-    try {
-      // Verifica si PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() retorna true
-      const isAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.();
-      if (!isAvailable) {
-        showToast('Tu dispositivo o navegador no soporta autenticación biométrica en esta app', true);
-        return;
-      }
-
-      // Registro biométrico estándar para autenticadores de plataforma (Android / WebAuthn)
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-      const userId = new Uint8Array(16);
-      window.crypto.getRandomValues(userId);
-
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: challenge,
-          rp: {
-            name: 'Monety',
-            id: window.location.hostname
-          },
-          user: {
-            id: userId,
-            name: 'usuario@monety.local',
-            displayName: 'Usuario Monety'
-          },
-          pubKeyCredParams: [
-            { alg: -7, type: 'public-key' },
-            { alg: -257, type: 'public-key' }
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: 'platform',
-            userVerification: 'required'
-          },
-          timeout: 60000
-        }
-      });
-
-      if (credential) {
-        const rawIdArray = Array.from(new Uint8Array(credential.rawId));
-        localStorage.setItem('security_biometric_enabled', 'true');
-        localStorage.setItem('security_biometric_cred_id', JSON.stringify(rawIdArray));
-        onUpdateSecurity({
-          ...securitySettings,
-          biometricsEnabled: true
-        });
-        showToast('¡Huella dactilar activada correctamente!');
-      }
-    } catch (err) {
-      console.warn('Error en registro biométrico:', err);
-      // Envuelto en try/catch para que si el usuario cancela o hay error, el switch permanezca apagado sin romper la app
-      if (err.name === 'NotAllowedError') {
-        showToast('Registro biométrico cancelado o no autorizado. Se mantiene solo el PIN.', true);
-      } else {
-        showToast('No se pudo registrar la huella en este dispositivo. Mantén solo el PIN.', true);
-      }
-    }
-  };
 
   // Subscriptions
   const handleCreateSubscription = (e) => {
