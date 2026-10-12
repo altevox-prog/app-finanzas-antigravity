@@ -30,11 +30,9 @@ import {
   calculateNetWorth
 } from '../utils/financeMath';
 import { 
-  getStoredWidgetsConfig, 
-  saveStoredWidgetsConfig,
-  normalizeWidgetId,
-  DEFAULT_WIDGETS_CONFIG
+  normalizeWidgetId
 } from '../utils/widgetsConfig';
+import useWidgetReorder from '../hooks/useWidgetReorder';
 import BalanceWidget from './BalanceWidget';
 import BudgetWidget from './BudgetWidget';
 import ReportsAndCharts from './ReportsAndCharts';
@@ -631,361 +629,33 @@ export default function Dashboard({
   const WIDGET_COMPONENTS = WIDGET_REGISTRY;
   const WIDGET_MAP = WIDGET_REGISTRY;
 
-  // 8. ESTADO CENTRAL DEL DASHBOARD BASADO EN CONFIGURACIÓN GUARDADA
-  const [widgets, setWidgets] = useState(() => {
-    const candidate = widgetsConfig || widgetsProp;
-    if (Array.isArray(candidate) && candidate.length > 0) return candidate;
-    return getStoredWidgetsConfig();
+  // 8. HOOK MODULAR DE REORDENAMIENTO, DRAG-AND-DROP Y VISIBILIDAD DE WIDGETS
+  const {
+    widgets,
+    setWidgets,
+    visibleWidgets,
+    hiddenWidgets,
+    isReordering,
+    draggedIndex,
+    handlePressStart,
+    handlePressEnd,
+    handleSwapWidgets,
+    handleDragStart,
+    handleDragOver,
+    handleDrop,
+    handleDragEnd,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+    handleFinishReordering,
+    handleToggleVisibility
+  } = useWidgetReorder({
+    widgetsConfig,
+    widgetsProp,
+    allowedWidgetIds,
+    onSaveWidgets,
+    getWidget
   });
-
-  // 9. ESTADOS Y REFERENCIAS PARA INTERACCIÓN ESTILO IOS (LONG PRESS & DRAG-AND-DROP)
-  const [isReordering, setIsReordering] = useState(false);
-  const [draggedIndex, setDraggedIndex] = useState(null);
-  const longPressTimerRef = useRef(null);
-  const pressedIndexRef = useRef(null);
-  const draggedIndexRef = useRef(null);
-  const widgetsRef = useRef(widgets);
-  const isReorderingRef = useRef(isReordering);
-  const touchStartPosRef = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    widgetsRef.current = widgets;
-  }, [widgets]);
-
-  useEffect(() => {
-    isReorderingRef.current = isReordering;
-  }, [isReordering]);
-
-  // Serialización primitiva para evitar bucles infinitos de renderizado
-  const serializedCandidateConfig = useMemo(() => {
-    const candidate = widgetsConfig || widgetsProp;
-    if (Array.isArray(candidate) && candidate.length > 0) {
-      try {
-        return JSON.stringify(candidate);
-      } catch (_) {
-        return '';
-      }
-    }
-    return '';
-  }, [widgetsConfig, widgetsProp]);
-
-  // Sincronización segura de widgets con props: solo si no está en reorganización y si los datos realmente cambiaron
-  useEffect(() => {
-    if (isReorderingRef.current || !serializedCandidateConfig) return;
-    try {
-      const currentSerialized = JSON.stringify(widgetsRef.current);
-      if (serializedCandidateConfig !== currentSerialized) {
-        const parsed = JSON.parse(serializedCandidateConfig);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setWidgets(parsed);
-        }
-      }
-    } catch (_) {}
-  }, [serializedCandidateConfig]);
-
-  useEffect(() => {
-    let isMounted = true;
-    const handleSync = (e) => {
-      if (isReorderingRef.current) return;
-      try {
-        const next = (e?.detail && Array.isArray(e.detail) && e.detail.length > 0)
-          ? e.detail
-          : getStoredWidgetsConfig();
-        const nextStr = JSON.stringify(next);
-        const currStr = JSON.stringify(widgetsRef.current);
-        if (nextStr !== currStr) {
-          queueMicrotask(() => {
-            if (isMounted && !isReorderingRef.current) {
-              setWidgets(next);
-            }
-          });
-        }
-      } catch (_) {}
-    };
-
-    window.addEventListener('monety_widgets_order_v2_updated', handleSync);
-    window.addEventListener('monety_widgets_config_updated', handleSync);
-    window.addEventListener('presu_widget_order_updated', handleSync);
-    window.addEventListener('storage', handleSync);
-    return () => {
-      isMounted = false;
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      window.removeEventListener('monety_widgets_order_v2_updated', handleSync);
-      window.removeEventListener('monety_widgets_config_updated', handleSync);
-      window.removeEventListener('presu_widget_order_updated', handleSync);
-      window.removeEventListener('storage', handleSync);
-    };
-  }, []);
-
-  // Disparador háptico seguro contra bloqueos de intervención del navegador
-  const triggerHaptic = (pattern = 50) => {
-    try {
-      if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-        if (typeof document !== 'undefined' && typeof document.hasFocus === 'function' && !document.hasFocus()) {
-          return;
-        }
-        if (typeof navigator.userActivation !== 'undefined' && !navigator.userActivation.hasBeenActive) {
-          return;
-        }
-        navigator.vibrate(pattern);
-      }
-    } catch (_) {
-      // Silenciar intervención de seguridad del navegador
-    }
-  };
-
-  // Handlers para detección de pulsación prolongada (500ms)
-  const handlePressStart = (index = null) => {
-    if (isReorderingRef.current) return;
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-    if (index !== null) {
-      pressedIndexRef.current = index;
-    }
-    longPressTimerRef.current = setTimeout(() => {
-      setIsReordering(true);
-      if (pressedIndexRef.current !== null && pressedIndexRef.current !== undefined) {
-        draggedIndexRef.current = pressedIndexRef.current;
-        setDraggedIndex(pressedIndexRef.current);
-      }
-      triggerHaptic(50);
-    }, 500);
-  };
-
-  const handlePressEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    pressedIndexRef.current = null;
-  };
-
-  // Intercambio atómico unificado para Drag & Drop (Ratón en PC y Táctil en Móvil)
-  const handleSwapWidgets = (targetIndex) => {
-    const currentIndex = draggedIndexRef.current;
-    if (currentIndex === null || currentIndex === undefined || currentIndex === targetIndex) {
-      return;
-    }
-
-    setWidgets((prevWidgets) => {
-      const visibleList = prevWidgets.filter(w => {
-        if (!w.visible) return false;
-        if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
-          const norm = normalizeWidgetId(w.id);
-          if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
-        }
-        return Boolean(getWidget(w.id));
-      });
-
-      const sourceItem = visibleList[currentIndex];
-      const targetItem = visibleList[targetIndex];
-
-      if (!sourceItem || !targetItem || sourceItem.id === targetItem.id) {
-        return prevWidgets;
-      }
-
-      const fromIndexInPrev = prevWidgets.findIndex(w => w.id === sourceItem.id);
-      const toIndexInPrev = prevWidgets.findIndex(w => w.id === targetItem.id);
-
-      if (fromIndexInPrev === -1 || toIndexInPrev === -1) {
-        return prevWidgets;
-      }
-
-      const updated = [...prevWidgets];
-      const [moved] = updated.splice(fromIndexInPrev, 1);
-      updated.splice(toIndexInPrev, 0, moved);
-      widgetsRef.current = updated;
-      return updated;
-    });
-
-    triggerHaptic(20);
-
-    draggedIndexRef.current = targetIndex;
-    setDraggedIndex(targetIndex);
-  };
-
-  // Drag & Drop nativo HTML5 para ratón (PC)
-  const handleDragStart = (e, index) => {
-    if (!isReordering) return;
-    draggedIndexRef.current = index;
-    setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-    try {
-      e.dataTransfer.setData('text/plain', String(index));
-    } catch (_) {}
-  };
-
-  const handleDragOver = (e, targetIndex) => {
-    if (!isReordering) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    handleSwapWidgets(targetIndex);
-  };
-
-  const handleDrop = (e) => {
-    if (!isReordering) return;
-    e.preventDefault();
-    draggedIndexRef.current = null;
-    setDraggedIndex(null);
-
-    const currentWidgets = widgetsRef.current;
-    localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
-    saveStoredWidgetsConfig(currentWidgets, null);
-    if (onSaveWidgets) onSaveWidgets(currentWidgets);
-  };
-
-  const handleDragEnd = () => {
-    draggedIndexRef.current = null;
-    setDraggedIndex(null);
-
-    const currentWidgets = widgetsRef.current;
-    localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
-    saveStoredWidgetsConfig(currentWidgets, null);
-    if (onSaveWidgets) onSaveWidgets(currentWidgets);
-  };
-
-  // Manejadores Táctiles (Touch Events) para Móviles / Pantallas Táctiles
-  const handleTouchStart = (e, index) => {
-    // Si se interactúa con un elemento interactivo o con scroll horizontal interno, no capturar para reorganización
-    if (e.target && typeof e.target.closest === 'function') {
-      if (e.target.closest('button, a, input, select, textarea, [data-no-drag], .overflow-x-auto, .no-scrollbar')) {
-        return;
-      }
-    }
-    if (e.touches && e.touches[0]) {
-      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-    if (isReorderingRef.current || isReordering) {
-      draggedIndexRef.current = index;
-      setDraggedIndex(index);
-      triggerHaptic(25);
-    } else {
-      handlePressStart(index);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isReorderingRef.current) {
-      if (touchStartPosRef.current && e.touches && e.touches[0]) {
-        const diffY = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
-        const diffX = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
-        if (diffY > 10 || diffX > 10) {
-          handlePressEnd();
-          return;
-        }
-      }
-      return;
-    }
-
-    // Solo prevenir scroll vertical si el usuario está arrastrando activamente desde la manija
-    if (draggedIndexRef.current === null || draggedIndexRef.current === undefined) {
-      return;
-    }
-
-    const touch = e.touches && e.touches[0];
-    if (!touch) return;
-
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-
-    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-    const widgetCard = targetEl?.closest('[data-widget-index]');
-    if (widgetCard) {
-      const targetIndex = Number(widgetCard.getAttribute('data-widget-index'));
-      if (!isNaN(targetIndex)) {
-        handleSwapWidgets(targetIndex);
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    handlePressEnd();
-    if (isReorderingRef.current || isReordering) {
-      if (draggedIndexRef.current !== null) {
-        draggedIndexRef.current = null;
-        setDraggedIndex(null);
-
-        const currentWidgets = widgetsRef.current;
-        localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
-        saveStoredWidgetsConfig(currentWidgets, null);
-        if (onSaveWidgets) onSaveWidgets(currentWidgets);
-      }
-    }
-  };
-
-  const handleFinishReordering = () => {
-    setIsReordering(false);
-    draggedIndexRef.current = null;
-    setDraggedIndex(null);
-    pressedIndexRef.current = null;
-
-    const currentWidgets = widgetsRef.current;
-    localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
-    saveStoredWidgetsConfig(currentWidgets, null);
-    if (onSaveWidgets) onSaveWidgets(currentWidgets);
-  };
-
-  // Control de visibilidad de widgets (ocultar / restaurar)
-  const handleToggleVisibility = (e, widgetId, newVisible) => {
-    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-
-    const currentList = widgetsRef.current || widgets;
-    const normTarget = normalizeWidgetId(widgetId);
-    let found = false;
-
-    let updated = currentList.map((w) => {
-      if (w.id === widgetId || normalizeWidgetId(w.id) === normTarget) {
-        found = true;
-        return { ...w, visible: newVisible, hidden: !newVisible };
-      }
-      return w;
-    });
-
-    // Si se está restaurando un widget que no estaba en la lista guardada, buscarlo en DEFAULT_WIDGETS_CONFIG
-    if (!found && newVisible) {
-      const defWidget = DEFAULT_WIDGETS_CONFIG.find(dw => dw.id === widgetId || normalizeWidgetId(dw.id) === normTarget);
-      if (defWidget) {
-        updated.push({ ...defWidget, visible: true, hidden: false });
-      }
-    }
-
-    widgetsRef.current = updated;
-    setWidgets(updated);
-    localStorage.setItem('monety_widgets_order_v2', JSON.stringify(updated));
-    saveStoredWidgetsConfig(updated, null);
-    if (onSaveWidgets) onSaveWidgets(updated);
-  };
-
-  const visibleWidgets = widgets.filter(w => {
-    if (!w.visible) return false;
-    const norm = normalizeWidgetId(w.id);
-    if (norm === 'trm' || norm === 'trm_oficial' || w.id === 'trm' || w.id === 'trm_oficial') return false;
-    if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
-      if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
-    }
-    return Boolean(getWidget(w.id));
-  });
-
-  const hiddenWidgets = useMemo(() => {
-    const list = widgets.filter((w) => w.visible === false || w.hidden === true);
-    const visibleIds = new Set(visibleWidgets.map(w => normalizeWidgetId(w.id)));
-    const existingHiddenIds = new Set(list.map(w => normalizeWidgetId(w.id)));
-
-    DEFAULT_WIDGETS_CONFIG.forEach(dw => {
-      const norm = normalizeWidgetId(dw.id);
-      if (norm === 'trm' || norm === 'trm_oficial') return;
-      if (allowedWidgetIds && Array.isArray(allowedWidgetIds) && !allowedWidgetIds.includes(norm)) return;
-      if (!visibleIds.has(norm) && !existingHiddenIds.has(norm)) {
-        list.push({ ...dw, visible: false, hidden: true });
-      }
-    });
-    return list;
-  }, [widgets, visibleWidgets, allowedWidgetIds]);
 
   const isWideWidget = (id) => {
     if (!id) return false;
