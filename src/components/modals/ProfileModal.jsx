@@ -62,6 +62,7 @@ import ProfilePinSetupView from './profile/views/ProfilePinSetupView';
 import ProfileSubscriptionsView from './profile/views/ProfileSubscriptionsView';
 import ProfileResetModal from './profile/ProfileResetModal';
 import ProfileLogoutModal from './profile/ProfileLogoutModal';
+import useProfileBackup from './profile/hooks/useProfileBackup';
 
 export default function ProfileModal({
   isOpen,
@@ -185,12 +186,44 @@ export default function ProfileModal({
   // Toast / Feedback message
   const [toastMessage, setToastMessage] = useState(null);
 
+  const showToast = (msg, isError = false) => {
+    setToastMessage({ text: msg, isError });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const fileInputRef = useRef(null);
   
-  // Backup & Restore State
-  const restoreInputRef = useRef(null);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [backupPreview, setBackupPreview] = useState(null);
+  // Backup & Restore State & Handlers
+  const {
+    restoreInputRef,
+    isRestoring,
+    backupPreview,
+    setBackupPreview,
+    handleExportJSON,
+    handleFileSelect,
+    confirmRestore
+  } = useProfileBackup({
+    dataToBackup: {
+      transactions,
+      investments,
+      accounts,
+      categories,
+      debtsAndLoans,
+      budgets,
+      savingsGoals,
+      subscriptions,
+      recurring_payments: subscriptions,
+      userProfile,
+      securitySettings,
+      trm,
+      theme
+    },
+    onRestoreBackup,
+    showToast,
+    parseAndValidateBackup,
+    downloadBackupJSON
+  });
+
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
   // Manejador centralizado de tecla Volver / Popstate para navegación interna escalonada
@@ -237,11 +270,6 @@ export default function ProfileModal({
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const showToast = (msg, isError = false) => {
-    setToastMessage({ text: msg, isError });
-    setTimeout(() => setToastMessage(null), 3500);
-  };
 
   // Calculate current month's expenses
   const now = new Date();
@@ -733,48 +761,6 @@ export default function ProfileModal({
   const totalSavedAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.currentAmount), 0);
   const totalTargetAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.targetAmount), 0);
 
-  // --- Export / Backup Handlers ---
-  const handleExportJSON = () => {
-    downloadBackupJSON({
-      transactions,
-      investments,
-      accounts,
-      categories,
-      debtsAndLoans,
-      budgets,
-      savingsGoals,
-      subscriptions,
-      recurring_payments: subscriptions,
-      userProfile,
-      securitySettings,
-      trm,
-      theme
-    });
-    showToast('Copia de seguridad descargada exitosamente.');
-  };
-
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setIsRestoring(true);
-    try {
-      const parsed = await parseAndValidateBackup(file);
-      setBackupPreview(parsed);
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setIsRestoring(false);
-      if (restoreInputRef.current) restoreInputRef.current.value = '';
-    }
-  };
-
-  const confirmRestore = async () => {
-    if (!backupPreview || !onRestoreBackup) return;
-    onRestoreBackup(backupPreview);
-    setBackupPreview(null);
-    showToast('¡Copia de seguridad restaurada con éxito!');
-  };
 
   const handleCloudSync = async () => {
     if (typeof onManualCloudSync === 'function') {
