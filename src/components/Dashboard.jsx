@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   Landmark, 
   HandCoins, 
@@ -41,7 +41,7 @@ import ReportsAndCharts from './ReportsAndCharts';
 import AccountsWidgetComponent from './AccountsWidget';
 import { RecentMovementsWidget, TransactionsWidget } from './RecentMovementsWidget';
 import BentoMetricsGrid from './common/BentoMetricsGrid';
-import PillBarChart from './common/PillBarChart';
+import WeeklyExpensesChart from './dashboard/WeeklyExpensesChart';
 import SegmentedControl from './common/SegmentedControl';
 import { MONTH_NAMES } from '../data/initialData';
 
@@ -1054,21 +1054,6 @@ export default function Dashboard({
     return { weeks, maxVal };
   }, [scopedTransactions]);
 
-  // Datos agregados formateados para PillBarChart (Actividad de Gastos por Semana)
-  const weeklyExpensesChartData = useMemo(() => {
-    const currentDayNum = selectedDay ? parseInt(selectedDay.split('-')[2], 10) : new Date().getDate();
-    const isCurrentMonth = selectedDate.getMonth() === new Date().getMonth() && selectedDate.getFullYear() === new Date().getFullYear();
-
-    return weeklyCashFlow.weeks.map((w) => {
-      const isActive = isCurrentMonth && currentDayNum >= w.start && currentDayNum <= w.end;
-      return {
-        label: w.name,
-        value: w.expense,
-        active: isActive
-      };
-    });
-  }, [weeklyCashFlow, selectedDay, selectedDate]);
-
   // Manejadores seguros para categorías y cuentas
   const handleAddCategory = (cat) => {
     if (typeof onAddCategory === 'function') {
@@ -1168,14 +1153,14 @@ export default function Dashboard({
       />
     ),
 
-    // 8. Flujo de caja semanal / Actividad de gastos (PillBarChart)
+    // 8. Flujo de caja semanal / Actividad de gastos (WeeklyExpensesChart)
     weekly_cashflow: (
-      <PillBarChart
-        data={weeklyExpensesChartData}
-        title="Actividad de Gastos"
-        subtitle={`Egresos por semana · ${bentoPeriodLabel}`}
+      <WeeklyExpensesChart
+        transactions={transactions}
+        selectedDate={selectedDate}
+        selectedDay={selectedDay}
+        currentMonthLabel={currentMonthLabel}
         formatMoney={formatMoney}
-        height={180}
       />
     ),
     weekly_cashflow_classic: (

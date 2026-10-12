@@ -1,0 +1,245 @@
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const WEEKS_TEMPLATE = [
+  { name: 'Sem 1', range: 'Días 1 - 7', start: 1, end: 7 },
+  { name: 'Sem 2', range: 'Días 8 - 14', start: 8, end: 14 },
+  { name: 'Sem 3', range: 'Días 15 - 21', start: 15, end: 21 },
+  { name: 'Sem 4', range: 'Días 22 - 28', start: 22, end: 28 },
+  { name: 'Sem 5', range: 'Días 29+', start: 29, end: 31 }
+];
+
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+/**
+ * WeeklyExpensesChart
+ * Widget independiente de "Actividad de Gastos" (Egresos por semana).
+ * Agrupa los egresos del mes seleccionado en 5 semanas estándar y los visualiza
+ * mediante barras cilíndricas animadas (Pill Bars).
+ */
+export default function WeeklyExpensesChart({
+  transactions = [],
+  selectedDate = new Date(),
+  selectedDay = null,
+  currentMonthLabel = '',
+  formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
+  height = 180,
+  className = ''
+}) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+
+  const targetDate = useMemo(() => {
+    return selectedDate ? new Date(selectedDate) : new Date();
+  }, [selectedDate]);
+
+  const targetYear = targetDate.getFullYear();
+  const targetMonth = targetDate.getMonth();
+
+  // 1. Filtrado temporal al mes en curso (independiente de si hay un día activo)
+  const monthTransactions = useMemo(() => {
+    if (!Array.isArray(transactions)) return [];
+    return transactions.filter((t) => {
+      if (!t || !t.date) return false;
+      const dateStr = String(t.date).split('T')[0];
+      const parts = dateStr.split('-');
+      if (parts.length < 3) return false;
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1; // 0-indexed
+      return y === targetYear && m === targetMonth;
+    });
+  }, [transactions, targetYear, targetMonth]);
+
+  // 2. Cálculo agrupado de egresos por semana
+  const { weeksData, maxExpense, hasAnyExpense } = useMemo(() => {
+    const weeks = WEEKS_TEMPLATE.map((w) => ({ ...w, expense: 0 }));
+
+    monthTransactions.forEach((tx) => {
+      if (!tx || !tx.date) return;
+      const type = String(tx.type || '').toLowerCase();
+      const isTransfer = Boolean(
+        tx.isTransfer ||
+        tx.is_transfer ||
+        type === 'transfer' ||
+        type === 'transferencia' ||
+        tx.categoryId === 'cat-transfer' ||
+        tx.category_id === 'cat-transfer' ||
+        tx.subcategoryId === 'sub-transfer-in' ||
+        tx.subcategoryId === 'sub-transfer-out'
+      );
+      if (isTransfer) return;
+
+      const isExpense = type === 'expense' || type === 'gasto';
+      if (!isExpense) return;
+
+      const dateStr = String(tx.date).split('T')[0];
+      const day = parseInt(dateStr.split('-')[2], 10);
+      if (isNaN(day)) return;
+
+      const amt = Math.abs(Number(tx.amount) || 0);
+      const targetWeek = weeks.find((w) => day >= w.start && day <= w.end);
+      if (targetWeek) {
+        targetWeek.expense += amt;
+      }
+    });
+
+    const maxExp = Math.max(...weeks.map((w) => w.expense), 0);
+    const hasExpense = maxExp > 0;
+
+    const now = new Date();
+    const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth();
+    const currentDayNum = selectedDay
+      ? parseInt(String(selectedDay).split('T')[0].split('-')[2], 10)
+      : now.getDate();
+
+    const formatted = weeks.map((w) => {
+      const isActive = isCurrentMonth && currentDayNum >= w.start && currentDayNum <= w.end;
+      const rawValue = w.expense;
+
+      // CORRECCIÓN DE BUG:
+      // Si no hay transacciones o el valor es 0, la altura es estrictamente 0%.
+      // No se inyectan alturas mock ni se divide por cero.
+      let percentage = 0;
+      if (hasExpense && rawValue > 0) {
+        percentage = Math.max(Math.round((rawValue / maxExp) * 100), 8);
+      }
+
+      return {
+        label: w.name,
+        range: w.range,
+        value: rawValue,
+        percentage,
+        active: isActive
+      };
+    });
+
+    return {
+      weeksData: formatted,
+      maxExpense: maxExp,
+      hasAnyExpense: hasExpense
+    };
+  }, [monthTransactions, targetYear, targetMonth, selectedDay]);
+
+  // 3. Etiqueta del período para el subtítulo
+  const periodLabel = useMemo(() => {
+    if (selectedDay) {
+      const dayNum = parseInt(String(selectedDay).split('T')[0].split('-')[2], 10);
+      const monthShort = (MONTH_NAMES[targetMonth] || '').slice(0, 3);
+      return `Día ${dayNum} · ${monthShort}`;
+    }
+    if (currentMonthLabel) return currentMonthLabel;
+    return `${MONTH_NAMES[targetMonth]} ${targetYear}`;
+  }, [selectedDay, currentMonthLabel, targetMonth, targetYear]);
+
+  return (
+    <div
+      className={`bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm p-5 select-none relative ${className}`}
+    >
+      {/* Encabezado del Widget */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+            Actividad de Gastos
+          </h3>
+          <p className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+            Egresos por semana · {periodLabel}
+          </p>
+        </div>
+
+        {/* Indicador de valor al interactuar */}
+        {hoveredIndex !== null && weeksData[hoveredIndex] && (
+          <div className="text-right animate-fadeIn">
+            <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-zinc-500 block">
+              {weeksData[hoveredIndex].label}
+            </span>
+            <span className="text-xs font-bold font-mono tabular-nums text-rose-500 dark:text-rose-400">
+              {formatMoney(weeksData[hoveredIndex].value)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Área del gráfico de barras cilíndricas */}
+      <div
+        className="flex items-end justify-between gap-2 pt-10 relative"
+        style={{ height: `${height}px` }}
+      >
+        {weeksData.map((item, idx) => {
+          const rawValue = item.value;
+          const isHovered = hoveredIndex === idx;
+
+          return (
+            <div
+              key={item.label}
+              className="relative flex-1 flex flex-col items-center justify-end h-full pt-8 cursor-pointer group select-none"
+              onMouseEnter={() => setHoveredIndex(idx)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              onClick={() => setHoveredIndex(idx)}
+            >
+              {/* Tooltip flotante individual */}
+              <AnimatePresence>
+                {isHovered && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                    animate={{ opacity: 1, y: -10, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute -top-7 z-50 px-2.5 py-1 rounded-lg bg-slate-900/95 dark:bg-zinc-800/95 text-white text-[11px] font-mono tabular-nums whitespace-nowrap shadow-xl border border-white/10 pointer-events-none"
+                  >
+                    {formatMoney(rawValue)}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Cápsula de la barra */}
+              <div
+                className={`w-full max-w-[28px] h-full flex items-end justify-center rounded-full p-1 transition-all duration-200 ${
+                  isHovered
+                    ? 'bg-rose-500/20 ring-2 ring-rose-500/50'
+                    : 'bg-slate-100/90 dark:bg-white/5'
+                }`}
+              >
+                <motion.div
+                  className="w-full rounded-full"
+                  style={{
+                    height: `${item.percentage}%`,
+                    transformOrigin: 'bottom',
+                    backgroundColor: isHovered
+                      ? '#F43F5E'
+                      : item.active
+                      ? '#FB7185'
+                      : rawValue > 0
+                      ? '#F43F5E'
+                      : 'transparent',
+                    boxShadow: isHovered && rawValue > 0 ? '0 0 14px rgba(244, 63, 94, 0.5)' : 'none'
+                  }}
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 120,
+                    damping: 14,
+                    delay: idx * 0.04
+                  }}
+                />
+              </div>
+
+              {/* Etiqueta inferior de la semana */}
+              <span
+                className={`text-[10px] font-mono mt-2 transition-colors duration-150 ${
+                  isHovered || item.active
+                    ? 'text-rose-500 dark:text-rose-400 font-bold'
+                    : 'text-slate-400 dark:text-zinc-500'
+                }`}
+              >
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
