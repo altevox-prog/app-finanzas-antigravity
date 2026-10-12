@@ -48,6 +48,7 @@ import BalanceCardsWidget, {
   MonthlyExpenseWidget,
   SavingsRateWidget
 } from './dashboard/BalanceCardsWidget';
+import QuickActionsFab from './dashboard/QuickActionsFab';
 import SegmentedControl from './common/SegmentedControl';
 import { MONTH_NAMES } from '../data/initialData';
 
@@ -1692,9 +1693,23 @@ export default function Dashboard({
         </div>
       )}
 
+      {/* Botón Flotante de Acciones Rápidas (Nuevo Movimiento) */}
+      {!isReordering && (
+        <QuickActionsFab
+          onOpenTransaction={handleOpenTxModal}
+          onOpenAddTransaction={handleOpenTxModal}
+          onOpenTransfer={financeActions?.openTransfer || financeActions?.handleOpenTransfer}
+          onOpenRecurring={handleOpenRecurringModal}
+          onOpenAddRecurring={handleOpenRecurringModal}
+          onOpenDebt={handleOpenDebtModal}
+          onOpenLoan={handleOpenDebtModal}
+          onOpenInvestment={() => navigateToTab('investments')}
+        />
+      )}
+
       {/* Fin de los widgets modulares del Dashboard */}
     </>
   );
 }
 
-export { Dashboard };
+export { Dashboard, QuickActionsFab };
