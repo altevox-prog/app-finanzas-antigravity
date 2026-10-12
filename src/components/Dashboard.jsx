@@ -26,21 +26,14 @@ import {
   normalizeWidgetId
 } from '../utils/widgetsConfig';
 import useWidgetReorder from '../hooks/useWidgetReorder';
-import BalanceWidget from './BalanceWidget';
-import BudgetWidget from './BudgetWidget';
-import ReportsAndCharts from './ReportsAndCharts';
-import RecentMovementsSection, { RecentMovementsWidget, TransactionsWidget } from './dashboard/RecentMovementsSection';
-import BentoMetricsGrid from './common/BentoMetricsGrid';
-import WeeklyExpensesChart from './dashboard/WeeklyExpensesChart';
-import BalanceCardsWidget, {
-  LiquidBalanceWidget,
-  MonthlyIncomeWidget,
-  MonthlyExpenseWidget,
-  SavingsRateWidget
-} from './dashboard/BalanceCardsWidget';
 import QuickActionsFab from './dashboard/QuickActionsFab';
 import SegmentedControl from './common/SegmentedControl';
 import { MONTH_NAMES } from '../data/initialData';
+import HiddenWidgetsSection from './dashboard/HiddenWidgetsSection';
+import DashboardWidgetWrapper, { isWideWidget } from './dashboard/DashboardWidgetWrapper';
+import { createWidgetRegistry } from './dashboard/widgetRegistry';
+
+// Re-exports de compatibilidad para módulos que consumían widgets satélite desde Dashboard.jsx
 import NetWorthWidget from './dashboard/widgets/NetWorthWidget';
 import DebtsWidget from './dashboard/widgets/DebtsWidget';
 import InvestmentsWidget from './dashboard/widgets/InvestmentsWidget';
@@ -48,6 +41,13 @@ import AccountsWidget from './dashboard/widgets/AccountsWidget';
 import RecurringPaymentsWidget from './dashboard/widgets/RecurringPaymentsWidget';
 import TRMWidget from './dashboard/widgets/TRMWidget';
 import WeeklyCashflowWidget from './dashboard/widgets/WeeklyCashflowWidget';
+import RecentMovementsSection, { RecentMovementsWidget, TransactionsWidget } from './dashboard/RecentMovementsSection';
+import BalanceCardsWidget, {
+  LiquidBalanceWidget,
+  MonthlyIncomeWidget,
+  MonthlyExpenseWidget,
+  SavingsRateWidget
+} from './dashboard/BalanceCardsWidget';
 
 // ============================================================================
 // WIDGETS SATÉLITE MODULARIZADOS (Re-exportaciones para compatibilidad)
@@ -261,220 +261,92 @@ export default function Dashboard({
     }
   };
 
-  // 7. REGISTRO Y MAPEO CENTRALIZADO DE LOS 12 WIDGETS REALES (WIDGET_REGISTRY)
-  const WIDGET_REGISTRY = {
-    // 1. Patrimonio total
-    net_worth: (
-      <NetWorthWidget
-        netWorthCOP={netWorthCOP}
-        totalAssetsCOP={totalAssetsCOP}
-        totalPayableCOP={debtsAndLoansMetrics.totalPayableCOP}
-        isNetWorthPositive={isNetWorthPositive}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 2. Inversiones
-    investments: (
-      <InvestmentsWidget
-        investmentsMetrics={investmentsMetrics}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 3. Préstamos y deudas
-    debts: (
-      <DebtsWidget
-        debtsAndLoansMetrics={debtsAndLoansMetrics}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenAddDebt={handleOpenDebtModal}
-        onOpenAddLoan={handleOpenDebtModal}
-        setIsNewDebtModalOpen={handleOpenDebtModal}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 4. Saldo disponible líquido
-    liquid_balance: (
-      <LiquidBalanceWidget
-        availableLiquidBalance={availableLiquidBalance}
-        netBalance={netBalance}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 5. Ingreso del mes
-    monthly_income: (
-      <MonthlyIncomeWidget
-        totalIncome={totalIncome}
-        incomeCount={selectedDay 
-          ? scopedTransactions.filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t)).length
-          : (monthlyStats.incomeCount || 0)
-        }
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 6. Gasto del mes
-    monthly_expense: (
-      <MonthlyExpenseWidget
-        totalExpense={totalExpense}
-        expenseCount={selectedDay
-          ? scopedTransactions.filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t)).length
-          : (monthlyStats.expenseCount || 0)
-        }
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 7. Tasa de ahorro / Superávit
-    savings_rate: (
-      <SavingsRateWidget
-        savingsRate={savingsRate}
-        freeCash={freeCash}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 8. Flujo de caja semanal / Actividad de gastos (WeeklyExpensesChart)
-    weekly_cashflow: (
-      <WeeklyExpensesChart
-        transactions={transactions}
-        selectedDate={selectedDate}
-        selectedDay={selectedDay}
-        currentMonthLabel={currentMonthLabel}
-        formatMoney={formatMoney}
-      />
-    ),
-    weekly_cashflow_classic: (
-      <WeeklyCashflowWidget
-        weeklyCashFlow={weeklyCashFlow}
-        hoveredWeekIndex={hoveredWeekIndex}
-        setHoveredWeekIndex={setHoveredWeekIndex}
-        formatMoney={formatMoney}
-        currentPeriod={currentPeriod}
-        setPeriod={handlePeriodChange}
-        periodOptions={periodOptions}
-      />
-    ),
-
-    // 9. Tus gastos
-    expenses_category: (
-      <ReportsAndCharts
-        transactions={transactions}
-        categories={categories}
-        selectedDate={selectedDate}
-        selectedDay={selectedDay}
-        onOpenCalendar={onOpenCalendar}
-        financeActions={financeActions}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-      />
-    ),
-
-    // 10. Mis cuentas
-    my_accounts: (
-      <AccountsWidget
-        accounts={accounts}
-        transactions={transactions}
-        trm={trm}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onSelectCreditCardDetail={onSelectCreditCardDetail}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 11. Últimos movimientos
-    recent_movements: (
-      <RecentMovementsSection
-        transactions={displayTransactions}
-        onViewAll={() => navigateToTab('transactions')}
-        setActiveTab={navigateToTab}
-        onNavigateToTab={navigateToTab}
-        onSelectTransaction={handleOpenTxModal}
-        onOpenTransaction={handleOpenTxModal}
-        onOpenAddTransaction={handleOpenTxModal}
-        formatMoney={formatMoney}
-      />
-    ),
-
-    // 12. Pagos recurrentes
-    recurring_payments: (
-      <RecurringPaymentsWidget
-        recurringPayments={recurringPayments}
-        subscriptions={subscriptions}
-        formatMoney={formatMoney}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenAddRecurring={handleOpenRecurringModal}
-        setIsRecurringModalOpen={handleOpenRecurringModal}
-      />
-    ),
-
-    // 13. Balance general
-    balance_general: (
-      <BalanceWidget
-        monthlyStats={{
-          ...monthlyStats,
-          availableLiquidBalance: availableLiquidBalance,
-          totalIncome: totalIncome,
-          totalExpense: totalExpense,
-          netBalance: netBalance
-        }}
-        selectedDate={selectedDate}
-        selectedDay={selectedDay}
-        onSelectDay={onSelectDay}
-        onOpenCalendar={onOpenCalendar}
-        txCount={scopedTransactions.length}
-      />
-    ),
-
-    // 14. Presupuesto
-    budget: <BudgetWidget monthlyStats={monthlyStats} />,
-
-    // 15. Bento metrics grid
-    bento_metrics: (
-      <BentoMetricsGrid
-        netWorth={netWorthCOP}
-        totalAssets={totalAssetsCOP}
-        totalPayable={debtsAndLoansMetrics.totalPayableCOP}
-        periodLabel={bentoPeriodLabel}
-        monthlyIncome={totalIncome}
-        monthlyExpenses={totalExpense}
-        savingsRate={savingsRate}
-        formatMoney={formatMoney}
-        onHeroClick={() => navigateToTab('accounts')}
-        onIncomeClick={() => navigateToTab('transactions')}
-        onExpenseClick={() => navigateToTab('transactions')}
-      />
-    ),
-
-    // 16. Cuadrícula consolidada de tarjetas de balance
-    balance_cards: (
-      <BalanceCardsWidget
-        availableLiquidBalance={availableLiquidBalance}
-        netBalance={netBalance}
-        totalIncome={totalIncome}
-        incomeCount={selectedDay 
-          ? scopedTransactions.filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t)).length
-          : (monthlyStats.incomeCount || 0)
-        }
-        totalExpense={totalExpense}
-        expenseCount={selectedDay
-          ? scopedTransactions.filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t)).length
-          : (monthlyStats.expenseCount || 0)
-        }
-        savingsRate={savingsRate}
-        freeCash={freeCash}
-        accounts={accounts}
-        formatMoney={formatMoney}
-      />
-    )
-  };
+  // 7. REGISTRO Y MAPEO CENTRALIZADO DE LOS WIDGETS (WIDGET_REGISTRY)
+  const WIDGET_REGISTRY = useMemo(() => {
+    return createWidgetRegistry({
+      netWorthCOP,
+      totalAssetsCOP,
+      debtsAndLoansMetrics,
+      isNetWorthPositive,
+      investmentsMetrics,
+      availableLiquidBalance,
+      netBalance,
+      totalIncome,
+      totalExpense,
+      savingsRate,
+      freeCash,
+      scopedTransactions,
+      displayTransactions,
+      transactions,
+      monthlyStats,
+      selectedDate,
+      selectedDay,
+      currentMonthLabel,
+      isTransferTx,
+      accounts,
+      categories,
+      recurringPayments,
+      subscriptions,
+      trm,
+      weeklyCashFlow,
+      hoveredWeekIndex,
+      setHoveredWeekIndex,
+      currentPeriod,
+      periodOptions,
+      handlePeriodChange,
+      bentoPeriodLabel,
+      navigateToTab,
+      handleOpenDebtModal,
+      handleOpenTxModal,
+      handleOpenRecurringModal,
+      onOpenCalendar,
+      onSelectDay,
+      onSelectCreditCardDetail,
+      financeActions,
+      formatMoney
+    });
+  }, [
+    netWorthCOP,
+    totalAssetsCOP,
+    debtsAndLoansMetrics,
+    isNetWorthPositive,
+    investmentsMetrics,
+    availableLiquidBalance,
+    netBalance,
+    totalIncome,
+    totalExpense,
+    savingsRate,
+    freeCash,
+    scopedTransactions,
+    displayTransactions,
+    transactions,
+    monthlyStats,
+    selectedDate,
+    selectedDay,
+    currentMonthLabel,
+    isTransferTx,
+    accounts,
+    categories,
+    recurringPayments,
+    subscriptions,
+    trm,
+    weeklyCashFlow,
+    hoveredWeekIndex,
+    setHoveredWeekIndex,
+    currentPeriod,
+    periodOptions,
+    handlePeriodChange,
+    bentoPeriodLabel,
+    navigateToTab,
+    handleOpenDebtModal,
+    handleOpenTxModal,
+    handleOpenRecurringModal,
+    onOpenCalendar,
+    onSelectDay,
+    onSelectCreditCardDetail,
+    financeActions,
+    formatMoney
+  ]);
 
   const getWidget = (id) => {
     return WIDGET_REGISTRY[normalizeWidgetId(id)] || WIDGET_REGISTRY[id] || null;
@@ -511,42 +383,6 @@ export default function Dashboard({
     getWidget
   });
 
-  const isWideWidget = (id) => {
-    if (!id) return false;
-    const norm = normalizeWidgetId(id);
-    const wideIds = [
-      'my_accounts', 'mis_cuentas', 'accounts',
-      'weekly_cashflow', 'pill_bar_chart', 'weekly_cashflow_classic',
-      'recent_movements', 'movimientos_recientes', 'recent_transactions',
-      'expenses_category', 'gastos_categoria', 'charts',
-      'bento_metrics', 'bento',
-      'balance_cards'
-    ];
-    return wideIds.includes(norm) || wideIds.includes(id);
-  };
-
-  const renderWidgetWrapper = (id, index) => {
-    const comp = getWidget(id);
-    if (!comp) return null;
-    const idx = index !== undefined ? index : visibleWidgets.findIndex(w => w.id === id || normalizeWidgetId(w.id) === normalizeWidgetId(id));
-    return (
-      <div
-        key={id}
-        data-widget-index={idx}
-        onMouseDown={idx >= 0 ? () => handlePressStart(idx) : undefined}
-        onMouseUp={handlePressEnd}
-        onMouseLeave={handlePressEnd}
-        onTouchStart={idx >= 0 ? (e) => handleTouchStart(e, idx) : undefined}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-        className={`w-full touch-pan-y ${isWideWidget(id) ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'}`}
-      >
-        {comp}
-      </div>
-    );
-  };
-
   return (
     <>
       {/* Botón flotante 'Listo' estilo iOS cuando está activo el modo reorganización */}
@@ -572,118 +408,59 @@ export default function Dashboard({
             const widgetComponent = getWidget(w.id);
             if (!widgetComponent) return null;
 
-            const isWide = isWideWidget(w.id);
-            const isJigglingAlt = index % 2 === 1;
-
             return (
-              <div 
-                key={w.id} 
-                data-widget-index={index}
-                className={`relative transition-transform duration-150 ${isWide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'} w-full ${
-                  isJigglingAlt ? 'animate-jiggle-alt' : 'animate-jiggle'
-                } select-none touch-pan-y ${
-                  draggedIndex === index ? 'opacity-40 scale-[0.98]' : 'hover:scale-[1.01]'
-                }`}
+              <DashboardWidgetWrapper
+                key={w.id}
+                id={w.id}
+                index={index}
+                isReordering={true}
+                draggedIndex={draggedIndex}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                onToggleVisibility={handleToggleVisibility}
               >
-                {/* Manija de arrastre restringida para móvil y PC: único sensor táctil para reordenar */}
-                <div
-                  data-drag-handle="true"
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    handleTouchStart(e, index);
-                  }}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchCancel={handleTouchEnd}
-                  draggable={true}
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                  className="absolute -top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/95 dark:bg-zinc-800 text-white shadow-xl border border-white/20 cursor-grab active:cursor-grabbing touch-none select-none pointer-events-auto"
-                  title="Arrastra desde aquí para mover el widget"
-                  aria-label="Manija para mover widget"
-                >
-                  <GripVertical className="w-3.5 h-3.5 opacity-90 text-slate-300" />
-                  <span className="text-[11px] font-bold tracking-tight">Mover</span>
-                </div>
-
-                {/* Botón flotante para ocultar widget en modo reorganización */}
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onClick={(e) => handleToggleVisibility(e, w.id, false)}
-                  className="absolute -top-2.5 -right-2.5 z-30 w-7 h-7 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer border-2 border-white dark:border-slate-900 pointer-events-auto"
-                  title="Ocultar widget"
-                  aria-label="Ocultar widget"
-                >
-                  <EyeOff className="w-3.5 h-3.5 stroke-[2.5]" />
-                </button>
-
-                <div className="pointer-events-none">
-                  {widgetComponent}
-                </div>
-              </div>
+                {widgetComponent}
+              </DashboardWidgetWrapper>
             );
           })}
         </div>
       ) : (
         <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full items-start touch-pan-y ${className || ''}`}>
-          {visibleWidgets.map((w, index) => renderWidgetWrapper(w.id, index))}
+          {visibleWidgets.map((w, index) => {
+            const widgetComponent = getWidget(w.id);
+            if (!widgetComponent) return null;
+
+            return (
+              <DashboardWidgetWrapper
+                key={w.id}
+                id={w.id}
+                index={index}
+                isReordering={false}
+                onPressStart={handlePressStart}
+                onPressEnd={handlePressEnd}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                {widgetComponent}
+              </DashboardWidgetWrapper>
+            );
+          })}
         </div>
       )}
 
       {/* Bandeja de widgets ocultos (visible durante reorganización) */}
       {isReordering && (
-        <div className="w-full mt-6 p-4 sm:p-5 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-slate-50/70 dark:bg-white/5 backdrop-blur-md transition-all animate-fadeIn">
-          <div className="flex items-center justify-between gap-2 mb-3 px-1">
-            <div className="flex items-center gap-2">
-              <EyeOff className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-              <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
-                Widgets ocultos {hiddenWidgets.length > 0 ? `(${hiddenWidgets.length})` : ''}
-              </h4>
-            </div>
-            {hiddenWidgets.length === 0 && (
-              <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                Todos los widgets están visibles
-              </span>
-            )}
-          </div>
-          {hiddenWidgets.length > 0 ? (
-            <div className="flex flex-wrap gap-2.5">
-              {hiddenWidgets.map((hw) => {
-                const label = hw.label || hw.name || hw.id;
-                const IconComponent = WIDGET_ICON_MAP[hw.icon] || Wallet;
-                return (
-                  <div
-                    key={hw.id}
-                    className="inline-flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 transition-all group"
-                  >
-                    <IconComponent className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate max-w-[160px]">{label}</span>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onClick={(e) => handleToggleVisibility(e, hw.id, true)}
-                      className="flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500 text-emerald-600 hover:text-white dark:text-emerald-400 dark:hover:text-white transition-all cursor-pointer font-bold text-[11px]"
-                      title={`Restaurar widget ${label}`}
-                      aria-label={`Restaurar widget ${label}`}
-                    >
-                      <Plus className="w-3 h-3 stroke-[2.5]" />
-                      <span>+ Mostrar</span>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400 py-1 px-1">
-              Todos los widgets están activos. Para ocultar alguno, pulsa el botón rojo en la esquina del widget mientras reorganizas.
-            </p>
-          )}
-        </div>
+        <HiddenWidgetsSection
+          hiddenWidgets={hiddenWidgets}
+          onToggleVisibility={handleToggleVisibility}
+          widgetIconMap={WIDGET_ICON_MAP}
+        />
       )}
 
       {/* Botón Flotante de Acciones Rápidas (Nuevo Movimiento) */}
