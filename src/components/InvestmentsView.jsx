@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   TrendingUp, 
-  TrendingDown, 
-  Plus, 
   ShieldCheck, 
   Coins, 
   Sparkles, 
   Layers, 
-  RefreshCw, 
   DollarSign, 
   ArrowRight,
   Clock, 
@@ -33,6 +30,7 @@ import {
 import { usePrivacy } from '../context/PrivacyContext';
 import InvestmentFormModal from './InvestmentFormModal';
 import BrandIcon from './BrandIcon';
+import PortfolioSummaryHeader from './investments/components/PortfolioSummaryHeader';
 import InvestmentCard from './investments/components/InvestmentCard';
 import CDTLiquidationModal from './investments/components/CDTLiquidationModal';
 import InvestmentQuickUpdateModal from './investments/components/InvestmentQuickUpdateModal';
@@ -175,149 +173,21 @@ export default function InvestmentsView({
       {/* ============================================================== */}
       {/* 1. RESUMEN TOTAL DEL PORTAFOLIO DE INVERSIONES (CABECERA) */}
       {/* ============================================================== */}
-      <div 
-        className="p-4 sm:p-5 rounded-3xl border shadow-sm space-y-4"
-        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
-      >
-        {/* Barra de Título y Botón de Actualización Rápida En Vivo */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="flex items-center gap-2 flex-wrap">
-            <TrendingUp className="w-5 h-5 text-emerald-500 shrink-0" />
-            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-main)' }}>
-              Portafolio de Inversiones
-            </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>En vivo</span>
-            </span>
-            {lastRefreshedAt && (
-              <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
-                • {lastRefreshedAt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Botón de Actualización Rápida */}
-            <button
-              type="button"
-              onClick={handleRefreshQuotes}
-              disabled={isRefreshing || investments.length === 0}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/60 dark:border-white/10 active:scale-95 disabled:opacity-50"
-              title="Actualizar cotizaciones en tiempo real"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>{isRefreshing ? 'Actualizando...' : '↺ Actualizar cotizaciones'}</span>
-            </button>
-
-            {/* Botón Nueva Inversión */}
-            <button
-              type="button"
-              onClick={() => {
-                setEditingInvestment(null);
-                setIsFormModalOpen(true);
-              }}
-              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Nueva inversión</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 2 Tarjetas Principales del Portafolio: Patrimonio Total y Ganancia Histórica */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {/* Tarjeta 1: Patrimonio en Inversiones Total (COP consolidado y USD) */}
-          <div 
-            className="p-4 rounded-2xl border flex flex-col justify-between"
-            style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-          >
-            <div>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
-                Patrimonio en Inversiones Total
-              </span>
-              <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums mt-1 text-slate-900 dark:text-zinc-100">
-                {formatMoney(portfolioMetrics.totalValueCOP, 'COP')}
-              </div>
-            </div>
-
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 font-medium">
-              <span className="font-mono tabular-nums tracking-tight">≈ {formatMoney(portfolioMetrics.totalValueUSD, 'USD')}</span>
-              <span>•</span>
-              <span className="font-mono tabular-nums tracking-tight text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                TRM: {formatInvestMoney(trm || 4050, 'COP')}
-              </span>
-            </div>
-          </div>
-
-          {/* Tarjeta 2: Ganancia Total Histórica (PnL acumulado con indicador verde/rojo) */}
-          <div 
-            className="p-4 rounded-2xl border flex flex-col justify-between"
-            style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-          >
-            <div>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
-                Ganancia / Pérdida Total (PnL Histórico)
-              </span>
-              <div className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums mt-1 ${
-                portfolioMetrics.isPositive ? 'text-emerald-500' : 'text-rose-500'
-              }`}>
-                {portfolioMetrics.isPositive ? '+' : ''}{formatMoney(portfolioMetrics.netGainCOP, 'COP')}
-              </div>
-            </div>
-
-            <div className="mt-2 flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono tracking-tight tabular-nums border ${
-                portfolioMetrics.isPositive 
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-              }`}>
-                {portfolioMetrics.isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                {portfolioMetrics.isPositive ? '+' : ''}{portfolioMetrics.totalPercentage.toFixed(2)}%
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono tracking-tight tabular-nums">
-                ({portfolioMetrics.isPositive ? '+' : ''}{formatMoney(portfolioMetrics.netGainUSD, 'USD')})
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Distribución de Activos Segmentada */}
-        {allocationByCategory.length > 0 && (
-          <div className="pt-2 space-y-2 border-t" style={{ borderColor: 'var(--border-color)' }}>
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span className="font-semibold">Distribución de Activos</span>
-              <span className="tabular-nums font-mono text-[11px]">100% Portafolio</span>
-            </div>
-
-            {/* Barra segmentada */}
-            <div className="w-full h-2.5 bg-black/5 dark:bg-white/10 rounded-full flex overflow-hidden p-0.5 gap-0.5">
-              {allocationByCategory.map(item => (
-                <div
-                  key={item.id}
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.max(2, item.percent)}%`,
-                    backgroundColor: item.color
-                  }}
-                  title={`${item.shortName}: ${item.percent}%`}
-                />
-              ))}
-            </div>
-
-            {/* Leyenda de Categorías */}
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px]">
-              {allocationByCategory.map(item => (
-                <div key={item.id} className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="font-bold text-slate-700 dark:text-slate-300">{item.shortName}:</span>
-                  <span className="opacity-70 tabular-nums">{item.percent}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      <PortfolioSummaryHeader
+        portfolioMetrics={portfolioMetrics}
+        allocationByCategory={allocationByCategory}
+        viewCurrency={viewCurrency}
+        onToggleCurrency={handleSetViewCurrency}
+        isRefreshing={isRefreshing}
+        lastRefreshedAt={lastRefreshedAt}
+        onRefreshQuotes={handleRefreshQuotes}
+        onNewInvestment={() => {
+          setEditingInvestment(null);
+          setIsFormModalOpen(true);
+        }}
+        trm={trm}
+        investmentsCount={investments.length}
+      />
 
       {/* ============================================================== */}
       {/* 2. BARRA DE FILTROS POR CATEGORÍA */}
