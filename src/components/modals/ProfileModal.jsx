@@ -66,6 +66,7 @@ import useProfileBackup from './profile/hooks/useProfileBackup';
 import useProfileDataActions from './profile/hooks/useProfileDataActions';
 import useProfileSecurity from './profile/hooks/useProfileSecurity';
 import useProfileFinances from './profile/hooks/useProfileFinances';
+import useProfileMetrics from './profile/hooks/useProfileMetrics';
 
 export default function ProfileModal({
   isOpen,
@@ -285,9 +286,7 @@ export default function ProfileModal({
     handleCreateGoal,
     handleOpenEditGoal,
     handleSaveEditGoal,
-    handleContributeToGoal,
-    totalSavedAcrossGoals,
-    totalTargetAcrossGoals
+    handleContributeToGoal
   } = useProfileFinances({
     userProfile,
     onUpdateProfile,
@@ -307,6 +306,15 @@ export default function ProfileModal({
     isSupabaseConfigured,
     user
   });
+
+  // Derived monthly expenses & savings metrics via custom hook
+  const {
+    monthExpenses,
+    totalMonthExpense,
+    expenseByCatMap,
+    totalSavedAcrossGoals,
+    totalTargetAcrossGoals
+  } = useProfileMetrics({ transactions, savingsGoals, safeNumber });
 
   // Manejador centralizado de tecla Volver / Popstate para navegación interna escalonada
   useBackHandler(isOpen, () => {
@@ -353,26 +361,6 @@ export default function ProfileModal({
 
   if (!isOpen) return null;
 
-  // Calculate current month's expenses
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  const monthExpenses = transactions.filter((t) => {
-    if (t.type !== 'expense') return false;
-    const isTransfer = t.isTransfer || t.is_transfer || t.type === 'transfer' || t.type === 'transferencia' || t.categoryId === 'cat-transfer' || t.subcategoryId === 'sub-transfer-in' || t.subcategoryId === 'sub-transfer-out';
-    if (isTransfer) return false;
-    const d = new Date(t.date + 'T00:00:00');
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  });
-
-  const totalMonthExpense = monthExpenses.reduce((sum, t) => sum + safeNumber(t.amount), 0);
-
-  // Group expenses by category
-  const expenseByCatMap = {};
-  monthExpenses.forEach((t) => {
-    expenseByCatMap[t.categoryId] = (expenseByCatMap[t.categoryId] || 0) + safeNumber(t.amount);
-  });
 
 
 
