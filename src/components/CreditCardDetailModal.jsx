@@ -1,26 +1,21 @@
-﻿import React, { useState } from 'react';
+import React from 'react';
 import { 
   CreditCard, 
   X, 
   Calendar, 
-  Clock, 
   ArrowDownLeft, 
   ArrowUpRight, 
   CheckCircle2, 
   AlertCircle, 
   Pencil, 
-  Sparkles, 
-  DollarSign, 
-  Wallet,
-  Receipt,
-  Layers
+  Receipt
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { usePrivacy } from '../context/PrivacyContext';
 import { safeNumber } from '../utils/financeMath';
 import { DynamicIcon } from './CategoryIcon';
 import BrandIcon from './BrandIcon';
 import { useBackHandler } from '../hooks/useBackHandler';
+import CreditCardPaymentSection from './credit-cards/CreditCardPaymentSection';
 
 export default function CreditCardDetailModal({
   isOpen,
@@ -33,21 +28,7 @@ export default function CreditCardDetailModal({
 }) {
   const { formatMoney } = usePrivacy();
 
-  // Payment State
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-
-  useBackHandler(isOpen, () => {
-    if (showPaymentForm) {
-      setShowPaymentForm(false);
-    } else {
-      onClose();
-    }
-  });
-
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [sourceAccountId, setSourceAccountId] = useState('');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [paymentNote, setPaymentNote] = useState('');
+  useBackHandler(isOpen, onClose);
 
   if (!isOpen || !card) return null;
 
@@ -97,69 +78,6 @@ export default function CreditCardDetailModal({
   const monthNamesShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const formattedNextDate = `${paymentDay} ${monthNamesShort[nextPaymentDate.getMonth()]}`;
 
-  // Other accounts eligible to pay from (not credit cards)
-  const sourceAccountOptions = accounts.filter(a => a.id !== card.id && a.type !== 'card' && a.type !== 'credit');
-
-  // Handle open payment form
-  const handleOpenPayment = (amountToPay = outstandingDebt) => {
-    setPaymentAmount(amountToPay > 0 ? String(amountToPay) : '');
-    setSourceAccountId(sourceAccountOptions[0]?.id || '');
-    setPaymentDate(new Date().toISOString().split('T')[0]);
-    setPaymentNote(`Abono a ${card.name}`);
-    setShowPaymentForm(true);
-  };
-
-  // Submit payment / abono
-  const handleConfirmPayment = (e) => {
-    e.preventDefault();
-    const amount = parseFloat(paymentAmount);
-    if (isNaN(amount) || amount <= 0) return;
-
-    // 1. Transaction to Credit Card (income -> reduces debt & frees credit)
-    const cardPaymentTx = {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now()),
-      date: paymentDate,
-      type: 'income',
-      amount: amount,
-      accountId: card.id,
-      accountName: card.name,
-      categoryId: 'cat-12', // Transferencia / Abono
-      categoryName: 'Abono Tarjeta de Crédito',
-      note: paymentNote.trim() || `Pago a ${card.name}`
-    };
-
-    onAddTransaction(cardPaymentTx);
-
-    // 2. If source account chosen, record expense on that account
-    if (sourceAccountId) {
-      const sourceAcc = accounts.find(a => a.id === sourceAccountId);
-      if (sourceAcc) {
-        const sourceDebitTx = {
-          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + (Date.now() + 1)),
-          date: paymentDate,
-          type: 'expense',
-          amount: amount,
-          accountId: sourceAcc.id,
-          accountName: sourceAcc.name,
-          categoryId: 'cat-4', // Servicios / Pagos
-          categoryName: 'Pago Tarjeta de Crédito',
-          note: `Pago realizado a ${card.name}`
-        };
-        onAddTransaction(sourceDebitTx);
-      }
-    }
-
-    // Confetti if paid off completely
-    if (amount >= outstandingDebt - 1) {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    }
-
-    setShowPaymentForm(false);
-  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 animate-fadeIn">
@@ -348,135 +266,13 @@ export default function CreditCardDetailModal({
           </div>
 
           {/* 4. BOTÓN / FORMULARIO ABONAR / PAGAR TARJETA */}
-          {!showPaymentForm ? (
-            <button
-              type="button"
-              onClick={() => handleOpenPayment()}
-              className="w-full py-3 bg-[#34C759] hover:bg-emerald-600 text-white font-bold rounded-2xl shadow-sm active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
-            >
-              <ArrowDownLeft className="w-4 h-4 stroke-[2.5]" />
-              <span>Abonar / Pagar Tarjeta</span>
-            </button>
-          ) : (
-            <form 
-              onSubmit={handleConfirmPayment} 
-              className="p-4 rounded-2xl border animate-slide-up space-y-3"
-              style={{ backgroundColor: 'var(--bg-card)', borderColor: '#34C759' }}
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[#34C759]">
-                  <ArrowDownLeft className="w-4 h-4" />
-                  Registrar Abono a {card.name}
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentForm(false)}
-                  className="opacity-50 hover:opacity-100 text-xs p-1"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Botones rápidos de pago */}
-              {outstandingDebt > 0 && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentAmount(String(outstandingDebt))}
-                    className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-colors cursor-pointer"
-                    style={{ 
-                      borderColor: '#34C759', 
-                      backgroundColor: paymentAmount === String(outstandingDebt) ? '#34C75920' : 'transparent',
-                      color: 'var(--text-main)'
-                    }}
-                  >
-                    Pago Total ({formatMoney(outstandingDebt)})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentAmount(String(Math.round(outstandingDebt * 0.1)))}
-                    className="py-1.5 px-3 rounded-xl text-[11px] font-bold border transition-colors cursor-pointer"
-                    style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-                  >
-                    Mínimo (10%)
-                  </button>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-semibold opacity-70 mb-1">Monto a Pagar ($ COP) *</label>
-                <input
-                  type="number"
-                  step="any"
-                  min="1"
-                  required
-                  placeholder="0"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="w-full text-sm font-bold px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#34C759]"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold opacity-70 mb-1">Debitar de Cuenta de Origen</label>
-                <select
-                  value={sourceAccountId}
-                  onChange={(e) => setSourceAccountId(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none focus:ring-1 focus:ring-[#34C759]"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-                >
-                  <option value="">(Sin debitar otra cuenta - Pago externo)</option>
-                  {sourceAccountOptions.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">Fecha de Pago</label>
-                  <input
-                    type="date"
-                    required
-                    value={paymentDate}
-                    onChange={(e) => setPaymentDate(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none"
-                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold opacity-70 mb-1">Nota / Concepto</label>
-                  <input
-                    type="text"
-                    placeholder="ej: Pago quincena"
-                    value={paymentNote}
-                    onChange={(e) => setPaymentNote(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border rounded-xl focus:outline-none"
-                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border-color)' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentForm(false)}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-xl opacity-75 hover:opacity-100 cursor-pointer"
-                  style={{ backgroundColor: 'var(--bg-card-sub)', color: 'var(--text-main)' }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 text-xs font-bold bg-[#34C759] hover:bg-emerald-600 text-white rounded-xl shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Confirmar Pago</span>
-                </button>
-              </div>
-            </form>
-          )}
+          <CreditCardPaymentSection
+            card={card}
+            outstandingDebt={outstandingDebt}
+            accounts={accounts}
+            onAddTransaction={onAddTransaction}
+            formatMoney={formatMoney}
+          />
 
           {/* 5. HISTORIAL DE MOVIMIENTOS DE LA TARJETA */}
           <div className="space-y-2 pt-2 border-t" style={{ borderColor: 'var(--border-color)' }}>
