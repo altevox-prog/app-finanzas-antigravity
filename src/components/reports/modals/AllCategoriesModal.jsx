@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { getCategoryEmoji as defaultGetCategoryEmoji } from '../utils/reportHelpers';
 
 export default function AllCategoriesModal({
   isOpen = true,
@@ -8,12 +9,13 @@ export default function AllCategoriesModal({
   categories,
   onSelectCategory,
   formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
-  getCategoryEmoji = (item) => item?.icon || '🏷️',
+  getCategoryEmoji: propGetCategoryEmoji,
   periodLabel = '',
   totalExpense = 0
 }) {
   if (!isOpen) return null;
 
+  const getCategoryEmoji = propGetCategoryEmoji || defaultGetCategoryEmoji;
   const cats = categories || categoryExpenses || [];
 
   return (

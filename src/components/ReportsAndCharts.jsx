@@ -22,107 +22,15 @@ const MONTH_NAMES = [
 ];
 
 
-const isEmoji = (str) => {
-  if (!str || typeof str !== 'string') return false;
-  return /(\p{Extended_Pictographic}|\p{Emoji_Presentation})/u.test(str);
-};
+import { 
+  isEmoji, 
+  getCategoryEmoji, 
+  formatAbbreviatedMoney 
+} from './reports/utils/reportHelpers';
+import CategoryDonutChart from './reports/components/CategoryDonutChart';
 
-export function getCategoryEmoji(item, fallbackName = '') {
-  // 1. Icono asignado directamente si ya es emoji
-  const icon = item?.icon;
-  if (icon && isEmoji(icon)) {
-    return icon;
-  }
+export { getCategoryEmoji };
 
-  // 2. Mapeo de iconos vectoriales legados de Lucide
-  const LEGACY_ICON_MAP = {
-    Utensils: '🍔',
-    Car: '🚗',
-    Home: '🏠',
-    Zap: '🏠',
-    Film: '🍿',
-    HeartPulse: '💊',
-    Activity: '💊',
-    GraduationCap: '📚',
-    ShoppingBag: '🛍️',
-    Briefcase: '💼',
-    TrendingUp: '📈',
-    Coins: '💰',
-    DollarSign: '💰',
-    Wallet: '👛',
-    CreditCard: '💳',
-    PiggyBank: '💰',
-    Plane: '🚗',
-    Smartphone: '🛍️',
-    Gift: '🛍️',
-    Tag: '📦',
-    MoreHorizontal: '📦',
-    CircleDot: '📦'
-  };
-  if (icon && LEGACY_ICON_MAP[icon]) {
-    return LEGACY_ICON_MAP[icon];
-  }
-
-  // 3. Si el nombre ya contiene un emoji embebido (ej: "☕ Café", "🛒 Mercado", "🔑 Arriendo")
-  const rawName = item?.name || fallbackName || '';
-  const emojiMatch = rawName.match(/(\p{Extended_Pictographic}|\p{Emoji_Presentation})/u);
-  if (emojiMatch) {
-    return emojiMatch[0];
-  }
-
-  // 4. Mapeo rápido por nombre (reglas oficiales fintech)
-  const lower = rawName.toLowerCase().trim();
-
-  // Alimentación / Comida: 🍔
-  if (lower.includes('alimento') || lower.includes('alimentac') || lower.includes('comida') || lower.includes('restaurante') || lower.includes('cafe') || lower.includes('café') || lower.includes('mercado') || lower.includes('pizza') || lower.includes('domicilio')) {
-    return '🍔';
-  }
-  // Transporte: 🚗
-  if (lower.includes('transporte') || lower.includes('gasolina') || lower.includes('taxi') || lower.includes('uber') || lower.includes('pasaje') || lower.includes('viaje') || lower.includes('carro') || lower.includes('mantenimiento') || lower.includes('moto') || lower.includes('bus')) {
-    return '🚗';
-  }
-  // Hogar / Servicios: 🏠
-  if (lower.includes('hogar') || lower.includes('servicio') || lower.includes('vivienda') || lower.includes('arriendo') || lower.includes('luz') || lower.includes('agua') || lower.includes('internet') || lower.includes('energia')) {
-    return '🏠';
-  }
-  // Entretenimiento: 🍿
-  if (lower.includes('entretenimiento') || lower.includes('ocio') || lower.includes('cine') || lower.includes('juego') || lower.includes('videojuego') || lower.includes('viajes') || lower.includes('suscrip') || lower.includes('netflix') || lower.includes('spotify')) {
-    return '🍿';
-  }
-  // Salud: 💊
-  if (lower.includes('salud') || lower.includes('cuidado') || lower.includes('medico') || lower.includes('médic') || lower.includes('cita') || lower.includes('doctor') || lower.includes('farmacia') || lower.includes('gym') || lower.includes('gimnasio') || lower.includes('aseo')) {
-    return '💊';
-  }
-  // Compras: 🛍️
-  if (lower.includes('compra') || lower.includes('ropa') || lower.includes('calzado') || lower.includes('tecnolog') || lower.includes('zapatos') || lower.includes('mall') || lower.includes('tienda') || lower.includes('shopping')) {
-    return '🛍️';
-  }
-  // Educación: 📚
-  if (lower.includes('educacion') || lower.includes('educación') || lower.includes('universidad') || lower.includes('libro') || lower.includes('curso') || lower.includes('estudio') || lower.includes('colegio')) {
-    return '📚';
-  }
-
-  // Otros: 📦
-  return '📦';
-}
-
-// Formateador compacto legible (ej: $1.2M, $450k, $1.250.000)
-function formatAbbreviatedMoney(amount, fallbackFormatter) {
-  if (!amount || amount <= 0) return '$0';
-  if (amount >= 1_000_000_000) {
-    const b = (amount / 1_000_000_000).toFixed(1).replace('.0', '');
-    return `$${b}B`;
-  }
-  if (amount >= 1_000_000) {
-    const m = (amount / 1_000_000).toFixed(1).replace('.0', '');
-    return `$${m}M`;
-  }
-  if (amount >= 100_000) {
-    const k = Math.round(amount / 1_000);
-    return `$${k}k`;
-  }
-  return fallbackFormatter ? fallbackFormatter(amount) : `$${amount}`;
-}
 
 export default function ReportsAndCharts({ 
   transactions = [], 
@@ -269,99 +177,22 @@ export default function ReportsAndCharts({
         {/* Zona de visualización (Layout Horizontal 2 Columnas) */}
         <div className="flex items-center justify-between gap-3">
           {/* Columna Izquierda (Mini-Dona estilizada) */}
-          <div 
-            className="relative w-24 h-24 sm:w-26 sm:h-26 shrink-0 flex items-center justify-center cursor-pointer group"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
+          <CategoryDonutChart
+            categories={categoryExpenses}
+            totalExpenses={totalExpense}
+            hoveredCategoryId={hoveredCategoryId}
+            setHoveredCategoryId={setHoveredCategoryId}
+            formatMoney={formatMoney}
+            onSelectCategory={(cat) => setSelectedCategoryModal(cat)}
+            onCenterClick={() => {
               if (financeActions && typeof financeActions.setActiveTab === 'function') {
                 financeActions.setActiveTab('transactions');
               } else {
                 handleNav('transactions');
               }
             }}
-            title={`Total de gastos: ${formatMoney(totalExpense)}`}
-          >
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              {/* Pista base de fondo */}
-              <circle
-                cx="50"
-                cy="50"
-                r="38"
-                fill="none"
-                strokeWidth="9"
-                className="stroke-slate-100 dark:stroke-white/5"
-              />
-
-              {/* Segmentos de categorías */}
-              {categoryExpenses.length > 0 && (() => {
-                const circumference = 2 * Math.PI * 38; // ~238.76
-                let accumulatedPercent = 0;
-
-                return categoryExpenses.map((cat, index) => {
-                  const percent = cat.exactPercent;
-                  const strokeLength = (percent / 100) * circumference;
-                  const gap = categoryExpenses.length > 1 ? 1.8 : 0;
-                  const visibleLength = Math.max(0, strokeLength - gap);
-                  const offset = (accumulatedPercent / 100) * circumference;
-                  accumulatedPercent += percent;
-
-                  const isHovered = hoveredCategoryId === cat.id;
-
-                  return (
-                    <circle
-                      key={cat.id || index}
-                      cx="50"
-                      cy="50"
-                      r="38"
-                      fill="none"
-                      stroke={cat.color}
-                      strokeWidth={isHovered ? 11 : 9}
-                      strokeDasharray={`${visibleLength} ${circumference}`}
-                      strokeDashoffset={-offset}
-                      className="transition-all duration-300 cursor-pointer"
-                      style={{
-                        transformOrigin: '50px 50px',
-                        opacity: hoveredCategoryId && !isHovered ? 0.35 : 1
-                      }}
-                      onMouseEnter={() => setHoveredCategoryId(cat.id)}
-                      onMouseLeave={() => setHoveredCategoryId(null)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedCategoryModal(cat);
-                      }}
-                    />
-                  );
-                });
-              })()}
-            </svg>
-
-            {/* Centro de la dona */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-1 select-none">
-              {hoveredCategory ? (
-                <div className="animate-fadeIn flex flex-col items-center">
-                  <span className="text-base leading-none mb-0.5">
-                    {getCategoryEmoji(hoveredCategory, hoveredCategory.name)}
-                  </span>
-                  <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300 truncate max-w-[65px]">
-                    {hoveredCategory.name}
-                  </span>
-                  <span className="text-xs font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5">
-                    {hoveredCategory.percent}%
-                  </span>
-                </div>
-              ) : (
-                <div className="animate-fadeIn flex flex-col items-center">
-                  <span className="text-[9px] text-slate-400 uppercase font-semibold leading-none">
-                    Total
-                  </span>
-                  <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white tabular-nums tracking-tight mt-0.5 truncate max-w-[75px]">
-                    {totalExpense > 0 ? formatAbbreviatedMoney(totalExpense, formatMoney) : '$0'}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+            getCategoryEmoji={getCategoryEmoji}
+          />
 
           {/* Columna Derecha (Icono de planta si vacío, o Top 3 categorías) */}
           {categoryExpenses.length === 0 ? (

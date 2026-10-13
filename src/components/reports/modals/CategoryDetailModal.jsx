@@ -1,38 +1,21 @@
 import React, { useMemo } from 'react';
 import { X, Receipt, Calendar, CreditCard } from 'lucide-react';
-
-function hexToRgba(hex, alpha = 0.15) {
-  if (!hex) return `rgba(148, 163, 184, ${alpha})`;
-  if (hex.startsWith('rgba')) {
-    return hex.replace(/[\d\.]+\)$/g, `${alpha})`);
-  }
-  if (hex.startsWith('rgb(')) {
-    return hex.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
-  }
-  let clean = hex.replace('#', '');
-  if (clean.length === 3) {
-    clean = clean.split('').map(x => x + x).join('');
-  }
-  const num = parseInt(clean, 16);
-  if (isNaN(num)) return `rgba(148, 163, 184, ${alpha})`;
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+import { hexToRgba, getCategoryEmoji as defaultGetCategoryEmoji } from '../utils/reportHelpers';
 
 export default function CategoryDetailModal({
   isOpen = true,
   category,
   onClose,
   formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
-  getCategoryEmoji = (item) => item?.icon || '🏷️',
+  getCategoryEmoji: propGetCategoryEmoji,
   selectedDay,
   transactions = [],
   categoryTransactions,
   subcategoriesList
 }) {
   if (!isOpen || !category) return null;
+
+  const getCategoryEmoji = propGetCategoryEmoji || defaultGetCategoryEmoji;
 
   const currentCategory = category;
   const txs = categoryTransactions || transactions || [];
