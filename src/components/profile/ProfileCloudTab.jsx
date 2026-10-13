@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Cloud, 
   ShieldCheck, 
@@ -13,34 +13,131 @@ import {
 } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import { signInWithGoogle } from '../../services/supabaseClient';
-import { downloadTransactionsCSV, downloadInvestmentsCSV } from '../../utils/exportUtils';
+import { 
+  downloadBackupJSON, 
+  parseAndValidateBackup, 
+  downloadTransactionsCSV, 
+  downloadInvestmentsCSV 
+} from '../../utils/exportUtils';
+import ProfileBackupPreviewModal from '../modals/profile/components/ProfileBackupPreviewModal';
 
 /**
  * ProfileCloudTab
- * Subcomponente independiente para la pestaña "Almacenamiento & Datos / Nube"
+ * Subcomponente autónomo para la pestaña "Almacenamiento & Datos / Nube"
  * del Centro de Control / Perfil.
- * Incluye:
+ * Incluye de forma independiente:
  * - Acceso y sincronización en la nube (Google Auth / Supabase Auth)
  * - Estado de almacenamiento y privacidad (Cloud vs Local)
- * - Copias de seguridad y archivos (Exportar JSON, Gastos CSV, Inversiones CSV, Restaurar JSON)
- * - Zona de peligro (Restablecer datos de fábrica)
+ * - Exportación de copia JSON, CSV de transacciones y CSV de portafolio
+ * - Carga, validación y modal de confirmación de restauración JSON
+ * - Zona de peligro (Restablecimiento de fábrica)
  */
 export default function ProfileCloudTab({
-  isCloudUser,
   user,
+  isCloudUser,
   onManualCloudSync,
-  isCloudSyncing,
+  isCloudSyncing = false,
   handleCloudSync,
+  onLogout,
   setShowLogoutConfirm,
-  handleExportJSON,
+  onResetData,
+  onOpenResetConfirm,
   transactions = [],
   investments = [],
+  accounts = [],
+  categories = [],
+  debtsAndLoans = [],
+  budgets = {},
+  savingsGoals = [],
+  subscriptions = [],
+  userProfile = {},
+  securitySettings = {},
+  theme = 'dark',
   trm = 4000,
-  restoreInputRef,
-  handleFileSelect,
-  isRestoring,
-  onOpenResetConfirm
+  onRestoreBackup
 }) {
+  const restoreInputRef = useRef(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [backupPreview, setBackupPreview] = useState(null);
+
+  const handleExportJSON = () => {
+    try {
+      const dataToBackup = {
+        transactions,
+        investments,
+        accounts,
+        categories,
+        debtsAndLoans,
+        budgets,
+        savingsGoals,
+        subscriptions,
+        recurring_payments: subscriptions,
+        userProfile,
+        securitySettings,
+        trm,
+        theme
+      };
+      downloadBackupJSON(dataToBackup);
+    } catch (err) {
+      console.error('Error al exportar copia JSON:', err);
+    }
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsRestoring(true);
+    try {
+      const parsed = await parseAndValidateBackup(file);
+      setBackupPreview(parsed);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error al validar el archivo de copia de seguridad.');
+    } finally {
+      setIsRestoring(false);
+      if (restoreInputRef.current) {
+        restoreInputRef.current.value = '';
+      }
+    }
+  };
+
+  const confirmRestore = async () => {
+    if (!backupPreview) return;
+    try {
+      if (typeof onRestoreBackup === 'function') {
+        await onRestoreBackup(backupPreview);
+      }
+      setBackupPreview(null);
+    } catch (err) {
+      console.error('Error al confirmar restauración:', err);
+    }
+  };
+
+  const triggerCloudSync = async () => {
+    if (typeof handleCloudSync === 'function') {
+      await handleCloudSync();
+    } else if (typeof onManualCloudSync === 'function') {
+      await onManualCloudSync();
+    }
+  };
+
+  const triggerLogout = () => {
+    if (typeof onLogout === 'function') {
+      onLogout();
+    } else if (typeof setShowLogoutConfirm === 'function') {
+      setShowLogoutConfirm(true);
+    }
+  };
+
+  const triggerResetData = () => {
+    if (typeof onResetData === 'function') {
+      onResetData();
+    } else if (typeof onOpenResetConfirm === 'function') {
+      onOpenResetConfirm();
+    }
+  };
+
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Módulo de Acceso con Google y Supabase Auth */}
@@ -85,7 +182,7 @@ export default function ProfileCloudTab({
               {typeof onManualCloudSync === 'function' && (
                 <button
                   type="button"
-                  onClick={handleCloudSync}
+                  onClick={triggerCloudSync}
                   disabled={isCloudSyncing}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                 >
@@ -95,7 +192,7 @@ export default function ProfileCloudTab({
               )}
               <button
                 type="button"
-                onClick={() => setShowLogoutConfirm(true)}
+                onClick={triggerLogout}
                 className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -320,13 +417,20 @@ export default function ProfileCloudTab({
 
           <button
             type="button"
-            onClick={onOpenResetConfirm}
+            onClick={triggerResetData}
             className="w-full py-2 px-3 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs transition-colors cursor-pointer active:scale-98"
           >
             Restablecer y borrar todos los datos
           </button>
         </div>
       </div>
+
+      {/* Modal de confirmación de restauración */}
+      <ProfileBackupPreviewModal
+        backupPreview={backupPreview}
+        onCancel={() => setBackupPreview(null)}
+        onConfirm={confirmRestore}
+      />
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { AlertCircle } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import CategoriesView from '../CategoriesView';
 import TaxView from '../TaxView';
-import { downloadBackupJSON, parseAndValidateBackup } from '../../utils/exportUtils';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { useAuth } from '../../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
@@ -11,7 +10,6 @@ import { safeNumber } from '../../utils/financeMath';
 import ProfileHeader from './profile/components/ProfileHeader';
 import ProfileTabBar from './profile/components/ProfileTabBar';
 import ProfileFooter from './profile/components/ProfileFooter';
-import ProfileBackupPreviewModal from './profile/components/ProfileBackupPreviewModal';
 import ProfileFinancesTab from './profile/ProfileFinancesTab';
 import ProfileSecurityTab from '../profile/ProfileSecurityTab';
 import ProfileCloudTab from '../profile/ProfileCloudTab';
@@ -22,7 +20,6 @@ import ProfilePinSetupView from './profile/views/ProfilePinSetupView';
 import ProfileSubscriptionsView from './profile/views/ProfileSubscriptionsView';
 import ProfileResetModal from './profile/ProfileResetModal';
 import ProfileLogoutModal from './profile/ProfileLogoutModal';
-import useProfileBackup from './profile/hooks/useProfileBackup';
 import useProfileDataActions from './profile/hooks/useProfileDataActions';
 import useProfileSecurity from './profile/hooks/useProfileSecurity';
 import useProfileFinances from './profile/hooks/useProfileFinances';
@@ -71,7 +68,7 @@ export default function ProfileModal({
   onLogout
 }) {
   const { formatMoney, enableDecimals, toggleEnableDecimals } = usePrivacy();
-  const { user, setUser, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   // Internal view state: 'main' | 'subscriptions' | 'pin_setup' | 'budgets' | 'savings_goals' | 'categories' | 'tax'
   const [currentView, setCurrentView] = useState('main');
@@ -110,53 +107,9 @@ export default function ProfileModal({
 
   const fileInputRef = useRef(null);
   
-  // Backup & Restore State & Handlers
-  const {
-    restoreInputRef,
-    isRestoring,
-    backupPreview,
-    setBackupPreview,
-    handleExportJSON,
-    handleFileSelect,
-    confirmRestore
-  } = useProfileBackup({
-    dataToBackup: {
-      transactions,
-      investments,
-      accounts,
-      categories,
-      debtsAndLoans,
-      budgets,
-      savingsGoals,
-      subscriptions,
-      recurring_payments: subscriptions,
-      userProfile,
-      securitySettings,
-      trm,
-      theme
-    },
-    onRestoreBackup,
-    showToast,
-    parseAndValidateBackup,
-    downloadBackupJSON
-  });
 
-  // Data actions (Cloud sync, Logout, Factory reset) via custom hook
-  const {
-    isCloudSyncing,
-    isLoggingOut,
-    isResetting,
-    showResetConfirm,
-    setShowResetConfirm,
-    confirmDeleteText,
-    setConfirmDeleteText,
-    showLogoutConfirm,
-    setShowLogoutConfirm,
-    handleCloudSync,
-    handleFullLogout,
-    handleFullReset,
-    handleConfirmFactoryReset
-  } = useProfileDataActions({
+  // Acciones de datos (Cloud sync, Logout, Factory reset)
+  const dataActions = useProfileDataActions({
     onManualCloudSync,
     onLogout,
     signOut,
@@ -168,86 +121,16 @@ export default function ProfileModal({
     user
   });
 
-  // PIN & Biometrics Security via custom hook
-  const {
-    newPin,
-    setNewPin,
-    confirmPin,
-    setConfirmPin,
-    pinError,
-    setPinError,
-    handleTogglePin,
-    handleSavePin,
-    handleToggleBiometrics
-  } = useProfileSecurity({
+  // Seguridad PIN & Biometría
+  const security = useProfileSecurity({
     securitySettings,
     onUpdateSecurity,
     setCurrentView,
     showToast
   });
 
-  // Financial management & Profile editing via custom hook
-  const {
-    isEditingName,
-    setIsEditingName,
-    tempName,
-    setTempName,
-    handleImageChange,
-    handleRemovePhoto,
-    handleSaveName,
-    showAddSubForm,
-    setShowAddSubForm,
-    newSubName,
-    setNewSubName,
-    newSubAmount,
-    setNewSubAmount,
-    newSubBillingDay,
-    setNewSubBillingDay,
-    newSubFrequency,
-    setNewSubFrequency,
-    newSubCategory,
-    setNewSubCategory,
-    handleCreateSubscription,
-    totalMonthlySubscriptions,
-    isEditingGlobalBudget,
-    setIsEditingGlobalBudget,
-    tempGlobalBudget,
-    setTempGlobalBudget,
-    editingCatBudgetId,
-    setEditingCatBudgetId,
-    tempCatBudgetAmount,
-    setTempCatBudgetAmount,
-    handleSaveGlobalBudget,
-    handleSaveCategoryBudget,
-    showAddGoalForm,
-    setShowAddGoalForm,
-    newGoalName,
-    setNewGoalName,
-    newGoalTarget,
-    setNewGoalTarget,
-    newGoalCurrent,
-    setNewGoalCurrent,
-    newGoalDate,
-    setNewGoalDate,
-    editingGoal,
-    setEditingGoal,
-    editGoalName,
-    setEditGoalName,
-    editGoalTarget,
-    setEditGoalTarget,
-    editGoalCurrent,
-    setEditGoalCurrent,
-    editGoalDate,
-    setEditGoalDate,
-    contributeGoalId,
-    setContributeGoalId,
-    contributeAmount,
-    setContributeAmount,
-    handleCreateGoal,
-    handleOpenEditGoal,
-    handleSaveEditGoal,
-    handleContributeToGoal
-  } = useProfileFinances({
+  // Gestión Financiera & Perfil
+  const finances = useProfileFinances({
     userProfile,
     onUpdateProfile,
     budgets,
@@ -267,32 +150,26 @@ export default function ProfileModal({
     user
   });
 
-  // Derived monthly expenses & savings metrics via custom hook
-  const {
-    monthExpenses,
-    totalMonthExpense,
-    expenseByCatMap,
-    totalSavedAcrossGoals,
-    totalTargetAcrossGoals
-  } = useProfileMetrics({ transactions, savingsGoals, safeNumber });
+  // Métricas mensuales
+  const metrics = useProfileMetrics({ transactions, savingsGoals, safeNumber });
 
   // Manejador centralizado de tecla Volver / Popstate para navegación interna escalonada
   useBackHandler(isOpen, () => {
-    if (showAddGoalForm || editingGoal) {
-      setShowAddGoalForm(false);
-      setEditingGoal(null);
+    if (finances.showAddGoalForm || finances.editingGoal) {
+      finances.setShowAddGoalForm(false);
+      finances.setEditingGoal(null);
       return;
     }
-    if (showAddSubForm) {
-      setShowAddSubForm(false);
+    if (finances.showAddSubForm) {
+      finances.setShowAddSubForm(false);
       return;
     }
-    if (isEditingGlobalBudget) {
-      setIsEditingGlobalBudget(false);
+    if (finances.isEditingGlobalBudget) {
+      finances.setIsEditingGlobalBudget(false);
       return;
     }
-    if (editingCatBudgetId) {
-      setEditingCatBudgetId(null);
+    if (finances.editingCatBudgetId) {
+      finances.setEditingCatBudgetId(null);
       return;
     }
     if (currentView !== 'main') {
@@ -307,15 +184,14 @@ export default function ProfileModal({
     if (isOpen) {
       setCurrentView('main');
       setActiveTab('finances');
-      setIsEditingName(false);
-      setShowAddSubForm(false);
-      setShowAddGoalForm(false);
-      setIsEditingGlobalBudget(false);
-      setEditingCatBudgetId(null);
-      setBackupPreview(null);
-      setShowResetConfirm(false);
-      setConfirmDeleteText('');
-      setShowLogoutConfirm(false);
+      finances.setIsEditingName(false);
+      finances.setShowAddSubForm(false);
+      finances.setShowAddGoalForm(false);
+      finances.setIsEditingGlobalBudget(false);
+      finances.setEditingCatBudgetId(null);
+      dataActions.setShowResetConfirm(false);
+      dataActions.setConfirmDeleteText('');
+      dataActions.setShowLogoutConfirm(false);
     }
   }, [isOpen]);
 
@@ -337,16 +213,10 @@ export default function ProfileModal({
           setCurrentView={setCurrentView}
           user={user}
           userProfile={userProfile}
-          isEditingName={isEditingName}
-          setIsEditingName={setIsEditingName}
-          tempName={tempName}
-          setTempName={setTempName}
-          handleSaveName={handleSaveName}
-          handleImageChange={handleImageChange}
-          handleRemovePhoto={handleRemovePhoto}
           fileInputRef={fileInputRef}
           isOnline={isOnline}
           onClose={onClose}
+          {...finances}
         >
           <ProfileTabBar activeTab={activeTab} setActiveTab={setActiveTab} />
         </ProfileHeader>
@@ -377,12 +247,12 @@ export default function ProfileModal({
                   setCurrentView={setCurrentView}
                   formatMoney={formatMoney}
                   budgets={budgets}
-                  totalMonthExpense={totalMonthExpense}
+                  totalMonthExpense={metrics.totalMonthExpense}
                   savingsGoals={savingsGoals}
-                  totalSavedAcrossGoals={totalSavedAcrossGoals}
-                  totalTargetAcrossGoals={totalTargetAcrossGoals}
+                  totalSavedAcrossGoals={metrics.totalSavedAcrossGoals}
+                  totalTargetAcrossGoals={metrics.totalTargetAcrossGoals}
                   subscriptions={subscriptions}
-                  totalMonthlySubscriptions={totalMonthlySubscriptions}
+                  totalMonthlySubscriptions={finances.totalMonthlySubscriptions}
                   onNavigateToRecurring={onNavigateToRecurring}
                   onClose={onClose}
                   onOpenAccounts={onOpenAccounts}
@@ -395,12 +265,12 @@ export default function ProfileModal({
               {activeTab === 'security' && (
                 <ProfileSecurityTab
                   securitySettings={securitySettings}
-                  handleTogglePin={handleTogglePin}
-                  handleToggleBiometrics={handleToggleBiometrics}
+                  handleTogglePin={security.handleTogglePin}
+                  handleToggleBiometrics={security.handleToggleBiometrics}
                   onChangePinClick={() => {
-                    setNewPin('');
-                    setConfirmPin('');
-                    setPinError('');
+                    security.setNewPin('');
+                    security.setConfirmPin('');
+                    security.setPinError('');
                     setCurrentView('pin_setup');
                   }}
                 />
@@ -409,23 +279,25 @@ export default function ProfileModal({
               {/* TAB 3: ALMACENAMIENTO & DATOS */}
               {activeTab === 'cloud' && (
                 <ProfileCloudTab
-                  isCloudUser={isCloudUser}
                   user={user}
+                  isCloudUser={isCloudUser}
                   onManualCloudSync={onManualCloudSync}
-                  isCloudSyncing={isCloudSyncing}
-                  handleCloudSync={handleCloudSync}
-                  setShowLogoutConfirm={setShowLogoutConfirm}
-                  handleExportJSON={handleExportJSON}
+                  isCloudSyncing={dataActions.isCloudSyncing}
+                  onLogout={() => dataActions.setShowLogoutConfirm(true)}
+                  onResetData={() => dataActions.setShowResetConfirm(true)}
                   transactions={transactions}
                   investments={investments}
                   trm={trm}
-                  restoreInputRef={restoreInputRef}
-                  handleFileSelect={handleFileSelect}
-                  isRestoring={isRestoring}
-                  onOpenResetConfirm={() => {
-                    setConfirmDeleteText('');
-                    setShowResetConfirm(true);
-                  }}
+                  accounts={accounts}
+                  categories={categories}
+                  debtsAndLoans={debtsAndLoans}
+                  budgets={budgets}
+                  savingsGoals={savingsGoals}
+                  subscriptions={subscriptions}
+                  userProfile={userProfile}
+                  securitySettings={securitySettings}
+                  theme={theme}
+                  onRestoreBackup={onRestoreBackup}
                 />
               )}
 
@@ -446,19 +318,10 @@ export default function ProfileModal({
             <ProfileBudgetsView
               budgets={budgets}
               categories={categories}
-              expenseByCatMap={expenseByCatMap}
-              totalMonthExpense={totalMonthExpense}
+              expenseByCatMap={metrics.expenseByCatMap}
+              totalMonthExpense={metrics.totalMonthExpense}
               formatMoney={formatMoney}
-              isEditingGlobalBudget={isEditingGlobalBudget}
-              setIsEditingGlobalBudget={setIsEditingGlobalBudget}
-              tempGlobalBudget={tempGlobalBudget}
-              setTempGlobalBudget={setTempGlobalBudget}
-              handleSaveGlobalBudget={handleSaveGlobalBudget}
-              editingCatBudgetId={editingCatBudgetId}
-              setEditingCatBudgetId={setEditingCatBudgetId}
-              tempCatBudgetAmount={tempCatBudgetAmount}
-              setTempCatBudgetAmount={setTempCatBudgetAmount}
-              handleSaveCategoryBudget={handleSaveCategoryBudget}
+              {...finances}
             />
           )}
 
@@ -466,38 +329,22 @@ export default function ProfileModal({
           {currentView === 'savings_goals' && (
             <ProfileSavingsGoalsView
               savingsGoals={savingsGoals}
-              totalSavedAcrossGoals={totalSavedAcrossGoals}
-              totalTargetAcrossGoals={totalTargetAcrossGoals}
+              totalSavedAcrossGoals={metrics.totalSavedAcrossGoals}
+              totalTargetAcrossGoals={metrics.totalTargetAcrossGoals}
               formatMoney={formatMoney}
               accounts={accounts}
-              now={now}
-              showAddGoalForm={showAddGoalForm}
-              setShowAddGoalForm={setShowAddGoalForm}
-              editingGoal={editingGoal}
-              setEditingGoal={setEditingGoal}
               onAddGoal={onAddGoal}
               onUpdateGoal={onUpdateGoal}
               onDeleteGoal={onDeleteGoal}
               showToast={showToast}
-              handleOpenEditGoal={handleOpenEditGoal}
-              contributeGoalId={contributeGoalId}
-              setContributeGoalId={setContributeGoalId}
-              contributeAmount={contributeAmount}
-              setContributeAmount={setContributeAmount}
-              handleContributeToGoal={handleContributeToGoal}
+              {...finances}
             />
           )}
 
           {/* VIEW: PIN SETUP */}
           {currentView === 'pin_setup' && (
             <ProfilePinSetupView
-              handleSavePin={handleSavePin}
-              newPin={newPin}
-              setNewPin={setNewPin}
-              confirmPin={confirmPin}
-              setConfirmPin={setConfirmPin}
-              pinError={pinError}
-              setPinError={setPinError}
+              {...security}
               setCurrentView={setCurrentView}
             />
           )}
@@ -506,20 +353,9 @@ export default function ProfileModal({
           {currentView === 'subscriptions' && (
             <ProfileSubscriptionsView
               subscriptions={subscriptions}
-              totalMonthlySubscriptions={totalMonthlySubscriptions}
               formatMoney={formatMoney}
-              showAddSubForm={showAddSubForm}
-              setShowAddSubForm={setShowAddSubForm}
-              handleCreateSubscription={handleCreateSubscription}
-              newSubName={newSubName}
-              setNewSubName={setNewSubName}
-              newSubAmount={newSubAmount}
-              setNewSubAmount={setNewSubAmount}
-              newSubBillingDay={newSubBillingDay}
-              setNewSubBillingDay={setNewSubBillingDay}
-              newSubFrequency={newSubFrequency}
-              setNewSubFrequency={setNewSubFrequency}
               onDeleteSubscription={onDeleteSubscription}
+              {...finances}
             />
           )}
 
@@ -555,39 +391,33 @@ export default function ProfileModal({
         <ProfileFooter
           currentView={currentView}
           userProfile={userProfile}
-          onLogoutClick={() => setShowLogoutConfirm(true)}
+          onLogoutClick={() => dataActions.setShowLogoutConfirm(true)}
         />
       </div>
 
-      {/* MODAL DE CONFIRMACIÓN DE RESTAURACIÓN */}
-      <ProfileBackupPreviewModal
-        backupPreview={backupPreview}
-        onCancel={() => setBackupPreview(null)}
-        onConfirm={confirmRestore}
-      />
 
       {/* MODAL DE DOBLE CONFIRMACIÓN DE BORRADO DE DATOS (ZONA DE PELIGRO) */}
-      {showResetConfirm && (
+      {dataActions.showResetConfirm && (
         <ProfileResetModal
-          isOpen={showResetConfirm}
+          isOpen={dataActions.showResetConfirm}
           onClose={() => {
-            setShowResetConfirm(false);
-            setConfirmDeleteText('');
+            dataActions.setShowResetConfirm(false);
+            dataActions.setConfirmDeleteText('');
           }}
-          confirmDeleteText={confirmDeleteText}
-          setConfirmDeleteText={setConfirmDeleteText}
-          isResetting={isResetting}
-          onConfirm={handleConfirmFactoryReset}
+          confirmDeleteText={dataActions.confirmDeleteText}
+          setConfirmDeleteText={dataActions.setConfirmDeleteText}
+          isResetting={dataActions.isResetting}
+          onConfirm={dataActions.handleConfirmFactoryReset}
         />
       )}
 
       {/* MODAL DE CONFIRMACIÓN DE CERRAR SESIÓN */}
-      {showLogoutConfirm && (
+      {dataActions.showLogoutConfirm && (
         <ProfileLogoutModal
-          isOpen={showLogoutConfirm}
-          onClose={() => setShowLogoutConfirm(false)}
-          onConfirm={handleFullLogout}
-          isLoggingOut={isLoggingOut}
+          isOpen={dataActions.showLogoutConfirm}
+          onClose={() => dataActions.setShowLogoutConfirm(false)}
+          onConfirm={dataActions.handleFullLogout}
+          isLoggingOut={dataActions.isLoggingOut}
         />
       )}
     </div>
