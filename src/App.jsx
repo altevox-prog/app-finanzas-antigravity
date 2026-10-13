@@ -1,659 +1,31 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React from 'react';
 import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
 import { ViewRouter } from './views';
 import SplashScreen from './components/SplashScreen';
 import OnboardingWizard from './components/OnboardingWizard';
-import { ModalContainer } from './components/modals';
-import QuickActionsModal from './components/QuickActionsModal';
-import { usePrivacy } from './context/PrivacyContext';
-import SyncStatusBadge from './components/SyncStatusBadge';
-import { useAuth } from './context/AuthContext';
-import { RotateCcw, RefreshCw, X } from 'lucide-react';
+import GlobalModals from './components/modals/GlobalModals';
+import PwaUpdateBanner from './components/PwaUpdateBanner';
+import { RotateCcw } from 'lucide-react';
 import Toaster from './components/Toaster';
-import { toast } from './utils/toast';
-import { useViewMode } from './hooks/useViewMode';
-import { useDebtAlerts } from './hooks/useDebtAlerts';
-import { useTheme } from './hooks/useTheme';
-import { useAppSecurity } from './hooks/useAppSecurity';
-import { useOnboarding } from './hooks/useOnboarding';
-import { useDashboardWidgets } from './hooks/useDashboardWidgets';
-import { useUserProfile } from './hooks/useUserProfile';
-import { useTRM } from './hooks/useTRM';
-import { useCategories } from './hooks/useCategories';
-import { useBudgets } from './hooks/useBudgets';
-import { useSavingsGoals } from './hooks/useSavingsGoals';
-import { useRecurringPayments } from './hooks/useRecurringPayments';
-import { useInvestments } from './hooks/useInvestments';
-import { useDebts } from './hooks/useDebts';
-import { useAccounts } from './hooks/useAccounts';
-import { useTransactions } from './hooks/useTransactions';
-import { useFinanceAnalytics } from './hooks/useFinanceAnalytics';
-import { useDateNavigation } from './hooks/useDateNavigation';
-import { useDataManagement } from './hooks/useDataManagement';
-import { useNavigationTabs } from './hooks/useNavigationTabs';
-import { useFinancialOperations } from './hooks/useFinancialOperations';
-import { useModalControls } from './hooks/useModalControls';
-import { useDataSync } from './hooks/useDataSync';
-import { useScrollRestoration } from './hooks/useScrollRestoration';
+import { useAppOrchestrator } from './hooks/useAppOrchestrator';
 
 export default function App() {
-  const { formatMoney } = usePrivacy();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const state = useAppOrchestrator();
 
-  // Cierre de sesión seguro y desacoplado de la pantalla de bloqueo por PIN
-  const handleGlobalLogout = useCallback(async () => {
-    try {
-      if (typeof signOut === 'function') {
-        await signOut();
-      }
-      try {
-        if (typeof window !== 'undefined') {
-          Object.keys(localStorage).forEach((key) => {
-            if (
-              key.startsWith('sb-') ||
-              key.includes('supabase') ||
-              key.includes('auth-token')
-            ) {
-              localStorage.removeItem(key);
-            }
-          });
-          sessionStorage.clear();
-        }
-      } catch (storageErr) {
-        console.warn('Error limpiando auth tokens en storage:', storageErr);
-      }
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
-    } catch (err) {
-      console.error('Error al cerrar sesión:', err);
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
-    }
-  }, [signOut]);
-  const { theme, setTheme, handleToggleTheme } = useTheme();
-
-  // Gestión centralizada de modales, visibilidad y superposiciones
-  const modalControls = useModalControls();
-  const {
-    isAddTxOpen,
-    setIsAddTxOpen,
-    isSettingsOpen,
-    setIsSettingsOpen,
-    isActionMenuOpen,
-    setIsActionMenuOpen,
-    handleOpenTransaction,
-    handleOpenAddLoan,
-    handleOpenAddDebt,
-    handleOpenTransfer,
-    handleOpenRecurring,
-    handleOpenInvestment,
-    handleOpenProfile,
-    handleCloseAllModals
-  } = modalControls;
-
-  // PWA Update notification banner state
-  const [hasPwaUpdate, setHasPwaUpdate] = useState(false);
-
-  // Escuchar evento de nueva versión disponible de PWA
-  useEffect(() => {
-    const handleUpdate = () => {
-      setHasPwaUpdate(true);
-    };
-    window.addEventListener('pwa-update-available', handleUpdate);
-    return () => window.removeEventListener('pwa-update-available', handleUpdate);
-  }, []);
-
-  // Flag de control para evitar que useEffects sobreescriban localStorage durante un reset de fábrica
-  const isResettingRef = useRef(false);
-
-  const transactionsRef = useRef([]);
-  const setTransactionsRef = useRef(null);
-
-  // Sincronización y estado de la Tasa Representativa del Mercado (TRM)
-  const { trm, setTrm, updateTRM } = useTRM(isResettingRef);
-
-  // Estado y sincronización de Perfil de Usuario
-  const {
-    userProfile,
-    setUserProfile,
-    handleUpdateProfile
-  } = useUserProfile({ user, isResettingRef });
-
-  // Cuentas state & actions
-  const {
-    accounts,
-    setAccounts,
-    handleAddAccount,
-    handleSaveAccount,
-    handleUpdateAccount,
-    handleDeleteAccount,
-    deleteAccount,
-    handleReorderAccounts,
-    handleArchiveAccount,
-    handleAdjustAccountBalance,
-    resetAccounts
-  } = useAccounts({
-    isResettingRef,
-    transactionsRef,
-    setTransactionsRef,
-    trm
-  });
-
-  // Transacciones state & actions
-  const {
-    transactions,
-    setTransactions,
-    handleAddTransaction: baseAddTransaction,
-    handleSaveTransaction: baseSaveTransaction,
-    handleUpdateTransaction: baseUpdateTransaction,
-    handleDeleteTransaction: baseDeleteTransaction,
-    handleExecuteTransfer: baseExecuteTransfer,
-    resetTransactions
-  } = useTransactions({
-    isResettingRef,
-    accounts,
-    setAccounts,
-    trm
-  });
-
-  transactionsRef.current = transactions;
-  setTransactionsRef.current = setTransactions;
-
-  // Gestión de categorías y subcategorías
-  const {
-    categories,
-    setCategories,
-    handleAddCategory,
-    handleUpdateCategory,
-    handleDeleteCategory,
-    handleAddSubcategory,
-    handleUpdateSubcategory,
-    handleDeleteSubcategory,
-    resetCategories
-  } = useCategories({
-    isResettingRef,
-    onCategoryUpdated: (updatedCat) => {
-      setTransactions((prev) =>
-        prev.map((t) => (t.categoryId === updatedCat.id ? { ...t, categoryName: updatedCat.name } : t))
-      );
-    },
-    onSubcategoryUpdated: (subcategoryId, newName) => {
-      setTransactions((prev) =>
-        prev.map((t) => (t.subcategoryId === subcategoryId ? { ...t, subcategoryName: newName.trim() } : t))
-      );
-    }
-  });
-
-  // Deudas y préstamos state & actions
-  const {
-    debtsAndLoans,
-    setDebtsAndLoans,
-    handleAddDebtOrLoan: baseAddDebtOrLoan,
-    handleSaveLoan: baseSaveLoan,
-    handleUpdateDebtOrLoan,
-    handleAddPayment: baseAddPayment,
-    handleDeletePayment: baseDeletePayment,
-    handleAddDisbursement: baseAddDisbursement,
-    handleDeleteDebtOrLoan: baseDeleteDebtOrLoan,
-    resetDebts
-  } = useDebts({
-    isResettingRef,
-    accounts,
-    categories,
-    setAccounts,
-    setTransactions,
-    setCategories
-  });
-
-  // Inversiones y portafolio state & actions
-  const {
-    investments,
-    setInvestments,
-    handleAddInvestment: baseAddInvestment,
-    handleSaveInvestment: baseSaveInvestment,
-    handleUpdateInvestment: baseUpdateInvestment,
-    handleDeleteInvestment: baseDeleteInvestment,
-    resetInvestments
-  } = useInvestments(isResettingRef);
-
-  // Orquestador central de operaciones financieras cruzadas
-  const financialOps = useFinancialOperations({
-    accounts,
-    setAccounts,
-    transactions,
-    setTransactions,
-    debtsAndLoans,
-    setDebtsAndLoans,
-    investments,
-    setInvestments,
-    categories,
-    setCategories,
-    trm,
-    userProfile,
-    isResettingRef,
-    baseAddTransaction,
-    baseSaveTransaction,
-    baseUpdateTransaction,
-    baseDeleteTransaction,
-    baseExecuteTransfer,
-    baseAddPayment,
-    baseDeletePayment,
-    baseAddDisbursement,
-    baseAddInvestment,
-    baseDeleteInvestment,
-    baseAddDebtOrLoan,
-    baseSaveLoan,
-    baseDeleteDebtOrLoan
-  });
-
-  // Modo de visualización responsive y vistas fijas
-  const {
-    viewMode,
-    isForcedMobile,
-    isForcedDesktop,
-    desktopOnlyClass,
-    desktopBlockClass,
-    mobileOnlyClass
-  } = useViewMode();
-
-  // Configuración y visibilidad de Widgets del Dashboard
-  const {
-    widgets,
-    setWidgets,
-    isEditWidgetsModalOpen,
-    setIsEditWidgetsModalOpen
-  } = useDashboardWidgets({ userId: user?.id, isResettingRef });
-  // Control de estado de onboarding y tutorial
-  const {
-    isOnboardingActive,
-    setIsOnboardingActive,
-    showTutorial,
-    setShowTutorial,
-    completeOnboarding
-  } = useOnboarding();
-
-  // Security settings (PIN and Biometrics) y estado de bloqueo de app
-  const {
-    securitySettings,
-    setSecuritySettings,
-    isLocked,
-    setIsLocked,
-    handleUnlock,
-    handleVerifyPin,
-    handleUpdatePin,
-    failedAttempts,
-    lockApp
-  } = useAppSecurity(isResettingRef);
-
-  // Pagos recurrentes y suscripciones state & actions
-  const {
-    recurringPayments,
-    setRecurringPayments,
-    subscriptions,
-    setSubscriptions,
-    handleAddRecurring,
-    handleSaveRecurring,
-    handleUpdateRecurring,
-    handleDeleteRecurring,
-    handleToggleActiveRecurring,
-    resetRecurringPayments
-  } = useRecurringPayments(isResettingRef);
-
-  // Presupuestos state & actions
-  const {
-    budgets,
-    setBudgets,
-    updateGlobalBudget,
-    updateCategoryBudget,
-    removeCategoryBudget,
-    resetBudgets
-  } = useBudgets(isResettingRef);
-
-  // Metas de Ahorro state & actions
-  const {
-    savingsGoals,
-    setSavingsGoals,
-    handleAddGoal,
-    handleUpdateGoal,
-    handleDeleteGoal,
-    handleContributeGoal,
-    resetSavingsGoals
-  } = useSavingsGoals(isResettingRef);
-
-  // Control y navegación unificada de fechas
-  const {
-    selectedDate,
-    setSelectedDate,
-    selectedMonth,
-    selectedYear,
-    selectedDay,
-    setSelectedDay,
-    showMonthPicker,
-    setShowMonthPicker,
-    currentMonthLabel,
-    handlePrevMonth,
-    handleNextMonth,
-    handleResetToToday,
-    handleChangeMonth,
-    handleSelectDay,
-    handleClearSelectedDay
-  } = useDateNavigation();
-
-  // Gestión global de datos, reseteo de fábrica, respaldos y onboarding
-  const {
-    handleFactoryReset,
-    handleFullReset,
-    handleResetData,
-    handleRestoreBackup,
-    handleImportBackup,
-    handleOnboardingComplete
-  } = useDataManagement({
-    isResettingRef,
-    user,
-    resetTransactions,
-    resetAccounts,
-    resetDebts,
-    resetInvestments,
-    resetRecurringPayments,
-    resetSavingsGoals,
-    resetBudgets,
-    setTransactions,
-    setAccounts,
-    setCategories,
-    setDebtsAndLoans,
-    setInvestments,
-    setBudgets,
-    setSavingsGoals,
-    setRecurringPayments,
-    setUserProfile,
-    setSecuritySettings,
-    setTrm,
-    setTheme,
-    setSelectedDay,
-    setIsLocked,
-    setShowTutorial,
-    completeOnboarding
-  });
-
-  // Sincronización en segundo plano con Supabase (Local-First Cloud Sync)
-  const {
-    syncStatus,
-    syncUser,
-    isCloudEnabled,
-    pushLocalToCloud,
-    pullCloudToLocal
-  } = useDataSync({
-    accounts,
-    setAccounts,
-    transactions,
-    setTransactions,
-    debtsAndLoans,
-    setDebtsAndLoans,
-    investments,
-    setInvestments,
-    recurringPayments,
-    setRecurringPayments,
-    budgets,
-    setBudgets,
-    categories,
-    setCategories,
-    savingsGoals,
-    setSavingsGoals,
-    userProfile,
-    setUserProfile
-  });
-
-  // Cierre preventivo de menús y modales al cambiar de pestaña
-  const handleCloseOverlaysOnTabChange = useCallback(() => {
-    handleCloseAllModals();
-    setIsEditWidgetsModalOpen(false);
-  }, [handleCloseAllModals, setIsEditWidgetsModalOpen]);
-
-  // Gestión centralizada de pestañas, scroll y reseteos
-  const {
-    activeTab,
-    setActiveTab,
-    tabResetKeys,
-    handleTabChange,
-    handleResetTab,
-    mainContentRef,
-    fromSettings,
-    setFromSettings,
-    handleGoBackFromSubView
-  } = useNavigationTabs({
-    initialTab: 'dashboard',
-    onTabChange: handleCloseOverlaysOnTabChange,
-    onOpenProfile: handleOpenProfile
-  });
-
-  // Restauración y persistencia ergonómica de posición de scroll por pestaña (Principio 9)
-  useScrollRestoration(activeTab, mainContentRef);
-
-  // Cálculos derivados y métricas analíticas memorizadas
-  const {
-    monthlyTransactions,
-    scopedTransactions,
-    monthlyStats,
-    netWorth,
-    taxMetrics  } = useFinanceAnalytics({
-    transactions,
-    accounts,
-    investments,
-    debtsAndLoans,
-    selectedDate,
-    selectedMonth,
-    selectedYear,
-    selectedDay,
-    trm
-  });
-
-  // Sistema de Alertas Preventivas y Notificaciones PWA
-  const {
-    tomorrowDebtAlerts,
-    handleDismissAlert,
-    handleReviewDebtAlert
-  } = useDebtAlerts({
-    debtsAndLoans,
-    accounts,
-    onNavigateToDebts: () => handleTabChange('debts')
-  });
-
-  // 1. Objeto consolidado y memorizado de datos financieros
-  const financeData = useMemo(() => ({
-    accounts,
-    transactions,
-    monthlyTransactions,
-    scopedTransactions,
-    categories,
-    investments,
-    debtsAndLoans,
-    recurringPayments,
-    subscriptions,
-    budgets,
-    savingsGoals,
-    monthlyStats,
-    netWorth,
-    taxMetrics,
-    trm,
-    userProfile,
-    selectedDate,
-    selectedMonth,
-    selectedYear,
-    selectedDay,
-    currentMonthLabel,
-    widgets,
-    tomorrowDebtAlerts,
-    user,
-    theme,
-    securitySettings,
-    isLocked,
-    failedAttempts,
-    showTutorial,
-    syncStatus,
-    syncUser,
-    isCloudEnabled
-  }), [
-    accounts,
-    transactions,
-    monthlyTransactions,
-    scopedTransactions,
-    categories,
-    investments,
-    debtsAndLoans,
-    recurringPayments,
-    subscriptions,
-    budgets,
-    savingsGoals,
-    monthlyStats,
-    netWorth,
-    taxMetrics,
-    trm,
-    userProfile,
-    selectedDate,
-    selectedMonth,
-    selectedYear,
-    selectedDay,
-    currentMonthLabel,
-    widgets,
-    tomorrowDebtAlerts,
-    user,
-    theme,
-    securitySettings,
-    isLocked,
-    failedAttempts,
-    showTutorial,
-    syncStatus,
-    syncUser,
-    isCloudEnabled
-  ]);
-
-  // 2. Objeto consolidado y memorizado de acciones y operaciones
-  const financeActions = useMemo(() => ({
-    ...financialOps,
-    ...modalControls,
-    handleTabChange,
-    handleResetTab,
-    setSelectedDate,
-    setSelectedDay,
-    setWidgets,
-    setBudgets,
-    setSubscriptions,
-    setSecuritySettings,
-    setTheme,
-    setShowTutorial,
-    showMonthPicker,
-    setShowMonthPicker,
-    isEditWidgetsModalOpen,
-    setIsEditWidgetsModalOpen,
-    handleUnlock,
-    handleVerifyPin,
-    handleUpdatePin,
-    handleReviewDebtAlert,
-    handleDismissAlert,
-    formatMoney,
-    handleGoBackFromSubView,
-    fromSettings,
-    setFromSettings,
-    handleAddCategory,
-    handleUpdateCategory,
-    handleDeleteCategory,
-    handleAddSubcategory,
-    handleUpdateSubcategory,
-    handleDeleteSubcategory,
-    handleAddAccount,
-    handleUpdateAccount,
-    handleDeleteAccount,
-    handleReorderAccounts,
-    handleUpdateDebtOrLoan,
-    handleUpdateInvestment: baseUpdateInvestment,
-    handleAddRecurring,
-    handleUpdateRecurring,
-    handleDeleteRecurring,
-    handleToggleActiveRecurring,
-    handleAddGoal,
-    handleUpdateGoal,
-    handleDeleteGoal,
-    handlePrevMonth,
-    handleNextMonth,
-    handleResetToToday,
-    handleChangeMonth,
-    handleRestoreBackup,
-    handleResetData,
-    handleUpdateProfile,
-    pushLocalToCloud,
-    pullCloudToLocal,
-    onLogout: handleGlobalLogout
-  }), [
-    financialOps,
-    modalControls,
-    handleTabChange,
-    handleResetTab,
-    setSelectedDate,
-    setSelectedDay,
-    setWidgets,
-    setBudgets,
-    setSubscriptions,
-    setSecuritySettings,
-    setTheme,
-    setShowTutorial,
-    showMonthPicker,
-    setShowMonthPicker,
-    isEditWidgetsModalOpen,
-    setIsEditWidgetsModalOpen,
-    handleUnlock,
-    handleVerifyPin,
-    handleUpdatePin,
-    handleReviewDebtAlert,
-    handleDismissAlert,
-    formatMoney,
-    handleGoBackFromSubView,
-    fromSettings,
-    setFromSettings,
-    handleAddCategory,
-    handleUpdateCategory,
-    handleDeleteCategory,
-    handleAddSubcategory,
-    handleUpdateSubcategory,
-    handleDeleteSubcategory,
-    handleAddAccount,
-    handleUpdateAccount,
-    handleDeleteAccount,
-    handleReorderAccounts,
-    handleUpdateDebtOrLoan,
-    baseUpdateInvestment,
-    handleAddRecurring,
-    handleUpdateRecurring,
-    handleDeleteRecurring,
-    handleToggleActiveRecurring,
-    handleAddGoal,
-    handleUpdateGoal,
-    handleDeleteGoal,
-    handlePrevMonth,
-    handleNextMonth,
-    handleResetToToday,
-    handleChangeMonth,
-    handleRestoreBackup,
-    handleResetData,
-    handleUpdateProfile,
-    pushLocalToCloud,
-    pullCloudToLocal,
-    handleGlobalLogout
-  ]);
-  if (authLoading) {
+  if (state.authLoading) {
     return <SplashScreen message="Verificando tu espacio..." />;
   }
 
-  // 2. Si el Onboarding está activo y no hay usuario autenticado, mostrar la pantalla de bienvenida
-  if (isOnboardingActive && (!user || user.id === 'local-user')) {
+  if (state.isOnboardingActive && (!state.user || state.user.id === 'local-user')) {
     return (
       <OnboardingWizard 
-        onComplete={handleOnboardingComplete} 
-        onRestoreBackup={handleRestoreBackup} 
+        onComplete={state.handleOnboardingComplete} 
+        onRestoreBackup={state.handleRestoreBackup} 
       />
     );
   }
+
+  const { isForcedMobile, isForcedDesktop, modalControls } = state;
 
   return (
     <div className={`min-h-[100dvh] bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-slate-100 flex ${
@@ -661,42 +33,33 @@ export default function App() {
       isForcedDesktop ? 'flex-row items-stretch justify-start p-0' :
       'flex-col lg:flex-row items-center lg:items-stretch justify-start sm:justify-center lg:justify-start p-0 sm:p-4 md:p-6 lg:p-0'
     } transition-colors font-sans antialiased w-full overflow-x-hidden`}>
-      {/* 1. BARRA LATERAL FIJA EN ESCRITORIO (Sidebar visible solo en lg:) */}
+      {/* 1. BARRA LATERAL FIJA EN ESCRITORIO */}
       <DesktopSidebar
         modalControls={modalControls}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onTabChange={handleTabChange}
+        activeTab={state.activeTab}
+        setActiveTab={state.setActiveTab}
+        onTabChange={state.handleTabChange}
         onOpenTransaction={() => modalControls.openAddTransaction('expense')}
-        onOpenAddTx={() => modalControls.openAddTransaction('expense')}
         onAddExpense={() => modalControls.openAddTransaction('expense')}
         onAddIncome={() => modalControls.openAddTransaction('income')}
         onOpenTransfer={() => modalControls.openTransfer()}
-        onOpenAddTransaction={() => modalControls.openAddTransaction('expense')}
-        onOpenNewTransaction={() => modalControls.openAddTransaction('expense')}
-        isAddTransactionOpen={modalControls.isAddTxOpen}
-        setIsAddTransactionOpen={() => modalControls.openAddTransaction('expense')}
         onOpenRecurring={() => modalControls.openAddRecurring()}
         onOpenLoan={() => modalControls.openAddLoan('payable')}
         onOpenDebt={() => modalControls.openAddLoan('payable')}
-        onOpenAddDebt={() => modalControls.openAddLoan('payable')}
-        onAddDebtOrLoan={() => modalControls.openAddLoan('payable')}
         onOpenInvestment={() => modalControls.openAddInvestment()}
-        isSettingsOpen={isSettingsOpen}
-        setIsSettingsOpen={setIsSettingsOpen}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenProfile={handleOpenProfile}
-        onOpenAuth={handleOpenProfile}
-        userProfile={userProfile}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-        onLock={() => setIsLocked(true)}
-        onLogout={handleGlobalLogout}
-        trm={trm}
-        syncStatus={syncStatus}
-        isCloudEnabled={isCloudEnabled}
-        syncUser={syncUser}
-        className={desktopOnlyClass}
+        isSettingsOpen={state.isSettingsOpen}
+        setIsSettingsOpen={state.setIsSettingsOpen}
+        onOpenProfile={state.handleOpenProfile}
+        userProfile={state.userProfile}
+        theme={state.theme}
+        onToggleTheme={state.handleToggleTheme}
+        onLock={() => state.setIsLocked(true)}
+        onLogout={state.handleGlobalLogout}
+        trm={state.trm}
+        syncStatus={state.syncStatus}
+        isCloudEnabled={state.isCloudEnabled}
+        syncUser={state.syncUser}
+        className={state.desktopOnlyClass}
       />
 
       {/* Indicador superior en pantallas móviles simuladas (< lg) */}
@@ -710,7 +73,7 @@ export default function App() {
         </div>
         <button 
           type="button"
-          onClick={() => handleFullReset()}
+          onClick={() => state.handleFullReset()}
           className="hover:text-slate-900 dark:hover:text-slate-200 text-[11px] flex items-center gap-1 opacity-75 hover:opacity-100 transition-opacity cursor-pointer"
           title="Restablecer aplicación a cero"
         >
@@ -719,7 +82,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* Contenedor Principal: Adaptable min-h-[100dvh] en móvil (< lg), Lienzo Panorámico SaaS en lg: */}
+      {/* Contenedor Principal Adaptable */}
       <div 
         className={`w-full ${
           isForcedMobile 
@@ -730,155 +93,97 @@ export default function App() {
         } flex flex-col justify-between relative transition-colors bg-[#F8FAFC] dark:bg-zinc-950 flex-1`}
         style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
       >
-        {/* Cabecera Unificada (Barra de estado iOS, Header Móvil y Header Panorámico de Escritorio) */}
+        {/* Cabecera Unificada */}
         <AppHeader
-          activeTab={activeTab}
-          userProfile={userProfile}
-          currentMonthLabel={currentMonthLabel}
-          selectedDate={selectedDate}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          selectedDay={selectedDay}
-          onOpenMonthPicker={() => setShowMonthPicker(true)}
-          handlePrevMonth={handlePrevMonth}
-          handleNextMonth={handleNextMonth}
-          handleResetToToday={handleResetToToday}
-          trm={trm}
+          activeTab={state.activeTab}
+          userProfile={state.userProfile}
+          currentMonthLabel={state.currentMonthLabel}
+          selectedDate={state.selectedDate}
+          selectedMonth={state.selectedMonth}
+          selectedYear={state.selectedYear}
+          selectedDay={state.selectedDay}
+          onOpenMonthPicker={() => state.setShowMonthPicker(true)}
+          handlePrevMonth={state.handlePrevMonth}
+          handleNextMonth={state.handleNextMonth}
+          handleResetToToday={state.handleResetToToday}
+          trm={state.trm}
           isForcedMobile={isForcedMobile}
           isForcedDesktop={isForcedDesktop}
-          mobileOnlyClass={mobileOnlyClass}
-          desktopOnlyClass={desktopOnlyClass}
-          monthlyStats={monthlyStats}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
-          onOpenProfile={handleOpenProfile}
-          onOpenSettings={handleOpenProfile}
-          onOpenAuth={handleOpenProfile}
-          onLogout={handleGlobalLogout}
-          syncStatus={syncStatus}
-          isCloudEnabled={isCloudEnabled}
-          syncUser={syncUser}
-          accounts={accounts}
-          investments={investments}
-          subscriptions={subscriptions}
-          debtsAndLoans={debtsAndLoans}
-          savingsGoals={savingsGoals}
+          mobileOnlyClass={state.mobileOnlyClass}
+          desktopOnlyClass={state.desktopOnlyClass}
+          monthlyStats={state.monthlyStats}
+          theme={state.theme}
+          onToggleTheme={state.handleToggleTheme}
+          onOpenProfile={state.handleOpenProfile}
+          onOpenSettings={state.handleOpenProfile}
+          onOpenAuth={state.handleOpenProfile}
+          onLogout={state.handleGlobalLogout}
+          syncStatus={state.syncStatus}
+          isCloudEnabled={state.isCloudEnabled}
+          syncUser={state.syncUser}
+          accounts={state.accounts}
+          investments={state.investments}
+          subscriptions={state.subscriptions}
+          debtsAndLoans={state.debtsAndLoans}
+          savingsGoals={state.savingsGoals}
         />
 
-        {/* Main Content Area con altura adaptable y separación inferior anti-solapamiento */}
-        <main ref={mainContentRef} className="flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 pb-28 sm:pb-32 lg:pb-12 relative lg:overflow-y-auto space-y-3.5 sm:space-y-4 lg:space-y-0">
+        {/* Main Content Area */}
+        <main ref={state.mainContentRef} className="flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 pb-28 sm:pb-32 lg:pb-12 relative lg:overflow-y-auto space-y-3.5 sm:space-y-4 lg:space-y-0">
           <div className="w-full lg:max-w-[1550px] lg:mx-auto lg:px-6 lg:py-6">
             <ViewRouter
-              activeTab={activeTab}
-              tabResetKeys={tabResetKeys}
-              financeData={financeData}
-              financeActions={financeActions}
+              activeTab={state.activeTab}
+              tabResetKeys={state.tabResetKeys}
+              financeData={state.financeData}
+              financeActions={state.financeActions}
               modalControls={modalControls}
               {...modalControls}
             />
           </div>
         </main>
 
-        {/* Barra de Navegación Inferior Estilo iOS Dock Central (Oculta en escritorio o visible según viewMode) */}
+        {/* Barra de Navegación Inferior Estilo iOS Dock Central */}
         <BottomNav
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onTabChange={handleTabChange}
-          isActionMenuOpen={isActionMenuOpen}
-          setIsActionMenuOpen={setIsActionMenuOpen}
-          onOpenTransaction={handleOpenTransaction}
-          onOpenAddTx={handleOpenTransaction}
-          onOpenTransfer={handleOpenTransfer}
-          onOpenRecurring={handleOpenRecurring}
-          onOpenLoan={() => handleOpenAddLoan('receivable')}
-          onOpenDebt={() => handleOpenAddDebt('payable')}
-          onOpenInvestment={handleOpenInvestment}
-          mobileOnlyClass={mobileOnlyClass}
+          activeTab={state.activeTab}
+          setActiveTab={state.setActiveTab}
+          onTabChange={state.handleTabChange}
+          isActionMenuOpen={state.isActionMenuOpen}
+          setIsActionMenuOpen={state.setIsActionMenuOpen}
+          onOpenTransaction={state.handleOpenTransaction}
+          onOpenAddTx={state.handleOpenTransaction}
+          onOpenTransfer={state.handleOpenTransfer}
+          onOpenRecurring={state.handleOpenRecurring}
+          onOpenLoan={() => state.handleOpenAddLoan('receivable')}
+          onOpenDebt={() => state.handleOpenAddDebt('payable')}
+          onOpenInvestment={state.handleOpenInvestment}
+          mobileOnlyClass={state.mobileOnlyClass}
         />
 
-        {/* Menú Modal del Botón '+' Reestructurado y Compacto */}
-        <QuickActionsModal
-          isOpen={isActionMenuOpen}
-          onClose={() => setIsActionMenuOpen(false)}
-          setIsOpen={setIsActionMenuOpen}
-          modalControls={modalControls}
-          onAddExpense={() => handleOpenTransaction('expense')}
-          onAddIncome={() => handleOpenTransaction('income')}
-          onOpenTransaction={handleOpenTransaction}
-          onOpenNewTransaction={handleOpenTransaction}
-          openModal={(modalName) => {
-            if (modalName === 'expense' || modalName === 'income' || modalName === 'transaction') handleOpenTransaction();
-            else if (modalName === 'transfer') handleOpenTransfer();
-            else if (modalName === 'recurring') handleOpenRecurring();
-            else if (modalName === 'debt') handleOpenAddDebt('payable');
-            else if (modalName === 'loan') handleOpenAddLoan('receivable');
-            else if (modalName === 'investment') handleOpenInvestment();
-          }}
-          onOpenTransfer={handleOpenTransfer}
-          onOpenInvestment={handleOpenInvestment}
-          onOpenRecurring={handleOpenRecurring}
-          onOpenAddRecurring={handleOpenRecurring}
-          onOpenLoan={() => handleOpenAddLoan('receivable')}
-          onOpenAddLoan={() => handleOpenAddLoan('receivable')}
-          onOpenDebt={() => handleOpenAddDebt('payable')}
-          onOpenAddDebt={() => handleOpenAddDebt('payable')}
-          onAddDebtOrLoan={() => handleOpenAddDebt('payable')}
-          setActiveTab={handleTabChange}
-          financeActions={financeActions}
-        />
-
-        {/* Barra Home Indicator de iOS para Desktop (Oculta en lg:) */}
+        {/* Barra Home Indicator de iOS para Desktop */}
         <div className={`${isForcedMobile ? 'block' : isForcedDesktop ? 'hidden' : 'hidden sm:block lg:hidden'} fixed bottom-1 left-0 right-0 sm:max-w-[440px] sm:left-1/2 sm:-translate-x-1/2 z-50 pointer-events-none`}>
           <div className="w-32 h-1 bg-slate-400/40 rounded-full mx-auto" />
         </div>
 
-        {/* Contenedor Orquestador de Modales y Overlays */}
-        <ModalContainer
+        {/* Modales Globales y Overlays Centralizados */}
+        <GlobalModals
+          isActionMenuOpen={state.isActionMenuOpen}
+          setIsActionMenuOpen={state.setIsActionMenuOpen}
           modalControls={modalControls}
-          {...modalControls}
-          financeData={financeData}
-          financeActions={financeActions}
-          onLogout={handleGlobalLogout}
+          handleOpenTransaction={state.handleOpenTransaction}
+          handleOpenTransfer={state.handleOpenTransfer}
+          handleOpenRecurring={state.handleOpenRecurring}
+          handleOpenAddDebt={state.handleOpenAddDebt}
+          handleOpenAddLoan={state.handleOpenAddLoan}
+          handleOpenInvestment={state.handleOpenInvestment}
+          handleTabChange={state.handleTabChange}
+          financeData={state.financeData}
+          financeActions={state.financeActions}
+          onLogout={state.handleGlobalLogout}
         />
 
         {/* Banner Flotante de Actualización PWA */}
-        {hasPwaUpdate && (
-          <div className="absolute top-3 left-3 right-3 sm:left-4 sm:right-4 z-50 animate-slide-up">
-            <div className="bg-slate-900/95 dark:bg-zinc-900/95 border border-emerald-500/40 text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 ring-1 ring-emerald-500/20">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-[13px] font-bold tracking-tight truncate leading-tight">
-                    ¡Nueva actualización lista!
-                  </p>
-                  <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                    Mejoras y nuevas funciones disponibles
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold active:scale-95 transition-all shadow-sm cursor-pointer"
-                >
-                  Actualizar ahora
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHasPwaUpdate(false)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-                  title="Cerrar aviso"
-                  aria-label="Cerrar aviso"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+        {state.hasPwaUpdate && (
+          <PwaUpdateBanner onClose={() => state.setHasPwaUpdate(false)} />
         )}
 
         {/* Sistema Global de Notificaciones Toaster */}
