@@ -13,8 +13,8 @@ import ProfileTabBar from './profile/components/ProfileTabBar';
 import ProfileFooter from './profile/components/ProfileFooter';
 import ProfileBackupPreviewModal from './profile/components/ProfileBackupPreviewModal';
 import ProfileFinancesTab from './profile/ProfileFinancesTab';
-import ProfileSecurityTab from './profile/ProfileSecurityTab';
-import ProfileCloudTab from './profile/ProfileCloudTab';
+import ProfileSecurityTab from '../profile/ProfileSecurityTab';
+import ProfileCloudTab from '../profile/ProfileCloudTab';
 import ProfileSystemTab from './profile/ProfileSystemTab';
 import ProfileBudgetsView from './profile/views/ProfileBudgetsView';
 import ProfileSavingsGoalsView from './profile/views/ProfileSavingsGoalsView';
@@ -320,11 +320,6 @@ export default function ProfileModal({
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-
-
-
-
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-fadeIn">
