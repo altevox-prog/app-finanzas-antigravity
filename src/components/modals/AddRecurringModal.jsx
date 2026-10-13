@@ -12,14 +12,12 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react';
-import CategoryCombobox from '../CategoryCombobox';
-import SubcategoryCombobox from '../SubcategoryCombobox';
-import AccountCombobox from '../AccountCombobox';
 import SegmentedControl from '../common/SegmentedControl';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../../utils/currencyFormatter';
 import FrequencyConfigFields from '../recurring/FrequencyConfigFields';
+import AccountCategoryFields from '../recurring/AccountCategoryFields';
 
 const POPULAR_SUGGESTIONS = [
   'Internet / Fibra',
@@ -545,47 +543,21 @@ export default function AddRecurringModal({
               setBillingDayOfWeek={setBillingDayOfWeek}
             />
 
-            {/* 6. Categoría y Subcategoría */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold opacity-60 mb-1">
-                  Categoría Principal *
-                </label>
-                <CategoryCombobox
-                  categories={localCategories}
-                  selectedCategoryId={categoryId}
-                  onSelectCategory={setCategoryId}
-                  onAddCategory={handleAddNewCategory}
-                  type={type}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold opacity-60 mb-1">
-                  Subcategoría
-                </label>
-                <SubcategoryCombobox
-                  subcategories={availableSubcategories}
-                  selectedSubcategoryId={subcategoryId}
-                  onSelectSubcategory={setSubcategoryId}
-                  onAddSubcategory={handleAddNewSubcategory}
-                  parentCategoryId={categoryId}
-                  placeholder={categoryId ? "Selecciona o escribe..." : "Elige categoría"}
-                />
-              </div>
-            </div>
-
-            {/* 7. Cuenta / Tarjeta Asociada */}
-            <div>
-              <label className="block text-[11px] font-semibold opacity-60 mb-1">
-                Cuenta de Cargo / Método *
-              </label>
-              <AccountCombobox
-                accounts={accounts}
-                selectedAccountId={accountId}
-                onSelectAccount={setAccountId}
-              />
-            </div>
+            {/* 6 y 7. Categoría, Subcategoría y Cuenta / Tarjeta */}
+            <AccountCategoryFields
+              type={type}
+              categoryId={categoryId}
+              setCategoryId={setCategoryId}
+              subcategoryId={subcategoryId}
+              setSubcategoryId={setSubcategoryId}
+              localCategories={localCategories}
+              availableSubcategories={availableSubcategories}
+              onAddCategory={handleAddNewCategory}
+              onAddSubcategory={handleAddNewSubcategory}
+              accountId={accountId}
+              setAccountId={setAccountId}
+              accounts={accounts}
+            />
 
             {/* 8. Nota Opcional */}
             <div>
