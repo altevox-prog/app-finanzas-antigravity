@@ -7,3 +7,5 @@ build
 .vercel
 .env*
 dist 
+
+/brands/

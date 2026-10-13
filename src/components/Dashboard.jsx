@@ -463,20 +463,6 @@ export default function Dashboard({
         />
       )}
 
-      {/* Botón Flotante de Acciones Rápidas (Nuevo Movimiento) */}
-      {!isReordering && (
-        <QuickActionsFab
-          onOpenTransaction={handleOpenTxModal}
-          onOpenAddTransaction={handleOpenTxModal}
-          onOpenTransfer={financeActions?.openTransfer || financeActions?.handleOpenTransfer}
-          onOpenRecurring={handleOpenRecurringModal}
-          onOpenAddRecurring={handleOpenRecurringModal}
-          onOpenDebt={handleOpenDebtModal}
-          onOpenLoan={handleOpenDebtModal}
-          onOpenInvestment={() => navigateToTab('investments')}
-        />
-      )}
-
       {/* Fin de los widgets modulares del Dashboard */}
     </>
   );
