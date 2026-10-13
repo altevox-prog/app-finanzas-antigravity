@@ -14,13 +14,13 @@ import {
   AlertCircle,
   Search
 } from 'lucide-react';
-import { INVESTMENT_CATEGORIES, formatCurrency, formatUSD } from '../data/initialData';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { usePrivacy } from '../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../utils/currencyFormatter';
 import SegmentedControl from './common/SegmentedControl';
 import FixedIncomeFields from './investments/modals/FixedIncomeFields';
 import MarketAssetFields from './investments/modals/MarketAssetFields';
+import InvestmentCategoryPicker from './investments/modals/InvestmentCategoryPicker';
 import { 
   toSafeNumber, 
   calculateCDTMaturityReturn, 
@@ -280,38 +280,10 @@ export default function InvestmentFormModal({
           {/* Cuerpo con Scroll y Padding Inferior Suficiente */}
           <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 pb-6">
             {/* Categoría Selector (Arriba del todo, justo debajo del título principal) */}
-            <div>
-              <label className="block text-[11px] font-bold opacity-70 mb-1.5">
-                Categoría de Inversión *
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {INVESTMENT_CATEGORIES.map((cat) => {
-                  const isSelected = category === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      data-category-btn={cat.id}
-                      type="button"
-                      onClick={() => handleCategoryChange(cat.id)}
-                      className={`p-2 rounded-xl text-left border flex items-center gap-2 transition-all active:scale-95 cursor-pointer ${
-                        isSelected ? 'ring-2 font-black shadow-sm' : 'opacity-70 hover:opacity-100'
-                      }`}
-                      style={{
-                        backgroundColor: isSelected ? `${cat.color}15` : 'var(--bg-input)',
-                        borderColor: isSelected ? cat.color : 'transparent',
-                        color: isSelected ? cat.color : 'var(--text-main)'
-                      }}
-                    >
-                      <span 
-                        className="w-2.5 h-2.5 rounded-full shrink-0" 
-                        style={{ backgroundColor: cat.color }} 
-                      />
-                      <span className="text-[11px] font-bold truncate">{cat.shortName}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <InvestmentCategoryPicker
+              selectedCategory={category}
+              onSelectCategory={handleCategoryChange}
+            />
 
             {/* Activos de Mercado (Ticker, Cotización en vivo, Títulos y Precios) */}
             <MarketAssetFields
