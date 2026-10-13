@@ -29,6 +29,8 @@ export default function BrandIcon({
     brandSrc = '/brands/Addi.png';
   } else if (q.includes('xtb')) {
     brandSrc = '/brands/xtb.jpeg';
+  } else if (q.includes('arq')) {
+    brandSrc = '/brands/ARQ.png';
   } else if (q.includes('btc') || q.includes('bitcoin') || q.includes('crypto')) {
     brandSrc = '/brands/bitcoin.png';
   } else if (q.includes('ahorro') || q.includes('alcancia') || q.includes('alcancía') || q.includes('bolsillo')) {
