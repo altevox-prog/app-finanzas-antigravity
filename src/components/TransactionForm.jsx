@@ -8,9 +8,7 @@ import {
   CheckCircle,
   X
 } from 'lucide-react';
-import CategoryCombobox from './CategoryCombobox';
-import SubcategoryCombobox from './SubcategoryCombobox';
-import AccountCombobox from './AccountCombobox';
+import TransactionAccountCategoryFields from './transactions/TransactionAccountCategoryFields';
 import ReceiptUploader from './transactions/ReceiptUploader';
 import CurrencyExchangeFields from './transactions/CurrencyExchangeFields';
 import { useBackHandler } from '../hooks/useBackHandler';
@@ -384,64 +382,38 @@ export default function TransactionForm({
         />
       </div>
 
-      {/* Categoría y Subcategoría */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
-            Categoría Principal *
-          </label>
-          <CategoryCombobox
-            categories={categories}
-            selectedCategoryId={categoryId}
-            onSelectCategory={setCategoryId}
-            onAddCategory={onAddCategory}
-            type={type}
-          />
-        </div>
+      {/* Categoría, Subcategoría y Cuenta */}
+      <TransactionAccountCategoryFields
+        type={type}
+        accountId={accountId}
+        setAccountId={setAccountId}
+        accounts={accounts}
+        onAddAccount={onAddAccount}
+        categoryId={categoryId}
+        setCategoryId={setCategoryId}
+        categories={categories}
+        availableCategories={availableCategories}
+        onAddCategory={onAddCategory}
+        subcategoryId={subcategoryId}
+        setSubcategoryId={setSubcategoryId}
+        availableSubcategories={availableSubcategories}
+        onAddSubcategory={onAddSubcategory}
+        onUpdateSubcategory={onUpdateSubcategory}
+        onDeleteSubcategory={onDeleteSubcategory}
+      />
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
-            Subcategoría
-          </label>
-          <SubcategoryCombobox
-            subcategories={availableSubcategories}
-            selectedSubcategoryId={subcategoryId}
-            onSelectSubcategory={setSubcategoryId}
-            onAddSubcategory={onAddSubcategory}
-            onUpdateSubcategory={onUpdateSubcategory}
-            onDeleteSubcategory={onDeleteSubcategory}
-            parentCategoryId={categoryId}
-            placeholder={categoryId ? "Selecciona o escribe..." : "Elige categoría"}
-          />
-        </div>
-      </div>
-
-      {/* Cuenta y Fecha */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
-            Cuenta / Método *
-          </label>
-          <AccountCombobox
-            accounts={accounts}
-            selectedAccountId={accountId}
-            onSelectAccount={setAccountId}
-            onAddAccount={onAddAccount}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
-            Fecha *
-          </label>
-          <input
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
-          />
-        </div>
+      {/* Fecha */}
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
+          Fecha *
+        </label>
+        <input
+          type="date"
+          required
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
+        />
       </div>
 
       {/* Nota Opcional */}
