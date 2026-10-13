@@ -1,0 +1,271 @@
+/**
+ * syncNormalizers.js
+ * Funciones puras de normalización y parsing defensivo para datos remotos de Supabase.
+ */
+
+/**
+ * Normaliza los datos del perfil remoto de Supabase combinándolos con el perfil local previo.
+ *
+ * @param {Object|null} safeCloudProfile - Registro de profile descargado de la nube
+ * @param {Object} [prevProfile={}] - Estado previo del perfil en React
+ * @returns {Object} Perfil normalizado con name, photo, initials y propiedades previas
+ */
+export function normalizeRemoteProfile(safeCloudProfile, prevProfile = {}) {
+  if (!safeCloudProfile) return prevProfile;
+  const displayName = safeCloudProfile.display_name || safeCloudProfile.name;
+  const photoUrl = safeCloudProfile.photo_url || safeCloudProfile.photo;
+  return {
+    ...prevProfile,
+    name: displayName || prevProfile?.name || 'Usuario',
+    photo: photoUrl || prevProfile?.photo || null,
+    initials: (displayName || prevProfile?.name || 'US')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(w => w[0].toUpperCase())
+      .join('') || 'US'
+  };
+}
+
+/**
+ * Normaliza una cuenta descargada de Supabase garantizando compatibilidad de nombres de balance.
+ *
+ * @param {Object} a - Registro de cuenta de Supabase
+ * @returns {Object} Cuenta con initial_balance, initialBalance, balance, current_balance, currentBalance
+ */
+export function normalizeRemoteAccount(a) {
+  if (!a || typeof a !== 'object') return a;
+  const balanceVal = Number(a.balance ?? a.current_balance ?? a.initial_balance ?? a.initialBalance ?? 0);
+  const initBal = Number(a.initial_balance ?? a.initialBalance ?? a.balance ?? a.current_balance ?? 0);
+  return {
+    ...a,
+    initial_balance: initBal,
+    initialBalance: initBal,
+    balance: balanceVal,
+    current_balance: balanceVal,
+    currentBalance: balanceVal
+  };
+}
+
+/**
+ * Normaliza una transacción descargada de Supabase:
+ * - Resuelve fecha desde date, created_at, datetime o fallback ISO a la fecha actual.
+ * - Resuelve nota/descripción de t o raw_data.
+ * - Resuelve categoría (category, category_name, categoryName, etc.).
+ * - Normaliza tipo ('gasto'/'expense' -> 'expense', 'ingreso'/'income' -> 'income').
+ * - Preserva compatibilidad camelCase y snake_case para accountId, categoryId, subcategoryId.
+ * - Convierte amount a Number y evalúa is_transfer / isTransfer.
+ *
+ * @param {Object} t - Registro de transacción de Supabase
+ * @returns {Object} Transacción normalizada
+ */
+export function normalizeRemoteTransaction(t) {
+  if (!t || typeof t !== 'object') return t;
+  const rawData = t.raw_data && typeof t.raw_data === 'object' ? t.raw_data : {};
+  const resolvedDate = t.date 
+    ? String(t.date).split('T')[0] 
+    : (t.created_at ? String(t.created_at).split('T')[0] : (t.datetime ? String(t.datetime).split('T')[0] : new Date().toISOString().split('T')[0]));
+  const noteText = t.note ?? t.notes ?? t.description ?? rawData.note ?? rawData.description ?? '';
+  const catName = t.category ?? t.category_name ?? t.categoryName ?? rawData.category ?? rawData.categoryName ?? 'General';
+  const rawType = String(t.type || rawData.type || 'expense').toLowerCase();
+  const normalizedType = (rawType === 'gasto' || rawType === 'expense') ? 'expense' : ((rawType === 'ingreso' || rawType === 'income') ? 'income' : rawType);
+
+  return {
+    ...t,
+    date: resolvedDate,
+    note: noteText,
+    notes: noteText,
+    description: t.description || noteText || 'Movimiento',
+    type: normalizedType,
+    categoryName: catName,
+    category_name: catName,
+    category: catName,
+    accountId: t.account_id || t.accountId || rawData.account_id || rawData.accountId || null,
+    account_id: t.account_id || t.accountId || rawData.account_id || rawData.accountId || null,
+    categoryId: t.category_id || t.categoryId || rawData.category_id || rawData.categoryId || null,
+    category_id: t.category_id || t.categoryId || rawData.category_id || rawData.categoryId || null,
+    subcategoryId: t.subcategory_id || t.subcategoryId || rawData.subcategory_id || rawData.subcategoryId || null,
+    amount: Number(t.amount || 0),
+    is_transfer: Boolean(t.is_transfer || t.isTransfer || rawData.is_transfer || false),
+    isTransfer: Boolean(t.is_transfer || t.isTransfer || rawData.is_transfer || false)
+  };
+}
+
+/**
+ * Normaliza una deuda/préstamo descargada de Supabase:
+ * - Resuelve nombre de la persona (person, person_name, name).
+ * - Calcula totalAmount y remainingAmount con fallbacks cruzados.
+ * - Extrae abonos desde d.payments, raw_data.payments, metadata.payments o 'PAYMENTS_JSON:' en d.notes.
+ *
+ * @param {Object} d - Registro de deuda de Supabase
+ * @returns {Object} Deuda normalizada
+ */
+export function normalizeRemoteDebt(d) {
+  if (!d || typeof d !== 'object') return d;
+  const rawData = d.raw_data && typeof d.raw_data === 'object' ? d.raw_data : {};
+  const metadataObj = d.metadata && typeof d.metadata === 'object' ? d.metadata : {};
+  const personName = d.person || d.person_name || d.name || 'Sin nombre';
+  const parsedTotal = Number(d.total_amount ?? d.totalAmount ?? d.amount ?? d.principalAmount ?? d.remaining_amount ?? 0);
+  const parsedRemaining = d.remaining_amount !== null && d.remaining_amount !== undefined && Number(d.remaining_amount) > 0
+    ? Number(d.remaining_amount)
+    : (d.remainingAmount !== null && d.remainingAmount !== undefined && Number(d.remainingAmount) > 0 ? Number(d.remainingAmount) : parsedTotal);
+
+  // Recuperar abonos de d.payments, raw_data.payments, o metadata.payments
+  let parsedPayments = [];
+  if (Array.isArray(d.payments)) {
+    parsedPayments = d.payments;
+  } else if (Array.isArray(rawData.payments)) {
+    parsedPayments = rawData.payments;
+  } else if (Array.isArray(metadataObj.payments)) {
+    parsedPayments = metadataObj.payments;
+  } else if (typeof d.notes === 'string' && d.notes.startsWith('PAYMENTS_JSON:')) {
+    try {
+      parsedPayments = JSON.parse(d.notes.replace('PAYMENTS_JSON:', ''));
+    } catch {}
+  }
+
+  return {
+    ...d,
+    person: personName,
+    personName: personName,
+    name: personName,
+    total_amount: parsedTotal,
+    totalAmount: parsedTotal,
+    principalAmount: parsedTotal,
+    amount: parsedTotal,
+    remaining_amount: parsedRemaining,
+    remainingAmount: parsedRemaining,
+    remainingCapital: parsedRemaining,
+    payments: Array.isArray(parsedPayments) ? parsedPayments : []
+  };
+}
+
+/**
+ * Normaliza una inversión descargada de Supabase garantizando compatibilidad de montos y tipos.
+ *
+ * @param {Object} inv - Registro de inversión de Supabase
+ * @returns {Object} Inversión normalizada
+ */
+export function normalizeRemoteInvestment(inv) {
+  if (!inv || typeof inv !== 'object') return inv;
+  const invAmount = Number(inv.invested_amount ?? inv.investedAmount ?? inv.current_value ?? inv.currentValue ?? inv.amount ?? 0);
+  const currVal = Number(inv.current_value ?? inv.currentValue ?? inv.invested_amount ?? inv.investedAmount ?? inv.amount ?? 0);
+  return {
+    ...inv,
+    amount: invAmount,
+    investedAmount: invAmount,
+    invested_amount: invAmount,
+    currentValue: currVal,
+    current_value: currVal,
+    type: inv.subtype || inv.type || 'stock',
+    subtype: inv.subtype || inv.type || 'stock'
+  };
+}
+
+/**
+ * Resuelve y unifica los presupuestos remotos provenientes de la tabla budgets, user_settings y fallbacks locales.
+ *
+ * @param {Array|Object} remoteBudgetsOrRes - Lista de presupuestos de Supabase o respuesta settled de Promise
+ * @param {Object|null} [userSettingsData=null] - Datos obtenidos de la tabla user_settings de Supabase
+ * @returns {{ global: number, categories: Object }} Objeto de presupuestos normalizado
+ */
+export function resolveRemoteBudgets(remoteBudgetsOrRes, userSettingsData = null) {
+  let remoteBudgetList = [];
+  if (Array.isArray(remoteBudgetsOrRes)) {
+    remoteBudgetList = remoteBudgetsOrRes;
+  } else if (remoteBudgetsOrRes?.status === 'fulfilled' && !remoteBudgetsOrRes.value?.error && Array.isArray(remoteBudgetsOrRes.value?.data)) {
+    remoteBudgetList = remoteBudgetsOrRes.value.data;
+  } else if (Array.isArray(remoteBudgetsOrRes?.data)) {
+    remoteBudgetList = remoteBudgetsOrRes.data;
+  }
+
+  let loadedGlobal = null;
+  let categoriesMap = {};
+
+  if (remoteBudgetList.length > 0) {
+    // Priorizar explícitamente registro con is_global: true
+    const globalRow = remoteBudgetList.find(b => b.is_global === true || b.is_global === 'true')
+      || remoteBudgetList.find(b => b.isGlobal === true || b.isGlobal === 'true')
+      || remoteBudgetList.find(b => b.name === 'Límite Global' || b.name === 'Presupuesto Global' || !b.category_id);
+
+    if (globalRow) {
+      loadedGlobal = Number(globalRow.amount || 0);
+      if (globalRow.id && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('global_budget_id', String(globalRow.id));
+        } catch {}
+      }
+    }
+
+    remoteBudgetList.forEach(b => {
+      const isRowGlobal = b.is_global === true || b.is_global === 'true' || b.isGlobal === true || b.isGlobal === 'true' || b.name === 'Límite Global' || b.name === 'Presupuesto Global' || !b.category_id;
+      if (!isRowGlobal && b.category_id) {
+        categoriesMap[b.category_id] = Number(b.amount || 0);
+      }
+    });
+  }
+
+  // Si no se obtuvo de la tabla budgets, consultar user_settings
+  if (userSettingsData) {
+    if (loadedGlobal === null) {
+      const rawLimit = userSettingsData.global_budget_limit ?? userSettingsData.global_budget ?? userSettingsData.budgets?.global;
+      if (rawLimit !== undefined && rawLimit !== null) {
+        loadedGlobal = Number(rawLimit || 0);
+      }
+    }
+    if (userSettingsData.budgets?.categories) {
+      categoriesMap = { ...userSettingsData.budgets.categories, ...categoriesMap };
+    }
+  }
+
+  // Fallback al almacenamiento local bajo global_budget_limit o user_settings si loadedGlobal sigue en null
+  if (typeof localStorage !== 'undefined') {
+    if (loadedGlobal === null) {
+      try {
+        const directLimit = localStorage.getItem('global_budget_limit');
+        if (directLimit !== null && directLimit !== undefined) {
+          loadedGlobal = Number(directLimit || 0);
+        }
+      } catch {}
+    }
+
+    if (loadedGlobal === null) {
+      try {
+        const localSettings = localStorage.getItem('user_settings');
+        if (localSettings) {
+          const parsed = JSON.parse(localSettings);
+          const rawLimit = parsed.global_budget_limit ?? parsed.global_budget ?? parsed.budgets?.global;
+          if (rawLimit !== undefined && rawLimit !== null) {
+            loadedGlobal = Number(rawLimit || 0);
+          }
+        }
+      } catch (e) {
+        console.warn('[useDataSync] Fallo al leer user_settings de localStorage:', e);
+      }
+    }
+
+    if (loadedGlobal === null) {
+      try {
+        const localB = localStorage.getItem('presu_budgets_v1') || localStorage.getItem('budgets');
+        if (localB) {
+          const parsedB = JSON.parse(localB);
+          loadedGlobal = Number(parsedB.global || 0);
+          categoriesMap = { ...(parsedB.categories || {}), ...categoriesMap };
+        } else {
+          loadedGlobal = 0;
+        }
+      } catch {
+        loadedGlobal = 0;
+      }
+    }
+  }
+
+  if (loadedGlobal === null) {
+    loadedGlobal = 0;
+  }
+
+  return {
+    global: loadedGlobal,
+    categories: categoriesMap
+  };
+}
