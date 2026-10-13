@@ -1,3 +1,4 @@
+export { default as GlobalModals } from './GlobalModals';
 export { default as ModalContainer } from './ModalContainer';
 export { default as AddTransactionModal } from './AddTransactionModal';
 export { default as TransferModal } from './TransferModal';

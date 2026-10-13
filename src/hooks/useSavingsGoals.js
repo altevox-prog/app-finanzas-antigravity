@@ -1,157 +1,166 @@
-import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS } from '../constants/storageKeys';
-import { INITIAL_SAVINGS_GOALS } from '../data/initialData';
+import { useState } from 'react';
+import { safeNumber as defaultSafeNumber } from '../utils/financeMath';
 
-function getInitialSavingsGoals() {
-  const saved = localStorage.getItem(STORAGE_KEYS.SAVINGS_GOALS) ||
-                localStorage.getItem('savingsGoals') ||
-                localStorage.getItem('savings') ||
-                localStorage.getItem('goals');
-  if (saved !== null) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      console.error('Error parseando metas de ahorro:', e);
-    }
-  }
-  return INITIAL_SAVINGS_GOALS;
-}
+/**
+ * useSavingsGoals
+ * Hook para gestionar metas de ahorro: creación, edición, abonos y cálculos de progreso.
+ */
+export function useSavingsGoals({
+  savingsGoals = [],
+  onAddGoal,
+  onUpdateGoal,
+  showToast,
+  formatMoney,
+  safeNumber = defaultSafeNumber
+} = {}) {
+  const [showAddGoalForm, setShowAddGoalForm] = useState(false);
+  const [newGoalName, setNewGoalName] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState('');
+  const [newGoalCurrent, setNewGoalCurrent] = useState('0');
+  const [newGoalDate, setNewGoalDate] = useState('');
 
-function sanitizeGoal(goal) {
-  const rawDate = goal.target_date || goal.dueDate || goal.deadline || '';
-  let safeDate = '';
-  if (rawDate) {
-    try {
-      safeDate = new Date(rawDate).toISOString().split('T')[0];
-    } catch (e) {
-      safeDate = String(rawDate).split('T')[0];
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [editGoalName, setEditGoalName] = useState('');
+  const [editGoalTarget, setEditGoalTarget] = useState('');
+  const [editGoalCurrent, setEditGoalCurrent] = useState('0');
+  const [editGoalDate, setEditGoalDate] = useState('');
+
+  const [contributeGoalId, setContributeGoalId] = useState(null);
+  const [contributeAmount, setContributeAmount] = useState('');
+
+  const handleCreateGoal = (e) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!newGoalName.trim() || !newGoalTarget || Number(newGoalTarget) <= 0) {
+      if (showToast) showToast('Ingresa un nombre y monto objetivo válido.', true);
+      return;
     }
-  }
-  return {
-    ...goal,
-    id: goal.id || crypto.randomUUID(),
-    target_date: safeDate,
-    dueDate: safeDate,
-    deadline: safeDate,
-    target_account_id: goal.target_account_id || goal.targetAccountId || null,
-    targetAccountId: goal.target_account_id || goal.targetAccountId || null,
-    months: goal.months ? Number(goal.months) : 6,
-    notification_day: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
-    notificationDay: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
-    notify_enabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true),
-    notifyEnabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true)
+
+    let safeDate = '';
+    if (newGoalDate) {
+      try {
+        safeDate = new Date(newGoalDate).toISOString().split('T')[0];
+      } catch {
+        safeDate = String(newGoalDate).split('T')[0];
+      }
+    }
+
+    const goal = {
+      id: `goal-${Date.now()}`,
+      name: newGoalName.trim(),
+      targetAmount: Number(newGoalTarget),
+      currentAmount: Number(newGoalCurrent) || 0,
+      dueDate: safeDate,
+      target_date: safeDate,
+      deadline: safeDate,
+      category: 'Ahorro',
+    };
+
+    if (typeof onAddGoal === 'function') {
+      onAddGoal(goal);
+    }
+    setNewGoalName('');
+    setNewGoalTarget('');
+    setNewGoalCurrent('0');
+    setNewGoalDate('');
+    setShowAddGoalForm(false);
+    if (showToast) showToast(`Meta "${goal.name}" creada.`);
   };
-}
 
-export function useSavingsGoals(isResettingRef) {
-  const [savingsGoals, setSavingsGoals] = useState(getInitialSavingsGoals);
+  const handleOpenEditGoal = (goal) => {
+    setEditingGoal(goal);
+    setEditGoalName(goal.name || '');
+    setEditGoalTarget(String(goal.targetAmount || goal.target_amount || ''));
+    setEditGoalCurrent(String(goal.currentAmount || goal.current_amount || '0'));
+    const d = goal.target_date || goal.dueDate || goal.deadline || '';
+    setEditGoalDate(d ? new Date(d).toISOString().split('T')[0] : '');
+  };
 
-  // Persistencia reactiva en localStorage
-  useEffect(() => {
-    if (isResettingRef?.current) return;
-    try {
-      const serialized = JSON.stringify(savingsGoals);
-      localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
-      localStorage.setItem('savingsGoals', serialized);
-      localStorage.setItem('savings', serialized);
-      localStorage.setItem('goals', serialized);
-    } catch (e) {
-      console.error('Error guardando metas de ahorro:', e);
+  const handleSaveEditGoal = (e) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!editingGoal || !editGoalName.trim() || Number(editGoalTarget) <= 0) return;
+
+    let safeDate = '';
+    if (editGoalDate) {
+      try {
+        safeDate = new Date(editGoalDate).toISOString().split('T')[0];
+      } catch {
+        safeDate = String(editGoalDate).split('T')[0];
+      }
     }
-  }, [savingsGoals, isResettingRef]);
 
-  // Agregar nueva meta
-  const handleAddGoal = useCallback(async (newGoal) => {
-    const goalItem = sanitizeGoal(newGoal);
-    setSavingsGoals((prev) => {
-      const updated = [goalItem, ...prev.filter((g) => g.id !== goalItem.id)];
-      try {
-        const serialized = JSON.stringify(updated);
-        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
-        localStorage.setItem('savingsGoals', serialized);
-        localStorage.setItem('savings', serialized);
-        localStorage.setItem('goals', serialized);
-      } catch (e) {}
-      return updated;
-    });
-    return goalItem;
-  }, []);
+    const updated = {
+      ...editingGoal,
+      name: editGoalName.trim(),
+      targetAmount: Number(editGoalTarget),
+      currentAmount: Number(editGoalCurrent) || 0,
+      dueDate: safeDate,
+      target_date: safeDate,
+      deadline: safeDate,
+    };
 
-  // Actualizar meta existente
-  const handleUpdateGoal = useCallback(async (updatedGoal) => {
-    const goalItem = sanitizeGoal(updatedGoal);
-    setSavingsGoals((prev) => {
-      const updated = prev.map((g) => (g.id === goalItem.id ? goalItem : g));
-      try {
-        const serialized = JSON.stringify(updated);
-        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
-        localStorage.setItem('savingsGoals', serialized);
-        localStorage.setItem('savings', serialized);
-        localStorage.setItem('goals', serialized);
-      } catch (e) {}
-      return updated;
-    });
-    return goalItem;
-  }, []);
+    if (typeof onUpdateGoal === 'function') {
+      onUpdateGoal(updated);
+    }
+    setEditingGoal(null);
+    if (showToast) showToast(`Meta "${updated.name}" actualizada.`);
+  };
 
-  // Eliminar meta
-  const handleDeleteGoal = useCallback(async (goalId) => {
-    setSavingsGoals((prev) => {
-      const updated = prev.filter((g) => g.id !== goalId);
-      try {
-        const serialized = JSON.stringify(updated);
-        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
-        localStorage.setItem('savingsGoals', serialized);
-        localStorage.setItem('savings', serialized);
-        localStorage.setItem('goals', serialized);
-      } catch (e) {}
-      return updated;
-    });
-  }, []);
+  const handleContributeToGoal = (goalId) => {
+    const val = Number(contributeAmount);
+    if (val <= 0) {
+      if (showToast) showToast('Ingresa un monto válido para abonar.', true);
+      return;
+    }
+    const targetGoal = savingsGoals.find((g) => g.id === goalId);
+    if (!targetGoal) return;
 
-  // Registrar abono / aporte a una meta
-  const handleContributeGoal = useCallback(async (goalId, amount) => {
-    const val = Number(amount) || 0;
-    if (val <= 0) return;
-    setSavingsGoals((prev) => {
-      const updated = prev.map((g) => {
-        if (g.id !== goalId) return g;
-        return {
-          ...g,
-          currentAmount: (Number(g.currentAmount) || 0) + val
-        };
+    if (typeof onUpdateGoal === 'function') {
+      onUpdateGoal({
+        ...targetGoal,
+        currentAmount: safeNumber(targetGoal.currentAmount) + val,
       });
-      try {
-        const serialized = JSON.stringify(updated);
-        localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
-        localStorage.setItem('savingsGoals', serialized);
-        localStorage.setItem('savings', serialized);
-        localStorage.setItem('goals', serialized);
-      } catch (e) {}
-      return updated;
-    });
-  }, []);
+    }
+    setContributeGoalId(null);
+    setContributeAmount('');
+    const formattedAmount = formatMoney ? formatMoney(val) : `$${val.toLocaleString()}`;
+    if (showToast) showToast(`¡Abono de ${formattedAmount} registrado con éxito!`);
+  };
 
-  // Restaurar / resetear metas
-  const resetSavingsGoals = useCallback(() => {
-    setSavingsGoals(INITIAL_SAVINGS_GOALS);
-    try {
-      const serialized = JSON.stringify(INITIAL_SAVINGS_GOALS);
-      localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
-      localStorage.setItem('savingsGoals', serialized);
-      localStorage.setItem('savings', serialized);
-      localStorage.setItem('goals', serialized);
-    } catch {}
-  }, []);
+  const totalSavedAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.currentAmount), 0);
+  const totalTargetAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.targetAmount), 0);
 
   return {
-    savingsGoals,
-    setSavingsGoals,
-    handleAddGoal,
-    handleUpdateGoal,
-    handleDeleteGoal,
-    handleContributeGoal,
-    resetSavingsGoals
+    showAddGoalForm,
+    setShowAddGoalForm,
+    newGoalName,
+    setNewGoalName,
+    newGoalTarget,
+    setNewGoalTarget,
+    newGoalCurrent,
+    setNewGoalCurrent,
+    newGoalDate,
+    setNewGoalDate,
+    editingGoal,
+    setEditingGoal,
+    editGoalName,
+    setEditGoalName,
+    editGoalTarget,
+    setEditGoalTarget,
+    editGoalCurrent,
+    setEditGoalCurrent,
+    editGoalDate,
+    setEditGoalDate,
+    contributeGoalId,
+    setContributeGoalId,
+    contributeAmount,
+    setContributeAmount,
+    handleCreateGoal,
+    handleOpenEditGoal,
+    handleSaveEditGoal,
+    handleContributeToGoal,
+    totalSavedAcrossGoals,
+    totalTargetAcrossGoals,
   };
 }
+
+export default useSavingsGoals;
