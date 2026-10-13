@@ -18,6 +18,7 @@ import { usePrivacy } from '../../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../../utils/currencyFormatter';
 import FrequencyConfigFields from '../recurring/FrequencyConfigFields';
 import AccountCategoryFields from '../recurring/AccountCategoryFields';
+import useRecurringCategories from '../recurring/useRecurringCategories';
 
 const POPULAR_SUGGESTIONS = [
   'Internet / Fibra',
@@ -30,36 +31,6 @@ const POPULAR_SUGGESTIONS = [
   'Seguro',
   'iCloud / Drive'
 ];
-
-const CATEGORY_STORAGE_KEYS = ['finanzas_categories_v3', 'categories', 'user_categories'];
-
-const getStoredCategories = (fallback = []) => {
-  for (const key of CATEGORY_STORAGE_KEYS) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      // continuar
-    }
-  }
-  return fallback;
-};
-
-const saveStoredCategories = (categoriesList) => {
-  CATEGORY_STORAGE_KEYS.forEach(key => {
-    try {
-      localStorage.setItem(key, JSON.stringify(categoriesList));
-    } catch (e) {
-      console.error(`Error saving to ${key}:`, e);
-    }
-  });
-  window.dispatchEvent(new CustomEvent('categories-updated', { detail: categoriesList }));
-};
 
 export default function AddRecurringModal({
   isOpen,
@@ -76,33 +47,6 @@ export default function AddRecurringModal({
   useBackHandler(Boolean(isOpen), onClose);
 
   const activeEditing = editingItem || editingPayment;
-
-  // Estado reactivo y sincronizado de categorías
-  const [localCategories, setLocalCategories] = useState(() => {
-    return getStoredCategories(categories);
-  });
-
-  // Sincronizar categorías cuando cambia la prop o se abre el modal
-  useEffect(() => {
-    if (categories && categories.length > 0) {
-      setLocalCategories(categories);
-    } else {
-      setLocalCategories(getStoredCategories([]));
-    }
-  }, [categories, isOpen]);
-
-  // Escuchar eventos globales de sincronización de categorías
-  useEffect(() => {
-    const handleUpdate = (e) => {
-      if (e?.detail && Array.isArray(e.detail)) {
-        setLocalCategories(e.detail);
-      } else {
-        setLocalCategories(getStoredCategories([]));
-      }
-    };
-    window.addEventListener('categories-updated', handleUpdate);
-    return () => window.removeEventListener('categories-updated', handleUpdate);
-  }, []);
 
   const { enableDecimals: privacyEnableDecimals } = usePrivacy();
   const enableDecimals = privacyEnableDecimals ?? getEnableDecimals();
@@ -121,6 +65,25 @@ export default function AddRecurringModal({
   const [subcategoryId, setSubcategoryId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [note, setNote] = useState('');
+
+  // Sincronización, almacenamiento y gestión de categorías mediante custom hook
+  const {
+    localCategories,
+    availableCategories,
+    availableSubcategories,
+    handleAddNewCategory,
+    handleAddNewSubcategory
+  } = useRecurringCategories({
+    categories,
+    onAddCategory,
+    onAddSubcategory,
+    categoryId,
+    setCategoryId,
+    subcategoryId,
+    setSubcategoryId,
+    type,
+    isOpen
+  });
 
   // Sync state when editing or opening
   useEffect(() => {
@@ -172,92 +135,6 @@ export default function AddRecurringModal({
     }
   }, [activeEditing, isOpen, accounts, trm, enableDecimals]);
 
-  // Manejo de creación instantánea de categoría con sincronización a localStorage y selección automática
-  const handleAddNewCategory = (newCat) => {
-    const categoryToAdd = {
-      id: newCat.id || crypto.randomUUID(),
-      name: newCat.name.trim(),
-      type: newCat.type || type,
-      color: newCat.color || '#34C759',
-      icon: newCat.icon || (newCat.type === 'income' ? '💰' : '🏷️'),
-      subcategories: newCat.subcategories || []
-    };
-
-    setLocalCategories(prev => {
-      const exists = prev.some(
-        (c) => c.id === categoryToAdd.id ||
-               c.name.trim().toLowerCase() === categoryToAdd.name.trim().toLowerCase()
-      );
-      if (exists) return prev;
-      const updated = [...prev, categoryToAdd];
-      saveStoredCategories(updated);
-      return updated;
-    });
-
-    setCategoryId(categoryToAdd.id);
-    setSubcategoryId('');
-
-    if (onAddCategory) {
-      onAddCategory(categoryToAdd);
-    }
-    return categoryToAdd;
-  };
-
-  // Manejo de creación instantánea de subcategoría
-  const handleAddNewSubcategory = (parentCatId, subcategoryName) => {
-    const trimmedName = subcategoryName.trim();
-    const newSub = {
-      id: crypto.randomUUID(),
-      name: trimmedName
-    };
-
-    setLocalCategories(prev => {
-      const updated = prev.map(cat => {
-        if (cat.id !== parentCatId) return cat;
-        const subExists = (cat.subcategories || []).some(
-          (s) => s.name.trim().toLowerCase() === trimmedName.toLowerCase()
-        );
-        if (subExists) return cat;
-        return {
-          ...cat,
-          subcategories: [...(cat.subcategories || []), newSub]
-        };
-      });
-      saveStoredCategories(updated);
-      return updated;
-    });
-
-    setSubcategoryId(newSub.id);
-
-    if (onAddSubcategory) {
-      onAddSubcategory(parentCatId, subcategoryName);
-    }
-    return newSub;
-  };
-
-  // Categories filtered by type from localCategories
-  const safeLocalCategories = Array.isArray(localCategories) ? localCategories.filter(Boolean) : [];
-  const availableCategories = safeLocalCategories.filter(c => c && (c.type === type || !c.type));
-  const selectedCategory = safeLocalCategories.find(c => c && c.id === categoryId) || availableCategories[0] || null;
-  const availableSubcategories = (Array.isArray(selectedCategory?.subcategories) ? selectedCategory.subcategories : []).filter(Boolean);
-
-  // Set default category when type changes
-  useEffect(() => {
-    if (availableCategories.length > 0 && !availableCategories.some(c => c && c.id === categoryId)) {
-      setCategoryId(availableCategories[0]?.id || '');
-    }
-  }, [type, availableCategories, categoryId]);
-
-  // Reset subcategory if category changes
-  useEffect(() => {
-    if (availableSubcategories.length > 0) {
-      if (!availableSubcategories.some(s => s && s.id === subcategoryId)) {
-        setSubcategoryId(availableSubcategories[0]?.id || '');
-      }
-    } else {
-      setSubcategoryId('');
-    }
-  }, [categoryId, availableSubcategories, subcategoryId]);
 
   if (!isOpen) return null;
 
