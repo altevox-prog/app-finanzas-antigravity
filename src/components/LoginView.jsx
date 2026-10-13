@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   Lock, 
   Mail, 
@@ -9,19 +9,15 @@ import {
   Eye, 
   EyeOff, 
   RefreshCw,
-  KeyRound,
-  ShieldCheck,
-  Smartphone,
-  Send,
-  ArrowLeft,
-  MailCheck
+  KeyRound
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { syncAndPersistUserProfile } from '../utils/userProfileHelper';
 import { supabase, updateSupabaseCredentials } from '../lib/supabase';
 import { getURL } from '../utils/urlHelper';
-import OtpSixDigitInput from './OtpSixDigitInput';
 import AppLogo from './AppLogo';
+import EmailConfirmationSentStep from './auth/EmailConfirmationSentStep';
+import TwoFactorVerifyStep from './auth/TwoFactorVerifyStep';
 
 export default function LoginView({ onSuccess }) {
   const { 
@@ -349,283 +345,32 @@ export default function LoginView({ onSuccess }) {
         </div>
       ) : mode === 'email_confirmation_sent' ? (
         /* PANTALLA: CONFIRMACIÓN DE CORREO PENDIENTE */
-        <div className="pt-2 space-y-4 text-center">
-          <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
-            <MailCheck className="w-8 h-8" />
-          </div>
-
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-            ¡Cuenta creada con éxito!
-          </h3>
-
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed px-2">
-            Hemos enviado un enlace de confirmación a tu correo:
-            <br />
-            <span className="font-bold text-slate-900 dark:text-white">{email}</span>
-          </p>
-
-          <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs text-left flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              Por razones de seguridad bancaria, debes abrir el enlace en tu correo para activar tu cuenta antes de acceder al panel.
-            </span>
-          </div>
-
-          {feedback && (
-            <div className={`p-3 rounded-2xl text-xs flex items-center gap-2 ${
-              feedback.type === 'error'
-                ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500'
-                : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-            }`}>
-              {feedback.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
-              <span>{feedback.message}</span>
-            </div>
-          )}
-
-          <div className="space-y-2 pt-2">
-            <button
-              type="button"
-              onClick={handleResendConfirmation}
-              disabled={isLoading}
-              className="w-full py-2.5 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
-            >
-              {isLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              <span>Reenviar correo de confirmación</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setMode('login'); setFeedback(null); }}
-              className="w-full py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-emerald-600/20"
-            >
-              <span>Ya lo confirmé, Iniciar Sesión</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      ) : mode === '2fa' ? (
-        /* PANTALLA: VERIFICACIÓN 2FA TOTP */
-        <div className="pt-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => { setMode('login'); setFeedback(null); }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>Verificación en Dos Pasos</span>
-            </h3>
-            <div className="w-8" />
-          </div>
-
-          <div className="text-center space-y-1">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto mb-2">
-              <Smartphone className="w-7 h-7" />
-            </div>
-            <h4 className="text-base font-bold text-slate-900 dark:text-white">
-              Código de Google Authenticator
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 px-2 leading-relaxed">
-              Ingresa el código dinámico de 6 dígitos mostrado en tu aplicación autenticadora para acceder.
-            </p>
-          </div>
-
-          {feedback && (
-            <div className={`p-3 rounded-2xl text-xs flex items-center gap-2 ${
-              feedback.type === 'error'
-                ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500'
-                : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-            }`}>
-              {feedback.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
-              <span>{feedback.message}</span>
-            </div>
-          )}
-
-          <div className="py-2">
-            <OtpSixDigitInput
-              value={twoFactorCode}
-              onChange={(val) => {
-                setTwoFactorCode(val);
-                if (val.length === 6) {
-                  handleVerify2fa(val);
-                }
-              }}
-              disabled={isLoading}
-              hasError={feedback?.type === 'error'}
-            />
-          </div>
-
-          <button
-            type="button"
-            disabled={isLoading || twoFactorCode.length !== 6}
-            onClick={() => handleVerify2fa(twoFactorCode)}
-            className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-500/20 active:scale-98"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Verificando 2FA...</span>
-              </>
-            ) : (
-              <>
-                <span>Confirmar e Ingresar</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setMode('login'); setFeedback(null); }}
-            className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer pt-1"
-          >
-            Cancelar y volver al inicio
-          </button>
-        </div>
-      ) : mode === 'email_otp' ? (
-        /* PANTALLA: PASSWORDLESS LOGIN CON OTP POR EMAIL */
-        <div className="pt-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => { setMode('login'); setFeedback(null); setIsOtpSent(false); }}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-              <KeyRound className="w-4 h-4 text-emerald-500" />
-              <span>Acceso con Código OTP</span>
-            </h3>
-            <div className="w-8" />
-          </div>
-
-          <div className="text-center space-y-1">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto mb-2">
-              <Mail className="w-7 h-7" />
-            </div>
-            <h4 className="text-base font-bold text-slate-900 dark:text-white">
-              {isOtpSent ? 'Ingresa el Código de 6 Dígitos' : 'Iniciar con Código al Correo'}
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 px-2 leading-relaxed">
-              {isOtpSent 
-                ? `Revisa tu correo ${email} e ingresa el código numérico recibido:`
-                : 'Recibe un código de acceso único directamente en tu correo sin necesidad de contraseña.'}
-            </p>
-          </div>
-
-          {feedback && (
-            <div className={`p-3 rounded-2xl text-xs flex items-center gap-2 ${
-              feedback.type === 'error'
-                ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500'
-                : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-            }`}>
-              {feedback.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
-              <span>{feedback.message}</span>
-            </div>
-          )}
-
-          {!isOtpSent ? (
-            <form onSubmit={handleRequestEmailOtp} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  Correo Electrónico
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="ejemplo@correo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !email}
-                className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-500/20 active:scale-98"
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Enviando código...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Enviar Código de 6 Dígitos</span>
-                    <Send className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            <div className="space-y-3">
-              <OtpSixDigitInput
-                value={emailOtpCode}
-                onChange={(val) => {
-                  setEmailOtpCode(val);
-                  if (val.length === 6) {
-                    handleVerifyEmailOtp(val);
-                  }
-                }}
-                disabled={isLoading}
-                hasError={feedback?.type === 'error'}
-              />
-
-              <button
-                type="button"
-                disabled={isLoading || emailOtpCode.length !== 6}
-                onClick={() => handleVerifyEmailOtp(emailOtpCode)}
-                className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-500/20 active:scale-98"
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Validando código...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Verificar e Ingresar</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center justify-between text-xs font-semibold pt-1">
-                <button
-                  type="button"
-                  onClick={handleRequestEmailOtp}
-                  disabled={isLoading}
-                  className="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-                >
-                  ¿No te llegó? Reenviar código
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsOtpSent(false); }}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  Cambiar correo
-                </button>
-              </div>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => { setMode('login'); setFeedback(null); }}
-            className="w-full text-center text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer pt-2"
-          >
-            Volver a iniciar sesión con contraseña
-          </button>
-        </div>
+        <EmailConfirmationSentStep
+          email={email}
+          onBackToLogin={() => { setMode('login'); setFeedback(null); }}
+          onResendConfirmation={handleResendConfirmation}
+          isLoading={isLoading}
+          feedback={feedback}
+        />
+      ) : (mode === '2fa' || mode === 'email_otp') ? (
+        /* PANTALLAS: VERIFICACIÓN 2FA TOTP Y PASSWORDLESS EMAIL OTP */
+        <TwoFactorVerifyStep
+          mode={mode}
+          onBackToLogin={() => { setMode('login'); setFeedback(null); setIsOtpSent(false); }}
+          feedback={feedback}
+          isLoading={isLoading}
+          twoFactorCode={twoFactorCode}
+          setTwoFactorCode={setTwoFactorCode}
+          onVerify2fa={handleVerify2fa}
+          email={email}
+          setEmail={setEmail}
+          isOtpSent={isOtpSent}
+          setIsOtpSent={setIsOtpSent}
+          emailOtpCode={emailOtpCode}
+          setEmailOtpCode={setEmailOtpCode}
+          onRequestEmailOtp={handleRequestEmailOtp}
+          onVerifyEmailOtp={handleVerifyEmailOtp}
+        />
       ) : (
         /* FORMULARIO ESTÁNDAR LOGIN / REGISTRO */
         <div className="space-y-4">

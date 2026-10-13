@@ -55,14 +55,18 @@ export default function TwoFactorVerifyStep({
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
             <span>Verificación en Dos Pasos</span>
           </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-            title="Cerrar modal"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              title="Cerrar modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="w-8" />
+          )}
         </div>
 
         <div className="text-center space-y-1">
@@ -151,14 +155,18 @@ export default function TwoFactorVerifyStep({
           <KeyRound className="w-4 h-4 text-emerald-500" />
           <span>Acceso con Código OTP</span>
         </h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-          title="Cerrar modal"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+            title="Cerrar modal"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        ) : (
+          <div className="w-8" />
+        )}
       </div>
 
       <div className="text-center space-y-1">
