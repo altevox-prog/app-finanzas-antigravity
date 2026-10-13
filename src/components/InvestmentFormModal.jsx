@@ -3,16 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   TrendingUp, 
   Coins, 
-  Sparkles, 
-  Layers, 
-  Calendar, 
-  Clock, 
-  Percent, 
-  Trash2, 
-  Info,
-  DollarSign,
-  AlertCircle,
-  Search
+  Trash2 
 } from 'lucide-react';
 import { useBackHandler } from '../hooks/useBackHandler';
 import { usePrivacy } from '../context/PrivacyContext';
@@ -20,10 +11,9 @@ import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '..
 import SegmentedControl from './common/SegmentedControl';
 import FixedIncomeFields from './investments/modals/FixedIncomeFields';
 import MarketAssetFields from './investments/modals/MarketAssetFields';
-import InvestmentCategoryPicker from './investments/modals/InvestmentCategoryPicker';
+import InvestmentCategoryHeader from './investments/InvestmentCategoryHeader';
 import { 
   toSafeNumber, 
-  calculateCDTMaturityReturn, 
   calculateCDTAccruedReturn 
 } from '../utils/financeMath';
 
@@ -159,33 +149,6 @@ export default function InvestmentFormModal({
 
   if (!isOpen) return null;
 
-  // Real-time calculations for CDT
-  let cdtDaysRemaining = null;
-  let cdtTotalDays = null;
-  let cdtEstimatedGain = null;
-  let isMatured = false;
-
-  if (category === 'fixed' && startDate && dueDate) {
-    const start = new Date(startDate + 'T00:00:00');
-    const due = new Date(dueDate + 'T00:00:00');
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
-    const msPerDay = 1000 * 60 * 60 * 24;
-    cdtTotalDays = Math.max(1, Math.round((due - start) / msPerDay));
-    const diffToDue = Math.round((due - now) / msPerDay);
-    cdtDaysRemaining = diffToDue;
-    isMatured = diffToDue <= 0;
-
-    const rateNum = toSafeNumber(interestRate);
-    const invNum = parseFormattedAmount(investedAmount) || 0;
-
-    if (invNum > 0 && rateNum > 0 && cdtTotalDays > 0) {
-      const { grossReturn } = calculateCDTMaturityReturn(invNum, rateNum, cdtTotalDays);
-      cdtEstimatedGain = grossReturn;
-    }
-  }
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const finalName = name.trim();
@@ -279,10 +242,13 @@ export default function InvestmentFormModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           {/* Cuerpo con Scroll y Padding Inferior Suficiente */}
           <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 pb-6">
-            {/* Categoría Selector (Arriba del todo, justo debajo del título principal) */}
-            <InvestmentCategoryPicker
-              selectedCategory={category}
-              onSelectCategory={handleCategoryChange}
+            {/* Cabecera de Categoría y Entidad */}
+            <InvestmentCategoryHeader
+              category={category}
+              onCategoryChange={handleCategoryChange}
+              institution={institution}
+              setInstitution={setInstitution}
+              isEditing={isEditing}
             />
 
             {/* Activos de Mercado (Ticker, Cotización en vivo, Títulos y Precios) */}
@@ -323,59 +289,6 @@ export default function InvestmentFormModal({
                 style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
               />
             </div>
-
-          {/* Entidad Financiera / Banco */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-[11px] font-bold opacity-70">
-                Entidad Financiera / Banco
-              </label>
-              <span className="text-[10px] opacity-50">Para agrupar en portafolio</span>
-            </div>
-            <input
-              type="text"
-              list="financial-institutions-list"
-              placeholder="ej. Nu, Bancolombia, Lulo Bank, Binance, Hapi, Tyba..."
-              value={institution}
-              onChange={(e) => setInstitution(e.target.value)}
-              className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none transition-all"
-              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-            />
-            <datalist id="financial-institutions-list">
-              <option value="Nu" />
-              <option value="Bancolombia" />
-              <option value="Lulo Bank" />
-              <option value="Davivienda" />
-              <option value="BBVA" />
-              <option value="Tyba" />
-              <option value="Trii" />
-              <option value="Littio" />
-              <option value="Binance" />
-              <option value="Interactive Brokers" />
-              <option value="Hapi" />
-              <option value="Finandina" />
-              <option value="Pibank" />
-              <option value="RappiCuenta" />
-              <option value="Fiducuenta" />
-            </datalist>
-            {/* Chips rápidos de bancos/entidades más comunes */}
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {['Nu', 'Bancolombia', 'Lulo Bank', 'Davivienda', 'Binance', 'Tyba', 'Hapi'].map(inst => (
-                <button
-                  key={inst}
-                  type="button"
-                  onClick={() => setInstitution(inst)}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    institution.toLowerCase() === inst.toLowerCase()
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-200/60 dark:bg-white/5 opacity-70 hover:opacity-100 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {inst}
-                </button>
-              ))}
-            </div>
-          </div>
 
 
           {/* Moneda de origen (COP vs USD) */}
@@ -462,10 +375,6 @@ export default function InvestmentFormModal({
               setDueDate={setDueDate}
               investedAmount={investedAmount}
               currency={currency}
-              cdtTotalDays={cdtTotalDays}
-              cdtDaysRemaining={cdtDaysRemaining}
-              cdtEstimatedGain={cdtEstimatedGain}
-              isMatured={isMatured}
             />
           )}
 
