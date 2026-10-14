@@ -1,12 +1,12 @@
 import React from 'react';
 import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
 import { ViewRouter } from './views';
-import SplashScreen from './components/SplashScreen';
-import OnboardingWizard from './components/OnboardingWizard';
+import SplashScreen from './components/onboarding/SplashScreen';
+import OnboardingWizard from './components/onboarding/OnboardingWizard';
 import GlobalModals from './components/layout/GlobalModals';
-import PwaUpdateBanner from './components/PwaUpdateBanner';
+import PwaUpdateBanner from './components/ui/PwaUpdateBanner';
 import { RotateCcw } from 'lucide-react';
-import Toaster from './components/Toaster';
+import Toaster from './components/ui/Toaster';
 import { useAppOrchestrator } from './hooks/useAppOrchestrator';
 
 export default function App() {
