@@ -1,3 +1,1 @@
-import QuickActionsModal from './QuickActionsModal';
-
-export default QuickActionsModal;
+export { default } from './common/QuickActionsMenu';

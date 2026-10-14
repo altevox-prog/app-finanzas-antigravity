@@ -1,3 +1,1 @@
-import DesktopMonthPicker from './DesktopMonthPicker';
-
-export default DesktopMonthPicker;
+export { default } from './common/PeriodSelectorModal';
