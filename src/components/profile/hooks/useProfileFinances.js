@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { safeNumber as defaultSafeNumber } from '../../../../utils/financeMath';
+import { safeNumber as defaultSafeNumber } from '../../../utils/financeMath';
 import { 
   supabase as defaultSupabase, 
   isSupabaseConfigured as defaultIsSupabaseConfigured 
-} from '../../../../services/supabaseClient';
-import { compressImageFile, getInitialsFromName } from '../../../../services/profile/profileImageService';
-import { persistGlobalBudget, persistCategoryBudget } from '../../../../services/profile/budgetService';
-import { useSavingsGoals } from '../../../../hooks/useSavingsGoals';
+} from '../../../services/supabaseClient';
+import { compressImageFile, getInitialsFromName } from '../../../services/profile/profileImageService';
+import { persistGlobalBudget, persistCategoryBudget } from '../../../services/profile/budgetService';
+import { useSavingsGoals } from '../../../hooks/useSavingsGoals';
 
 /**
  * useProfileFinances - Gestión unificada de perfil, suscripciones, presupuestos y metas de ahorro.

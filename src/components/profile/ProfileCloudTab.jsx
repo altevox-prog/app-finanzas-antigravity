@@ -19,7 +19,7 @@ import {
   downloadTransactionsCSV, 
   downloadInvestmentsCSV 
 } from '../../utils/exportUtils';
-import ProfileBackupPreviewModal from '../modals/profile/components/ProfileBackupPreviewModal';
+import ProfileBackupPreviewModal from './components/ProfileBackupPreviewModal';
 
 /**
  * ProfileCloudTab

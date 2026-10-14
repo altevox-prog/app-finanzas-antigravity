@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   supabase as defaultSupabase, 
   isSupabaseConfigured as defaultIsSupabaseConfigured 
-} from '../../../../services/supabaseClient';
+} from '../../../services/supabaseClient';
 
 /**
  * useProfileDataActions

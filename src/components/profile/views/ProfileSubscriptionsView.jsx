@@ -7,7 +7,7 @@ import {
   Tv, 
   Trash2 
 } from 'lucide-react';
-import BrandIcon from '../../../BrandIcon';
+import BrandIcon from '../../BrandIcon';
 
 /**
  * ProfileSubscriptionsView

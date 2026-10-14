@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { safeNumber as defaultSafeNumber } from '../../../../utils/financeMath';
+import { safeNumber as defaultSafeNumber } from '../../../utils/financeMath';
 
 /**
  * useProfileMetrics

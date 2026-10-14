@@ -8,7 +8,7 @@ import {
   Pencil, 
   Trash2 
 } from 'lucide-react';
-import GoalModal from '../../GoalModal';
+import GoalModal from '../modals/GoalModal';
 
 /**
  * ProfileSavingsGoalsView

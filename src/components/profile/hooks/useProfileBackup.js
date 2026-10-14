@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { 
   downloadBackupJSON as defaultDownloadBackupJSON, 
   parseAndValidateBackup as defaultParseAndValidateBackup 
-} from '../../../../utils/exportUtils';
+} from '../../../utils/exportUtils';
 
 /**
  * useProfileBackup
