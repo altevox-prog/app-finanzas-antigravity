@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
+import { Loader2 } from 'lucide-react';
 import DashboardView from './DashboardView';
-import TransactionsView from './TransactionsView';
-import AccountsView from './AccountsView';
-import DebtsView from './DebtsView';
-import InvestmentsView from './InvestmentsView';
-import RecurringView from './RecurringView';
-import TaxView from './TaxView';
+
+const TransactionsView = lazy(() => import('./TransactionsView'));
+const AccountsView = lazy(() => import('./AccountsView'));
+const DebtsView = lazy(() => import('./DebtsView'));
+const InvestmentsView = lazy(() => import('./InvestmentsView'));
+const RecurringView = lazy(() => import('./RecurringView'));
+const TaxView = lazy(() => import('./TaxView'));
+
+function ViewFallbackLoader() {
+  return (
+    <div className="flex h-64 w-full items-center justify-center p-8">
+      <Loader2 className="h-8 w-8 animate-spin text-emerald-500 opacity-80" />
+    </div>
+  );
+}
 
 /**
  * ViewRouter
@@ -144,7 +154,8 @@ export default function ViewRouter({
         />
       )}
 
-      {/* Tab 2: Movimientos */}
+      <Suspense fallback={<ViewFallbackLoader />}>
+        {/* Tab 2: Movimientos */}
       {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
         <TransactionsView
           key={`transactions-list-${tabResetKeys?.transactions || 0}`}
@@ -265,6 +276,7 @@ export default function ViewRouter({
           fromSettings={fromSettings}
         />
       )}
+      </Suspense>
     </>
   );
 }
