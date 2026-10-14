@@ -1,1 +1,1 @@
-export { default } from './modals/AddLoanModal';
+export { default } from './debts/AddLoanModal';
