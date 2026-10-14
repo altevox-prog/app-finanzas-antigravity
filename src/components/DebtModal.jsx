@@ -1,1 +1,1 @@
-export { default } from './modals/DebtModal';
+export { default } from './debts/DebtFormModal';

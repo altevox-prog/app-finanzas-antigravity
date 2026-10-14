@@ -1,5 +1,5 @@
 import React from 'react';
-import DebtModal from '../DebtModal';
+import DebtModal from './DebtFormModal';
 import DebtReceiptModal from '../DebtReceiptModal';
 import AddDisbursementModal from '../AddDisbursementModal';
 import DebtPaymentModal from './DebtPaymentModal';
