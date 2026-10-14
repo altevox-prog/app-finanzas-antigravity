@@ -1,1 +1,1 @@
-export { default } from './modals/EditWidgetsModal';
+export { default } from './dashboard/modals/EditWidgetsModal';

@@ -1,1 +1,1 @@
-export { default } from './modals/ExportModal';
+export { default } from './reports/modals/ExportModal';
