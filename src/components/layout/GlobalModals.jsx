@@ -1,6 +1,6 @@
 import React from 'react';
-import QuickActionsModal from '../QuickActionsModal';
-import ModalContainer from './ModalContainer';
+import QuickActionsModal from '../common/QuickActionsModal';
+import ModalContainer from '../ui/ModalContainer';
 
 /**
  * GlobalModals

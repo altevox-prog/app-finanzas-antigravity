@@ -6,3 +6,4 @@ export { default as DesktopLayout } from './DesktopLayout';
 export { default as MobileLayout } from './MobileLayout';
 export { default as DesktopMonthPicker } from './DesktopMonthPicker';
 export { default as ViewSwitcherPill } from './ViewSwitcherPill';
+export { default as GlobalModals } from './GlobalModals';

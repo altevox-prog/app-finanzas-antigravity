@@ -3,7 +3,7 @@ import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
 import { ViewRouter } from './views';
 import SplashScreen from './components/SplashScreen';
 import OnboardingWizard from './components/OnboardingWizard';
-import GlobalModals from './components/modals/GlobalModals';
+import GlobalModals from './components/layout/GlobalModals';
 import PwaUpdateBanner from './components/PwaUpdateBanner';
 import { RotateCcw } from 'lucide-react';
 import Toaster from './components/Toaster';

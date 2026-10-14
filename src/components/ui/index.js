@@ -7,3 +7,4 @@ export { default as PwaUpdateBanner } from './PwaUpdateBanner';
 export { default as UpdateAppButton } from './UpdateAppButton';
 export { default as Toaster } from './Toaster';
 export { default as ErrorBoundary } from './ErrorBoundary';
+export { default as ModalContainer } from './ModalContainer';

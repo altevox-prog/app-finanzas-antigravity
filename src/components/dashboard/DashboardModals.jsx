@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import AddTransactionModal from '../modals/AddTransactionModal';
-import DebtFormModal from '../modals/DebtFormModal';
-import AddRecurringModal from '../modals/AddRecurringModal';
+import AddTransactionModal from '../transactions/modals/AddTransactionModal';
+import DebtFormModal from '../debts/DebtFormModal';
+import AddRecurringModal from '../recurring/modals/AddRecurringModal';
 import AddAccountModal from '../accounts/modals/AddAccountModal';
 import AddCategoryModal from '../categories/modals/AddCategoryModal';
 

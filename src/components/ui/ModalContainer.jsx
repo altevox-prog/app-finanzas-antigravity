@@ -1,17 +1,17 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AddTransactionModal from './AddTransactionModal';
-import TransferModal from './TransferModal';
-import AddLoanModal from './AddLoanModal';
-import AddRecurringModal from './AddRecurringModal';
-import EditWidgetsModal from './EditWidgetsModal';
-import ProfileModal from './ProfileModal';
-import AddInvestmentModal from '../AddInvestmentModal';
-import DesktopMonthPicker from '../DesktopMonthPicker';
-import CalendarDropdown from '../CalendarDropdown';
-import CreditCardDetailModal from '../CreditCardDetailModal';
-import OnboardingFlow from '../OnboardingFlow';
-import LockScreen from '../LockScreen';
+import AddTransactionModal from '../transactions/modals/AddTransactionModal';
+import TransferModal from '../transactions/modals/TransferModal';
+import AddLoanModal from '../debts/AddLoanModal';
+import AddRecurringModal from '../recurring/modals/AddRecurringModal';
+import EditWidgetsModal from '../dashboard/modals/EditWidgetsModal';
+import ProfileModal from '../profile/modals/ProfileModal';
+import AddInvestmentModal from '../investments/modals/AddInvestmentModal';
+import DesktopMonthPicker from '../layout/DesktopMonthPicker';
+import CalendarDropdown from '../common/CalendarDropdown';
+import CreditCardDetailModal from '../accounts/modals/CreditCardDetailModal';
+import OnboardingFlow from '../onboarding/OnboardingFlow';
+import LockScreen from '../auth/LockScreen';
 import { DEFAULT_WIDGETS_CONFIG } from '../../utils/widgetsConfig';
 
 /**
