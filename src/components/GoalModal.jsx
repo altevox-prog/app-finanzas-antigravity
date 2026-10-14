@@ -1,1 +1,1 @@
-export { default } from './modals/GoalModal';
+export { default } from './profile/modals/GoalModal';
