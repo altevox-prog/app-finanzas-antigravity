@@ -1,3 +1,2 @@
-import LockScreen from './LockScreen';
-export default LockScreen;
-export { LockScreen };
+export * from './auth/LockScreen';
+export { default } from './auth/LockScreen';
