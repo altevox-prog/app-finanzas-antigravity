@@ -1,1 +1,1 @@
-export { default } from './modals/AddTransactionModal';
+export { default } from './transactions/modals/AddTransactionModal';
