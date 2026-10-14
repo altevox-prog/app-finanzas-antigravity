@@ -1,2 +1,1 @@
-export { default } from './RecurringView';
-export * from './RecurringView';
+export { default } from './recurring/RecurringView';
