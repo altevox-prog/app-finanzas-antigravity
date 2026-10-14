@@ -1,0 +1,133 @@
+import React, { useMemo } from 'react';
+import { Receipt, ArrowRight } from 'lucide-react';
+import { getCategoryEmoji } from '../../ReportsAndCharts';
+
+/**
+ * RecentTransactionsWidget
+ * Tabla detallada con los últimos movimientos cronológicos del período.
+ */
+export default function RecentTransactionsWidget({
+  transactions = [],
+  categories = [],
+  formatMoney = (val) => `$${val}`,
+  onTransactionClick,
+  onNavigateToTab,
+  onAddTransaction
+}) {
+  const recentTransactions = useMemo(() => {
+    return (Array.isArray(transactions) ? [...transactions] : [])
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 7);
+  }, [transactions]);
+
+  const handleNavigate = () => {
+    if (typeof onNavigateToTab === 'function') {
+      onNavigateToTab('transactions');
+    }
+  };
+
+  return (
+    <div className="lg:col-span-8 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+            Últimos movimientos
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Historial cronológico reciente con detalles
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleNavigate}
+          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors flex items-center gap-0.5 cursor-pointer"
+        >
+          <span>Ver todos</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Tabla Moderna SaaS */}
+      {recentTransactions.length === 0 ? (
+        <div className="py-12 text-center space-y-2">
+          <Receipt className="w-8 h-8 mx-auto text-slate-400 opacity-60" />
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+            No hay movimientos registrados en este mes
+          </p>
+          <button
+            type="button"
+            onClick={onAddTransaction}
+            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+          >
+            + Registrar primer movimiento
+          </button>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-white/5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <th className="pb-3 pl-2">Categoría</th>
+                <th className="pb-3 px-2">Descripción</th>
+                <th className="pb-3 px-2">Cuenta</th>
+                <th className="pb-3 px-2">Fecha</th>
+                <th className="pb-3 pr-2 text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
+              {recentTransactions.map((tx) => {
+                const isInc = tx.type === 'income';
+                const displayEmoji = getCategoryEmoji(
+                  { icon: tx.categoryIcon, name: tx.categoryName },
+                  tx.categoryName
+                );
+
+                return (
+                  <tr
+                    key={tx.id}
+                    onClick={() => onTransactionClick?.(tx)}
+                    className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                  >
+                    {/* Categoría / Emoji */}
+                    <td className="py-3 pl-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base leading-none select-none">
+                          {displayEmoji}
+                        </span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {tx.categoryName || 'General'}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Descripción / Nota */}
+                    <td className="py-3 px-2 text-slate-600 dark:text-slate-300 font-medium truncate max-w-[180px]">
+                      {tx.note || tx.subcategoryName || '—'}
+                    </td>
+
+                    {/* Cuenta */}
+                    <td className="py-3 px-2 text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
+                      {tx.accountName || 'Principal'}
+                    </td>
+
+                    {/* Fecha */}
+                    <td className="py-3 px-2 text-slate-500 dark:text-slate-400 tabular-nums">
+                      {tx.date}
+                    </td>
+
+                    {/* Monto */}
+                    <td className="py-3 pr-2 text-right font-bold font-mono tracking-tight tabular-nums">
+                      <span className={isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}>
+                        {isInc ? '+' : '-'}{formatMoney(tx.amount)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
