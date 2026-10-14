@@ -1,4 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { 
+  Landmark, 
+  HandCoins, 
+  TrendingUp, 
+  Wallet, 
+  ArrowDownRight, 
+  ArrowUpRight, 
+  PiggyBank, 
+  Activity, 
+  CreditCard, 
+  Receipt, 
+  PieChart, 
+  CalendarSync 
+} from 'lucide-react';
+import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import NetWorthWidget from './widgets/NetWorthWidget';
 import InvestmentsWidget from './widgets/InvestmentsWidget';
 import DebtsWidget from './widgets/DebtsWidget';
@@ -18,30 +33,42 @@ import BalanceWidget from '../BalanceWidget';
 import BudgetWidget from '../BudgetWidget';
 import ReportsAndCharts from '../ReportsAndCharts';
 import BentoMetricsGrid from '../common/BentoMetricsGrid';
+import MetricCardsGrid from './widgets/MetricCardsGrid';
+import TopAccountsWidget from './widgets/TopAccountsWidget';
+import RecentTransactionsWidget from './widgets/RecentTransactionsWidget';
+
+export const WIDGET_ICON_MAP = {
+  Landmark,
+  TrendingUp,
+  HandCoins,
+  Wallet,
+  ArrowDownRight,
+  ArrowUpRight,
+  PiggyBank,
+  Activity,
+  PieChart,
+  CreditCard,
+  Receipt,
+  CalendarSync
+};
 
 /**
- * createWidgetRegistry
+ * createWidgetRegistry / getWidgetRegistry
  * Factory que crea y retorna el mapa centralizado de componentes de widgets disponibles
  * para el Dashboard a partir de los datos, métricas y callbacks provistos.
- *
- * @param {Object} params
- * @returns {Record<string, React.ReactNode>} WIDGET_REGISTRY
  */
 export function createWidgetRegistry({
-  // Métricas de patrimonio, inversiones y deudas
   netWorthCOP,
   totalAssetsCOP,
   debtsAndLoansMetrics = {},
   isNetWorthPositive,
   investmentsMetrics = {},
-  // Liquidez, ingresos y egresos
   availableLiquidBalance,
   netBalance,
   totalIncome,
   totalExpense,
   savingsRate,
   freeCash,
-  // Transacciones y estado del mes
   scopedTransactions = [],
   displayTransactions = [],
   transactions = [],
@@ -50,22 +77,18 @@ export function createWidgetRegistry({
   selectedDay,
   currentMonthLabel,
   isTransferTx = () => false,
-  // Cuentas, categorías, pagos recurrentes
   accounts = [],
   categories = [],
   recurringPayments = [],
   subscriptions = [],
   trm = 4050,
-  // Flujo de caja semanal
   weeklyCashFlow = [],
   hoveredWeekIndex,
   setHoveredWeekIndex,
   currentPeriod,
   periodOptions,
   handlePeriodChange,
-  // Bento
   bentoPeriodLabel,
-  // Handlers y navegación
   navigateToTab = () => {},
   handleOpenDebtModal = () => {},
   handleOpenTxModal = () => {},
@@ -74,11 +97,9 @@ export function createWidgetRegistry({
   onSelectDay = () => {},
   onSelectCreditCardDetail = () => {},
   financeActions = {},
-  // Formateadores
   formatMoney = (val) => val
 } = {}) {
   return {
-    // 1. Patrimonio total
     net_worth: (
       <NetWorthWidget
         netWorthCOP={netWorthCOP}
@@ -89,7 +110,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 2. Inversiones
     investments: (
       <InvestmentsWidget
         investmentsMetrics={investmentsMetrics}
@@ -99,7 +119,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 3. Préstamos y deudas
     debts: (
       <DebtsWidget
         debtsAndLoansMetrics={debtsAndLoansMetrics}
@@ -112,7 +131,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 4. Saldo disponible líquido
     liquid_balance: (
       <LiquidBalanceWidget
         availableLiquidBalance={availableLiquidBalance}
@@ -121,7 +139,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 5. Ingreso del mes
     monthly_income: (
       <MonthlyIncomeWidget
         totalIncome={totalIncome}
@@ -133,7 +150,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 6. Gasto del mes
     monthly_expense: (
       <MonthlyExpenseWidget
         totalExpense={totalExpense}
@@ -145,7 +161,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 7. Tasa de ahorro / Superávit
     savings_rate: (
       <SavingsRateWidget
         savingsRate={savingsRate}
@@ -154,7 +169,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 8. Flujo de caja semanal / Actividad de gastos (WeeklyExpensesChart)
     weekly_cashflow: (
       <WeeklyExpensesChart
         transactions={transactions}
@@ -164,6 +178,7 @@ export function createWidgetRegistry({
         formatMoney={formatMoney}
       />
     ),
+
     weekly_cashflow_classic: (
       <WeeklyCashflowWidget
         weeklyCashFlow={weeklyCashFlow}
@@ -176,7 +191,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 9. Tus gastos
     expenses_category: (
       <ReportsAndCharts
         transactions={transactions}
@@ -190,7 +204,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 10. Mis cuentas
     my_accounts: (
       <AccountsWidget
         accounts={accounts}
@@ -203,7 +216,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 11. Últimos movimientos
     recent_movements: (
       <RecentMovementsSection
         transactions={displayTransactions}
@@ -217,7 +229,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 12. Pagos recurrentes
     recurring_payments: (
       <RecurringPaymentsWidget
         recurringPayments={recurringPayments}
@@ -230,7 +241,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 13. Balance general
     balance_general: (
       <BalanceWidget
         monthlyStats={{
@@ -248,10 +258,8 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 14. Presupuesto
     budget: <BudgetWidget monthlyStats={monthlyStats} />,
 
-    // 15. Bento metrics grid
     bento_metrics: (
       <BentoMetricsGrid
         netWorth={netWorthCOP}
@@ -268,7 +276,6 @@ export function createWidgetRegistry({
       />
     ),
 
-    // 16. Cuadrícula consolidada de tarjetas de balance
     balance_cards: (
       <BalanceCardsWidget
         availableLiquidBalance={availableLiquidBalance}
@@ -288,6 +295,100 @@ export function createWidgetRegistry({
         accounts={accounts}
         formatMoney={formatMoney}
       />
+    ),
+
+    metric_cards_grid: (
+      <MetricCardsGrid
+        totalIncome={totalIncome}
+        totalExpense={totalExpense}
+        netBalance={netBalance}
+        savingsRate={savingsRate}
+        availableLiquidBalance={availableLiquidBalance}
+        freeCash={freeCash}
+        formatMoney={formatMoney}
+        monthlyStats={monthlyStats}
+      />
+    ),
+
+    top_accounts: (
+      <TopAccountsWidget
+        accounts={accounts}
+        transactions={transactions}
+        trm={trm}
+        formatMoney={formatMoney}
+        onAccountClick={() => navigateToTab('accounts')}
+        onNavigateToTab={navigateToTab}
+      />
+    ),
+
+    recent_transactions: (
+      <RecentTransactionsWidget
+        transactions={displayTransactions}
+        formatMoney={formatMoney}
+        onTransactionClick={handleOpenTxModal}
+        onNavigateToTab={navigateToTab}
+        onAddTransaction={() => handleOpenTxModal('expense')}
+      />
     )
   };
+}
+
+export const getWidgetRegistry = createWidgetRegistry;
+
+/**
+ * getWidgetComponent
+ * Resuelve un widget ID desde el registro normalizando la llave.
+ */
+export const getWidgetComponent = (id, registry) => {
+  if (!registry || !id) return null;
+  return registry[normalizeWidgetId(id)] || registry[id] || null;
+};
+
+/**
+ * useWidgetRegistry
+ * Custom hook memorizado para generar el registro de widgets en Dashboard
+ */
+export function useWidgetRegistry(params = {}) {
+  return useMemo(() => createWidgetRegistry(params), [
+    params.netWorthCOP,
+    params.totalAssetsCOP,
+    params.debtsAndLoansMetrics,
+    params.isNetWorthPositive,
+    params.investmentsMetrics,
+    params.availableLiquidBalance,
+    params.netBalance,
+    params.totalIncome,
+    params.totalExpense,
+    params.savingsRate,
+    params.freeCash,
+    params.scopedTransactions,
+    params.displayTransactions,
+    params.transactions,
+    params.monthlyStats,
+    params.selectedDate,
+    params.selectedDay,
+    params.currentMonthLabel,
+    params.isTransferTx,
+    params.accounts,
+    params.categories,
+    params.recurringPayments,
+    params.subscriptions,
+    params.trm,
+    params.weeklyCashFlow,
+    params.hoveredWeekIndex,
+    params.setHoveredWeekIndex,
+    params.currentPeriod,
+    params.periodOptions,
+    params.handlePeriodChange,
+    params.bentoPeriodLabel,
+    params.navigateToTab,
+    params.handleOpenDebtModal,
+    params.handleOpenTxModal,
+    params.handleOpenRecurringModal,
+    params.onOpenCalendar,
+    params.onSelectDay,
+    params.onSelectCreditCardDetail,
+    params.financeActions,
+    params.formatMoney
+  ]);
 }
