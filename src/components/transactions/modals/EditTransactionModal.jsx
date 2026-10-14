@@ -7,9 +7,7 @@ import {
   Trash2 
 } from 'lucide-react';
 import SegmentedControl from '../../common/SegmentedControl';
-import CategoryCombobox from '../../CategoryCombobox';
-import SubcategoryCombobox from '../../SubcategoryCombobox';
-import AccountCombobox from '../../AccountCombobox';
+import TransactionAccountCategoryFields from '../TransactionAccountCategoryFields';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 import { 
@@ -164,8 +162,7 @@ export default function EditTransactionModal({
     }
   };
 
-  const editCategoryObj = categories.find(c => c.id === categoryId);
-  const availableEditSubcategories = editCategoryObj?.subcategories || [];
+
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
@@ -299,59 +296,23 @@ export default function EditTransactionModal({
                 )}
               </div>
 
-              {/* Fecha */}
-              <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Fecha *</label>
-                <input
-                  type="date"
-                  required
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
-                />
-              </div>
-
-              {/* Categoría Principal con CategoryCombobox */}
-              <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Categoría Principal *</label>
-                <CategoryCombobox
+              <div className="sm:col-span-2 space-y-3">
+                <TransactionAccountCategoryFields
+                  accountId={accountId}
+                  setAccountId={setAccountId}
+                  accounts={accounts}
+                  categoryId={categoryId}
+                  setCategoryId={setCategoryId}
                   categories={categories}
-                  selectedCategoryId={categoryId}
-                  onSelectCategory={(id) => {
-                    setCategoryId(id);
-                    const cat = categories.find(c => c.id === id);
-                    if (cat?.subcategories?.length > 0) {
-                      setSubcategoryId(cat.subcategories[0].id);
-                    } else {
-                      setSubcategoryId('');
-                    }
-                  }}
-                  onAddCategory={onAddCategory}
+                  subcategoryId={subcategoryId}
+                  setSubcategoryId={setSubcategoryId}
+                  date={date}
+                  setDate={setDate}
                   type={type}
-                />
-              </div>
-
-              {/* Subcategoría con SubcategoryCombobox */}
-              <div>
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Subcategoría</label>
-                <SubcategoryCombobox
-                  subcategories={availableEditSubcategories}
-                  selectedSubcategoryId={subcategoryId}
-                  onSelectSubcategory={setSubcategoryId}
+                  onAddCategory={onAddCategory}
                   onAddSubcategory={onAddSubcategory}
                   onUpdateSubcategory={onUpdateSubcategory}
                   onDeleteSubcategory={onDeleteSubcategory}
-                  parentCategoryId={categoryId}
-                />
-              </div>
-
-              {/* Cuenta con AccountCombobox */}
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Cuenta *</label>
-                <AccountCombobox
-                  accounts={accounts}
-                  selectedAccountId={accountId}
-                  onSelectAccount={setAccountId}
                   onAddAccount={onAddAccount}
                 />
               </div>
