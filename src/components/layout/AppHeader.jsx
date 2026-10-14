@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, ChevronDown, Bell } from 'lucide-react';
-import Header from '../Header';
+import Header from './Header';
 import SyncStatusBadge from '../SyncStatusBadge';
 import NotificationCenter from '../NotificationCenter';
 import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';

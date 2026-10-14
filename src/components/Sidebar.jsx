@@ -1,3 +1,2 @@
-import DesktopSidebar from './DesktopSidebar';
-export default DesktopSidebar;
-export { DesktopSidebar };
+export { default } from './layout/DesktopSidebar';
+export * from './layout/DesktopSidebar';
