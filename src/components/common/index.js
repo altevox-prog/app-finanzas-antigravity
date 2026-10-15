@@ -9,3 +9,4 @@ export { default as CalendarDropdown } from './CalendarDropdown';
 export { default as CalendarModal } from './CalendarModal';
 export { default as PeriodSelectorModal } from './PeriodSelectorModal';
 export { default as EmojiPickerModal, EMOJI_CATEGORIES } from './EmojiPickerModal';
+export { default as AmountInput } from './AmountInput';

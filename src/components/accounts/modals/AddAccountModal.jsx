@@ -1,12 +1,35 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { TrendingUp } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
+import AmountInput from '../../common/AmountInput';
 import { 
-  formatNativeCurrency, 
-  convertToCOP 
+  formatNativeCurrency 
 } from '../../../utils/currencyUtils';
 import { normalizeAccountType } from '../../../services/syncEngine';
 import { useBackHandler } from '../../../hooks/useBackHandler';
+
+const PRESET_BRANDS = [
+  { name: 'Bancolombia', label: 'Bancolombia', brandKey: 'bancolombia', type: 'bank' },
+  { name: 'Nequi', label: 'Nequi', brandKey: 'nequi', type: 'savings' },
+  { name: 'Davivienda', label: 'Davivienda', brandKey: 'davivienda', type: 'bank' },
+  { name: 'Nu', label: 'Nu', brandKey: 'nu', type: 'bank' },
+  { 
+    name: 'BBVA', 
+    label: 'BBVA', 
+    brandKey: 'bbva', 
+    type: 'bank',
+    fallback: (
+      <div className="w-6 h-6 rounded bg-[#004481] text-white font-black text-[9px] flex items-center justify-center tracking-tighter">
+        BBVA
+      </div>
+    )
+  },
+  { name: 'Efectivo', label: 'Efectivo', brandKey: 'efectivo', type: 'cash' },
+  { name: 'Tarjeta Crédito', label: 'Tarjeta', brandKey: 'mastercard', type: 'credit' },
+  { name: 'Inversiones', label: 'Inversión', brandKey: 'dinero', type: 'investment' },
+];
+
+const isBBVA = (str) => typeof str === 'string' && str.toLowerCase().includes('bbva');
 
 /**
  * AddAccountModal
@@ -21,6 +44,9 @@ export default function AddAccountModal({
 }) {
   // Estados internos del formulario de creación
   const [newAccName, setNewAccName] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState(null);
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const iconPickerRef = useRef(null);
   const [newAccType, setNewAccType] = useState('bank');
   const [newAccCurrency, setNewAccCurrency] = useState('COP');
   const [newAccBalance, setNewAccBalance] = useState('');
@@ -37,6 +63,8 @@ export default function AddAccountModal({
 
   const resetForm = () => {
     setNewAccName('');
+    setSelectedBrand(null);
+    setShowIconPicker(false);
     setNewAccType('bank');
     setNewAccCurrency('COP');
     setNewAccBalance('');
@@ -48,6 +76,30 @@ export default function AddAccountModal({
     setNewAccClosingDate('25');
     setNewAccColor('#007AFF');
     setNewAccIcon('Building2');
+  };
+
+  useEffect(() => {
+    if (!showIconPicker) return;
+    const handleClickOutside = (e) => {
+      if (iconPickerRef.current && !iconPickerRef.current.contains(e.target)) {
+        setShowIconPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showIconPicker]);
+
+  const handleSelectPreset = (item) => {
+    setSelectedBrand(item.brandKey || item.name);
+    setNewAccName(item.name);
+    if (item.type) {
+      setNewAccType(item.type);
+    }
+    setShowIconPicker(false);
   };
 
   const handleClose = () => {
@@ -147,17 +199,9 @@ export default function AddAccountModal({
       >
         {/* Cabecera FIJA */}
         <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <BrandIcon name={newAccName} size={32} type={newAccType} />
-            <div>
-              <h3 className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
-                Nueva cuenta / método de pago
-              </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Personaliza el nombre, tipo y saldo de tu cuenta
-              </p>
-            </div>
-          </div>
+          <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
+            Nueva Cuenta
+          </h3>
           <button
             type="button"
             onClick={handleClose}
@@ -171,101 +215,113 @@ export default function AddAccountModal({
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Cuerpo con SCROLL interno automático */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
-            {/* Tarjeta de VISTA PREVIA EN VIVO (Estilo Tarjeta Fintech Binance) */}
-            <div className="rounded-2xl bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 p-4 transition-all">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
-                    <BrandIcon name={newAccName} size={40} type={newAccType} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-[10px] tracking-wider font-semibold text-slate-400 uppercase">
-                        Vista previa
-                      </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        {newAccCurrency}
-                      </span>
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-900 dark:text-white truncate leading-tight">
-                      {newAccName.trim() || 'Nombre de la cuenta'}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {newAccType === 'cash' ? 'Efectivo' : (newAccType === 'card' || newAccType === 'credit') ? 'Tarjeta de crédito' : newAccType === 'savings' ? 'Ahorros / billetera digital' : newAccType === 'investment' ? 'Inversión / acciones' : 'Banco / débito'}
-                    </p>
-                    {newAccType === 'investment' && parseFloat(newAccShares) > 0 && (
-                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-                        {newAccTicker ? `${newAccTicker} · ` : ''}{newAccShares} {parseFloat(newAccShares) === 1 ? 'acción' : 'acciones'} @ {formatNativeCurrency(parseFloat(newAccUnitPrice) || 0, newAccCurrency)} c/u
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <span className="text-[10px] tracking-wider font-semibold text-slate-400 uppercase block mb-0.5">
-                    {(newAccType === 'card' || newAccType === 'credit') ? 'Deuda / Saldo utilizado' : 'Saldo base'}
-                  </span>
-                  <span className={`text-lg sm:text-xl font-bold tabular-nums block ${
-                    (newAccType === 'card' || newAccType === 'credit') && (parseFloat(newAccBalance) || 0) > 0
-                      ? 'text-rose-600 dark:text-rose-400'
-                      : 'text-slate-900 dark:text-white'
-                  }`}>
-                    {(newAccType === 'card' || newAccType === 'credit') && (parseFloat(newAccBalance) || 0) > 0
-                      ? `-${formatNativeCurrency(parseFloat(newAccBalance) || 0, newAccCurrency)}`
-                      : formatNativeCurrency(parseFloat(newAccBalance) || 0, newAccCurrency)
-                    }
-                  </span>
-                  {newAccCurrency !== 'COP' && (
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block mt-0.5">
-                      ≈ $ {Math.round(convertToCOP(parseFloat(newAccBalance) || 0, newAccCurrency, trm)).toLocaleString('es-CO')} COP
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Selector de Moneda Principal de la Cuenta */}
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Divisa principal de la cuenta *
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { code: 'COP', label: '$ COP' },
-                  { code: 'USD', label: '$ USD' },
-                  { code: 'EUR', label: '€ EUR' }
-                ].map((item) => (
+            {/* Selector de Divisa Compacto y Sutil (Tabs superiores) */}
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                Divisa principal
+              </span>
+              <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.06]">
+                {['COP', 'USD', 'EUR'].map((code) => (
                   <button
-                    key={item.code}
+                    key={code}
                     type="button"
-                    onClick={() => setNewAccCurrency(item.code)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
-                      newAccCurrency === item.code
-                        ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                        : 'border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
+                    onClick={() => setNewAccCurrency(code)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      newAccCurrency === code
+                        ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    <span>{item.label}</span>
+                    {code}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Nombre *</label>
+            {/* Fila 1: Nombre de la cuenta (Ancho completo 100%) con avatar interactivo */}
+            <div className="relative">
+              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
+                Nombre de la cuenta *
+              </label>
+              <div className="flex items-center gap-2.5 w-full">
+                {/* Avatar / Icono interactivo de entidad bancaria */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowIconPicker((prev) => !prev)}
+                    title="Seleccionar icono o entidad"
+                    className="w-11 h-11 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+                  >
+                    <BrandIcon 
+                      name={selectedBrand || newAccName || 'Cuenta'} 
+                      type={newAccType} 
+                      size={26}
+                      fallback={
+                        isBBVA(selectedBrand || newAccName) ? (
+                          <div className="w-6 h-6 rounded bg-[#004481] text-white font-extrabold text-[9px] flex items-center justify-center tracking-tighter">
+                            BBVA
+                          </div>
+                        ) : null
+                      }
+                    />
+                  </button>
+
+                  {/* Popover / Menú desplegable para selección manual */}
+                  {showIconPicker && (
+                    <div 
+                      ref={iconPickerRef}
+                      className="absolute left-0 top-full mt-2 z-50 w-64 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl animate-fadeIn"
+                    >
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                        Entidades y Logos
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {PRESET_BRANDS.map((item) => (
+                          <button
+                            key={item.name}
+                            type="button"
+                            onClick={() => handleSelectPreset(item)}
+                            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-center cursor-pointer group"
+                            title={item.name}
+                          >
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80 group-hover:scale-110 transition-transform">
+                              <BrandIcon 
+                                name={item.brandKey || item.name} 
+                                size={22} 
+                                fallback={item.fallback || null}
+                              />
+                            </div>
+                            <span className="text-[10px] font-medium text-slate-600 dark:text-zinc-300 truncate w-full">
+                              {item.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input de texto a ancho completo 100% restante */}
                 <input
                   type="text"
                   required
-                  placeholder="ej: Bancolombia, Interactive Brokers..."
+                  placeholder="ej: Bancolombia, Nequi, Davivienda, BBVA..."
                   value={newAccName}
-                  onChange={(e) => setNewAccName(e.target.value)}
-                  className="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                  onChange={(e) => {
+                    setNewAccName(e.target.value);
+                    if (selectedBrand) setSelectedBrand(null);
+                  }}
+                  className="flex-1 min-w-0 w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-medium"
                 />
               </div>
+            </div>
 
+            {/* Fila 2: Dividida en 2 columnas (grid grid-cols-1 sm:grid-cols-2 gap-4) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Tipo de método *</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
+                  Tipo de método / cuenta *
+                </label>
                 <select
                   value={newAccType}
                   onChange={(e) => {
@@ -277,7 +333,7 @@ export default function AddAccountModal({
                     else if (val === 'investment') setNewAccIcon('TrendingUp');
                     else setNewAccIcon('Building2');
                   }}
-                  className="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+                  className="w-full h-11 text-xs sm:text-sm px-3 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-medium cursor-pointer"
                 >
                   <option value="bank">Banco / débito</option>
                   <option value="cash">Efectivo</option>
@@ -294,16 +350,13 @@ export default function AddAccountModal({
                     : `Saldo inicial (${newAccCurrency}) *`
                   }
                 </label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  min="0"
-                  placeholder="0"
+                <AmountInput
                   value={newAccBalance}
+                  onChange={(cleanVal) => setNewAccBalance(cleanVal)}
+                  allowDecimals={newAccCurrency !== 'COP'}
+                  placeholder="0"
                   onFocus={(e) => e.target.select()}
-                  onChange={(e) => setNewAccBalance(e.target.value)}
-                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
+                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold"
                 />
               </div>
             </div>
@@ -435,14 +488,14 @@ export default function AddAccountModal({
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2.5 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              className="px-4 py-2.5 h-11 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
+              className={`flex-1 sm:flex-initial px-6 py-2.5 h-11 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm active:scale-95 transition-all flex items-center justify-center cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
             >
               {isSubmitting ? 'Guardando...' : 'Guardar Cuenta'}
             </button>

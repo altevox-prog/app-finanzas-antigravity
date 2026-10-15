@@ -9,6 +9,7 @@ import {
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 import BrandIcon from '../../ui/BrandIcon';
+import AmountInput from '../../common/AmountInput';
 import { 
   getAccountNativeBalance, 
   formatNativeCurrency, 
@@ -290,26 +291,22 @@ export default function TransferModal({
               <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Monto a transferir ({fromCurrency}) *
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  required
-                  placeholder="0"
-                  value={amount}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
-                    setAmount(val);
-                    setErrorMsg('');
-                  }}
-                  className="w-full text-xl font-black px-4 py-3 rounded-2xl border bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-blue-500 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">
-                  {fromCurrency}
-                </span>
-              </div>
+              <AmountInput
+                value={amount}
+                onChange={(cleanVal) => {
+                  setAmount(cleanVal);
+                  setErrorMsg('');
+                }}
+                required
+                onFocus={(e) => e.target.select()}
+                suffix={
+                  <span className="font-bold text-xs text-slate-400">
+                    {fromCurrency}
+                  </span>
+                }
+                className="w-full text-xl font-black px-4 py-3 rounded-2xl border bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+              />
 
               {/* Vista previa de conversión si las monedas son diferentes */}
               {fromCurrency !== toCurrency && numAmount > 0 && (

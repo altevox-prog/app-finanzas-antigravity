@@ -1,4 +1,5 @@
 import React from 'react';
+import AmountInput from '../../common/AmountInput';
 
 /**
  * ProfileBudgetsView
@@ -55,14 +56,12 @@ export default function ProfileBudgetsView({
 
         {isEditingGlobalBudget ? (
           <div className="flex items-center gap-2 pt-1">
-            <input
-              type="number"
-              inputMode="decimal"
+            <AmountInput
               value={tempGlobalBudget}
               onFocus={(e) => e.target.select()}
-              onChange={(e) => setTempGlobalBudget(e.target.value)}
+              onChange={(cleanVal) => setTempGlobalBudget(cleanVal)}
               placeholder="Sin límite ($0)"
-              className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-zinc-100 text-xs sm:text-sm font-mono font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
+              className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-zinc-100 text-xs sm:text-sm font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
             />
             <button
               type="button"
@@ -193,14 +192,12 @@ export default function ProfileBudgetsView({
                 {/* Inline editor */}
                 {editingCatBudgetId === cat.id && (
                   <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-white/[0.06] animate-fadeIn">
-                    <input
-                      type="number"
-                      inputMode="decimal"
+                    <AmountInput
                       value={tempCatBudgetAmount}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setTempCatBudgetAmount(e.target.value)}
+                      onChange={(cleanVal) => setTempCatBudgetAmount(cleanVal)}
                       placeholder="Límite para esta categoría"
-                      className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/[0.08] text-xs sm:text-sm font-mono tabular-nums text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
+                      className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/[0.08] text-xs sm:text-sm font-mono text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
                     />
                     <button
                       type="button"

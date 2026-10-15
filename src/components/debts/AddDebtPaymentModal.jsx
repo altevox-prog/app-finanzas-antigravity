@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { usePrivacy } from '../../context/PrivacyContext';
+import AmountInput from '../common/AmountInput';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../../utils/currencyFormatter';
 
 export default function AddDebtPaymentModal({
@@ -261,15 +262,14 @@ export default function AddDebtPaymentModal({
                   </button>
                 )}
               </div>
-              <input
-                type="text"
-                inputMode="decimal"
+              <AmountInput
                 placeholder="0"
                 required
                 value={capitalAmount}
                 onFocus={(e) => e.target.select()}
-                onChange={(e) => setCapitalAmount(formatCurrencyInput(e.target.value, enableDecimals))}
-                className="w-full text-lg font-black px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 tabular-nums"
+                onChange={(cleanVal) => setCapitalAmount(cleanVal)}
+                enableDecimals={enableDecimals}
+                className="w-full text-lg font-black px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 style={{ color: 'var(--text-main)' }}
               />
             </div>
@@ -280,15 +280,14 @@ export default function AddDebtPaymentModal({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 Monto de intereses pagados ($) *
               </label>
-              <input
-                type="text"
-                inputMode="decimal"
+              <AmountInput
                 placeholder="0"
                 required
                 value={interestAmount}
                 onFocus={(e) => e.target.select()}
-                onChange={(e) => setInterestAmount(formatCurrencyInput(e.target.value, enableDecimals))}
-                className="w-full text-lg font-black px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-amber-500 tabular-nums"
+                onChange={(cleanVal) => setInterestAmount(cleanVal)}
+                enableDecimals={enableDecimals}
+                className="w-full text-lg font-black px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 style={{ color: 'var(--text-main)' }}
               />
             </div>
@@ -301,15 +300,14 @@ export default function AddDebtPaymentModal({
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     Abono a Capital ($) *
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <AmountInput
                     placeholder="0"
                     required
                     value={capitalAmount}
                     onFocus={(e) => e.target.select()}
-                    onChange={(e) => setCapitalAmount(formatCurrencyInput(e.target.value, enableDecimals))}
-                    className="w-full text-base font-black px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 tabular-nums"
+                    onChange={(cleanVal) => setCapitalAmount(cleanVal)}
+                    enableDecimals={enableDecimals}
+                    className="w-full text-base font-black px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     style={{ color: 'var(--text-main)' }}
                   />
                   <span className="text-[10px] text-slate-400 block">Reduce saldo adeudado</span>
@@ -319,15 +317,14 @@ export default function AddDebtPaymentModal({
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     Abono a Intereses ($) *
                   </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <AmountInput
                     placeholder="0"
                     required
                     value={interestAmount}
                     onFocus={(e) => e.target.select()}
-                    onChange={(e) => setInterestAmount(formatCurrencyInput(e.target.value, enableDecimals))}
-                    className="w-full text-base font-black px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-amber-500 tabular-nums"
+                    onChange={(cleanVal) => setInterestAmount(cleanVal)}
+                    enableDecimals={enableDecimals}
+                    className="w-full text-base font-black px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     style={{ color: 'var(--text-main)' }}
                   />
                   <span className="text-[10px] text-slate-400 block">Costo financiero / servicio</span>

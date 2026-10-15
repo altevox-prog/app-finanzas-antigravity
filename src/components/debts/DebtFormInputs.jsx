@@ -2,6 +2,7 @@ import React from 'react';
 import { Percent, ShieldCheck } from 'lucide-react';
 import DebtScheduleFields from './DebtScheduleFields';
 import DebtInterestAlertCard from './DebtInterestAlertCard';
+import AmountInput from '../common/AmountInput';
 import { formatCurrencyInput } from '../../utils/currencyFormatter';
 
 export default function DebtFormInputs({
@@ -59,19 +60,15 @@ export default function DebtFormInputs({
           <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
             Monto Base Total ($ COP) *
           </label>
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs opacity-50 font-bold">$</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              required
-              placeholder="0"
-              value={totalAmount}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => { setTotalAmount(formatCurrencyInput(e.target.value, enableDecimals)); setError(''); }}
-              className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-bold font-mono tabular-nums"
-            />
-          </div>
+          <AmountInput
+            value={totalAmount}
+            onChange={(cleanVal) => { setTotalAmount(cleanVal); setError(''); }}
+            enableDecimals={enableDecimals}
+            required
+            onFocus={(e) => e.target.select()}
+            prefix={<span className="text-xs opacity-50 font-bold">$</span>}
+            className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-bold font-mono"
+          />
         </div>
 
         <div>

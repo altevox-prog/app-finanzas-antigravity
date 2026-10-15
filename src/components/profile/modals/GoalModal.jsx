@@ -13,6 +13,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { useBackHandler } from '../../../hooks/useBackHandler';
+import AmountInput from '../../common/AmountInput';
 
 /**
  * GoalModal
@@ -242,39 +243,29 @@ export default function GoalModal({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Monto Objetivo ($ COP) *
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs opacity-50 font-mono font-bold">$</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    required
-                    min="1"
-                    placeholder="0"
-                    value={targetAmount}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => { setTargetAmount(e.target.value); setError(''); }}
-                    className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
-                  />
-                </div>
+                <AmountInput
+                  required
+                  placeholder="0"
+                  value={targetAmount}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(cleanVal) => { setTargetAmount(cleanVal); setError(''); }}
+                  prefix={<span className="text-xs opacity-50 font-mono font-bold">$</span>}
+                  className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Ahorrado Actual ($ COP)
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs opacity-50 font-mono font-bold">$</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    placeholder="0"
-                    value={currentAmount}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => setCurrentAmount(e.target.value)}
-                    className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
-                  />
-                </div>
+                <AmountInput
+                  placeholder="0"
+                  value={currentAmount}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(cleanVal) => setCurrentAmount(cleanVal)}
+                  prefix={<span className="text-xs opacity-50 font-mono font-bold">$</span>}
+                  className="w-full h-11 text-xs sm:text-sm pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono"
+                />
               </div>
             </div>
 

@@ -3,6 +3,7 @@ import { ArrowDownLeft, CheckCircle2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
+import AmountInput from '../common/AmountInput';
 
 /**
  * CreditCardPaymentSection
@@ -169,14 +170,12 @@ export default function CreditCardPaymentSection({
 
           <div>
             <label className="block text-[11px] font-semibold opacity-70 mb-1">Monto a Pagar ($ COP) *</label>
-            <input
-              type="number"
-              step="any"
-              min="1"
+            <AmountInput
               required
               placeholder="0"
               value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              onChange={(cleanVal) => setPaymentAmount(cleanVal)}
               className="w-full text-sm font-bold px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#34C759]"
               style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
             />
