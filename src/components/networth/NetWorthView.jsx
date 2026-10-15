@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -7,7 +7,7 @@ import {
   Scale 
 } from 'lucide-react';
 import { calculateNetWorth } from '../../utils/financeMath';
-import { getAccountNativeBalance, convertFromCOP } from '../../utils/currencyUtils';
+import { getAccountNativeBalance } from '../../utils/currencyUtils';
 import { usePrivacy } from '../../context/PrivacyContext';
 import NetWorthChart from './components/NetWorthChart';
 import AssetLiabilityBreakdown from './components/AssetLiabilityBreakdown';
@@ -28,7 +28,6 @@ export default function NetWorthView({
   onNavigate = null,
   fromSettings = false
 }) {
-  const [currency, setCurrency] = useState('COP'); // 'COP' | 'USD'
   const { formatMoney } = usePrivacy();
 
   // Cálculo consolidado de la Ecuación Patrimonial usando la lógica centralizada existente
@@ -56,14 +55,8 @@ export default function NetWorthView({
     payableCount
   } = netWorthData;
 
-  // Formateador adaptativo según selector de moneda (COP vs USD)
-  const formatVal = (amountCOP) => {
-    if (currency === 'USD') {
-      const valUSD = convertFromCOP(amountCOP, 'USD', trm);
-      return formatMoney(valUSD, 'USD');
-    }
-    return formatMoney(amountCOP, 'COP');
-  };
+  // Formateador consolidado fijado en COP
+  const formatVal = (amountCOP) => formatMoney(amountCOP, 'COP');
 
   // Ratios de apalancamiento y solvencia
   const liabilityRatio = totalAssetsCOP > 0 
@@ -85,60 +78,32 @@ export default function NetWorthView({
   return (
     <div className="space-y-4 sm:space-y-5 animate-fadeIn max-w-4xl mx-auto pb-8">
       {/* Cabecera Estándar Unificada */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-            aria-label="Volver"
-            title="Volver"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
-                Patrimonio Neto
-              </h2>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                isNetWorthPositive 
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-              }`}>
-                {isNetWorthPositive ? 'Solvente' : 'Pasivo Alto'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 truncate">
-              Balance general de activos y pasivos consolidados
-            </p>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+          aria-label="Volver"
+          title="Volver"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
+              Patrimonio Neto
+            </h2>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${
+              isNetWorthPositive 
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+            }`}>
+              {isNetWorthPositive ? 'Solvente' : 'Pasivo Alto'}
+            </span>
           </div>
-        </div>
-
-        {/* Selector compacto de divisa (COP / USD) */}
-        <div className="flex items-center p-0.5 bg-slate-100 dark:bg-zinc-800 rounded-xl border border-slate-200/80 dark:border-white/10 shrink-0">
-          <button
-            type="button"
-            onClick={() => setCurrency('COP')}
-            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              currency === 'COP'
-                ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white'
-            }`}
-          >
-            COP
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrency('USD')}
-            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              currency === 'USD'
-                ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white'
-            }`}
-          >
-            USD
-          </button>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 truncate mt-0.5">
+            Balance general de activos y pasivos consolidados
+          </p>
         </div>
       </div>
 
@@ -153,7 +118,7 @@ export default function NetWorthView({
             {formatVal(netWorthCOP)}
           </h3>
           <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1 font-mono">
-            {currency === 'USD' ? `TRM aplicada: $${Number(trm).toLocaleString('es-CO')} COP` : 'Calculado en pesos colombianos (COP)'}
+            Calculado en pesos colombianos (COP)
           </p>
         </div>
 
