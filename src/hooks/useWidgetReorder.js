@@ -26,12 +26,42 @@ export function useWidgetReorder({
     return getStoredWidgetsConfig();
   });
 
+/**
+ * Verifica si el puntero ha superado el punto medio del elemento objetivo
+ * en la dirección del movimiento, evitando rebotes entre posiciones adyacentes.
+ */
+function hasCrossedMidpoint(pointerX, pointerY, targetRect, fromIndex, toIndex) {
+  if (!targetRect || fromIndex === null || fromIndex === undefined || fromIndex === toIndex) {
+    return false;
+  }
+
+  const midX = targetRect.left + targetRect.width / 2;
+  const midY = targetRect.top + targetRect.height / 2;
+
+  // Si nos movemos hacia adelante en el arreglo (hacia abajo o a la derecha)
+  if (fromIndex < toIndex) {
+    if (Math.abs(pointerY - midY) > targetRect.height * 0.15) {
+      return pointerY > midY;
+    }
+    return pointerX > midX;
+  } else {
+    // Si nos movemos hacia atrás en el arreglo (hacia arriba o a la izquierda)
+    if (Math.abs(pointerY - midY) > targetRect.height * 0.15) {
+      return pointerY < midY;
+    }
+    return pointerX < midX;
+  }
+}
+
+const SWAP_THROTTLE_MS = 100;
+
   // 2. Estados y referencias para interacción (Long press & Drag-and-Drop)
   const [isReordering, setIsReordering] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const longPressTimerRef = useRef(null);
   const pressedIndexRef = useRef(null);
   const draggedIndexRef = useRef(null);
+  const lastSwapTimeRef = useRef(0);
   const widgetsRef = useRef(widgets);
   const isReorderingRef = useRef(isReordering);
   const touchStartPosRef = useRef({ x: 0, y: 0 });
@@ -161,8 +191,9 @@ export function useWidgetReorder({
     setWidgets((prevWidgets) => {
       const visibleList = prevWidgets.filter(w => {
         if (!w.visible) return false;
+        const norm = normalizeWidgetId(w.id);
+        if (norm === 'trm' || norm === 'trm_oficial' || w.id === 'trm' || w.id === 'trm_oficial') return false;
         if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
-          const norm = normalizeWidgetId(w.id);
           if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
         }
         return getWidget ? Boolean(getWidget(w.id)) : true;
@@ -216,7 +247,26 @@ export function useWidgetReorder({
         e.dataTransfer.dropEffect = 'move';
       }
     }
-    handleSwapWidgets(targetIndex);
+
+    const currentIndex = draggedIndexRef.current;
+    if (currentIndex === null || currentIndex === undefined || currentIndex === targetIndex) {
+      return;
+    }
+
+    // Throttling: evitar llamadas continuas a 60fps
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastSwapTimeRef.current < SWAP_THROTTLE_MS) {
+      return;
+    }
+
+    // Comprobación de umbral de punto medio para evitar rebotes entre posiciones adyacentes
+    const targetEl = e.currentTarget?.closest('[data-widget-index]') || e.currentTarget;
+    const targetRect = targetEl?.getBoundingClientRect();
+
+    if (hasCrossedMidpoint(e.clientX, e.clientY, targetRect, currentIndex, targetIndex)) {
+      lastSwapTimeRef.current = now;
+      handleSwapWidgets(targetIndex);
+    }
   }, [handleSwapWidgets]);
 
   const handleDrop = useCallback((e) => {
@@ -224,6 +274,7 @@ export function useWidgetReorder({
     if (e) e.preventDefault();
     draggedIndexRef.current = null;
     setDraggedIndex(null);
+    lastSwapTimeRef.current = 0;
 
     const currentWidgets = widgetsRef.current;
     localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
@@ -234,6 +285,7 @@ export function useWidgetReorder({
   const handleDragEnd = useCallback(() => {
     draggedIndexRef.current = null;
     setDraggedIndex(null);
+    lastSwapTimeRef.current = 0;
 
     const currentWidgets = widgetsRef.current;
     localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
@@ -273,7 +325,8 @@ export function useWidgetReorder({
       return;
     }
 
-    if (draggedIndexRef.current === null || draggedIndexRef.current === undefined) {
+    const currentIndex = draggedIndexRef.current;
+    if (currentIndex === null || currentIndex === undefined) {
       return;
     }
 
@@ -284,13 +337,23 @@ export function useWidgetReorder({
       e.preventDefault();
     }
 
-    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-    const widgetCard = targetEl?.closest('[data-widget-index]');
-    if (widgetCard) {
-      const targetIndex = Number(widgetCard.getAttribute('data-widget-index'));
-      if (!isNaN(targetIndex)) {
-        handleSwapWidgets(targetIndex);
-      }
+    // Throttling: evitar procesar ráfagas de eventos táctiles
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastSwapTimeRef.current < SWAP_THROTTLE_MS) {
+      return;
+    }
+
+    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-widget-index]');
+    if (!targetEl) return;
+
+    const targetIndex = Number(targetEl.getAttribute('data-widget-index'));
+    if (isNaN(targetIndex) || targetIndex === currentIndex) return;
+
+    // Comprobación de umbral de punto medio para evitar rebotes entre posiciones adyacentes
+    const targetRect = targetEl.getBoundingClientRect();
+    if (hasCrossedMidpoint(touch.clientX, touch.clientY, targetRect, currentIndex, targetIndex)) {
+      lastSwapTimeRef.current = now;
+      handleSwapWidgets(targetIndex);
     }
   }, [handlePressEnd, handleSwapWidgets]);
 
@@ -300,6 +363,7 @@ export function useWidgetReorder({
       if (draggedIndexRef.current !== null) {
         draggedIndexRef.current = null;
         setDraggedIndex(null);
+        lastSwapTimeRef.current = 0;
 
         const currentWidgets = widgetsRef.current;
         localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
@@ -314,6 +378,7 @@ export function useWidgetReorder({
     draggedIndexRef.current = null;
     setDraggedIndex(null);
     pressedIndexRef.current = null;
+    lastSwapTimeRef.current = 0;
 
     const currentWidgets = widgetsRef.current;
     localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
@@ -390,6 +455,7 @@ export function useWidgetReorder({
     setIsReordering,
     draggedIndex,
     setDraggedIndex,
+    isDragging: draggedIndex !== null && draggedIndex !== undefined,
     handlePressStart,
     handlePressEnd,
     handleSwapWidgets,

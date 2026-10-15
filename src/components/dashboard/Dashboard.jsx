@@ -112,7 +112,7 @@ export default function Dashboard({
         </div>
       )}
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full items-start touch-pan-y ${isReordering ? 'select-none' : ''} ${className || ''}`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full items-start touch-pan-y ${isReordering ? 'select-none [&_*]:!transition-none' : ''} ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
         {visibleWidgets.map((w, index) => {
           const widgetComponent = getWidget(w.id);
           if (!widgetComponent) return null;

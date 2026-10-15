@@ -53,19 +53,34 @@ export default function DashboardWidgetWrapper({
 
   // MODO REORGANIZACIÓN
   if (isReordering) {
-    const isJigglingAlt = index % 2 === 1;
+    const isDragging = draggedIndex !== null && draggedIndex !== undefined;
     const isCurrentlyDragged = draggedIndex === index;
+    const isJigglingAlt = index % 2 === 1;
+
+    // Desactivar animaciones continuas durante el arrastre activo para estabilizar las coordenadas
+    const animationClass = isDragging 
+      ? '!animate-none' 
+      : (isJigglingAlt ? 'animate-jiggle-alt' : 'animate-jiggle');
+
+    // Desactivar transiciones CSS durante reorganización/arrastre para evitar competición con el cálculo de coordenadas
+    const transitionClass = (isReordering || isDragging)
+      ? '!transition-none'
+      : 'transition-transform duration-150';
 
     return (
       <div
         data-widget-index={index}
-        className={`relative transition-transform duration-150 ${
+        onDragOver={(e) => onDragOver?.(e, index)}
+        onDrop={onDrop}
+        className={`relative ${
           wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'
-        } w-full ${
-          isJigglingAlt ? 'animate-jiggle-alt' : 'animate-jiggle'
-        } select-none touch-pan-y ${
-          isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : 'hover:scale-[1.01]'
+        } w-full select-none touch-pan-y ${transitionClass} ${animationClass} ${
+          isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : (isDragging ? '' : 'hover:scale-[1.01]')
         }`}
+        style={{
+          willChange: isReordering ? 'transform' : 'auto',
+          transform: 'translate3d(0, 0, 0)',
+        }}
       >
         {/* Manija de arrastre para móvil y PC */}
         <div
@@ -86,8 +101,8 @@ export default function DashboardWidgetWrapper({
           title="Arrastra desde aquí para mover el widget"
           aria-label="Manija para mover widget"
         >
-          <GripVertical className="w-3.5 h-3.5 opacity-90 text-slate-300" />
-          <span className="text-[11px] font-bold tracking-tight">Mover</span>
+          <GripVertical className="w-3.5 h-3.5 opacity-90 text-slate-300 pointer-events-none select-none" />
+          <span className="text-[11px] font-bold tracking-tight pointer-events-none select-none">Mover</span>
         </div>
 
         {/* Botón flotante para ocultar widget en modo reorganización */}
@@ -100,11 +115,17 @@ export default function DashboardWidgetWrapper({
           title="Ocultar widget"
           aria-label="Ocultar widget"
         >
-          <EyeOff className="w-3.5 h-3.5 stroke-[2.5]" />
+          <EyeOff className="w-3.5 h-3.5 stroke-[2.5] pointer-events-none select-none" />
         </button>
 
-        {/* Contenido del widget sin eventos interactivos en reordenamiento */}
-        <div className="pointer-events-none">
+        {/* Contenido del widget sin eventos interactivos ni transiciones internas durante reordenamiento */}
+        <div 
+          className="pointer-events-none select-none [&_*]:!pointer-events-none [&_*]:!transition-none"
+          style={{ 
+            willChange: isReordering ? 'transform' : 'auto',
+            transform: 'translate3d(0, 0, 0)' 
+          }}
+        >
           {children}
         </div>
       </div>
@@ -123,6 +144,9 @@ export default function DashboardWidgetWrapper({
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
       className={`w-full touch-pan-y ${wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'}`}
+      style={{
+        transform: 'translate3d(0, 0, 0)',
+      }}
     >
       {children}
     </div>
