@@ -11,12 +11,24 @@ export default function AccountsWidget({
   transactions = [],
   trm = 4050,
   onNavigateToTab = () => {},
+  onOpenAccounts,
+  setActiveTab,
   onSelectCreditCardDetail = () => {},
   formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`
 }) {
   const accountList = Array.isArray(accounts) ? accounts : [];
   const isTwoAccounts = accountList.length === 2;
   const isThreeOrMore = accountList.length >= 3;
+
+  const handleNavigateToAccounts = () => {
+    if (typeof onOpenAccounts === 'function') {
+      onOpenAccounts();
+    } else if (typeof onNavigateToTab === 'function') {
+      onNavigateToTab('accounts');
+    } else if (typeof setActiveTab === 'function') {
+      setActiveTab('accounts');
+    }
+  };
 
   // En PC (md: en adelante): 2 columnas al 100% alineadas con el Dashboard si hay 2 cuentas, o 3 columnas si hay 3 o más
   // En Móvil (< md): carrusel horizontal táctil (flex overflow-x-auto snap-x gap-3)
@@ -44,6 +56,15 @@ export default function AccountsWidget({
             {accountList.length} {accountList.length === 1 ? 'cuenta' : 'cuentas'}
           </span>
         </div>
+        {accountList.length > 0 && (
+          <button
+            type="button"
+            onClick={handleNavigateToAccounts}
+            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors cursor-pointer"
+          >
+            Ver todas →
+          </button>
+        )}
       </div>
 
       {/* Galería horizontal deslizable con no-scrollbar en móvil / grid alineado en PC */}
@@ -53,7 +74,7 @@ export default function AccountsWidget({
       >
         {accountList.length === 0 ? (
           <div 
-            onClick={() => onNavigateToTab('accounts')}
+            onClick={handleNavigateToAccounts}
             className="w-full sm:w-[320px] p-4 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 transition-all group"
           >
             <div className="flex items-center gap-3">
@@ -100,13 +121,7 @@ export default function AccountsWidget({
             return (
               <div 
                 key={acc?.id || `acc-car-${index}`}
-                onClick={() => {
-                  if (isCreditCard) {
-                    onSelectCreditCardDetail(acc);
-                  } else {
-                    onNavigateToTab('accounts');
-                  }
-                }}
+                onClick={handleNavigateToAccounts}
                 className={`shrink-0 snap-start ${cardResponsiveClasses} p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-sm hover:shadow-sm cursor-pointer active:scale-98 transition-all hover:border-slate-300 dark:hover:border-white/20 group`}
               >
                 {/* Cabecera de la tarjeta: Logo + Tipo + Moneda */}

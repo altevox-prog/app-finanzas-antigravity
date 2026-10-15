@@ -211,7 +211,7 @@ export function createWidgetRegistry({
         trm={trm}
         onNavigateToTab={navigateToTab}
         setActiveTab={navigateToTab}
-        onSelectCreditCardDetail={onSelectCreditCardDetail}
+        onOpenAccounts={() => navigateToTab('accounts')}
         formatMoney={formatMoney}
       />
     ),

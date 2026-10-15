@@ -16,11 +16,14 @@ export default function TopAccountsWidget({
   trm = 4000,
   formatMoney = (val) => `$${val}`,
   onAccountClick,
-  onNavigateToTab
+  onNavigateToTab,
+  onOpenAccounts
 }) {
   const topAccounts = Array.isArray(accounts) ? accounts.slice(0, 4) : [];
   const handleNavigate = () => {
-    if (typeof onAccountClick === 'function') {
+    if (typeof onOpenAccounts === 'function') {
+      onOpenAccounts();
+    } else if (typeof onAccountClick === 'function') {
       onAccountClick('accounts');
     } else if (typeof onNavigateToTab === 'function') {
       onNavigateToTab('accounts');
