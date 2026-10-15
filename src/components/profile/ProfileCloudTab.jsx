@@ -11,7 +11,6 @@ import {
   UploadCloud, 
   AlertTriangle 
 } from 'lucide-react';
-import Avatar from '../ui/Avatar';
 import { signInWithGoogle } from '../../services/supabaseClient';
 import { 
   downloadBackupJSON, 
@@ -150,55 +149,26 @@ export default function ProfileCloudTab({
         </div>
 
         {isCloudUser ? (
-          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar
-                  src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture}
-                  name={user?.user_metadata?.full_name}
-                  email={user?.email}
-                  size="lg"
-                  showStatus={true}
-                  isOnline={true}
-                />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                      {user?.user_metadata?.full_name || 'Cuenta Google'}
-                    </h4>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Conectado
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
-                    {user?.email}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2.5 pt-2 border-t border-slate-200/70 dark:border-slate-700/60">
-              {typeof onManualCloudSync === 'function' && (
-                <button
-                  type="button"
-                  onClick={triggerCloudSync}
-                  disabled={isCloudSyncing}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin' : ''}`} />
-                  <span>{isCloudSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}</span>
-                </button>
-              )}
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            {typeof onManualCloudSync === 'function' && (
               <button
                 type="button"
-                onClick={triggerLogout}
-                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                onClick={triggerCloudSync}
+                disabled={isCloudSyncing}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Cerrar sesión</span>
+                <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+                <span>{isCloudSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}</span>
               </button>
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={triggerLogout}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Cerrar sesión</span>
+            </button>
           </div>
         ) : (
           <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
@@ -255,39 +225,24 @@ export default function ProfileCloudTab({
           </h3>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-3.5">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 ${
-                isCloudUser
-                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
-                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-500'
-              }`}>
-                {isCloudUser ? <Cloud className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {isCloudUser ? 'Sincronización en la Nube' : 'Modo Local'}
-                  </h4>
-                  {isCloudUser ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Sincronización en la Nube Activa
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                      Modo Local (Sin sincronizar)
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  {isCloudUser
-                    ? 'Tus datos se respaldan de forma segura en tu cuenta en la nube, con una copia local en este dispositivo para respuesta instantánea y disponibilidad offline.'
-                    : 'Tus datos residen únicamente en este navegador (localStorage). Inicia sesión con tu correo para habilitar respaldo multi-dispositivo.'}
-                </p>
-              </div>
+        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 ${
+              isCloudUser
+                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
+                : 'bg-amber-500/10 border border-amber-500/20 text-amber-500'
+            }`}>
+              {isCloudUser ? <Cloud className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {isCloudUser ? 'Sincronización en la Nube' : 'Modo Local'}
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                {isCloudUser
+                  ? 'Tus datos se respaldan de forma segura en tu cuenta en la nube, con una copia local en este dispositivo para respuesta instantánea y disponibilidad offline.'
+                  : 'Tus datos residen únicamente en este navegador (localStorage). Inicia sesión con tu correo para habilitar respaldo multi-dispositivo.'}
+              </p>
             </div>
           </div>
         </div>
