@@ -6,7 +6,8 @@ import {
   CreditCard, 
   Tag, 
   ChevronRight,
-  Scale 
+  Scale,
+  FileText 
 } from 'lucide-react';
 
 /**
@@ -120,6 +121,35 @@ export default function ProfileFinancesTab({
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+          </button>
+
+          {/* Impuestos y Declaración de Renta */}
+          <button
+            type="button"
+            onClick={() => {
+              onClose?.();
+              if (typeof onNavigate === 'function') {
+                onNavigate('tax');
+              } else if (typeof setCurrentView === 'function') {
+                setCurrentView('tax');
+              }
+            }}
+            className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <FileText className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                  Impuestos y Declaración de Renta
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Topes DIAN, estimación de renta y retenciones
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors" />
           </button>
         </div>
       </div>

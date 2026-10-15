@@ -272,7 +272,7 @@ export default function ViewRouter({
       )}
 
       {/* Vista Dedicada: Impuestos y Declaración de Renta DIAN */}
-      {activeTab === 'tax' && (
+      {(activeTab === 'tax' || activeTab === 'taxes' || activeTab === 'impuestos') && (
         <TaxView
           transactions={transactions}
           accounts={accounts}

@@ -6,7 +6,6 @@ import {
   ArrowUpDown,
   CreditCard,
   CalendarSync,
-  Landmark,
   Scale,
   HandCoins,
   TrendingUp,
@@ -111,12 +110,6 @@ export default function DesktopSidebar({
       id: 'recurring',
       label: 'Pagos recurrentes',
       icon: <CalendarSync className="w-4.5 h-4.5" />
-    },
-    {
-      id: 'tax',
-      label: 'Impuestos y renta',
-      icon: <Landmark className="w-4.5 h-4.5" />,
-      badge: 'DIAN'
     },
     {
       id: 'debts',

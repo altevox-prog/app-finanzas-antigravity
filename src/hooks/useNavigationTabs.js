@@ -135,9 +135,10 @@ export function useNavigationTabs({
 
   // Retorno desde sub-vistas hacia ajustes, net_worth o dashboard
   const handleGoBackFromSubView = useCallback(() => {
-    // Si estamos en net_worth y venimos de settings, regresar a settings
-    if (activeTab === 'net_worth' && fromSettings) {
+    // Si estamos en una vista abierta directamente desde settings (tax, net_worth, etc.), regresar a settings
+    if (fromSettings && (activeTab === 'tax' || activeTab === 'taxes' || activeTab === 'impuestos' || activeTab === 'net_worth' || historyStack.length <= 2)) {
       setFromSettings(false);
+      setHistoryStack(['dashboard']);
       if (onOpenProfile) onOpenProfile();
       return;
     }

@@ -91,7 +91,7 @@ export default function DesktopLayout({
                 {activeTab === 'transactions' && 'Historial de movimientos'}
                 {activeTab === 'accounts' && 'Cuentas y métodos de pago'}
                 {activeTab === 'recurring' && 'Pagos recurrentes y suscripciones'}
-                {activeTab === 'tax' && 'Impuestos y declaración de renta'}
+                {(activeTab === 'tax' || activeTab === 'taxes' || activeTab === 'impuestos') && 'Impuestos y declaración de renta'}
                 {(activeTab === 'debts' || activeTab === 'loans') && 'Préstamos y deudas'}
                 {activeTab === 'investments' && 'Portafolio de inversiones'}
                 {(activeTab === 'net_worth' || activeTab === 'networth' || activeTab === 'patrimonio') && 'Patrimonio neto y balance'}

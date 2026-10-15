@@ -17,6 +17,8 @@ const TAB_TITLES = {
   accounts: 'Cuentas y métodos de pago',
   recurring: 'Pagos recurrentes y suscripciones',
   tax: 'Impuestos y declaración de renta',
+  taxes: 'Impuestos y declaración de renta',
+  impuestos: 'Impuestos y declaración de renta',
   debts: 'Préstamos y deudas',
   loans: 'Préstamos y deudas',
   investments: 'Portafolio de inversiones',
