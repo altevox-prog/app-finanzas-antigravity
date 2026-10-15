@@ -41,10 +41,12 @@ function formatIntegerWithDots(intStr) {
  * @param {boolean} allowDecimals
  * @returns {string} Cadena formateada para el input (ej. "1.250.500" o "1.250.500,50")
  */
-export function formatCurrencyInput(value, allowDecimals = false) {
+export function formatCurrencyInput(value, allowDecimals = true) {
   if (value === undefined || value === null || value === '') return '';
 
+  // 1. Si es un número primitivo
   if (typeof value === 'number') {
+    if (isNaN(value)) return '';
     if (!allowDecimals) {
       return formatIntegerWithDots(Math.round(value));
     }
@@ -60,49 +62,56 @@ export function formatCurrencyInput(value, allowDecimals = false) {
   if (!str) return '';
 
   if (!allowDecimals) {
-    // Si no permite decimales, solo dígitos con puntos de miles
+    if (str.includes(',')) {
+      return formatIntegerWithDots(str.split(',')[0]);
+    }
     return formatIntegerWithDots(str);
   }
 
-  // Si allowDecimals es true:
-  // Detectar si el usuario acaba de escribir un separador decimal al final (coma o punto)
+  // 2. Si el usuario escribe una coma o punto al final (inicio explícito de decimales)
   if (str.endsWith(',') || str.endsWith('.')) {
     const before = str.slice(0, -1);
     const formattedBefore = formatIntegerWithDots(before) || '0';
     return `${formattedBefore},`;
   }
 
-  const hasComma = str.includes(',');
-  const hasDot = str.includes('.');
+  // 3. Si hay coma explícita: divide en [parteEntera, parteDecimal]
+  if (str.includes(',')) {
+    const idx = str.indexOf(',');
+    const rawInt = str.slice(0, idx);
+    const rawDec = str.slice(idx + 1).replace(/\D/g, '').slice(0, 2);
+    const parteEntera = formatIntegerWithDots(rawInt) || '0';
+    return rawDec !== '' ? `${parteEntera},${rawDec}` : `${parteEntera},`;
+  }
 
-  let intPart = '';
-  let decPart = null;
-
-  if (hasComma) {
-    const parts = str.split(',');
-    intPart = parts[0];
-    // Ignorar comas/puntos adicionales y dejar máximo 2 dígitos decimales
-    decPart = parts.slice(1).join('').replace(/\D/g, '').slice(0, 2);
-  } else if (hasDot) {
+  // 4. Si hay un punto:
+  // En este formato, los puntos normales son separadores de miles ('1.000', '1.250.500').
+  // Al borrar un cero de '1.000' queda '1.00', que debe interpretarse como entero ('100').
+  // Solo se considera punto decimal explícito si:
+  // a) Empieza por '0.' o '.' (ej. '0.5' o '.5')
+  // b) O tiene decimales explícitos no-cero (ej. pegado '1000.5' o '800000.50')
+  if (str.includes('.')) {
     const dotParts = str.split('.');
-    // Si hay un solo punto y la parte después tiene <= 2 dígitos (ej. "1250.5" o "1250.50")
-    if (dotParts.length === 2 && dotParts[1].length <= 2) {
-      intPart = dotParts[0];
-      decPart = dotParts[1].replace(/\D/g, '').slice(0, 2);
-    } else {
-      // Puntos múltiples o formato miles (ej. "1.250.500")
-      intPart = str.replace(/\./g, '');
+    const lastPart = dotParts[dotParts.length - 1];
+
+    const isExplicitDecimal = 
+      (str.startsWith('0.') || str.startsWith('.')) ||
+      (dotParts.length === 2 && lastPart.length <= 2 && !/^0+$/.test(lastPart)) ||
+      (dotParts.length > 2 && lastPart.length <= 2 && !/^0+$/.test(lastPart));
+
+    if (isExplicitDecimal) {
+      const rawInt = dotParts.slice(0, -1).join('');
+      const rawDec = lastPart.replace(/\D/g, '').slice(0, 2);
+      const parteEntera = formatIntegerWithDots(rawInt) || '0';
+      return `${parteEntera},${rawDec}`;
     }
-  } else {
-    intPart = str;
+
+    // Puntos de miles o remanentes de backspace: 100% entero
+    return formatIntegerWithDots(str);
   }
 
-  const formattedInt = formatIntegerWithDots(intPart) || (decPart !== null ? '0' : '');
-
-  if (decPart !== null) {
-    return `${formattedInt},${decPart}`;
-  }
-  return formattedInt;
+  // 5. Sin coma ni punto: 100% entero
+  return formatIntegerWithDots(str);
 }
 
 /**
@@ -115,34 +124,53 @@ export function parseFormattedAmount(strValue) {
   if (strValue === undefined || strValue === null || strValue === '') return 0;
   if (typeof strValue === 'number') return isNaN(strValue) ? 0 : strValue;
 
-  let clean = String(strValue).trim().replace(/[^0-9.,-]/g, '');
+  let clean = String(strValue).trim();
   if (!clean || clean === '-') return 0;
 
   const isNegative = clean.startsWith('-');
   if (isNegative) clean = clean.substring(1);
 
+  // Conservar solo dígitos, comas y puntos
+  clean = clean.replace(/[^0-9.,]/g, '');
+  if (!clean) return 0;
+
+  // 1. Si hay coma: separador decimal explícito
   if (clean.includes(',')) {
-    const parts = clean.split(',');
-    const intStr = parts[0].replace(/\./g, '');
-    const decStr = parts.slice(1).join('').replace(/[^0-9]/g, '').slice(0, 2);
-    const num = parseFloat((intStr || '0') + '.' + (decStr || '0'));
+    const idx = clean.indexOf(',');
+    const intStr = clean.slice(0, idx).replace(/\D/g, '') || '0';
+    const decStr = clean.slice(idx + 1).replace(/\D/g, '').slice(0, 2);
+    const num = parseFloat(intStr + (decStr ? `.${decStr}` : ''));
+    if (isNaN(num)) return 0;
     return isNegative ? -num : num;
   }
 
+  // 2. Si hay punto:
   if (clean.includes('.')) {
     const dotParts = clean.split('.');
-    if (dotParts.length > 2) {
-      // Múltiples puntos: separadores de miles
-      clean = clean.replace(/\./g, '');
-    } else if (dotParts.length === 2) {
-      if (dotParts[1].length === 3) {
-        // Un solo punto con 3 dígitos: ej. 1.000 -> 1000
-        clean = clean.replace(/\./g, '');
-      }
+    const lastPart = dotParts[dotParts.length - 1];
+    const isExplicitDecimal = 
+      (clean.startsWith('0.') || clean.startsWith('.')) ||
+      (dotParts.length === 2 && lastPart.length <= 2 && !/^0+$/.test(lastPart)) ||
+      (dotParts.length > 2 && lastPart.length <= 2 && !/^0+$/.test(lastPart));
+
+    if (isExplicitDecimal) {
+      const intStr = dotParts.slice(0, -1).join('').replace(/\D/g, '') || '0';
+      const decStr = lastPart.replace(/\D/g, '').slice(0, 2);
+      const num = parseFloat(intStr + (decStr ? `.${decStr}` : ''));
+      if (isNaN(num)) return 0;
+      return isNegative ? -num : num;
     }
+
+    // Puntos de miles (ej. 1.000, 1.250.500)
+    const intStr = clean.replace(/\D/g, '');
+    const num = parseFloat(intStr);
+    if (isNaN(num)) return 0;
+    return isNegative ? -num : num;
   }
 
-  const num = parseFloat(clean);
+  // 3. Sin coma ni punto: 100% entero
+  const intStr = clean.replace(/\D/g, '');
+  const num = parseFloat(intStr);
   if (isNaN(num)) return 0;
   return isNegative ? -num : num;
 }

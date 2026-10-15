@@ -72,13 +72,13 @@ export default function InvestmentFormModal({
       const rawInv = currentInitial.investedAmount ?? currentInitial.invested_amount ?? currentInitial.amount ?? currentInitial.totalInvested;
       setInvestedAmount(
         rawInv !== undefined && rawInv !== null && Number(rawInv) !== 0
-          ? formatCurrencyInput(rawInv, enableDecimals)
+          ? formatCurrencyInput(rawInv, true)
           : ''
       );
       const rawCurr = currentInitial.currentAmount ?? currentInitial.currentValue ?? currentInitial.current_value;
       setCurrentAmount(
         rawCurr !== undefined && rawCurr !== null && Number(rawCurr) !== 0
-          ? formatCurrencyInput(rawCurr, enableDecimals)
+          ? formatCurrencyInput(rawCurr, true)
           : ''
       );
       setNotes(currentInitial.notes || '');
@@ -116,7 +116,7 @@ export default function InvestmentFormModal({
     const rate = toSafeNumber(interestRate);
     if (inv > 0 && rate > 0 && startDate) {
       const { maturityTotal } = calculateCDTAccruedReturn(inv, rate, startDate);
-      setCurrentAmount(formatCurrencyInput(enableDecimals ? Number(maturityTotal.toFixed(2)) : Math.round(maturityTotal), enableDecimals));
+      setCurrentAmount(formatCurrencyInput(Number(maturityTotal.toFixed(2)), true));
     }
   };
 
@@ -351,7 +351,7 @@ export default function InvestmentFormModal({
                 value={investedAmount}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => {
-                  const formatted = formatCurrencyInput(e.target.value, enableDecimals);
+                  const formatted = formatCurrencyInput(e.target.value, true);
                   setInvestedAmount(formatted);
                   if (!currentAmount || currentAmount === investedAmount) {
                     setCurrentAmount(formatted);
@@ -385,7 +385,7 @@ export default function InvestmentFormModal({
                 placeholder="0"
                 value={currentAmount}
                 onFocus={(e) => e.target.select()}
-                onChange={(e) => setCurrentAmount(formatCurrencyInput(e.target.value, enableDecimals))}
+                onChange={(e) => setCurrentAmount(formatCurrencyInput(e.target.value, true))}
                 className="w-full text-xs font-black px-3 py-2.5 rounded-xl border border-transparent focus:outline-none"
                 style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
               />

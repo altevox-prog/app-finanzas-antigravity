@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { fetchMarketPrice } from '../../../services/marketQuotesService';
+import { formatCurrencyInput } from '../../../utils/currencyFormatter';
 
 export default function MarketAssetFields({
   category,
@@ -45,9 +46,9 @@ export default function MarketAssetFields({
         if (shares && parseFloat(shares) > 0) {
           const s = parseFloat(shares);
           const curr = Math.round(s * numPrice * 100) / 100;
-          setCurrentAmount(String(curr));
+          setCurrentAmount(formatCurrencyInput(curr, true));
           if (!investedAmount) {
-            setInvestedAmount(String(curr));
+            setInvestedAmount(formatCurrencyInput(curr, true));
           }
         }
       }
@@ -65,9 +66,9 @@ export default function MarketAssetFields({
     const b = parseFloat(buyPrice);
     const c = parseFloat(currentPrice);
     if (!isNaN(s) && s > 0) {
-      if (!isNaN(b) && b > 0) setInvestedAmount(String(Math.round(s * b * 100) / 100));
-      if (!isNaN(c) && c > 0) setCurrentAmount(String(Math.round(s * c * 100) / 100));
-      else if (!isNaN(b) && b > 0 && !currentAmount) setCurrentAmount(String(Math.round(s * b * 100) / 100));
+      if (!isNaN(b) && b > 0) setInvestedAmount(formatCurrencyInput(Math.round(s * b * 100) / 100, true));
+      if (!isNaN(c) && c > 0) setCurrentAmount(formatCurrencyInput(Math.round(s * c * 100) / 100, true));
+      else if (!isNaN(b) && b > 0 && !currentAmount) setCurrentAmount(formatCurrencyInput(Math.round(s * b * 100) / 100, true));
     }
   };
 
@@ -76,7 +77,7 @@ export default function MarketAssetFields({
     const b = parseFloat(val);
     const s = parseFloat(shares);
     if (!isNaN(b) && b > 0 && !isNaN(s) && s > 0) {
-      setInvestedAmount(String(Math.round(s * b * 100) / 100));
+      setInvestedAmount(formatCurrencyInput(Math.round(s * b * 100) / 100, true));
     }
   };
 
@@ -85,7 +86,7 @@ export default function MarketAssetFields({
     const c = parseFloat(val);
     const s = parseFloat(shares);
     if (!isNaN(c) && c > 0 && !isNaN(s) && s > 0) {
-      setCurrentAmount(String(Math.round(s * c * 100) / 100));
+      setCurrentAmount(formatCurrencyInput(Math.round(s * c * 100) / 100, true));
     }
   };
 
