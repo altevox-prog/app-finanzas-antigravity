@@ -56,7 +56,7 @@ export default function AllCategoriesModal({
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Total del período: <span className="font-bold text-rose-500">-{formatMoney(totalExpense)}</span>
+              Total del período: <span className="font-bold text-rose-500 dark:text-rose-400">-{formatMoney(totalExpense)}</span>
             </p>
           </div>
           <button
@@ -109,7 +109,7 @@ export default function AllCategoriesModal({
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-bold text-slate-900 dark:text-white tabular-nums">
+                      <span className="font-bold text-rose-500 dark:text-rose-400 tabular-nums">
                         -{formatMoney(cat.amount)}
                       </span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-slate-300">

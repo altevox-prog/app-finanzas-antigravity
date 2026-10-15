@@ -76,7 +76,11 @@ export default function RecentTransactionsWidget({
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-xs">
               {recentTransactions.map((tx) => {
-                const isInc = tx.type === 'income';
+                const type = String(tx?.type || '').toLowerCase();
+                const amt = Number(tx?.amount) || 0;
+                const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer);
+                const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
+                const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
                 const displayEmoji = getCategoryEmoji(
                   { icon: tx.categoryIcon, name: tx.categoryName },
                   tx.categoryName
@@ -117,8 +121,14 @@ export default function RecentTransactionsWidget({
 
                     {/* Monto */}
                     <td className="py-3 pr-2 text-right font-bold font-mono tracking-tight tabular-nums">
-                      <span className={isInc ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}>
-                        {isInc ? '+' : '-'}{formatMoney(tx.amount)}
+                      <span className={
+                        isExpense 
+                          ? 'text-rose-500 dark:text-rose-400' 
+                          : isIncome 
+                            ? 'text-emerald-500 dark:text-emerald-400' 
+                            : 'text-slate-600 dark:text-zinc-300'
+                      }>
+                        {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
                       </span>
                     </td>
                   </tr>

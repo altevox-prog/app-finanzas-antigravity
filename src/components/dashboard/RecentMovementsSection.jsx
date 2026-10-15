@@ -125,7 +125,11 @@ export default function RecentMovementsSection({
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-white/5">
               {recentTransactions.map((tx, idx) => {
-                const isIncome = String(tx?.type || '').toLowerCase() === 'income' || String(tx?.type || '').toLowerCase() === 'ingreso';
+                const type = String(tx?.type || '').toLowerCase();
+                const amt = Number(tx?.amount) || 0;
+                const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer);
+                const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
+                const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
                 const noteOrCategory = tx?.note || tx?.categoryName || tx?.category || 'Movimiento';
                 const accountLabel = tx?.accountName || tx?.account || '';
                 const dateLabel = tx?.date ? String(tx.date).split('T')[0] : '';
@@ -140,15 +144,19 @@ export default function RecentMovementsSection({
                     <div className="flex items-center gap-2.5 min-w-0 pr-2">
                       <div
                         className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                          isIncome
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                          isExpense
+                            ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400'
+                            : isIncome
+                              ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
+                              : 'bg-slate-500/10 text-slate-500 dark:text-slate-400'
                         }`}
                       >
-                        {isIncome ? (
+                        {isExpense ? (
+                          <ArrowUpRight className="w-4 h-4" />
+                        ) : isIncome ? (
                           <ArrowDownRight className="w-4 h-4" />
                         ) : (
-                          <ArrowUpRight className="w-4 h-4" />
+                          <Activity className="w-4 h-4" />
                         )}
                       </div>
                       <div className="min-w-0">
@@ -164,14 +172,16 @@ export default function RecentMovementsSection({
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`text-xs sm:text-sm font-bold font-mono tabular-nums ${
-                          isIncome
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-rose-600 dark:text-rose-400'
+                        className={`text-xs sm:text-sm font-bold font-mono tabular-nums whitespace-nowrap ${
+                          isExpense
+                            ? 'text-rose-500 dark:text-rose-400'
+                            : isIncome
+                              ? 'text-emerald-500 dark:text-emerald-400'
+                              : 'text-slate-600 dark:text-zinc-300'
                         }`}
                       >
-                        {isIncome ? '+' : '-'}
-                        {formatMoney(Math.abs(Number(tx?.amount) || 0))}
+                        {isExpense ? '-' : isIncome ? '+' : ''}
+                        {formatMoney(Math.abs(amt))}
                       </span>
                     </div>
                   </div>

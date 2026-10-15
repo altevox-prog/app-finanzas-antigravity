@@ -49,6 +49,11 @@ export default function TransactionDetailModal({
   };
 
   const categoryColor = categories.find(c => c.id === transaction.categoryId)?.color || '#007AFF';
+  const amt = Number(transaction.amount || 0);
+  const type = transaction.type;
+  const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(transaction.isTransfer);
+  const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
+  const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
 
   return (
     <div 
@@ -86,19 +91,21 @@ export default function TransactionDetailModal({
             fallback={null} 
           />
           <div 
-            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold mb-1" 
-            style={{
-              backgroundColor: transaction.type === 'expense' ? 'rgba(255,59,48,0.15)' : 'rgba(52,199,89,0.15)',
-              color: transaction.type === 'expense' ? '#FF3B30' : '#34C759'
-            }}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold mb-1 ${
+              isExpense
+                ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400'
+                : isIncome
+                ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
+                : 'bg-slate-500/10 text-slate-600 dark:text-zinc-300'
+            }`}
           >
-            {transaction.type === 'expense' ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-            <span>{transaction.type === 'expense' ? 'Gasto' : 'Ingreso'}</span>
+            {isExpense ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+            <span>{isExpense ? 'Gasto' : isIncome ? 'Ingreso' : 'Transferencia'}</span>
           </div>
           <div className={`text-3xl font-extrabold tabular-nums tracking-tight ${
-            transaction.type === 'expense' ? 'text-[#FF3B30]' : 'text-[#34C759]'
+            isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-600 dark:text-zinc-300'
           }`}>
-            {transaction.type === 'expense' ? '-' : '+'}{formatMoney(transaction.amount)}
+            {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
           </div>
           {transaction.originalCurrency && transaction.originalCurrency !== 'COP' && (
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums">

@@ -46,7 +46,11 @@ export default function TransactionItem({
   onViewReceipt
 }) {
   const { formatMoney } = usePrivacy();
-  const isExpense = tx.type === 'expense';
+  const type = String(tx?.type || '').toLowerCase();
+  const amt = Number(tx?.amount) || 0;
+  const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer);
+  const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
+  const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
 
   return (
     <div 
@@ -64,7 +68,7 @@ export default function TransactionItem({
               fallback={
                 <CategoryIcon
                   category={category || tx.categoryName}
-                  status={isExpense ? 'negative' : 'positive'}
+                  status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
                   size={14}
                   withBadge={false}
                 />
@@ -79,9 +83,13 @@ export default function TransactionItem({
         {/* Derecha: Monto monetario */}
         <div className="flex items-center gap-2 shrink-0">
           <span className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums whitespace-nowrap ${
-            isExpense ? 'text-slate-900 dark:text-zinc-100' : 'text-emerald-600 dark:text-emerald-400'
+            isExpense 
+              ? 'text-rose-500 dark:text-rose-400' 
+              : isIncome 
+                ? 'text-emerald-500 dark:text-emerald-400' 
+                : 'text-slate-600 dark:text-zinc-300'
           }`}>
-            {isExpense ? '-' : '+'}{formatMoney(tx.amount)}
+            {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
           </span>
 
           {/* Botón de acción / editar (en desktop / tablet) */}

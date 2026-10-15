@@ -290,7 +290,12 @@ export default function CreditCardDetailModal({
             ) : (
               <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06]">
                 {cardTxs.map((tx) => {
-                  const isIncome = tx.type === 'income';
+                  const type = String(tx?.type || '').toLowerCase();
+                  const amt = Number(tx?.amount) || 0;
+                  const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer);
+                  const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
+                  const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
+
                   return (
                     <div 
                       key={tx.id}
@@ -305,7 +310,11 @@ export default function CreditCardDetailModal({
                             wrapperClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 overflow-hidden border border-slate-200/60 dark:border-white/[0.06]"
                             fallback={
                               <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                                isIncome ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                isExpense 
+                                  ? 'bg-rose-500/15 text-rose-500 dark:text-rose-400' 
+                                  : isIncome 
+                                    ? 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400' 
+                                    : 'bg-slate-500/15 text-slate-500 dark:text-slate-400'
                               }`}>
                                 {isIncome ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
                               </div>
@@ -317,9 +326,13 @@ export default function CreditCardDetailModal({
                         </div>
 
                         <span className={`text-xs font-bold font-mono tracking-tight tabular-nums shrink-0 whitespace-nowrap ${
-                          isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-zinc-100'
+                          isExpense 
+                            ? 'text-rose-500 dark:text-rose-400' 
+                            : isIncome 
+                              ? 'text-emerald-500 dark:text-emerald-400' 
+                              : 'text-slate-600 dark:text-zinc-300'
                         }`}>
-                          {isIncome ? '+' : '-'}{formatMoney(tx.amount)}
+                          {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
                         </span>
                       </div>
 

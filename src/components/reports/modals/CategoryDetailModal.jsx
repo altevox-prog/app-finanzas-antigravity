@@ -159,7 +159,7 @@ export default function CategoryDetailModal({
                         </span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                        <span className="text-xs font-bold tabular-nums text-rose-500 dark:text-rose-400">
                           -{formatMoney(sub.amount)}
                         </span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/10 font-bold text-slate-600 dark:text-slate-300">
