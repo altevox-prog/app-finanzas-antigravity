@@ -13,6 +13,40 @@ export function getTodayLocalString() {
 }
 
 /**
+ * normalizeDateToYYYYMMDD
+ * Normaliza cualquier formato de fecha (ISO con tiempo, timestamp, cadena con barras o guiones)
+ * a formato estricto YYYY-MM-DD para comparaciones lexicográficas seguras.
+ *
+ * @param {string|number|Date} rawDate
+ * @returns {string} Fecha en formato YYYY-MM-DD
+ */
+export function normalizeDateToYYYYMMDD(rawDate) {
+  if (!rawDate) return '';
+  if (typeof rawDate === 'string') {
+    const trimmed = rawDate.trim();
+    if (trimmed.includes('T')) return trimmed.split('T')[0];
+    if (trimmed.includes(' ')) return trimmed.split(' ')[0];
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3 && parts[2].length === 4) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+    return trimmed;
+  }
+  try {
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  } catch {
+    return '';
+  }
+}
+
+/**
  * advanceNextDate
  * Avanza una fecha YYYY-MM-DD según la frecuencia especificada preservando el día de corte.
  *
@@ -106,7 +140,8 @@ export async function processDueRecurringPayments({
     // Solo automáticos si el modo está configurado; si no hay modo, por defecto es auto
     if (item.mode === 'manual') return false;
 
-    const nextDate = item.nextPaymentDate || item.nextDate || item.next_date;
+    const rawNextDate = item.nextPaymentDate || item.nextDate || item.next_date;
+    const nextDate = normalizeDateToYYYYMMDD(rawNextDate);
     if (!nextDate) return false;
 
     return nextDate <= todayStr;

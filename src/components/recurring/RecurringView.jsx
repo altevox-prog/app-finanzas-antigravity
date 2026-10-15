@@ -12,7 +12,8 @@ import {
   Clock,
   MoreVertical,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Check
 } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import BrandIcon from '../ui/BrandIcon';
@@ -20,7 +21,13 @@ import CategoryIcon from '../categories/components/CategoryIcon';
 import AddRecurringModal from './modals/AddRecurringModal';
 import SwipeableRow from '../common/SwipeableRow';
 import { safeNumber } from '../../utils/financeMath';
-import { processDueRecurringPayments } from '../../services/recurring/recurringAutoProcessor';
+import { 
+  processDueRecurringPayments, 
+  advanceNextDate, 
+  getTodayLocalString,
+  normalizeDateToYYYYMMDD
+} from '../../services/recurring/recurringAutoProcessor';
+import { generateUUID } from '../../utils/recordMerger';
 
 export default function RecurringView({
   recurringPayments = [],
@@ -88,6 +95,102 @@ export default function RecurringView({
 
   // Filtro de visualización: 'all' | 'expense' | 'income'
   const [filterType, setFilterType] = useState('all');
+  const [processingId, setProcessingId] = useState(null);
+
+  // Fecha local canónica actual
+  const todayStr = getTodayLocalString();
+
+  // Helper para normalizar la fecha de próximo pago y estado activo
+  const getItemNextDate = (item) => {
+    const raw = item?.nextPaymentDate || item?.nextDate || item?.next_date || '';
+    return normalizeDateToYYYYMMDD(raw);
+  };
+  const isItemActive = (item) => item?.isActive !== false && item?.active !== false;
+
+  // Manejador para Aprobar / Registrar movimiento en modo Por Confirmar
+  const handleApprovePending = async (item) => {
+    if (!item || processingId === item.id) return;
+    setProcessingId(item.id);
+
+    try {
+      const nextDate = getItemNextDate(item) || todayStr;
+      const type = item.type === 'income' ? 'income' : 'expense';
+      const description = item.name || item.description || item.note || 'Movimiento recurrente';
+      const amount = Number(item.amount) || 0;
+
+      const newTx = {
+        id: generateUUID(),
+        description,
+        note: description,
+        amount,
+        originalAmount: Number(item.originalAmount || item.amount) || amount,
+        currency: item.currency || item.originalCurrency || 'COP',
+        originalCurrency: item.originalCurrency || item.currency || 'COP',
+        exchangeRate: Number(item.exchangeRate) || 1,
+        type,
+        category: item.categoryName || item.category || 'Recurrentes',
+        categoryName: item.categoryName || item.category || 'Recurrentes',
+        categoryId: item.categoryId || item.category_id || '',
+        subcategoryId: item.subcategoryId || item.subcategory_id || null,
+        subcategoryName: item.subcategoryName || null,
+        accountId: item.accountId || item.account_id || '',
+        accountName: item.accountName || 'Principal',
+        date: nextDate,
+        createdAt: new Date().toISOString(),
+        isRecurring: true,
+        recurringId: item.id
+      };
+
+      const newNextDate = advanceNextDate(nextDate, item.frequency, item.billingDay);
+      const updatedItem = {
+        ...item,
+        nextDate: newNextDate,
+        next_date: newNextDate,
+        nextPaymentDate: newNextDate,
+        lastProcessedDate: nextDate,
+        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      if (typeof onAddTransaction === 'function') {
+        await onAddTransaction(newTx);
+      }
+      if (typeof onUpdateRecurring === 'function') {
+        await onUpdateRecurring(updatedItem);
+      }
+    } catch (err) {
+      console.error('[RecurringView] Error al aprobar movimiento recurrente:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Manejador para Omitir movimiento (avanzar ciclo sin registrar transacción)
+  const handleSkipPending = async (item) => {
+    if (!item || processingId === item.id) return;
+    setProcessingId(item.id);
+
+    try {
+      const nextDate = getItemNextDate(item) || todayStr;
+      const newNextDate = advanceNextDate(nextDate, item.frequency, item.billingDay);
+      const updatedItem = {
+        ...item,
+        nextDate: newNextDate,
+        next_date: newNextDate,
+        nextPaymentDate: newNextDate,
+        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      if (typeof onUpdateRecurring === 'function') {
+        await onUpdateRecurring(updatedItem);
+      }
+    } catch (err) {
+      console.error('[RecurringView] Error al omitir movimiento recurrente:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   // Evaluación y ejecución automática de movimientos vencidos al cargar la vista
   useEffect(() => {
@@ -102,7 +205,7 @@ export default function RecurringView({
 
   // Lista normalizada y elementos activos
   const safeRecurring = Array.isArray(recurringPayments) ? recurringPayments : [];
-  const activeItems = safeRecurring.filter(item => item.isActive !== false && item.active !== false);
+  const activeItems = safeRecurring.filter(item => isItemActive(item));
 
   const autoCount = activeItems.filter(item => (item.mode || 'auto') !== 'manual').length;
   const manualCount = activeItems.filter(item => item.mode === 'manual').length;
@@ -139,8 +242,25 @@ export default function RecurringView({
     return true;
   });
 
+  // 1. Ítems pendientes por confirmar (Modo manual, activos, y con nextPaymentDate <= hoy)
+  const pendingConfirmationItems = filteredRecurring.filter(item => {
+    const isManual = item.mode === 'manual';
+    const isActive = isItemActive(item);
+    const nextDate = getItemNextDate(item);
+    return isManual && isActive && nextDate && nextDate <= todayStr;
+  });
+
+  // 2. Ítems en anotación automática
   const autoItems = filteredRecurring.filter(item => (item.mode || 'auto') !== 'manual');
-  const manualItems = filteredRecurring.filter(item => item.mode === 'manual');
+
+  // 3. Ítems regulares en modo manual que NO están pendientes urgentes (futuros o pausados)
+  const regularManualItems = filteredRecurring.filter(item => {
+    if (item.mode !== 'manual') return false;
+    const isActive = isItemActive(item);
+    const nextDate = getItemNextDate(item);
+    if (isActive && nextDate && nextDate <= todayStr) return false;
+    return true;
+  });
 
   // Helper for human-readable frequency text
   const formatFrequencyLabel = (item) => {
@@ -168,11 +288,13 @@ export default function RecurringView({
   };
 
   // Render an individual card
-  const renderRecurringCard = (item) => {
+  const renderRecurringCard = (item, isPending = false) => {
     const isExpense = item.type !== 'income';
     const categoryObj = categories.find(c => c.id === item.categoryId);
     const accountObj = accounts.find(a => a.id === item.accountId);
-    const isActive = item.isActive !== false;
+    const isActive = item.isActive !== false && item.active !== false;
+    const nextDate = getItemNextDate(item);
+    const isOverdue = isPending && Boolean(nextDate && nextDate < todayStr);
 
     return (
       <SwipeableRow
@@ -187,96 +309,158 @@ export default function RecurringView({
         contentClassName="rounded-2xl"
       >
         <div
-          className={`p-4 rounded-2xl bg-white dark:bg-zinc-900/90 border transition-all shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-            isActive 
-              ? 'border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15' 
-              : 'border-slate-200/40 dark:border-white/[0.08] opacity-60 bg-slate-50/50 dark:bg-white/[0.01]'
+          className={`p-4 rounded-2xl bg-white dark:bg-zinc-900/90 border transition-all shadow-sm flex flex-col justify-between gap-3 ${
+            isPending
+              ? (isOverdue 
+                  ? 'border-rose-300 dark:border-rose-500/30 bg-rose-500/[0.02]' 
+                  : 'border-amber-300 dark:border-amber-500/30 bg-amber-500/[0.02]')
+              : isActive 
+                ? 'border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15' 
+                : 'border-slate-200/40 dark:border-white/[0.08] opacity-60 bg-slate-50/50 dark:bg-white/[0.01]'
           }`}
         >
-          {/* Columna Izquierda: Icono + Detalles */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <BrandIcon
-              name={item.name || item.categoryName || ''}
-              size={24}
-              wrapperClassName="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden border border-slate-200/50 dark:border-white/5"
-              fallback={
-                <CategoryIcon
-                  category={categoryObj || item.categoryName}
-                  status={isExpense ? 'negative' : 'positive'}
-                  size={22}
-                  withBadge={false}
-                />
-              }
-            />
+          {/* Fila Principal: Icono + Detalles + Monto / Toggle */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Columna Izquierda: Icono + Detalles */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <BrandIcon
+                name={item.name || item.categoryName || ''}
+                size={24}
+                wrapperClassName="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden border border-slate-200/50 dark:border-white/5"
+                fallback={
+                  <CategoryIcon
+                    category={categoryObj || item.categoryName}
+                    status={isExpense ? 'negative' : 'positive'}
+                    size={22}
+                    withBadge={false}
+                  />
+                }
+              />
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                  {item.name}
-                </h3>
-                {!isActive && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-400">
-                    Pausado
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                    {item.name}
+                  </h3>
+                  {isPending && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 border ${
+                      isOverdue 
+                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30' 
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    }`}>
+                      {isOverdue ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                      {isOverdue ? 'Vencido' : 'Pendiente hoy'}
+                    </span>
+                  )}
+                  {!isActive && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-400">
+                      Pausado
+                    </span>
+                  )}
+                </div>
+
+                {/* Frecuencia + Próxima fecha + Cuenta */}
+                <div className="flex items-center gap-1.5 pt-0.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+                  <span className="font-medium text-slate-600 dark:text-slate-300">
+                    {formatFrequencyLabel(item)}
+                  </span>
+                  {nextDate && (
+                    <>
+                      <span className="opacity-40">•</span>
+                      <span className={`text-[11px] font-semibold ${
+                        isPending
+                          ? (isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400')
+                          : 'text-emerald-600 dark:text-emerald-400'
+                      }`}>
+                        {isPending ? (isOverdue ? 'Venció: ' : 'Vence hoy: ') : 'Próx: '}
+                        {new Date(nextDate + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </>
+                  )}
+                  {item.accountName && (
+                    <>
+                      <span className="opacity-40">•</span>
+                      <span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/10 inline-flex items-center gap-1 truncate max-w-[130px]">
+                        <BrandIcon name={item.accountName} type={accountObj?.type} size={11} fallback={null} />
+                        <span className="truncate">{item.accountName}</span>
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Columna Derecha: Monto + Toggle */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
+              {/* Monto */}
+              <div className="text-right">
+                <span className={`font-bold font-mono tracking-tight text-base tabular-nums whitespace-nowrap block leading-tight ${
+                  isExpense ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                }`}>
+                  {isExpense ? '-' : '+'}{formatMoney(item.amount)}
+                </span>
+                {item.originalCurrency && item.originalCurrency !== 'COP' && (
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-tight tabular-nums">
+                    ({Number(item.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.originalCurrency})
                   </span>
                 )}
               </div>
 
-              {/* Frecuencia + Próxima fecha + Cuenta */}
-              <div className="flex items-center gap-1.5 pt-0.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-                <span className="font-medium text-slate-600 dark:text-slate-300">
-                  {formatFrequencyLabel(item)}
-                </span>
-                {(item.nextDate || item.next_date) && (
-                  <>
-                    <span className="opacity-40">•</span>
-                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      Próx: {new Date((item.nextDate || item.next_date) + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </>
-                )}
-                {item.accountName && (
-                  <>
-                    <span className="opacity-40">•</span>
-                    <span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/10 inline-flex items-center gap-1 truncate max-w-[130px]">
-                      <BrandIcon name={item.accountName} type={accountObj?.type} size={11} fallback={null} />
-                      <span className="truncate">{item.accountName}</span>
-                    </span>
-                  </>
-                )}
+              {/* Switch Toggle Activo/Pausado */}
+              <label 
+                className="relative inline-flex items-center cursor-pointer select-none"
+                title={isActive ? 'Pausar recurrencia' : 'Activar recurrencia'}
+              >
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={() => onToggleActiveRecurring(item.id)}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 transition-colors shadow-inner" />
+              </label>
+            </div>
+          </div>
+
+          {/* Barra de Acciones para ítems pendientes por confirmar */}
+          {isPending && (
+            <div 
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              className="flex items-center justify-between pt-2.5 mt-1 border-t border-slate-100 dark:border-white/5 gap-2"
+            >
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">
+                ¿Deseas registrar este movimiento?
+              </span>
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  type="button"
+                  disabled={processingId === item.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSkipPending(item);
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/80 dark:border-white/10 disabled:opacity-50"
+                  title="Avanzar al siguiente ciclo sin registrar gasto/ingreso"
+                >
+                  Omitir
+                </button>
+                <button
+                  type="button"
+                  disabled={processingId === item.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleApprovePending(item);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="Registrar en transacciones y avanzar fecha"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Aprobar</span>
+                </button>
               </div>
             </div>
-          </div>
-
-          {/* Columna Derecha: Monto + Toggle */}
-          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
-            {/* Monto */}
-            <div className="text-right">
-              <span className={`font-bold font-mono tracking-tight text-base tabular-nums whitespace-nowrap block leading-tight ${
-                isExpense ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-              }`}>
-                {isExpense ? '-' : '+'}{formatMoney(item.amount)}
-              </span>
-              {item.originalCurrency && item.originalCurrency !== 'COP' && (
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-tight tabular-nums">
-                  ({Number(item.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {item.originalCurrency})
-                </span>
-              )}
-            </div>
-
-            {/* Switch Toggle Activo/Pausado */}
-            <label 
-              className="relative inline-flex items-center cursor-pointer select-none"
-              title={isActive ? 'Pausar recurrencia' : 'Activar recurrencia'}
-            >
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={() => onToggleActiveRecurring(item.id)}
-                className="sr-only peer"
-              />
-              <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 transition-colors shadow-inner" />
-            </label>
-          </div>
+          )}
         </div>
       </SwipeableRow>
     );
@@ -435,7 +619,30 @@ export default function RecurringView({
             </div>
           )}
 
-          {/* Sección 1: Anotación automática */}
+          {/* Sección 1: Pendientes por confirmar (Vencidos hoy o anteriores) */}
+          {pendingConfirmationItems.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                    Pendientes por confirmar
+                  </h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                    {pendingConfirmationItems.length} {pendingConfirmationItems.length === 1 ? 'pendiente' : 'pendientes'}
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Requiere tu aprobación
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {pendingConfirmationItems.map(item => renderRecurringCard(item, true))}
+              </div>
+            </div>
+          )}
+
+          {/* Sección 2: Anotación automática */}
           {autoItems.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
@@ -453,30 +660,30 @@ export default function RecurringView({
               </div>
 
               <div className="space-y-2.5">
-                {autoItems.map(item => renderRecurringCard(item))}
+                {autoItems.map(item => renderRecurringCard(item, false))}
               </div>
             </div>
           )}
 
-          {/* Sección 2: Pendientes por confirmar */}
-          {manualItems.length > 0 && (
+          {/* Sección 3: Programados por confirmar (Fecha futura o pausados) */}
+          {regularManualItems.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                    Pendientes por confirmar
+                    Programados por confirmar
                   </h2>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-400">
                     Manual
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                  {manualItems.length} {manualItems.length === 1 ? 'recordatorio' : 'recordatorios'}
+                  {regularManualItems.length} {regularManualItems.length === 1 ? 'recordatorio' : 'recordatorios'}
                 </span>
               </div>
 
               <div className="space-y-2.5">
-                {manualItems.map(item => renderRecurringCard(item))}
+                {regularManualItems.map(item => renderRecurringCard(item, false))}
               </div>
             </div>
           )}

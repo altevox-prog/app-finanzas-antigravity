@@ -22,7 +22,9 @@ export default function NotificationCenter({
   notifications = [],
   activeNotifications = [],
   onDismiss,
-  onMarkAllAsRead
+  onMarkAllAsRead,
+  onApproveRecurring = null,
+  onSkipRecurring = null
 }) {
   if (!isOpen) return null;
 
@@ -154,6 +156,41 @@ export default function NotificationCenter({
                     <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
                       {item.message}
                     </p>
+
+                    {item.type === 'recurring_pending' && item.recurringItem && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between gap-2">
+                        <span className={`text-xs font-mono font-bold tabular-nums ${
+                          item.isExpense ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {item.isExpense ? '-' : '+'}${Number(item.amount || 0).toLocaleString('es-CO')}
+                        </span>
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSkipRecurring?.(item.recurringItem);
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer"
+                            title="Avanzar ciclo sin registrar transacción"
+                          >
+                            Omitir
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onApproveRecurring?.(item.recurringItem);
+                            }}
+                            className="px-3 py-1 rounded-lg text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                            title="Registrar en transacciones y avanzar fecha"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>Aprobar</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

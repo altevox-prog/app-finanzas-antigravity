@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { safeNumber } from '../utils/financeMath';
+import { getTodayLocalString, normalizeDateToYYYYMMDD } from '../services/recurring/recurringAutoProcessor';
 
 /**
  * useFinancialDueAlerts
@@ -16,6 +17,7 @@ export function useFinancialDueAlerts({
   investments = [],
   debtsAndLoans = [],
   subscriptions = [],
+  recurringPayments = [],
   savingsGoals = []
 } = {}) {
   // Almacenamiento persistente de alertas leídas/descartadas
@@ -173,8 +175,50 @@ export function useFinancialDueAlerts({
       }
     });
 
-    // 3. Suscripciones y Pagos Recurrentes
-    (subscriptions || []).forEach((sub) => {
+    // 3. Pagos / Ingresos Recurrentes en Modo Manual (Por Confirmar)
+    const todayStr = getTodayLocalString();
+    const allRecurring = (recurringPayments && recurringPayments.length > 0)
+      ? recurringPayments
+      : (subscriptions || []);
+
+    (allRecurring || []).forEach((item) => {
+      if (!item) return;
+      const isManual = item.mode === 'manual';
+      const isActive = item.active !== false && item.isActive !== false;
+      const rawDate = item.nextPaymentDate || item.nextDate || item.next_date;
+      const nextDate = normalizeDateToYYYYMMDD(rawDate);
+
+      if (isManual && isActive && nextDate && nextDate <= todayStr) {
+        const isOverdue = nextDate < todayStr;
+        const isExpense = item.type !== 'income';
+        const amount = Number(item.amount) || 0;
+        const name = item.name || item.description || 'Movimiento recurrente';
+
+        list.push({
+          id: `pending-recurring-${item.id}-${nextDate}`,
+          type: 'recurring_pending',
+          category: isExpense ? 'Gasto por confirmar' : 'Ingreso por confirmar',
+          title: name,
+          message: isOverdue 
+            ? `Venció el ${nextDate}. Requiere confirmación para registrarse.` 
+            : `Vence hoy. Confirma si deseas registrar este ${isExpense ? 'gasto' : 'ingreso'}.`,
+          amount,
+          isExpense,
+          date: nextDate,
+          urgency: isOverdue ? 'urgent' : 'warning',
+          badge: isOverdue ? 'Vencido' : 'Pendiente hoy',
+          icon: 'Bell',
+          recurringItem: item
+        });
+      }
+    });
+
+    // 3.b Suscripciones automáticas y pagos periódicos informativos
+    (allRecurring || []).forEach((sub) => {
+      if (!sub) return;
+      // Los manuales ya se procesaron con su alerta interactiva arriba
+      if (sub.mode === 'manual') return;
+
       if (sub.billingDay !== undefined && sub.billingDay !== null && sub.billingDay !== '') {
         const bDay = parseInt(sub.billingDay, 10);
         if (!isNaN(bDay)) {
@@ -318,7 +362,7 @@ export function useFinancialDueAlerts({
     });
 
     return list;
-  }, [accounts, investments, subscriptions, debtsAndLoans, savingsGoals]);
+  }, [accounts, investments, subscriptions, recurringPayments, debtsAndLoans, savingsGoals]);
 
   // Alertas activas no descartadas
   const activeAlerts = useMemo(() => {

@@ -4,6 +4,12 @@ import Header from './Header';
 import SyncStatusBadge from '../ui/SyncStatusBadge';
 import NotificationCenter from '../ui/NotificationCenter';
 import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
+import { 
+  advanceNextDate, 
+  getTodayLocalString, 
+  normalizeDateToYYYYMMDD 
+} from '../../services/recurring/recurringAutoProcessor';
+import { generateUUID } from '../../utils/recordMerger';
 
 const TAB_TITLES = {
   dashboard: 'Panel financiero',
@@ -49,8 +55,11 @@ export default function AppHeader({
   accounts = [],
   investments = [],
   subscriptions = [],
+  recurringPayments = [],
   debtsAndLoans = [],
-  savingsGoals = []
+  savingsGoals = [],
+  onAddTransaction = null,
+  onUpdateRecurring = null
 }) {
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
 
@@ -66,8 +75,86 @@ export default function AppHeader({
     investments,
     debtsAndLoans,
     subscriptions,
+    recurringPayments,
     savingsGoals
   });
+
+  // Manejador para aprobar recurrente manual desde el centro de notificaciones
+  const handleApproveRecurring = async (item) => {
+    if (!item) return;
+    try {
+      const nextDate = normalizeDateToYYYYMMDD(item.nextPaymentDate || item.nextDate || item.next_date) || getTodayLocalString();
+      const type = item.type === 'income' ? 'income' : 'expense';
+      const description = item.name || item.description || item.note || 'Movimiento recurrente';
+      const amount = Number(item.amount) || 0;
+
+      const newTx = {
+        id: generateUUID(),
+        description,
+        note: description,
+        amount,
+        originalAmount: Number(item.originalAmount || item.amount) || amount,
+        currency: item.currency || item.originalCurrency || 'COP',
+        originalCurrency: item.originalCurrency || item.currency || 'COP',
+        exchangeRate: Number(item.exchangeRate) || 1,
+        type,
+        category: item.categoryName || item.category || 'Recurrentes',
+        categoryName: item.categoryName || item.category || 'Recurrentes',
+        categoryId: item.categoryId || item.category_id || '',
+        subcategoryId: item.subcategoryId || item.subcategory_id || null,
+        subcategoryName: item.subcategoryName || null,
+        accountId: item.accountId || item.account_id || '',
+        accountName: item.accountName || 'Principal',
+        date: nextDate,
+        createdAt: new Date().toISOString(),
+        isRecurring: true,
+        recurringId: item.id
+      };
+
+      const newNextDate = advanceNextDate(nextDate, item.frequency, item.billingDay);
+      const updatedItem = {
+        ...item,
+        nextDate: newNextDate,
+        next_date: newNextDate,
+        nextPaymentDate: newNextDate,
+        lastProcessedDate: nextDate,
+        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      if (typeof onAddTransaction === 'function') {
+        await onAddTransaction(newTx);
+      }
+      if (typeof onUpdateRecurring === 'function') {
+        await onUpdateRecurring(updatedItem);
+      }
+    } catch (err) {
+      console.error('[AppHeader] Error al aprobar movimiento recurrente:', err);
+    }
+  };
+
+  // Manejador para omitir recurrente manual desde el centro de notificaciones
+  const handleSkipRecurring = async (item) => {
+    if (!item) return;
+    try {
+      const nextDate = normalizeDateToYYYYMMDD(item.nextPaymentDate || item.nextDate || item.next_date) || getTodayLocalString();
+      const newNextDate = advanceNextDate(nextDate, item.frequency, item.billingDay);
+      const updatedItem = {
+        ...item,
+        nextDate: newNextDate,
+        next_date: newNextDate,
+        nextPaymentDate: newNextDate,
+        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      if (typeof onUpdateRecurring === 'function') {
+        await onUpdateRecurring(updatedItem);
+      }
+    } catch (err) {
+      console.error('[AppHeader] Error al omitir movimiento recurrente:', err);
+    }
+  };
 
   const handleOpenPicker = () => {
     if (onOpenMonthPicker) onOpenMonthPicker();
@@ -111,8 +198,11 @@ export default function AppHeader({
           accounts={accounts}
           investments={investments}
           subscriptions={subscriptions}
+          recurringPayments={recurringPayments}
           debtsAndLoans={debtsAndLoans}
           savingsGoals={savingsGoals}
+          onApproveRecurring={handleApproveRecurring}
+          onSkipRecurring={handleSkipRecurring}
         />
       </div>
 
@@ -187,6 +277,8 @@ export default function AppHeader({
         activeNotifications={activeAlerts}
         onDismiss={dismissAlert}
         onMarkAllAsRead={markAllAsRead}
+        onApproveRecurring={handleApproveRecurring}
+        onSkipRecurring={handleSkipRecurring}
       />
     </>
   );

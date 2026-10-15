@@ -144,8 +144,11 @@ export default function App() {
           accounts={state.accounts}
           investments={state.investments}
           subscriptions={state.subscriptions}
+          recurringPayments={state.recurringPayments}
           debtsAndLoans={state.debtsAndLoans}
           savingsGoals={state.savingsGoals}
+          onAddTransaction={state.financialOps?.handleAddTransaction || state.financeActions?.handleAddTransaction}
+          onUpdateRecurring={state.handleUpdateRecurring || state.financeActions?.handleUpdateRecurring}
         />
 
         {/* Main Content Area */}
