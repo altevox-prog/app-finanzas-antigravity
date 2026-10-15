@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarSync, ChevronRight } from 'lucide-react';
+import { CalendarSync } from 'lucide-react';
 import { safeNumber } from '../../../utils/financeMath';
 
 /**
@@ -43,7 +43,6 @@ export default function RecurringPaymentsWidget({
             <CalendarSync className="w-4 h-4 text-emerald-500 shrink-0" />
             <span className="truncate uppercase">PRESUPUESTO MENSUAL</span>
           </span>
-          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
         </div>
 
         {/* Cuerpo */}

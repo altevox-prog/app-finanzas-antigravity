@@ -93,6 +93,7 @@ export function createWidgetRegistry({
   handleOpenDebtModal = () => {},
   handleOpenTxModal = () => {},
   handleOpenRecurringModal = () => {},
+  handleSelectTransaction = () => {},
   onOpenCalendar = () => {},
   onSelectDay = () => {},
   onSelectCreditCardDetail = () => {},
@@ -106,6 +107,8 @@ export function createWidgetRegistry({
         totalAssetsCOP={totalAssetsCOP}
         totalPayableCOP={debtsAndLoansMetrics.totalPayableCOP}
         isNetWorthPositive={isNetWorthPositive}
+        onNavigateToTab={navigateToTab}
+        setActiveTab={navigateToTab}
         formatMoney={formatMoney}
       />
     ),
@@ -219,8 +222,8 @@ export function createWidgetRegistry({
         onViewAll={() => navigateToTab('transactions')}
         setActiveTab={navigateToTab}
         onNavigateToTab={navigateToTab}
-        onSelectTransaction={handleOpenTxModal}
-        onOpenTransaction={handleOpenTxModal}
+        onSelectTransaction={handleSelectTransaction}
+        onOpenTransaction={handleSelectTransaction}
         formatMoney={formatMoney}
       />
     ),
@@ -319,7 +322,7 @@ export function createWidgetRegistry({
       <RecentTransactionsWidget
         transactions={displayTransactions}
         formatMoney={formatMoney}
-        onTransactionClick={handleOpenTxModal}
+        onTransactionClick={handleSelectTransaction}
         onNavigateToTab={navigateToTab}
       />
     )
@@ -378,6 +381,7 @@ export function useWidgetRegistry(params = {}) {
     params.handleOpenDebtModal,
     params.handleOpenTxModal,
     params.handleOpenRecurringModal,
+    params.handleSelectTransaction,
     params.onOpenCalendar,
     params.onSelectDay,
     params.onSelectCreditCardDetail,

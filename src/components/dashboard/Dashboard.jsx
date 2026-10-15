@@ -38,6 +38,14 @@ export default function Dashboard({
 }) {
   const { formatMoney } = usePrivacy();
   const [modalsState, setModalsState] = useState({});
+  const [selectedTxForDetail, setSelectedTxForDetail] = useState(null);
+  const [selectedTxForEdit, setSelectedTxForEdit] = useState(null);
+  const [selectedTxForReceipt, setSelectedTxForReceipt] = useState(null);
+
+  const handleSelectTransaction = (tx) => {
+    if (!tx || typeof tx !== 'object') return;
+    setSelectedTxForDetail(tx);
+  };
 
   const handleCloseModal = (type) => setModalsState(prev => ({ 
     ...prev, [`is${type ? type.charAt(0).toUpperCase() + type.slice(1) : ''}ModalOpen`]: false 
@@ -89,6 +97,7 @@ export default function Dashboard({
     ...metrics, accounts, categories, recurringPayments, subscriptions, trm,
     selectedDate, selectedDay, currentMonthLabel, monthlyStats, transactions,
     navigateToTab, handleOpenDebtModal, handleOpenTxModal, handleOpenRecurringModal,
+    handleSelectTransaction,
     onOpenCalendar, onSelectDay, onSelectCreditCardDetail, financeActions, formatMoney
   });
 
@@ -153,6 +162,11 @@ export default function Dashboard({
         onAddTransaction={onAddTransaction} onAddDebtOrLoan={onAddDebtOrLoan}
         onAddRecurring={onAddRecurring} onAddAccount={onAddAccount}
         onAddCategory={onAddCategory} onAddSubcategory={onAddSubcategory}
+        onUpdateSubcategory={onUpdateSubcategory} onDeleteSubcategory={onDeleteSubcategory}
+        onUpdateTransaction={onUpdateTransaction} onDeleteTransaction={onDeleteTransaction}
+        selectedTxForDetail={selectedTxForDetail} setSelectedTxForDetail={setSelectedTxForDetail}
+        selectedTxForEdit={selectedTxForEdit} setSelectedTxForEdit={setSelectedTxForEdit}
+        selectedTxForReceipt={selectedTxForReceipt} setSelectedTxForReceipt={setSelectedTxForReceipt}
         accounts={accounts} categories={categories} trm={trm}
       />
     </>

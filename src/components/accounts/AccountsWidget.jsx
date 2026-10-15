@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, ChevronRight, Wallet, Plus, CreditCard } from 'lucide-react';
+import { ArrowRight, Wallet, Plus, CreditCard } from 'lucide-react';
 import BrandIcon from '../ui/BrandIcon';
 import { getAccountNativeBalance, formatNativeCurrency, safeNumber } from '../../utils/currencyUtils';
 
@@ -61,9 +61,6 @@ export default function AccountsWidget({
             {accountList.length} {accountList.length === 1 ? 'cuenta' : 'cuentas'}
           </span>
         </div>
-        {accountList.length > 0 && (
-          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-        )}
       </div>
 
       {/* Galería horizontal deslizable con no-scrollbar en móvil / grid alineado en PC */}

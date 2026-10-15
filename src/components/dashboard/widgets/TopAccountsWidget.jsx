@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import { 
   getAccountNativeBalance, 
@@ -46,7 +45,6 @@ export default function TopAccountsWidget({
             {accounts.length} métodos y billeteras
           </p>
         </div>
-        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
       </div>
 
       {/* Lista de Cuentas */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { HandCoins, ChevronRight } from 'lucide-react';
+import { HandCoins } from 'lucide-react';
 
 /**
  * DebtsWidget
@@ -31,12 +31,9 @@ export default function DebtsWidget({
             <HandCoins className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>Préstamos y Deudas</span>
           </span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-slate-400 font-semibold">
-              {totalActivos} activos
-            </span>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-          </div>
+          <span className="text-[10px] text-slate-400 font-semibold">
+            {totalActivos} activos
+          </span>
         </div>
 
         {/* Bloque resumido y armonizado */}

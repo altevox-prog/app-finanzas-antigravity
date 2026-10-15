@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, ChevronRight } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 /**
  * InvestmentsWidget
@@ -30,16 +30,13 @@ export default function InvestmentsWidget({
             <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>Inversiones</span>
           </span>
-          <div className="flex items-center gap-1.5">
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono tabular-nums border ${
-              investmentsMetrics.isPositive 
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-            }`}>
-              {investmentsMetrics.isPositive ? '+' : ''}{investmentsMetrics.profitPercentage.toFixed(2)}%
-            </span>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-          </div>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono tabular-nums border ${
+            investmentsMetrics.isPositive 
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+              : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+          }`}>
+            {investmentsMetrics.isPositive ? '+' : ''}{investmentsMetrics.profitPercentage.toFixed(2)}%
+          </span>
         </div>
 
         <div className="mt-1">

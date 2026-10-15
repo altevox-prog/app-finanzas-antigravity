@@ -152,10 +152,10 @@ export default function CategoryCombobox({
                   setIsCreatingNew(true);
                   setNewCatName('');
                 }}
-                className="w-full min-h-[40px] flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#007AFF] hover:bg-[#007AFF]/10 transition-colors text-left cursor-pointer select-none touch-manipulation"
+                className="w-full min-h-[40px] flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-[#007AFF] hover:bg-[#007AFF]/10 transition-colors text-left cursor-pointer select-none touch-manipulation"
               >
-                <Plus className="w-3.5 h-3.5 select-none pointer-events-none" />
-                <span className="select-none pointer-events-none">+ Crear nueva categoría</span>
+                <Plus className="w-4 h-4 shrink-0 select-none pointer-events-none" />
+                <span className="select-none pointer-events-none">Crear nueva categoría</span>
               </button>
             ) : (
               <div className="p-2 rounded-xl bg-slate-50 dark:bg-white/5 space-y-2 border border-blue-500/30">

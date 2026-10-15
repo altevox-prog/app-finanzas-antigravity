@@ -4,11 +4,15 @@ import DebtFormModal from '../debts/DebtFormModal';
 import AddRecurringModal from '../recurring/modals/AddRecurringModal';
 import AddAccountModal from '../accounts/modals/AddAccountModal';
 import AddCategoryModal from '../categories/modals/AddCategoryModal';
+import TransactionDetailModal from '../transactions/modals/TransactionDetailModal';
+import EditTransactionModal from '../transactions/modals/EditTransactionModal';
+import ReceiptModal from '../transactions/modals/ReceiptModal';
 
 /**
  * DashboardModals
  * Subcomponente para el renderizado condicional de los modales secundarios del Dashboard
- * y gestión de creación rápida (transacciones, deudas, pagos recurrentes, cuentas y categorías).
+ * y gestión de creación rápida (transacciones, deudas, pagos recurrentes, cuentas y categorías)
+ * así como detalle y edición de movimientos seleccionados.
  */
 export default function DashboardModals({
   modalsState = {},
@@ -19,6 +23,16 @@ export default function DashboardModals({
   onAddAccount,
   onAddCategory,
   onAddSubcategory,
+  onUpdateSubcategory,
+  onDeleteSubcategory,
+  onUpdateTransaction,
+  onDeleteTransaction,
+  selectedTxForDetail = null,
+  setSelectedTxForDetail = () => {},
+  selectedTxForEdit = null,
+  setSelectedTxForEdit = () => {},
+  selectedTxForReceipt = null,
+  setSelectedTxForReceipt = () => {},
   accounts = [],
   categories = [],
   trm = 4050
@@ -123,6 +137,62 @@ export default function DashboardModals({
           newCatInitialSub={newCatInitialSub}
           setNewCatInitialSub={setNewCatInitialSub}
           onSubmit={handleCreateCategory}
+        />
+      )}
+
+      {/* 6. Modal de Detalle de Transacción */}
+      {selectedTxForDetail && (
+        <TransactionDetailModal
+          transaction={selectedTxForDetail}
+          categories={categories}
+          onClose={() => setSelectedTxForDetail(null)}
+          onEdit={(tx) => {
+            setSelectedTxForDetail(null);
+            setSelectedTxForEdit(tx);
+          }}
+          onDelete={(id) => {
+            if (typeof onDeleteTransaction === 'function') {
+              onDeleteTransaction(id);
+            }
+            setSelectedTxForDetail(null);
+          }}
+          onViewReceipt={(tx) => setSelectedTxForReceipt(tx)}
+        />
+      )}
+
+      {/* 7. Modal de Edición de Transacción */}
+      {selectedTxForEdit && (
+        <EditTransactionModal
+          transaction={selectedTxForEdit}
+          accounts={accounts}
+          categories={categories}
+          onClose={() => setSelectedTxForEdit(null)}
+          onSave={(updated) => {
+            if (typeof onUpdateTransaction === 'function') {
+              onUpdateTransaction(updated);
+            }
+            setSelectedTxForEdit(null);
+          }}
+          onDelete={(id) => {
+            if (typeof onDeleteTransaction === 'function') {
+              onDeleteTransaction(id);
+            }
+            setSelectedTxForEdit(null);
+          }}
+          onAddCategory={onAddCategory}
+          onAddSubcategory={onAddSubcategory}
+          onUpdateSubcategory={onUpdateSubcategory}
+          onDeleteSubcategory={onDeleteSubcategory}
+          onAddAccount={onAddAccount}
+          trm={trm}
+        />
+      )}
+
+      {/* 8. Modal de Comprobante / Recibo */}
+      {selectedTxForReceipt && (
+        <ReceiptModal
+          transaction={selectedTxForReceipt}
+          onClose={() => setSelectedTxForReceipt(null)}
         />
       )}
     </>

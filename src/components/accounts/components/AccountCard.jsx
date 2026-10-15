@@ -1,10 +1,4 @@
 import React from 'react';
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  Pencil, 
-  Trash2 
-} from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { 
@@ -14,16 +8,13 @@ import {
 
 /**
  * AccountCard
- * Tarjeta individual de cuenta bancaria, efectivo, inversión o tarjeta de crédito.
- * Estilo Fintech Bento con saldo en divisa nativa, equivalente en COP y controles interactivos.
+ * Tarjeta individual limpia de cuenta bancaria, efectivo, inversión o tarjeta de crédito.
+ * Estilo Fintech Bento interactiva con saldo en divisa nativa y equivalente en COP.
+ * Sin botones redundantes de flechas, lápiz o papelera (gestionados vía Swipe y Long-Press).
  */
 export default function AccountCard({
   account,
   index,
-  isFirst = false,
-  isLast = false,
-  onMoveUp,
-  onMoveDown,
   onEdit,
   onDelete,
   onSelectCard,
@@ -66,17 +57,17 @@ export default function AccountCard({
   const handleCardClick = () => {
     if (isCreditCard && onSelectCard) {
       onSelectCard(account);
+    } else if (onEdit) {
+      onEdit(account);
     }
   };
 
   return (
     <div
-      onClick={isCreditCard ? handleCardClick : undefined}
-      className={`p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm transition-all ${
-        isCreditCard ? 'cursor-pointer hover:border-slate-300 dark:hover:border-white/20 active:scale-[0.995]' : 'hover:border-slate-300 dark:hover:border-white/15'
-      }`}
+      onClick={handleCardClick}
+      className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm transition-all cursor-pointer hover:border-slate-300 dark:hover:border-white/20 active:scale-[0.995]"
     >
-      {/* Fila superior (Cabecera): Icono, Nombre, Badges a la izquierda; Controles a la derecha */}
+      {/* Fila superior (Cabecera): Icono, Nombre, Badges */}
       <div className="flex items-center justify-between gap-2">
         {/* Izquierda: Contenedor de icono + Nombre + Badges */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -107,73 +98,9 @@ export default function AccountCard({
             )}
           </div>
         </div>
-
-        {/* Derecha: Controles de reordenar + botón de editar + eliminar opcional */}
-        <div className="shrink-0 flex items-center gap-1">
-          {(onMoveUp || onMoveDown) && (
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                disabled={isFirst}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onMoveUp) onMoveUp();
-                }}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
-                title="Subir posición"
-                aria-label="Subir posición"
-              >
-                <ChevronUp className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                disabled={isLast}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onMoveDown) onMoveDown();
-                }}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
-                title="Bajar posición"
-                aria-label="Bajar posición"
-              >
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {onEdit && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(account);
-              }}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer"
-              title="Editar cuenta"
-              aria-label="Editar cuenta"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-          )}
-
-          {onDelete && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(account);
-              }}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-              title="Eliminar cuenta"
-              aria-label="Eliminar cuenta"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-        </div>
       </div>
 
-      {/* Fila inferior (Cuerpo de saldo): Contenedor independiente con mt-3 sin colisiones */}
+      {/* Fila inferior (Cuerpo de saldo): Contenedor con mt-3 */}
       <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-baseline justify-between gap-2 flex-wrap">
         <span className="text-xs font-medium text-slate-500 dark:text-zinc-400">
           {isCreditCard ? 'Saldo utilizado / Deuda' : 'Saldo disponible'}

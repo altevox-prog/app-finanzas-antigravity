@@ -78,7 +78,7 @@ export default function TransactionFilterBar({
       </div>
 
       {/* Quick Filter Horizontal Scroll by Account */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar pt-0.5">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar pt-0.5 pr-6">
         <button
           type="button"
           onClick={() => onAccountFilterChange && onAccountFilterChange('all')}
@@ -105,6 +105,8 @@ export default function TransactionFilterBar({
             <span>{acc.name}</span>
           </button>
         ))}
+        {/* Espaciador final para evitar recorte de la última tarjeta al final del scroll */}
+        <div className="w-4 shrink-0 h-1 pointer-events-none" aria-hidden="true" />
       </div>
     </div>
   );

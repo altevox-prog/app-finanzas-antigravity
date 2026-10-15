@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Receipt, ChevronRight } from 'lucide-react';
+import { Receipt } from 'lucide-react';
 import { getCategoryEmoji } from '../../reports/ReportsAndCharts';
 
 /**
@@ -42,7 +42,6 @@ export default function RecentTransactionsWidget({
             Historial cronológico reciente con detalles
           </p>
         </div>
-        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
       </div>
 
       {/* Tabla Moderna SaaS */}
@@ -80,11 +79,7 @@ export default function RecentTransactionsWidget({
                 return (
                   <tr
                     key={tx.id}
-                    onClick={(e) => {
-                      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-                      if (typeof onTransactionClick === 'function') onTransactionClick(tx);
-                    }}
-                    className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors group/row cursor-pointer"
+                    className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors group/row"
                   >
                     {/* Categoría / Emoji */}
                     <td className="py-3 pl-2">

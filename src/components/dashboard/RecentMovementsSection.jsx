@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Activity, 
-  ChevronRight, 
   ArrowUpRight, 
   ArrowDownRight,
   Inbox
@@ -44,21 +43,6 @@ export default function RecentMovementsSection({
     }
   };
 
-  // Apertura del modal de detalle / edición de una transacción
-  const handleItemClick = (e, tx) => {
-    if (isReordering) return;
-    if (e && typeof e.stopPropagation === 'function') {
-      e.stopPropagation();
-    }
-    if (typeof onSelectTransaction === 'function') {
-      onSelectTransaction(tx);
-    } else if (typeof onOpenTransaction === 'function') {
-      onOpenTransaction(tx);
-    } else {
-      handleViewAll(e);
-    }
-  };
-
   return (
     <div
       onClick={handleViewAll}
@@ -80,7 +64,6 @@ export default function RecentMovementsSection({
               </p>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
         </div>
 
         {/* Listado de últimas transacciones o estado vacío */}
@@ -112,9 +95,7 @@ export default function RecentMovementsSection({
                 return (
                   <div
                     key={tx?.id || idx}
-                    onClick={(e) => handleItemClick(e, tx)}
-                    className="flex items-center justify-between py-2.5 px-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group/item"
-                    title="Ver o editar movimiento"
+                    className="flex items-center justify-between py-2.5 px-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group/item"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 pr-2">
                       <div

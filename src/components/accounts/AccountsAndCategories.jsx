@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   CreditCard, 
   Plus, 
@@ -10,6 +10,7 @@ import CreditCardDetailModal from './modals/CreditCardDetailModal';
 import AddAccountModal from './modals/AddAccountModal';
 import EditAccountModal from './modals/EditAccountModal';
 import AccountCard from './components/AccountCard';
+import SwipeableRow from '../common/SwipeableRow';
 import { 
   getAccountNativeBalance, 
   safeNumber
@@ -31,6 +32,26 @@ export default function AccountsAndCategories({
 }) {
   const { formatMoney } = usePrivacy();
 
+  // Sincronización del orden local de cuentas
+  const [localAccounts, setLocalAccounts] = useState(accounts);
+  const localAccountsRef = useRef(accounts);
+
+  useEffect(() => {
+    setLocalAccounts(accounts);
+    localAccountsRef.current = accounts;
+  }, [accounts]);
+
+  // Estados y referencias para Long-Press & Drag-and-Drop
+  const [isReordering, setIsReordering] = useState(false);
+  const isReorderingRef = useRef(false);
+  const [draggingIndex, setDraggingIndex] = useState(null);
+  const isDraggingRef = useRef(false);
+  const justDraggedRef = useRef(false);
+  const longPressTimerRef = useRef(null);
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
+  const draggedIndexRef = useRef(null);
+  const lastSwapTimeRef = useRef(0);
+
   // Selected Credit Card for Detail Modal (local fallback if not controlled globally)
   const [localSelectedCard, setLocalSelectedCard] = useState(null);
 
@@ -43,8 +64,8 @@ export default function AccountsAndCategories({
   // Live balance for accounts in their native currency and COP equivalent (defensivo)
   const accountsWithBalance = useMemo(() => {
     try {
-      if (!Array.isArray(accounts)) return [];
-      return accounts.map((account) => {
+      if (!Array.isArray(localAccounts)) return [];
+      return localAccounts.map((account) => {
         try {
           const currency = account?.currency || 'COP';
           const currentBalance = getAccountNativeBalance(account, transactions, trm);
@@ -88,7 +109,7 @@ export default function AccountsAndCategories({
       console.error('Error calculando balances de cuentas:', err);
       return [];
     }
-  }, [accounts, transactions, trm]);
+  }, [localAccounts, transactions, trm]);
 
   const totalAvailableWealth = accountsWithBalance
     .filter(acc => acc?.type !== 'card' && acc?.type !== 'credit')
@@ -109,20 +130,6 @@ export default function AccountsAndCategories({
     }
   };
 
-  // Reordenar cuentas (intercambiar posición e invocar persistencia)
-  const handleMoveAccount = (index, direction) => {
-    const safeAccounts = Array.isArray(accounts) ? accounts : [];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= safeAccounts.length) return;
-    const newAccounts = [...safeAccounts];
-    const temp = newAccounts[index];
-    newAccounts[index] = newAccounts[targetIndex];
-    newAccounts[targetIndex] = temp;
-    if (onReorderAccounts) {
-      onReorderAccounts(newAccounts);
-    }
-  };
-
   // Open edit modal for an account
   const handleOpenEditAccount = (acc) => {
     setEditingAccount(acc);
@@ -136,10 +143,27 @@ export default function AccountsAndCategories({
     setEditingAccount(null);
   };
 
+  // Eliminar cuenta con confirmación enriquecida si tiene saldo o movimientos vinculados
   const handleDeleteAccount = (accId) => {
-    const accToDelete = accounts.find(a => a.id === accId);
+    const accToDelete = localAccounts.find(a => a.id === accId) || accounts.find(a => a.id === accId);
     const accName = accToDelete ? accToDelete.name : 'esta cuenta';
-    if (window.confirm(`¿Estás seguro de eliminar la cuenta "${accName}"?`)) {
+    
+    // Verificar si tiene saldo o movimientos vinculados
+    const accTxs = Array.isArray(transactions) 
+      ? transactions.filter(t => t?.accountId === accId || t?.account === accToDelete?.name)
+      : [];
+    const rawBalance = Number(accToDelete?.balance ?? (accToDelete?.currentBalance ?? 0));
+    const hasBalance = !isNaN(rawBalance) && rawBalance !== 0;
+
+    let confirmMessage = `¿Estás seguro de eliminar la cuenta "${accName}"?`;
+    if (hasBalance || accTxs.length > 0) {
+      const details = [];
+      if (hasBalance) details.push(`saldo actual (${formatMoney(rawBalance)})`);
+      if (accTxs.length > 0) details.push(`${accTxs.length} movimiento(s) vinculados`);
+      confirmMessage = `⚠️ Atención: La cuenta "${accName}" tiene ${details.join(' y ')}.\n\n¿Estás seguro de que deseas eliminarla de todas formas?`;
+    }
+
+    if (window.confirm(confirmMessage)) {
       if (onDeleteAccount) {
         onDeleteAccount(accId);
       }
@@ -151,6 +175,197 @@ export default function AccountsAndCategories({
       onAddAccount(newAcc);
     }
     setShowAddAccount(false);
+  };
+
+  // Clic en la tarjeta (abre detalle si es tarjeta de crédito, o edición si es cuenta regular)
+  const handleCardClick = (acc) => {
+    if (justDraggedRef.current || isReorderingRef.current || isDraggingRef.current || draggingIndex !== null) return;
+    if (acc.type === 'card' || acc.type === 'credit') {
+      if (onOpenCreditCardDetail) {
+        onOpenCreditCardDetail(acc);
+      } else {
+        setLocalSelectedCard(acc);
+      }
+    } else {
+      handleOpenEditAccount(acc);
+    }
+  };
+
+  /* ============================================================== */
+  /* GESTIÓN DE REORDENAMIENTO TÁCTIL (Móvil Long-Press ~400ms)    */
+  /* ============================================================== */
+  const handleTouchStart = (e, index) => {
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    draggedIndexRef.current = index;
+
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      try {
+        navigator.vibrate?.(40);
+      } catch (_) {}
+      isReorderingRef.current = true;
+      setIsReordering(true);
+      isDraggingRef.current = true;
+      setDraggingIndex(index);
+    }, 400);
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+
+    // Si aún no está en modo reordenar y el dedo se desplazó > 8px, cancelar timer inmediatamente
+    // Esto asegura que un swipe lateral rápido active el swipe de editar/eliminar sin demoras
+    if (!isReorderingRef.current) {
+      if (dx > 8 || dy > 8) {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      }
+      return;
+    }
+
+    // Modo reordenar activo: prevenir scroll nativo del viewport
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+
+    const currentIdx = draggedIndexRef.current;
+    if (currentIdx === null || currentIdx === undefined) return;
+
+    // Throttling para fluidez
+    const now = Date.now();
+    if (now - lastSwapTimeRef.current < 60) return;
+
+    // Identificar la tarjeta destino calculando las coordenadas de las tarjetas
+    const allCards = document.querySelectorAll('[data-account-index]');
+    let targetIdx = null;
+
+    for (const card of allCards) {
+      const rect = card.getBoundingClientRect();
+      if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        const idx = parseInt(card.getAttribute('data-account-index'), 10);
+        if (!isNaN(idx) && idx !== currentIdx) {
+          const midY = rect.top + rect.height / 2;
+          const isValidMove = currentIdx < idx 
+            ? touch.clientY > midY 
+            : touch.clientY < midY;
+          if (isValidMove) {
+            targetIdx = idx;
+            break;
+          }
+        }
+      }
+    }
+
+    if (targetIdx !== null && targetIdx !== currentIdx) {
+      lastSwapTimeRef.current = now;
+      setLocalAccounts((prev) => {
+        const updated = [...prev];
+        const [movedItem] = updated.splice(currentIdx, 1);
+        updated.splice(targetIdx, 0, movedItem);
+        localAccountsRef.current = updated;
+        return updated;
+      });
+      draggedIndexRef.current = targetIdx;
+      setDraggingIndex(targetIdx);
+      try {
+        navigator.vibrate?.(20);
+      } catch (_) {}
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (isReorderingRef.current) {
+      isReorderingRef.current = false;
+      setIsReordering(false);
+      isDraggingRef.current = false;
+      setDraggingIndex(null);
+      draggedIndexRef.current = null;
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 300);
+
+      // Persistir nuevo orden
+      if (onReorderAccounts) {
+        onReorderAccounts(localAccountsRef.current);
+      }
+    }
+  };
+
+  const handleTouchCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (isReorderingRef.current) {
+      isReorderingRef.current = false;
+      setIsReordering(false);
+      isDraggingRef.current = false;
+      setDraggingIndex(null);
+      draggedIndexRef.current = null;
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 300);
+
+      if (onReorderAccounts) {
+        onReorderAccounts(localAccountsRef.current);
+      }
+    }
+  };
+
+  /* ============================================================== */
+  /* GESTIÓN DE REORDENAMIENTO EN ESCRITORIO (HTML5 Drag & Drop)    */
+  /* ============================================================== */
+  const handleDragStart = (e, index) => {
+    draggedIndexRef.current = index;
+    setDraggingIndex(index);
+    isDraggingRef.current = true;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+    try {
+      navigator.vibrate?.(40);
+    } catch (_) {}
+  };
+
+  const handleDragOver = (e, targetIdx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const currentIdx = draggedIndexRef.current;
+    if (currentIdx === null || currentIdx === undefined || currentIdx === targetIdx) return;
+
+    setLocalAccounts((prev) => {
+      const updated = [...prev];
+      const [movedItem] = updated.splice(currentIdx, 1);
+      updated.splice(targetIdx, 0, movedItem);
+      localAccountsRef.current = updated;
+      return updated;
+    });
+    draggedIndexRef.current = targetIdx;
+    setDraggingIndex(targetIdx);
+  };
+
+  const handleDragEnd = () => {
+    isDraggingRef.current = false;
+    setDraggingIndex(null);
+    draggedIndexRef.current = null;
+    justDraggedRef.current = true;
+    setTimeout(() => {
+      justDraggedRef.current = false;
+    }, 300);
+
+    if (onReorderAccounts) {
+      onReorderAccounts(localAccountsRef.current);
+    }
   };
 
   return (
@@ -170,11 +385,11 @@ export default function AccountsAndCategories({
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <h2 className="text-[18px] sm:text-[20px] font-bold flex items-center gap-2 truncate" style={{ color: 'var(--text-main)' }}>
+              <h2 className="text-base sm:text-lg md:text-xl font-bold flex items-center gap-2 leading-tight min-w-0" style={{ color: 'var(--text-main)' }}>
                 <CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" />
-                <span>Cuentas y Métodos de Pago</span>
+                <span className="leading-tight">Cuentas y Métodos de Pago</span>
               </h2>
-              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-normal">
+              <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-normal">
                 Saldos sincronizados automáticamente
               </p>
             </div>
@@ -217,30 +432,47 @@ export default function AccountsAndCategories({
           </div>
         </div>
 
-        {/* Tarjetas de Cuenta Individuales (Estilo Fintech Bento) */}
+        {/* Tarjetas de Cuenta Individuales con Swipe to Action y Long-Press Drag & Drop */}
         <div className="grid grid-cols-1 gap-3">
-          {accountsWithBalance.map((acc, index) => (
-            <AccountCard
-              key={acc?.id || `acc-${index}`}
-              account={acc}
-              index={index}
-              isFirst={index === 0}
-              isLast={index === accountsWithBalance.length - 1}
-              onMoveUp={() => handleMoveAccount(index, 'up')}
-              onMoveDown={() => handleMoveAccount(index, 'down')}
-              onEdit={() => setEditingAccount(acc)}
-              onDelete={() => handleDeleteAccount(acc?.id)}
-              onSelectCard={() => {
-                if (onOpenCreditCardDetail) {
-                  onOpenCreditCardDetail(acc);
-                } else {
-                  setLocalSelectedCard(acc);
-                }
-              }}
-              transactions={transactions}
-              trm={trm}
-            />
-          ))}
+          {accountsWithBalance.map((acc, index) => {
+            const isDragging = draggingIndex === index;
+            return (
+              <div
+                key={acc?.id || `acc-${index}`}
+                data-account-index={index}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchCancel}
+                className={`transition-all duration-200 select-none ${
+                  isDragging
+                    ? 'scale-[1.02] shadow-2xl ring-2 ring-emerald-500/40 z-30 opacity-95 touch-none'
+                    : 'opacity-100 z-0'
+                }`}
+              >
+                <SwipeableRow
+                  onEdit={() => handleOpenEditAccount(acc)}
+                  onDelete={() => handleDeleteAccount(acc?.id)}
+                  disabled={isReordering || draggingIndex !== null}
+                  className="rounded-2xl"
+                >
+                  <AccountCard
+                    account={acc}
+                    index={index}
+                    onEdit={() => handleCardClick(acc)}
+                    onDelete={() => handleDeleteAccount(acc?.id)}
+                    onSelectCard={() => handleCardClick(acc)}
+                    transactions={transactions}
+                    trm={trm}
+                  />
+                </SwipeableRow>
+              </div>
+            );
+          })}
 
           {accounts.length === 0 && (
             <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-slate-400">
