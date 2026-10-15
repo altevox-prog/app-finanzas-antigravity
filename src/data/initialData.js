@@ -261,7 +261,7 @@ export const formatUSD = (amount, isCensored = false, showDecimalsParam = undefi
 export const INVESTMENT_CATEGORIES = [
   {
     id: 'variable',
-    name: 'Renta Variable / ETFs / Acciones',
+    name: 'Renta Variable',
     shortName: 'Renta Variable',
     color: '#007AFF',
     icon: 'TrendingUp',
@@ -269,7 +269,7 @@ export const INVESTMENT_CATEGORIES = [
   },
   {
     id: 'fixed',
-    name: 'Renta Fija / CDTs',
+    name: 'Renta Fija',
     shortName: 'Renta Fija',
     color: '#34C759',
     icon: 'ShieldCheck',
@@ -277,11 +277,11 @@ export const INVESTMENT_CATEGORIES = [
   },
   {
     id: 'liquidity',
-    name: 'Fondos de Liquidez / Fiducuentas',
+    name: 'Liquidez',
     shortName: 'Liquidez',
     color: '#5AC8FA',
     icon: 'Coins',
-    description: 'Fiducuentas y cuentas de ahorro remuneradas con retiro inmediato'
+    description: 'Cuentas remuneradas y fondos de liquidez a la vista'
   },
   {
     id: 'crypto',
@@ -290,14 +290,6 @@ export const INVESTMENT_CATEGORIES = [
     color: '#FF9500',
     icon: 'Sparkles',
     description: 'Bitcoin, Ethereum, stablecoins y criptoactivos'
-  },
-  {
-    id: 'other',
-    name: 'Otros Activos',
-    shortName: 'Otros',
-    color: '#AF52DE',
-    icon: 'Layers',
-    description: 'Bienes raíces tokenizados, metales u otras inversiones'
   }
 ];
 
