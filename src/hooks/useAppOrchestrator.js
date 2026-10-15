@@ -12,8 +12,51 @@ import { useUserProfile } from './useUserProfile';
 import { useTRM } from './useTRM';
 import { useCategories } from './useCategories';
 import { useBudgets } from './useBudgets';
-import { useSavingsGoals } from './useSavingsGoals';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { INITIAL_SAVINGS_GOALS } from '../data/initialData';
 import { useRecurringPayments } from './useRecurringPayments';
+
+function getInitialSavingsGoals() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.SAVINGS_GOALS) ||
+                  localStorage.getItem('savingsGoals') ||
+                  localStorage.getItem('savings') ||
+                  localStorage.getItem('goals');
+    if (saved !== null) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.error('Error parseando metas de ahorro:', e);
+  }
+  return INITIAL_SAVINGS_GOALS;
+}
+
+function sanitizeGoal(goal) {
+  const rawDate = goal.target_date || goal.dueDate || goal.deadline || '';
+  let safeDate = '';
+  if (rawDate) {
+    try {
+      safeDate = new Date(rawDate).toISOString().split('T')[0];
+    } catch {
+      safeDate = String(rawDate).split('T')[0];
+    }
+  }
+  return {
+    ...goal,
+    id: goal.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`),
+    target_date: safeDate,
+    dueDate: safeDate,
+    deadline: safeDate,
+    target_account_id: goal.target_account_id || goal.targetAccountId || null,
+    targetAccountId: goal.target_account_id || goal.targetAccountId || null,
+    months: goal.months ? Number(goal.months) : 6,
+    notification_day: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
+    notificationDay: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
+    notify_enabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true),
+    notifyEnabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true)
+  };
+}
 import { useInvestments } from './useInvestments';
 import { useDebts } from './useDebts';
 import { useAccounts } from './useAccounts';
@@ -141,7 +184,62 @@ export function useAppOrchestrator() {
 
   // Presupuestos & Metas state & actions
   const { budgets, setBudgets, updateGlobalBudget, updateCategoryBudget, removeCategoryBudget, resetBudgets } = useBudgets(isResettingRef);
-  const { savingsGoals, setSavingsGoals, handleAddGoal, handleUpdateGoal, handleDeleteGoal, handleContributeGoal, resetSavingsGoals } = useSavingsGoals(isResettingRef);
+  
+  // Metas de ahorro state & actions
+  const [savingsGoals, setSavingsGoals] = useState(getInitialSavingsGoals);
+
+  // Persistencia reactiva en localStorage de metas de ahorro
+  useEffect(() => {
+    if (isResettingRef?.current) return;
+    try {
+      const serialized = JSON.stringify(savingsGoals);
+      localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
+      localStorage.setItem('savingsGoals', serialized);
+      localStorage.setItem('savings', serialized);
+      localStorage.setItem('goals', serialized);
+    } catch (e) {
+      console.error('Error guardando metas de ahorro:', e);
+    }
+  }, [savingsGoals, isResettingRef]);
+
+  const handleAddGoal = useCallback(async (newGoal) => {
+    const goalItem = sanitizeGoal(newGoal);
+    setSavingsGoals((prev) => [goalItem, ...(prev || []).filter((g) => g.id !== goalItem.id)]);
+    return goalItem;
+  }, []);
+
+  const handleUpdateGoal = useCallback(async (updatedGoal) => {
+    const goalItem = sanitizeGoal(updatedGoal);
+    setSavingsGoals((prev) => (prev || []).map((g) => (g.id === goalItem.id ? goalItem : g)));
+    return goalItem;
+  }, []);
+
+  const handleDeleteGoal = useCallback(async (goalId) => {
+    setSavingsGoals((prev) => (prev || []).filter((g) => g.id !== goalId));
+  }, []);
+
+  const handleContributeGoal = useCallback(async (goalId, amount) => {
+    const val = Number(amount) || 0;
+    if (val <= 0) return;
+    setSavingsGoals((prev) => (prev || []).map((g) => {
+      if (g.id !== goalId) return g;
+      return {
+        ...g,
+        currentAmount: (Number(g.currentAmount) || 0) + val
+      };
+    }));
+  }, []);
+
+  const resetSavingsGoals = useCallback(() => {
+    setSavingsGoals(INITIAL_SAVINGS_GOALS);
+    try {
+      const serialized = JSON.stringify(INITIAL_SAVINGS_GOALS);
+      localStorage.setItem(STORAGE_KEYS.SAVINGS_GOALS, serialized);
+      localStorage.setItem('savingsGoals', serialized);
+      localStorage.setItem('savings', serialized);
+      localStorage.setItem('goals', serialized);
+    } catch {}
+  }, []);
 
   // Control y navegación unificada de fechas
   const {
@@ -164,26 +262,26 @@ export function useAppOrchestrator() {
   const resetAllFinancialStates = useCallback(() => {
     if (isResettingRef) isResettingRef.current = true;
     try {
-      resetTransactions?.();
-      resetAccounts?.();
-      resetDebts?.();
-      resetInvestments?.();
-      resetRecurringPayments?.();
-      resetSavingsGoals?.();
-      resetBudgets?.();
-      resetCategories?.();
+      if (typeof resetTransactions === 'function') resetTransactions();
+      if (typeof resetAccounts === 'function') resetAccounts();
+      if (typeof resetDebts === 'function') resetDebts();
+      if (typeof resetInvestments === 'function') resetInvestments();
+      if (typeof resetRecurringPayments === 'function') resetRecurringPayments();
+      if (typeof resetSavingsGoals === 'function') resetSavingsGoals();
+      if (typeof resetBudgets === 'function') resetBudgets();
+      if (typeof resetCategories === 'function') resetCategories();
 
-      setTransactions([]);
-      setAccounts([]);
-      setDebtsAndLoans([]);
-      setInvestments([]);
-      setRecurringPayments([]);
-      setSavingsGoals([]);
-      setCategories([]);
-      setBudgets({ global: 0, categories: {} });
-      setUserProfile({ name: 'Usuario', email: '' });
-      setIsLocked(false);
-      setSecuritySettings({ pinEnabled: false, pin: '', biometricsEnabled: false });
+      if (typeof setTransactions === 'function') setTransactions([]);
+      if (typeof setAccounts === 'function') setAccounts([]);
+      if (typeof setDebtsAndLoans === 'function') setDebtsAndLoans([]);
+      if (typeof setInvestments === 'function') setInvestments([]);
+      if (typeof setRecurringPayments === 'function') setRecurringPayments([]);
+      if (typeof setSavingsGoals === 'function') setSavingsGoals([]);
+      if (typeof setCategories === 'function') setCategories([]);
+      if (typeof setBudgets === 'function') setBudgets({ global: 0, categories: {} });
+      if (typeof setUserProfile === 'function') setUserProfile({ name: 'Usuario', email: '' });
+      if (typeof setIsLocked === 'function') setIsLocked(false);
+      if (typeof setSecuritySettings === 'function') setSecuritySettings({ pinEnabled: false, pin: '', biometricsEnabled: false });
     } catch (resetErr) {
       console.warn('[useAppOrchestrator] Error al resetear estados de React:', resetErr);
     } finally {
