@@ -169,6 +169,9 @@ export default function App() {
               financeData={state.financeData}
               financeActions={state.financeActions}
               modalControls={modalControls}
+              handleGoBackFromSubView={state.handleGoBackFromSubView}
+              handleTabChange={state.handleTabChange}
+              fromSettings={state.fromSettings}
               {...modalControls}
             />
           </div>

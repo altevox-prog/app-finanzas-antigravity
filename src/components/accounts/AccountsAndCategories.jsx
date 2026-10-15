@@ -160,17 +160,15 @@ export default function AccountsAndCategories({
       <section className="bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            {(onBack || fromSettings) && (
-              <button
-                type="button"
-                onClick={handleGoBack}
-                className="w-9 h-9 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-[#121622] shadow-sm shrink-0"
-                aria-label="Volver"
-                title="Volver"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+              aria-label="Volver"
+              title="Volver"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             <div className="min-w-0 flex-1">
               <h2 className="text-[18px] sm:text-[20px] font-bold flex items-center gap-2 truncate" style={{ color: 'var(--text-main)' }}>
                 <CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" />
@@ -182,14 +180,16 @@ export default function AccountsAndCategories({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowAddAccount(!showAddAccount)}
-            className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
-            title={showAddAccount ? 'Cerrar' : 'Nueva Cuenta'}
-          >
-            <Plus className={`w-4 h-4 transition-transform duration-200 ${showAddAccount ? 'rotate-45' : ''}`} />
-          </button>
+          {fromSettings && (
+            <button
+              type="button"
+              onClick={() => setShowAddAccount(!showAddAccount)}
+              className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
+              title={showAddAccount ? 'Cerrar' : 'Nueva Cuenta'}
+            >
+              <Plus className={`w-4 h-4 transition-transform duration-200 ${showAddAccount ? 'rotate-45' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* Modal / Sheet Formulario Nueva Cuenta */}
@@ -246,7 +246,7 @@ export default function AccountsAndCategories({
             <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-slate-400">
               <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm font-medium">No tienes cuentas registradas</p>
-              <p className="text-xs mt-0.5">Usa el botón + arriba para agregar tu primera cuenta</p>
+              <p className="text-xs mt-0.5">{fromSettings ? 'Usa el botón + arriba para agregar tu primera cuenta' : 'Gestiona y agrega tus cuentas desde la sección de Configuración'}</p>
             </div>
           )}
         </div>

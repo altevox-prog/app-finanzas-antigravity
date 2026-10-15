@@ -2,8 +2,8 @@ import React from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
-  RefreshCw, 
-  Plus 
+  RefreshCw,
+  ArrowLeft
 } from 'lucide-react';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatCurrency, formatUSD } from '../../../data/initialData';
@@ -28,6 +28,7 @@ export default function PortfolioSummaryHeader({
   onNewInvestment,
   trm = 4050,
   investmentsCount = 0,
+  onBack = null
 }) {
   const { formatMoney, isPrivacyMode, enableDecimals } = usePrivacy();
   const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
@@ -54,20 +55,33 @@ export default function PortfolioSummaryHeader({
     >
       {/* Barra de Título y Botón de Actualización Rápida En Vivo */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--border-color)' }}>
-        <div className="flex items-center gap-2 flex-wrap">
-          <TrendingUp className="w-5 h-5 text-emerald-500 shrink-0" />
-          <h2 className="text-lg sm:text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-main)' }}>
-            Portafolio de Inversiones
-          </h2>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>En vivo</span>
-          </span>
-          {lastRefreshedAt && (
-            <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
-              • {lastRefreshedAt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={onBack ? onBack : () => {
+              if (typeof window !== 'undefined' && window.history.length > 2) window.history.back();
+            }}
+            className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+            aria-label="Volver"
+            title="Volver"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <TrendingUp className="w-5 h-5 text-emerald-500 shrink-0" />
+            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-main)' }}>
+              Portafolio de Inversiones
+            </h2>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>En vivo</span>
             </span>
-          )}
+            {lastRefreshedAt && (
+              <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
+                • {lastRefreshedAt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -109,16 +123,6 @@ export default function PortfolioSummaryHeader({
           >
             <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>{isRefreshing ? 'Actualizando...' : '↺ Actualizar cotizaciones'}</span>
-          </button>
-
-          {/* Botón Nueva Inversión */}
-          <button
-            type="button"
-            onClick={onNewInvestment}
-            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Nueva inversión</span>
           </button>
         </div>
       </div>

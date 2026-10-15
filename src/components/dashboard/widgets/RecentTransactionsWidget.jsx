@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Receipt, ArrowRight } from 'lucide-react';
+import { Receipt, ChevronRight } from 'lucide-react';
 import { getCategoryEmoji } from '../../reports/ReportsAndCharts';
 
 /**
@@ -12,7 +12,8 @@ export default function RecentTransactionsWidget({
   formatMoney = (val) => `$${val}`,
   onTransactionClick,
   onNavigateToTab,
-  onAddTransaction
+  onAddTransaction,
+  isReordering = false
 }) {
   const recentTransactions = useMemo(() => {
     return (Array.isArray(transactions) ? [...transactions] : [])
@@ -21,13 +22,17 @@ export default function RecentTransactionsWidget({
   }, [transactions]);
 
   const handleNavigate = () => {
+    if (isReordering) return;
     if (typeof onNavigateToTab === 'function') {
       onNavigateToTab('transactions');
     }
   };
 
   return (
-    <div className="lg:col-span-8 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4">
+    <div 
+      onClick={handleNavigate}
+      className="lg:col-span-8 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4 hover:border-emerald-500/40 hover:shadow-md transition-all cursor-pointer active:scale-[0.99] group"
+    >
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
@@ -37,14 +42,7 @@ export default function RecentTransactionsWidget({
             Historial cronológico reciente con detalles
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleNavigate}
-          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors flex items-center gap-0.5 cursor-pointer"
-        >
-          <span>Ver todos</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
       </div>
 
       {/* Tabla Moderna SaaS */}
@@ -82,8 +80,11 @@ export default function RecentTransactionsWidget({
                 return (
                   <tr
                     key={tx.id}
-                    onClick={() => onTransactionClick?.(tx)}
-                    className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                    onClick={(e) => {
+                      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+                      if (typeof onTransactionClick === 'function') onTransactionClick(tx);
+                    }}
+                    className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors group/row cursor-pointer"
                   >
                     {/* Categoría / Emoji */}
                     <td className="py-3 pl-2">

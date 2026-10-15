@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Wallet, Plus, CreditCard } from 'lucide-react';
+import { ArrowRight, ChevronRight, Wallet, Plus, CreditCard } from 'lucide-react';
 import BrandIcon from '../ui/BrandIcon';
 import { getAccountNativeBalance, formatNativeCurrency, safeNumber } from '../../utils/currencyUtils';
 
@@ -14,13 +14,15 @@ export default function AccountsWidget({
   onOpenAccounts,
   setActiveTab,
   onSelectCreditCardDetail = () => {},
-  formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`
+  formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
+  isReordering = false
 }) {
   const accountList = Array.isArray(accounts) ? accounts : [];
   const isTwoAccounts = accountList.length === 2;
   const isThreeOrMore = accountList.length >= 3;
 
   const handleNavigateToAccounts = () => {
+    if (isReordering) return;
     if (typeof onOpenAccounts === 'function') {
       onOpenAccounts();
     } else if (typeof onNavigateToTab === 'function') {
@@ -47,9 +49,12 @@ export default function AccountsWidget({
   return (
     <div className="w-full space-y-2.5">
       {/* Header del widget */}
-      <div className="flex items-center justify-between px-0.5">
+      <div 
+        onClick={handleNavigateToAccounts}
+        className="flex items-center justify-between px-0.5 cursor-pointer group"
+      >
         <div className="flex items-center gap-2">
-          <h3 className="text-[15px] sm:text-[16px] font-bold tracking-tight text-slate-900 dark:text-white">
+          <h3 className="text-[15px] sm:text-[16px] font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">
             Mis Cuentas
           </h3>
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
@@ -57,13 +62,7 @@ export default function AccountsWidget({
           </span>
         </div>
         {accountList.length > 0 && (
-          <button
-            type="button"
-            onClick={handleNavigateToAccounts}
-            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors cursor-pointer"
-          >
-            Ver todas →
-          </button>
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
         )}
       </div>
 

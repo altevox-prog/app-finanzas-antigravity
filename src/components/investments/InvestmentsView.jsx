@@ -24,7 +24,8 @@ export default function InvestmentsView({
   onUpdateInvestment,
   onDeleteInvestment,
   onAddTransaction,
-  trm = 4050
+  trm = 4050,
+  onBack = null
 }) {
   const { formatMoney, isPrivacyMode, enableDecimals } = usePrivacy();
   const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
@@ -166,6 +167,7 @@ export default function InvestmentsView({
         }}
         trm={trm}
         investmentsCount={investments.length}
+        onBack={onBack}
       />
 
       {/* ============================================================== */}
@@ -194,19 +196,9 @@ export default function InvestmentsView({
                 ? 'No tienes inversiones registradas' 
                 : 'No hay inversiones en esta categoría'}
             </p>
-            <p className="text-[11px] opacity-50 mt-0.5 mb-3">
-              Toca "Nueva inversión" para registrar acciones, ETFs, criptoactivos o CDTs con cotización en tiempo real.
+            <p className="text-[11px] opacity-50 mt-0.5">
+              Usa el botón central (+) para registrar acciones, ETFs, criptoactivos o CDTs con cotización en tiempo real.
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                setEditingInvestment(null);
-                setIsFormModalOpen(true);
-              }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 cursor-pointer"
-            >
-              Agregar inversión
-            </button>
           </div>
         ) : viewGrouping === 'flat' ? (
           /* ============================================================== */

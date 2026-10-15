@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarSync, ArrowRight } from 'lucide-react';
+import { CalendarSync, ChevronRight } from 'lucide-react';
 import { safeNumber } from '../../../utils/financeMath';
 
 /**
@@ -11,9 +11,11 @@ export default function RecurringPaymentsWidget({
   subscriptions = [],
   formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`,
   onNavigateToTab = () => {},
-  setActiveTab = null
+  setActiveTab = null,
+  isReordering = false
 }) {
   const handleNav = (tab = 'recurring') => {
+    if (isReordering) return;
     if (typeof onNavigateToTab === 'function') onNavigateToTab(tab);
     else if (typeof setActiveTab === 'function') setActiveTab(tab);
   };
@@ -32,7 +34,7 @@ export default function RecurringPaymentsWidget({
   return (
     <div 
       onClick={() => handleNav('recurring')}
-      className="min-h-[140px] p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
+      className="p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
     >
       <div>
         {/* Cabecera interna limpia ([📅] Presupuesto mensual) sin elementos flotantes externos */}
@@ -41,6 +43,7 @@ export default function RecurringPaymentsWidget({
             <CalendarSync className="w-4 h-4 text-emerald-500 shrink-0" />
             <span className="truncate uppercase">PRESUPUESTO MENSUAL</span>
           </span>
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
         </div>
 
         {/* Cuerpo */}
@@ -70,27 +73,6 @@ export default function RecurringPaymentsWidget({
             </div>
           )}
         </div>
-      </div>
-
-      {/* Footer homogéneo */}
-      <div className="pt-3 mt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-slate-400 font-medium">
-          Pagos periódicos
-        </span>
-        <button
-          type="button"
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleNav('recurring');
-          }}
-          className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 text-[11px] group-hover:translate-x-0.5 transition-transform hover:underline cursor-pointer"
-        >
-          <span>Ver detalles</span>
-          <ArrowRight className="w-3 h-3" />
-        </button>
       </div>
     </div>
   );

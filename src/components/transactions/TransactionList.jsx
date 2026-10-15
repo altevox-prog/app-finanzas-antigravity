@@ -3,7 +3,7 @@ import {
   Inbox, 
   X, 
   ArrowRight,
-  Plus
+  ArrowLeft
 } from 'lucide-react';
 import { MONTH_NAMES } from '../../data/initialData';
 import { usePrivacy } from '../../context/PrivacyContext';
@@ -35,7 +35,8 @@ export default function TransactionList({
   onOpenAddTransaction,
   setIsAddTransactionOpen,
   modalControls,
-  trm = 4000
+  trm = 4000,
+  onBack = null
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'income' | 'expense'
@@ -108,61 +109,46 @@ export default function TransactionList({
     <div className={`ios-card ${isCompact ? 'p-3.5 sm:p-4' : 'p-4 sm:p-5'}`}>
       {/* Top Bar with Title and Actions */}
       <div className="flex items-center justify-between gap-2 mb-2.5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-[15px] sm:text-[18px] font-bold tracking-tight text-slate-900 dark:text-white">
-              {isCompact ? 'Movimientos Recientes' : (selectedDay 
-                ? `Gastos del ${selectedDay.split('-')[2]} de ${MONTH_NAMES[parseInt(selectedDay.split('-')[1]) - 1]}` 
-                : 'Movimientos')} {!isCompact && `(${filteredTransactions.length})`}
-            </h2>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {!isCompact && (
+            <button
+              type="button"
+              onClick={onBack ? onBack : () => {
+                if (typeof window !== 'undefined' && window.history.length > 2) window.history.back();
+              }}
+              className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+              aria-label="Volver"
+              title="Volver"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[15px] sm:text-[18px] font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                {isCompact ? 'Movimientos Recientes' : (selectedDay 
+                  ? `Gastos del ${selectedDay.split('-')[2]} de ${MONTH_NAMES[parseInt(selectedDay.split('-')[1]) - 1]}` 
+                  : 'Movimientos')} {!isCompact && `(${filteredTransactions.length})`}
+              </h2>
 
-            {selectedDay && onSelectDay && (
-              <button
-                onClick={() => onSelectDay(null)}
-                className="text-[11px] text-[#007AFF] bg-blue-500/10 hover:bg-blue-500/15 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors cursor-pointer"
-                title="Mostrar todo el mes"
-              >
-                <span>Ver todo el mes</span>
-                <X className="w-2.5 h-2.5" />
-              </button>
+              {selectedDay && onSelectDay && (
+                <button
+                  onClick={() => onSelectDay(null)}
+                  className="text-[11px] text-[#007AFF] bg-blue-500/10 hover:bg-blue-500/15 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                  title="Mostrar todo el mes"
+                >
+                  <span>Ver todo el mes</span>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
+            {!isCompact && (
+              <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 font-normal mt-0.5 truncate">
+                {selectedDay ? `Filtrado por fecha específica: ${selectedDay}` : currentMonthLabel}
+              </p>
             )}
           </div>
-          {!isCompact && (
-            <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-              {selectedDay ? `Filtrado por fecha específica: ${selectedDay}` : currentMonthLabel}
-            </p>
-          )}
         </div>
-
-        {/* En escritorio y en widgets compactos se muestra el acceso de añadir movimiento */}
-        {(onOpenTransaction || onOpenAddTransaction || setIsAddTransactionOpen) && (
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onTouchStart={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (modalControls && typeof modalControls.openAddTransaction === 'function') {
-                modalControls.openAddTransaction('expense');
-              } else if (onOpenTransaction) {
-                onOpenTransaction('expense');
-              } else if (onOpenAddTransaction) {
-                onOpenAddTransaction('expense');
-              } else if (setIsAddTransactionOpen) {
-                setIsAddTransactionOpen(true);
-              }
-            }}
-            className={`${isCompact ? 'flex px-2.5 py-1 text-xs' : 'flex py-2 px-3.5 text-xs'} bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-sm active:scale-95 transition-all items-center gap-1.5 cursor-pointer shrink-0`}
-            title="Nuevo Movimiento"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{isCompact ? 'Nuevo' : 'Nuevo Movimiento'}</span>
-          </button>
-        )}
       </div>
 
       {/* Filters and Search - Stacked cleanly for mobile */}
@@ -190,39 +176,18 @@ export default function TransactionList({
             {selectedDay ? 'No hay movimientos en este día' : 'Sin movimientos registrados este mes'}
           </p>
           <p className="text-[11px] opacity-50 mt-0.5">
-            {selectedDay ? 'Toca "Ver todo el mes" para ver el período completo.' : 'Registra tu primer ingreso o gasto para tus cuentas.'}
+            {selectedDay ? 'Toca "Ver todo el mes" para ver el período completo.' : 'Usa el botón central (+) para registrar tus ingresos y gastos.'}
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-            {(onOpenTransaction || onOpenAddTransaction || setIsAddTransactionOpen) && (
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onTouchStart={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (onOpenTransaction) onOpenTransaction();
-                  else if (setIsAddTransactionOpen) setIsAddTransactionOpen(true);
-                  else if (onOpenAddTransaction) onOpenAddTransaction();
-                }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 transition-all inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Nuevo Movimiento</span>
-              </button>
-            )}
-            {selectedDay && onSelectDay && (
+          {selectedDay && onSelectDay && (
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
               <button
                 onClick={() => onSelectDay(null)}
                 className="px-3.5 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 cursor-pointer"
               >
                 Mostrar todo el mes
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className={`rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06] ${isCompact ? '' : 'lg:max-h-[640px] lg:overflow-y-auto'}`}>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Activity, 
-  ArrowRight, 
+  ChevronRight, 
   ArrowUpRight, 
   ArrowDownRight,
   Inbox
@@ -10,7 +10,7 @@ import {
 /**
  * RecentMovementsSection
  * Componente modular para el widget de "Movimientos Recientes" en el Dashboard.
- * Muestra el resumen de las últimas transacciones del período y acceso directo al historial completo ('Ver todos').
+ * Muestra el resumen de las últimas transacciones del período. Toda la tarjeta navega a transacciones.
  */
 export default function RecentMovementsSection({
   transactions = [],
@@ -21,7 +21,8 @@ export default function RecentMovementsSection({
   onOpenTransaction = null,
   formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
   limit = 4,
-  className = ''
+  className = '',
+  isReordering = false
 }) {
   const safeList = Array.isArray(transactions) ? transactions : [];
   const count = safeList.length;
@@ -29,6 +30,7 @@ export default function RecentMovementsSection({
 
   // Redirección hacia la vista principal de transacciones
   const handleViewAll = (e) => {
+    if (isReordering) return;
     if (e) {
       if (typeof e.preventDefault === 'function') e.preventDefault();
       if (typeof e.stopPropagation === 'function') e.stopPropagation();
@@ -44,9 +46,9 @@ export default function RecentMovementsSection({
 
   // Apertura del modal de detalle / edición de una transacción
   const handleItemClick = (e, tx) => {
-    if (e) {
-      if (typeof e.preventDefault === 'function') e.preventDefault();
-      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (isReordering) return;
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
     }
     if (typeof onSelectTransaction === 'function') {
       onSelectTransaction(tx);
@@ -59,7 +61,8 @@ export default function RecentMovementsSection({
 
   return (
     <div
-      className={`bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm p-4 sm:p-5 flex flex-col justify-between transition-all select-none ${className}`}
+      onClick={handleViewAll}
+      className={`bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm p-4 sm:p-5 flex flex-col justify-between transition-all select-none hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group ${className}`}
     >
       <div>
         {/* Encabezado del widget */}
@@ -77,6 +80,7 @@ export default function RecentMovementsSection({
               </p>
             </div>
           </div>
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
         </div>
 
         {/* Listado de últimas transacciones o estado vacío */}
@@ -109,7 +113,7 @@ export default function RecentMovementsSection({
                   <div
                     key={tx?.id || idx}
                     onClick={(e) => handleItemClick(e, tx)}
-                    className="flex items-center justify-between py-2.5 px-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+                    className="flex items-center justify-between py-2.5 px-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer group/item"
                     title="Ver o editar movimiento"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -131,7 +135,7 @@ export default function RecentMovementsSection({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-900 dark:text-zinc-100 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        <p className="text-xs font-semibold text-slate-900 dark:text-zinc-100 truncate group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors">
                           {noteOrCategory}
                         </p>
                         <p className="text-[10px] text-slate-400 dark:text-zinc-500 truncate">
@@ -161,22 +165,6 @@ export default function RecentMovementsSection({
             </div>
           )}
         </div>
-      </div>
-
-      {/* Footer con acceso al historial completo */}
-      <div className="pt-3 mt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-zinc-400 font-medium text-[11px]">
-          Historial completo
-        </span>
-        <button
-          type="button"
-          onClick={handleViewAll}
-          className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 text-[11px] hover:underline cursor-pointer group"
-          title="Ver todos los movimientos"
-        >
-          <span>Ver todos</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-        </button>
       </div>
     </div>
   );

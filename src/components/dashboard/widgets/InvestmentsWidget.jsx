@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, ChevronRight } from 'lucide-react';
 
 /**
  * InvestmentsWidget
@@ -10,9 +10,11 @@ export default function InvestmentsWidget({
   onNavigateToTab = () => {},
   setActiveTab = null,
   formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`,
-  className = ''
+  className = '',
+  isReordering = false
 }) {
   const handleNav = (tab = 'investments') => {
+    if (isReordering) return;
     if (typeof onNavigateToTab === 'function') onNavigateToTab(tab);
     else if (typeof setActiveTab === 'function') setActiveTab(tab);
   };
@@ -28,7 +30,7 @@ export default function InvestmentsWidget({
             <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>Inversiones</span>
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold font-mono tabular-nums border ${
               investmentsMetrics.isPositive 
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
@@ -36,6 +38,7 @@ export default function InvestmentsWidget({
             }`}>
               {investmentsMetrics.isPositive ? '+' : ''}{investmentsMetrics.profitPercentage.toFixed(2)}%
             </span>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
           </div>
         </div>
 

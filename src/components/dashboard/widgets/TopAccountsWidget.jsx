@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronRight } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import { 
   getAccountNativeBalance, 
@@ -16,10 +17,12 @@ export default function TopAccountsWidget({
   formatMoney = (val) => `$${val}`,
   onAccountClick,
   onNavigateToTab,
-  onOpenAccounts
+  onOpenAccounts,
+  isReordering = false
 }) {
   const topAccounts = Array.isArray(accounts) ? accounts.slice(0, 4) : [];
   const handleNavigate = () => {
+    if (isReordering) return;
     if (typeof onOpenAccounts === 'function') {
       onOpenAccounts();
     } else if (typeof onAccountClick === 'function') {
@@ -30,7 +33,10 @@ export default function TopAccountsWidget({
   };
 
   return (
-    <div className="lg:col-span-4 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4">
+    <div 
+      onClick={handleNavigate}
+      className="lg:col-span-4 p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#121622] border border-slate-200/80 dark:border-white/5 shadow-sm space-y-4 hover:border-emerald-500/40 hover:shadow-md transition-all cursor-pointer active:scale-[0.99] group"
+    >
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
@@ -40,13 +46,7 @@ export default function TopAccountsWidget({
             {accounts.length} métodos y billeteras
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleNavigate}
-          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors cursor-pointer"
-        >
-          Ver todas →
-        </button>
+        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
       </div>
 
       {/* Lista de Cuentas */}

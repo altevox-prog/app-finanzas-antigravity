@@ -91,6 +91,17 @@ export default function ViewRouter({
     handleDeleteRecurring,
     handleToggleActiveRecurring
   } = merged;
+
+  const handleBack = () => {
+    if (typeof handleGoBackFromSubView === 'function') {
+      handleGoBackFromSubView();
+    } else if (typeof handleTabChange === 'function') {
+      handleTabChange('dashboard');
+    } else if (typeof window !== 'undefined' && window.history.length > 2) {
+      window.history.back();
+    }
+  };
+
   return (
     <>
       {/* Tab 1: Dashboard Inicio */}
@@ -148,6 +159,7 @@ export default function ViewRouter({
       {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
         <TransactionsView
           key={`transactions-list-${tabResetKeys?.transactions || 0}`}
+          onBack={handleBack}
           transactions={monthlyTransactions && monthlyTransactions.length > 0 ? monthlyTransactions : transactions}
           onAddTransaction={handleAddTransaction}
           onDeleteTransaction={handleDeleteTransaction}
@@ -183,7 +195,7 @@ export default function ViewRouter({
           onAddTransaction={handleAddTransaction}
           onOpenCreditCardDetail={setSelectedCreditCardDetail}
           trm={trm}
-          onBack={handleGoBackFromSubView}
+          onBack={handleBack}
           fromSettings={fromSettings}
         />
       )}
@@ -192,6 +204,7 @@ export default function ViewRouter({
       {(activeTab === 'debts' || activeTab === 'loans') && (
         <DebtsView
           key={`debts-${tabResetKeys?.debts || 0}`}
+          onBack={handleBack}
           debtsAndLoans={debtsAndLoans}
           accounts={accounts}
           onAddDebtOrLoan={handleAddDebtOrLoan}
@@ -222,6 +235,7 @@ export default function ViewRouter({
       {activeTab === 'investments' && (
         <InvestmentsView
           key={`investments-${tabResetKeys?.investments || 0}`}
+          onBack={handleBack}
           investments={investments}
           accounts={accounts}
           onAddInvestment={handleAddInvestment}
@@ -244,7 +258,7 @@ export default function ViewRouter({
           onOpenCreateModal={() => setIsAddRecurringOpen && setIsAddRecurringOpen(true)}
           onOpenAddRecurring={() => setIsAddRecurringOpen && setIsAddRecurringOpen(true)}
           setIsAddRecurringOpen={setIsAddRecurringOpen}
-          onBack={handleGoBackFromSubView}
+          onBack={handleBack}
           fromSettings={fromSettings}
           accounts={accounts}
           categories={categories}
@@ -261,8 +275,8 @@ export default function ViewRouter({
           transactions={transactions}
           accounts={accounts}
           investments={investments}
-          onBack={handleGoBackFromSubView}
-          onClose={handleGoBackFromSubView}
+          onBack={handleBack}
+          onClose={handleBack}
           fromSettings={fromSettings}
         />
       )}

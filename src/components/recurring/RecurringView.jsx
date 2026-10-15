@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   CalendarSync, 
   ArrowLeft, 
-  Plus, 
   Pencil, 
   Trash2, 
   Zap, 
@@ -470,17 +469,16 @@ export default function RecurringView({
     <div className="space-y-4 animate-fadeIn pb-12">
       {/* A. Cabecera (Header) */}
       <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 mb-2">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          {(onBack || fromSettings) && (
-            <button
-              type="button"
-              onClick={handleGoBack}
-              className="w-9 h-9 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/60 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-              aria-label="Volver"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          )}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={handleGoBack}
+            className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+            aria-label="Volver"
+            title="Volver"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate">
               Pagos recurrentes
@@ -490,16 +488,6 @@ export default function RecurringView({
             </p>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={handleOpenLocalCreate}
-          className="py-2 px-3 sm:py-2.5 sm:px-4 bg-[#007AFF] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ml-auto sm:ml-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="sm:hidden">Añadir</span>
-          <span className="hidden sm:inline">Nuevo pago recurrente</span>
-        </button>
       </div>
 
       {/* B. Tarjetas de Resumen Financiero Recurrente (KPIs) */}
@@ -596,17 +584,8 @@ export default function RecurringView({
           </h2>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-            Registra gastos o ingresos que se repiten con frecuencia (arriendo, servicios, gimnasio, cuotas) para que Monety los registre automáticamente o te avise a tiempo.
+            Registra gastos o ingresos que se repiten con frecuencia (arriendo, servicios, gimnasio, cuotas) usando el botón central (+) para que Monety los registre automáticamente o te avise a tiempo.
           </p>
-
-          <button
-            type="button"
-            onClick={handleOpenLocalCreate}
-            className="mt-6 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl shadow-lg shadow-emerald-600/25 active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Crear pago recurrente</span>
-          </button>
         </div>
       ) : (
         /* E. Listado Activo (Cuando ya existen elementos creados) */
