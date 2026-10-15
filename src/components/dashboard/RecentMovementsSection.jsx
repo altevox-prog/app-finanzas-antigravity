@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Activity, 
-  Plus, 
   ArrowRight, 
   ArrowUpRight, 
   ArrowDownRight,
@@ -11,8 +10,7 @@ import {
 /**
  * RecentMovementsSection
  * Componente modular para el widget de "Movimientos Recientes" en el Dashboard.
- * Muestra el encabezado con acción rápida (+ Nuevo), una vista previa de las
- * últimas transacciones del período y acceso directo al historial completo ('Ver todos').
+ * Muestra el resumen de las últimas transacciones del período y acceso directo al historial completo ('Ver todos').
  */
 export default function RecentMovementsSection({
   transactions = [],
@@ -21,7 +19,6 @@ export default function RecentMovementsSection({
   onNavigateToTab = null,
   onSelectTransaction = null,
   onOpenTransaction = null,
-  onOpenAddTransaction = null,
   formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
   limit = 4,
   className = ''
@@ -42,21 +39,6 @@ export default function RecentMovementsSection({
       setActiveTab('transactions');
     } else if (typeof onNavigateToTab === 'function') {
       onNavigateToTab('transactions');
-    }
-  };
-
-  // Apertura del modal de nueva transacción
-  const handleAddNew = (e) => {
-    if (e) {
-      if (typeof e.preventDefault === 'function') e.preventDefault();
-      if (typeof e.stopPropagation === 'function') e.stopPropagation();
-    }
-    if (typeof onOpenAddTransaction === 'function') {
-      onOpenAddTransaction('expense');
-    } else if (typeof onOpenTransaction === 'function') {
-      onOpenTransaction('expense');
-    } else {
-      handleViewAll(e);
     }
   };
 
@@ -95,17 +77,6 @@ export default function RecentMovementsSection({
               </p>
             </div>
           </div>
-
-          {/* Botón de acción rápida '+ Nuevo' */}
-          <button
-            type="button"
-            onClick={handleAddNew}
-            className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
-            title="Añadir nuevo movimiento"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Nuevo</span>
-          </button>
         </div>
 
         {/* Listado de últimas transacciones o estado vacío */}

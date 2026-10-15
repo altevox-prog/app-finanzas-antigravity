@@ -1,5 +1,4 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import { 
   getAccountNativeBalance, 
@@ -130,15 +129,6 @@ export default function TopAccountsWidget({
           );
         })}
       </div>
-
-      <button
-        type="button"
-        onClick={handleNavigate}
-        className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-white/10 hover:border-emerald-500 text-slate-600 dark:text-slate-300 hover:text-emerald-500 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-      >
-        <Plus className="w-4 h-4" />
-        <span>Gestionar cuentas</span>
-      </button>
     </div>
   );
 }

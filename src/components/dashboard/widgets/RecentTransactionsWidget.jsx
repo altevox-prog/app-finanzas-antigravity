@@ -54,13 +54,6 @@ export default function RecentTransactionsWidget({
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
             No hay movimientos registrados en este mes
           </p>
-          <button
-            type="button"
-            onClick={onAddTransaction}
-            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-          >
-            + Registrar primer movimiento
-          </button>
         </div>
       ) : (
         <div className="overflow-x-auto">

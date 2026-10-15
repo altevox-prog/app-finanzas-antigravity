@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarSync, Plus, ArrowRight } from 'lucide-react';
+import { CalendarSync, ArrowRight } from 'lucide-react';
 import { safeNumber } from '../../../utils/financeMath';
 
 /**
@@ -11,27 +11,11 @@ export default function RecurringPaymentsWidget({
   subscriptions = [],
   formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`,
   onNavigateToTab = () => {},
-  setActiveTab = null,
-  onOpenAddRecurring = null,
-  setIsRecurringModalOpen = null
+  setActiveTab = null
 }) {
   const handleNav = (tab = 'recurring') => {
     if (typeof onNavigateToTab === 'function') onNavigateToTab(tab);
     else if (typeof setActiveTab === 'function') setActiveTab(tab);
-  };
-
-  const handleAdd = (e) => {
-    if (e) {
-      if (typeof e.preventDefault === 'function') e.preventDefault();
-      if (typeof e.stopPropagation === 'function') e.stopPropagation();
-    }
-    if (typeof onOpenAddRecurring === 'function') {
-      onOpenAddRecurring();
-    } else if (typeof setIsRecurringModalOpen === 'function') {
-      setIsRecurringModalOpen(true);
-    } else {
-      handleNav('recurring');
-    }
   };
 
   const allRecurring = recurringPayments.length > 0 ? recurringPayments : subscriptions;
@@ -57,24 +41,6 @@ export default function RecurringPaymentsWidget({
             <CalendarSync className="w-4 h-4 text-emerald-500 shrink-0" />
             <span className="truncate uppercase">PRESUPUESTO MENSUAL</span>
           </span>
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onTouchStart={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleAdd(e);
-            }}
-            className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
-            title="Añadir nuevo pago recurrente"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Añadir</span>
-          </button>
         </div>
 
         {/* Cuerpo */}
@@ -122,7 +88,7 @@ export default function RecurringPaymentsWidget({
           }}
           className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 text-[11px] group-hover:translate-x-0.5 transition-transform hover:underline cursor-pointer"
         >
-          <span>Gestionar</span>
+          <span>Ver detalles</span>
           <ArrowRight className="w-3 h-3" />
         </button>
       </div>

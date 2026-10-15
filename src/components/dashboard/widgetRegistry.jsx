@@ -124,9 +124,6 @@ export function createWidgetRegistry({
         debtsAndLoansMetrics={debtsAndLoansMetrics}
         onNavigateToTab={navigateToTab}
         setActiveTab={navigateToTab}
-        onOpenAddDebt={handleOpenDebtModal}
-        onOpenAddLoan={handleOpenDebtModal}
-        setIsNewDebtModalOpen={handleOpenDebtModal}
         formatMoney={formatMoney}
       />
     ),
@@ -224,7 +221,6 @@ export function createWidgetRegistry({
         onNavigateToTab={navigateToTab}
         onSelectTransaction={handleOpenTxModal}
         onOpenTransaction={handleOpenTxModal}
-        onOpenAddTransaction={handleOpenTxModal}
         formatMoney={formatMoney}
       />
     ),
@@ -236,8 +232,6 @@ export function createWidgetRegistry({
         formatMoney={formatMoney}
         onNavigateToTab={navigateToTab}
         setActiveTab={navigateToTab}
-        onOpenAddRecurring={handleOpenRecurringModal}
-        setIsRecurringModalOpen={handleOpenRecurringModal}
       />
     ),
 
@@ -327,7 +321,6 @@ export function createWidgetRegistry({
         formatMoney={formatMoney}
         onTransactionClick={handleOpenTxModal}
         onNavigateToTab={navigateToTab}
-        onAddTransaction={() => handleOpenTxModal('expense')}
       />
     )
   };
