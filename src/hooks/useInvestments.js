@@ -19,12 +19,7 @@ function getInitialInvestments() {
         saveInvestmentsToStorage([]);
         return [];
       }
-      return Array.isArray(parsed) ? parsed.map(inv => ({
-        ...inv,
-        quantity: toSafeNumber(inv.quantity || inv.shares),
-        buyPrice: toSafeNumber(inv.buyPrice || inv.purchasePrice),
-        currentPrice: toSafeNumber(inv.currentPrice || inv.unitPrice || inv.buyPrice)
-      })) : [];
+      return Array.isArray(parsed) ? parsed.map(sanitizeInvestment) : [];
     } catch (e) {
       return [];
     }
@@ -33,12 +28,28 @@ function getInitialInvestments() {
 }
 
 function sanitizeInvestment(inv) {
+  if (!inv || typeof inv !== 'object') return inv;
+  const investedAmount = toSafeNumber(inv.investedAmount ?? inv.invested_amount ?? inv.amount ?? inv.totalInvested);
+  const currentAmount = toSafeNumber(
+    inv.currentAmount !== undefined && inv.currentAmount !== null ? inv.currentAmount :
+    inv.currentValue !== undefined && inv.currentValue !== null ? inv.currentValue :
+    inv.current_value !== undefined && inv.current_value !== null ? inv.current_value :
+    investedAmount
+  );
+
   return {
     ...inv,
     id: inv.id || crypto.randomUUID(),
     quantity: toSafeNumber(inv.quantity || inv.shares),
+    shares: toSafeNumber(inv.shares || inv.quantity),
     buyPrice: toSafeNumber(inv.buyPrice || inv.purchasePrice),
-    currentPrice: toSafeNumber(inv.currentPrice || inv.unitPrice || inv.buyPrice)
+    currentPrice: toSafeNumber(inv.currentPrice || inv.unitPrice || inv.buyPrice),
+    investedAmount,
+    invested_amount: investedAmount,
+    amount: investedAmount,
+    currentAmount,
+    currentValue: currentAmount,
+    current_value: currentAmount
   };
 }
 
@@ -84,7 +95,7 @@ export function useInvestments(isResettingRef) {
             user_id: user.id,
             name: sanitizedInv.name,
             asset_type: sanitizedInv.assetType || sanitizedInv.category || 'other',
-            current_value: toSafeNumber(sanitizedInv.currentAmount || sanitizedInv.investedAmount),
+            current_value: toSafeNumber(sanitizedInv.currentAmount || sanitizedInv.currentValue || sanitizedInv.current_value || sanitizedInv.investedAmount),
             invested_amount: toSafeNumber(sanitizedInv.investedAmount),
             currency: sanitizedInv.currency || 'USD',
             updated_at: new Date().toISOString()
@@ -118,7 +129,7 @@ export function useInvestments(isResettingRef) {
             user_id: user.id,
             name: sanitizedInv.name,
             asset_type: sanitizedInv.assetType || sanitizedInv.category || 'other',
-            current_value: toSafeNumber(sanitizedInv.currentAmount || sanitizedInv.investedAmount),
+            current_value: toSafeNumber(sanitizedInv.currentAmount || sanitizedInv.currentValue || sanitizedInv.current_value || sanitizedInv.investedAmount),
             invested_amount: toSafeNumber(sanitizedInv.investedAmount),
             currency: sanitizedInv.currency || 'USD',
             updated_at: new Date().toISOString()

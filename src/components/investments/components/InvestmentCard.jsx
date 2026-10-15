@@ -52,35 +52,37 @@ export default function InvestmentCard({
     const ticker = (inv.ticker || inv.symbol || (inv.name && inv.name.length <= 6 ? inv.name : '')).toUpperCase().trim();
     const livePrice = livePrices[ticker];
     
-    const currentPrice = toSafeNumber(
-      livePrice || 
-      inv.currentPrice || 
-      inv.unitPrice || 
-      (inv.shares > 0 && inv.currentAmount > 0 ? inv.currentAmount / inv.shares : inv.buyPrice) || 
-      (inv.investedAmount && inv.shares ? inv.investedAmount / inv.shares : 0)
-    );
+    const rawInvested = toSafeNumber(inv.investedAmount ?? inv.invested_amount ?? inv.amount ?? inv.totalInvested);
+    const rawCurrent = toSafeNumber(inv.currentAmount ?? inv.currentValue ?? inv.current_value);
 
-    const buyPrice = toSafeNumber(
-      inv.buyPrice || 
-      (inv.shares > 0 && inv.investedAmount > 0 ? inv.investedAmount / inv.shares : currentPrice) || 
-      0
-    );
+    const hasShares = Boolean(inv.shares && Number(inv.shares) > 0);
+    const shares = hasShares ? toSafeNumber(inv.shares) : 0;
 
-    const shares = toSafeNumber(
-      inv.shares || 
-      (buyPrice > 0 ? toSafeNumber(inv.investedAmount || inv.currentAmount) / buyPrice : 1)
-    );
+    let buyPrice = toSafeNumber(inv.buyPrice || inv.purchasePrice);
+    if (buyPrice === 0 && shares > 0 && rawInvested > 0) {
+      buyPrice = rawInvested / shares;
+    }
+
+    let currentPrice = toSafeNumber(livePrice || inv.currentPrice || inv.unitPrice);
+    if (currentPrice === 0 && shares > 0 && rawCurrent > 0) {
+      currentPrice = rawCurrent / shares;
+    } else if (currentPrice === 0 && buyPrice > 0) {
+      currentPrice = buyPrice;
+    }
 
     const currency = inv.currency || 'USD';
     const trmValue = toSafeNumber(trm) || 4050;
 
-    const totalCostOrigin = shares > 0 && buyPrice > 0 
-      ? (shares * buyPrice) 
-      : toSafeNumber(inv.investedAmount);
+    const totalCostOrigin = rawInvested > 0 
+      ? rawInvested 
+      : (shares > 0 && buyPrice > 0 ? (shares * buyPrice) : 0);
 
-    const currentValueOrigin = shares > 0 && currentPrice > 0 
-      ? (shares * currentPrice) 
-      : toSafeNumber(inv.currentAmount || totalCostOrigin);
+    let currentValueOrigin = rawCurrent > 0 ? rawCurrent : totalCostOrigin;
+    if (livePrice && shares > 0) {
+      currentValueOrigin = shares * livePrice;
+    } else if (rawCurrent === 0 && shares > 0 && currentPrice > 0) {
+      currentValueOrigin = shares * currentPrice;
+    }
 
     const totalCostUSD = currency === 'USD' ? totalCostOrigin : convertCOPtoUSD(totalCostOrigin, trmValue);
     const currentValueUSD = currency === 'USD' ? currentValueOrigin : convertCOPtoUSD(currentValueOrigin, trmValue);
@@ -281,9 +283,13 @@ export default function InvestmentCard({
           )}
         </div>
 
-        {/* Conversión Automática a COP */}
+        {/* Conversión Automática Secundaria */}
         <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-          <span className="font-mono tabular-nums tracking-tight">≈ {formatInvestMoney(m.currentValueCOP, 'COP')} COP</span>{' '}
+          {m.currency === 'USD' ? (
+            <span className="font-mono tabular-nums tracking-tight">≈ {formatInvestMoney(m.currentValueCOP, 'COP')} COP</span>
+          ) : (
+            <span className="font-mono tabular-nums tracking-tight">≈ {formatInvestMoney(m.currentValueUSD, 'USD')} USD</span>
+          )}{' '}
           <span className="opacity-70 font-mono text-[11px]">(TRM: {formatInvestMoney(trm || 4050, 'COP')})</span>
         </div>
       </div>
@@ -296,10 +302,16 @@ export default function InvestmentCard({
             Invertido (Costo)
           </span>
           <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums block mt-0.5">
-            {formatInvestMoney(m.totalCostUSD, 'USD')} USD
+            {m.currency === 'USD' 
+              ? `${formatInvestMoney(m.totalCostUSD, 'USD')} USD`
+              : `${formatInvestMoney(m.totalCostCOP, 'COP')} COP`
+            }
           </span>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums">
-            ≈ {formatInvestMoney(m.totalCostCOP, 'COP')} COP
+            ≈ {m.currency === 'USD' 
+              ? `${formatInvestMoney(m.totalCostCOP, 'COP')} COP`
+              : `${formatInvestMoney(m.totalCostUSD, 'USD')} USD`
+            }
           </span>
         </div>
 
@@ -311,23 +323,35 @@ export default function InvestmentCard({
           <span className={`font-bold font-mono tracking-tight tabular-nums block mt-0.5 ${
             m.isPositive ? 'text-emerald-500' : 'text-rose-500'
           }`}>
-            {m.pnlUSD >= 0 ? '+' : ''}{formatInvestMoney(m.pnlUSD, 'USD')} USD
+            {m.currency === 'USD'
+              ? `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD`
+              : `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP`
+            }
           </span>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums">
-            ≈ {m.pnlCOP >= 0 ? '+' : ''}{formatInvestMoney(m.pnlCOP, 'COP')} COP
+            ≈ {m.currency === 'USD'
+              ? `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP`
+              : `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD`
+            }
           </span>
         </div>
 
         {/* Col 3: Precio Actual vs Compra */}
         <div>
           <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            Precio Actual vs Compra
+            {m.shares > 0 ? 'Precio Unitario' : 'Valoración'}
           </span>
           <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums block mt-0.5">
-            Actual: {formatInvestMoney(m.currentPrice, m.currency)}
+            {m.shares > 0 
+              ? `Actual: ${formatInvestMoney(m.currentPrice, m.currency)}`
+              : `Actual: ${formatInvestMoney(m.currency === 'USD' ? m.currentValueUSD : m.currentValueCOP, m.currency)}`
+            }
           </span>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums">
-            Compra: {formatInvestMoney(m.buyPrice, m.currency)}
+            {m.shares > 0 
+              ? `Compra: ${formatInvestMoney(m.buyPrice, m.currency)}`
+              : `Inicial: ${formatInvestMoney(m.currency === 'USD' ? m.totalCostUSD : m.totalCostCOP, m.currency)}`
+            }
           </span>
         </div>
       </div>

@@ -69,14 +69,16 @@ export default function InvestmentFormModal({
       setShares(currentInitial.shares !== undefined ? String(currentInitial.shares) : '');
       setBuyPrice(currentInitial.buyPrice !== undefined ? String(currentInitial.buyPrice) : '');
       setCurrentPrice(currentInitial.currentPrice !== undefined ? String(currentInitial.currentPrice) : '');
+      const rawInv = currentInitial.investedAmount ?? currentInitial.invested_amount ?? currentInitial.amount ?? currentInitial.totalInvested;
       setInvestedAmount(
-        currentInitial.investedAmount !== undefined && currentInitial.investedAmount !== null && Number(currentInitial.investedAmount) !== 0
-          ? formatCurrencyInput(currentInitial.investedAmount, enableDecimals)
+        rawInv !== undefined && rawInv !== null && Number(rawInv) !== 0
+          ? formatCurrencyInput(rawInv, enableDecimals)
           : ''
       );
+      const rawCurr = currentInitial.currentAmount ?? currentInitial.currentValue ?? currentInitial.current_value;
       setCurrentAmount(
-        currentInitial.currentAmount !== undefined && currentInitial.currentAmount !== null && Number(currentInitial.currentAmount) !== 0
-          ? formatCurrencyInput(currentInitial.currentAmount, enableDecimals)
+        rawCurr !== undefined && rawCurr !== null && Number(rawCurr) !== 0
+          ? formatCurrencyInput(rawCurr, enableDecimals)
           : ''
       );
       setNotes(currentInitial.notes || '');
@@ -172,8 +174,10 @@ export default function InvestmentFormModal({
         invNum = Math.round(sNum * bNum * 100) / 100;
       }
 
-      let currNum = currentAmount !== '' ? parseFormattedAmount(currentAmount) : invNum;
-      if (sNum > 0 && cNum > 0 && (currNum === 0 || currNum === invNum)) {
+      const rawCurrentStr = String(currentAmount ?? '').trim();
+      let currNum = rawCurrentStr !== '' ? parseFormattedAmount(rawCurrentStr) : invNum;
+      // Solo si el usuario dejó el campo en blanco y existen shares y precio actual:
+      if (rawCurrentStr === '' && sNum > 0 && cNum > 0) {
         currNum = Math.round(sNum * cNum * 100) / 100;
       }
 
@@ -191,7 +195,11 @@ export default function InvestmentFormModal({
         buyPrice: bNum > 0 ? bNum : undefined,
         currentPrice: cNum > 0 ? cNum : undefined,
         investedAmount: invNum,
+        invested_amount: invNum,
+        amount: invNum,
         currentAmount: currNum,
+        currentValue: currNum,
+        current_value: currNum,
         notes: notes.trim(),
         interestRate: interestRate ? parseFloat(interestRate) : undefined,
         startDate: category === 'fixed' ? startDate : undefined,

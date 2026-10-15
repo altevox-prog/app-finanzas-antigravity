@@ -35,37 +35,38 @@ export default function useInvestmentCalculations({
     const ticker = (asset.ticker || asset.symbol || (asset.name && asset.name.length <= 6 ? asset.name : '')).toUpperCase().trim();
     const livePrice = livePrices[ticker];
     
-    // Precio actual: prioriza cotización en vivo si existe
-    const currentPrice = toSafeNumber(
-      livePrice || 
-      asset.currentPrice || 
-      asset.unitPrice || 
-      (asset.shares > 0 && asset.currentAmount > 0 ? asset.currentAmount / asset.shares : asset.buyPrice) || 
-      (asset.investedAmount && asset.shares ? asset.investedAmount / asset.shares : 0)
-    );
+    const rawInvested = toSafeNumber(asset.investedAmount ?? asset.invested_amount ?? asset.amount ?? asset.totalInvested);
+    const rawCurrent = toSafeNumber(asset.currentAmount ?? asset.currentValue ?? asset.current_value);
 
-    const buyPrice = toSafeNumber(
-      asset.buyPrice || 
-      (asset.shares > 0 && asset.investedAmount > 0 ? asset.investedAmount / asset.shares : currentPrice) || 
-      0
-    );
+    const hasShares = Boolean(asset.shares && Number(asset.shares) > 0);
+    const shares = hasShares ? toSafeNumber(asset.shares) : 0;
 
-    const shares = toSafeNumber(
-      asset.shares || 
-      (buyPrice > 0 ? toSafeNumber(asset.investedAmount || asset.currentAmount) / buyPrice : 1)
-    );
+    let buyPrice = toSafeNumber(asset.buyPrice || asset.purchasePrice);
+    if (buyPrice === 0 && shares > 0 && rawInvested > 0) {
+      buyPrice = rawInvested / shares;
+    }
+
+    let currentPrice = toSafeNumber(livePrice || asset.currentPrice || asset.unitPrice);
+    if (currentPrice === 0 && shares > 0 && rawCurrent > 0) {
+      currentPrice = rawCurrent / shares;
+    } else if (currentPrice === 0 && buyPrice > 0) {
+      currentPrice = buyPrice;
+    }
 
     const currency = asset.currency || 'USD';
     const trmValue = toSafeNumber(trm) || 4050;
 
     // Valores en moneda de origen
-    const totalCostOrigin = shares > 0 && buyPrice > 0 
-      ? (shares * buyPrice) 
-      : toSafeNumber(asset.investedAmount);
+    const totalCostOrigin = rawInvested > 0 
+      ? rawInvested 
+      : (shares > 0 && buyPrice > 0 ? (shares * buyPrice) : 0);
 
-    const currentValueOrigin = shares > 0 && currentPrice > 0 
-      ? (shares * currentPrice) 
-      : toSafeNumber(asset.currentAmount || totalCostOrigin);
+    let currentValueOrigin = rawCurrent > 0 ? rawCurrent : totalCostOrigin;
+    if (livePrice && shares > 0) {
+      currentValueOrigin = shares * livePrice;
+    } else if (rawCurrent === 0 && shares > 0 && currentPrice > 0) {
+      currentValueOrigin = shares * currentPrice;
+    }
 
     // Normalización en USD (Usa convertCOPtoUSD si origen es COP)
     const totalCostUSD = currency === 'USD' ? totalCostOrigin : convertCOPtoUSD(totalCostOrigin, trmValue);

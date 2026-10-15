@@ -148,13 +148,14 @@ export function normalizeRemoteDebt(d) {
  */
 export function normalizeRemoteInvestment(inv) {
   if (!inv || typeof inv !== 'object') return inv;
-  const invAmount = Number(inv.invested_amount ?? inv.investedAmount ?? inv.current_value ?? inv.currentValue ?? inv.amount ?? 0);
-  const currVal = Number(inv.current_value ?? inv.currentValue ?? inv.invested_amount ?? inv.investedAmount ?? inv.amount ?? 0);
+  const invAmount = Number(inv.invested_amount ?? inv.investedAmount ?? inv.current_value ?? inv.currentValue ?? inv.currentAmount ?? inv.amount ?? 0);
+  const currVal = Number(inv.current_value ?? inv.currentValue ?? inv.currentAmount ?? inv.invested_amount ?? inv.investedAmount ?? inv.amount ?? 0);
   return {
     ...inv,
     amount: invAmount,
     investedAmount: invAmount,
     invested_amount: invAmount,
+    currentAmount: currVal,
     currentValue: currVal,
     current_value: currVal,
     type: inv.subtype || inv.type || 'stock',

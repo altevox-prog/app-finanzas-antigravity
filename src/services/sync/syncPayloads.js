@@ -279,8 +279,8 @@ export function buildStrictlyEssentialDebts(debtsPayload = [], fallbackErrMsg = 
  */
 export function buildInvestmentsPayload(investments = [], userId, nowIso = new Date().toISOString()) {
   return (investments || []).map(inv => {
-    const invVal = Number(inv.invested_amount ?? inv.investedAmount ?? inv.amount ?? inv.totalInvested ?? inv.current_value ?? inv.currentValue ?? 0);
-    const currVal = Number(inv.current_value ?? inv.currentValue ?? invVal);
+    const invVal = Number(inv.invested_amount ?? inv.investedAmount ?? inv.amount ?? inv.totalInvested ?? inv.current_value ?? inv.currentValue ?? inv.currentAmount ?? 0);
+    const currVal = Number(inv.current_value ?? inv.currentValue ?? inv.currentAmount ?? invVal);
     return {
       id: ensureUUID(inv.id),
       user_id: userId,
