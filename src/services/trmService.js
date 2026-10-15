@@ -3,11 +3,14 @@ import { useState, useEffect } from 'react';
 const TRM_CACHE_KEY = 'presu_trm_data';
 const FALLBACK_TRM = 4050; // Valor seguro por si no hay conexión
 
+// Promesa en vuelo compartida para deduplicar peticiones concurrentes (ej. StrictMode de React)
+let inFlightTRMPromise = null;
+
 /**
- * Consulta la Tasa Representativa del Mercado (TRM) oficial de Colombia
+ * Consulta interna de la Tasa Representativa del Mercado (TRM) oficial de Colombia
  * con caché de 24 horas y doble respaldo (Datos Abiertos -> ExchangeRate API -> Fallback).
  */
-export async function getOfficialTRM() {
+async function fetchOfficialTRMInternal() {
   const todayStr = new Date().toISOString().split('T')[0];
   
   // 1. Verificar si ya tenemos la TRM de hoy guardada en caché
@@ -21,18 +24,28 @@ export async function getOfficialTRM() {
   }
 
   // 2. Consultar API oficial de datos abiertos (Superfinanciera / Datos.gov.co)
+  // Se establece un margen prudente de 5 segundos para absorber la latencia del portal estatal
+  let timeoutId;
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    timeoutId = setTimeout(() => {
+      try {
+        controller.abort();
+      } catch {}
+    }, 5000);
+
     const res = await fetch(
       'https://www.datos.gov.co/resource/32sa-8pi3.json?$limit=1&$order=vigenciahasta%20DESC',
-      { signal: controller.signal }
+      { 
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' }
+      }
     );
     clearTimeout(timeoutId);
 
     if (res.ok) {
       const data = await res.json();
-      if (data && data.length > 0 && data[0].valor) {
+      if (Array.isArray(data) && data.length > 0 && data[0].valor) {
         const officialValue = parseFloat(data[0].valor);
         if (!isNaN(officialValue) && officialValue > 1000) {
           localStorage.setItem(
@@ -44,14 +57,30 @@ export async function getOfficialTRM() {
       }
     }
   } catch (apiErr) {
-    console.warn('Fallo consulta datos.gov.co, usando respaldo secundario:', apiErr);
+    // Manejo de fallback de forma silenciosa para el usuario
+    const isTimeout = apiErr?.name === 'AbortError' || String(apiErr).includes('aborted');
+    console.warn(
+      'Fallo consulta datos.gov.co, usando respaldo secundario:',
+      isTimeout ? 'Tiempo de respuesta superado (timeout 5s)' : (apiErr?.message || apiErr)
+    );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   // 3. Respaldo secundario si la red gubernamental tarda o falla
+  let timeoutSecId;
   try {
     const controllerSec = new AbortController();
-    const timeoutSecId = setTimeout(() => controllerSec.abort(), 2000);
-    const resSec = await fetch('https://open.er-api.com/v6/latest/USD', { signal: controllerSec.signal });
+    timeoutSecId = setTimeout(() => {
+      try {
+        controllerSec.abort();
+      } catch {}
+    }, 5000);
+
+    const resSec = await fetch('https://open.er-api.com/v6/latest/USD', { 
+      signal: controllerSec.signal,
+      headers: { 'Accept': 'application/json' }
+    });
     clearTimeout(timeoutSecId);
 
     if (resSec.ok) {
@@ -68,7 +97,9 @@ export async function getOfficialTRM() {
       }
     }
   } catch (fallbackErr) {
-    console.warn('Fallo API secundaria:', fallbackErr);
+    console.warn('Fallo API secundaria de respaldo:', fallbackErr?.message || fallbackErr);
+  } finally {
+    clearTimeout(timeoutSecId);
   }
 
   // 4. Si hay algún valor en caché anterior (aunque sea de otro día), usarlo antes del fallback estático
@@ -81,6 +112,26 @@ export async function getOfficialTRM() {
 
   // 5. Si está completamente offline sin caché previo, usar fallback
   return FALLBACK_TRM;
+}
+
+/**
+ * Consulta la Tasa Representativa del Mercado (TRM) oficial de Colombia
+ * con deduplicación de peticiones en vuelo para evitar cancelaciones prematuras en React StrictMode.
+ */
+export async function getOfficialTRM() {
+  if (inFlightTRMPromise) {
+    return inFlightTRMPromise;
+  }
+
+  inFlightTRMPromise = (async () => {
+    try {
+      return await fetchOfficialTRMInternal();
+    } finally {
+      inFlightTRMPromise = null;
+    }
+  })();
+
+  return inFlightTRMPromise;
 }
 
 /**

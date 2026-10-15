@@ -6,6 +6,9 @@ const PrivacyContext = createContext();
 export function PrivacyProvider({ children }) {
   const [isPrivacyMode, setIsPrivacyMode] = useState(() => {
     try {
+      if (localStorage.getItem('security_hide_balances_on_start') === 'true') {
+        return true;
+      }
       return localStorage.getItem('presu_privacy_mode') === 'true';
     } catch {
       return false;
@@ -59,6 +62,16 @@ export function PrivacyProvider({ children }) {
   const togglePrivacyMode = () => {
     setIsPrivacyMode((prev) => {
       const next = !prev;
+      try {
+        localStorage.setItem('presu_privacy_mode', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const setPrivacyMode = (val) => {
+    setIsPrivacyMode((prev) => {
+      const next = typeof val === 'function' ? val(prev) : Boolean(val);
       try {
         localStorage.setItem('presu_privacy_mode', String(next));
       } catch {}
@@ -125,6 +138,10 @@ export function PrivacyProvider({ children }) {
   return (
     <PrivacyContext.Provider value={{ 
       isPrivacyMode, 
+      isPrivate: isPrivacyMode,
+      setIsPrivacyMode: setPrivacyMode,
+      setIsPrivate: setPrivacyMode,
+      setPrivacyMode,
       togglePrivacyMode, 
       enableDecimals, 
       toggleEnableDecimals, 
@@ -147,6 +164,10 @@ export function usePrivacy() {
   if (!ctx) {
     return {
       isPrivacyMode: false,
+      isPrivate: false,
+      setIsPrivacyMode: () => {},
+      setIsPrivate: () => {},
+      setPrivacyMode: () => {},
       togglePrivacyMode: () => {},
       enableDecimals: false,
       toggleEnableDecimals: () => {},

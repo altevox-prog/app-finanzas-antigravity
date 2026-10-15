@@ -9,7 +9,6 @@ import { supabase, isSupabaseConfigured } from '../../../services/supabaseClient
 import { safeNumber } from '../../../utils/financeMath';
 import ProfileHeader from '../components/ProfileHeader';
 import ProfileTabBar from '../components/ProfileTabBar';
-import ProfileFooter from '../components/ProfileFooter';
 import ProfileFinancesTab from '../ProfileFinancesTab';
 import ProfileSecurityTab from '../ProfileSecurityTab';
 import ProfileCloudTab from '../ProfileCloudTab';
@@ -195,12 +194,37 @@ export default function ProfileModal({
     }
   }, [isOpen]);
 
+  // Bloqueo de scroll de la pantalla trasera (Scroll Lock)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const mainEl = document.querySelector('main');
+    const prevMainOverflow = mainEl ? mainEl.style.overflow : '';
+    const prevBodyOverflow = document.body ? document.body.style.overflow : '';
+
+    if (mainEl) {
+      mainEl.style.overflow = 'hidden';
+    }
+    if (document.body) {
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      if (mainEl) {
+        mainEl.style.overflow = prevMainOverflow;
+      }
+      if (document.body) {
+        document.body.style.overflow = prevBodyOverflow;
+      }
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-fadeIn">
       <div 
-        className="rounded-t-2xl sm:rounded-2xl w-full max-w-lg lg:max-w-xl mx-auto shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden animate-slide-up transition-all"
+        className="rounded-t-2xl sm:rounded-2xl w-full max-w-lg lg:max-w-xl mx-auto shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 flex flex-col h-[85dvh] max-h-[90dvh] sm:h-[620px] sm:max-h-[85vh] sm:min-h-[580px] overflow-hidden animate-slide-up"
       >
         {/* iOS Handle Indicator para Móvil */}
         <div className="w-12 h-1.5 bg-slate-400/30 dark:bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
@@ -234,7 +258,7 @@ export default function ProfileModal({
         )}
 
         {/* Scrollable Content Body */}
-        <div className="overflow-y-auto scroll-touch px-5 py-4 space-y-6 flex-1 scroll-smooth pb-safe">
+        <div className="overflow-y-auto overscroll-contain scroll-touch px-5 py-4 space-y-6 flex-1 scroll-smooth pb-6">
 
           {/* ============================================================== */}
           {/* VIEW: MAIN PROFILE & CONTROL CENTER                            */}
@@ -386,13 +410,6 @@ export default function ProfileModal({
           )}
 
         </div>
-
-        {/* Pie Fijo (Footer) */}
-        <ProfileFooter
-          currentView={currentView}
-          userProfile={userProfile}
-          onLogoutClick={() => dataActions.setShowLogoutConfirm(true)}
-        />
       </div>
 
 

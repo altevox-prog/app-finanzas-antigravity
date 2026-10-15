@@ -139,26 +139,47 @@ export default function ProfileCloudTab({
         </div>
 
         {isCloudUser ? (
-          <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    Sesión activa en la nube
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate mt-1">
+                  {user?.user_metadata?.full_name || userProfile?.name || 'Usuario'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {user?.email}
+                </p>
+              </div>
+
+              {/* Botón contextual de Cerrar Sesión */}
+              <button
+                type="button"
+                onClick={triggerLogout}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
+                title="Cerrar Sesión"
+              >
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
+
+            {/* Botón Sincronizar ahora */}
             {typeof onManualCloudSync === 'function' && (
               <button
                 type="button"
                 onClick={triggerCloudSync}
                 disabled={isCloudSyncing}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin' : ''}`} />
                 <span>{isCloudSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={triggerLogout}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Cerrar sesión</span>
-            </button>
           </div>
         ) : (
           <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">

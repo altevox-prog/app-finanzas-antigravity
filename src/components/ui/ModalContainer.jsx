@@ -58,6 +58,7 @@ export default function ModalContainer({
     isSettingsOpen,
     setIsSettingsOpen,
     isProfileOpen,
+    setIsProfileOpen,
     profileResetKey = 0,
     showTutorial,
     setShowTutorial,
@@ -364,8 +365,8 @@ export default function ModalContainer({
           key={`profile-modal-${profileResetKey}`}
           isOpen={true}
           onClose={() => {
-            setIsSettingsOpen?.(false);
-            setIsProfileOpen?.(false);
+            if (typeof setIsSettingsOpen === 'function') setIsSettingsOpen(false);
+            if (typeof setIsProfileOpen === 'function') setIsProfileOpen(false);
           }}
           userProfile={userProfile}
           onUpdateProfile={handleUpdateProfile}
