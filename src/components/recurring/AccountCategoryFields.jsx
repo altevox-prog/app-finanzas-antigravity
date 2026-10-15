@@ -59,7 +59,7 @@ export default function AccountCategoryFields({
       {/* 1. Categoría y Subcategoría */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1">
+          <label className="block text-[11px] font-semibold opacity-60 mb-1 select-none">
             Categoría Principal *
           </label>
           <CategoryCombobox
@@ -72,7 +72,7 @@ export default function AccountCategoryFields({
         </div>
 
         <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1">
+          <label className="block text-[11px] font-semibold opacity-60 mb-1 select-none">
             Subcategoría
           </label>
           <SubcategoryCombobox

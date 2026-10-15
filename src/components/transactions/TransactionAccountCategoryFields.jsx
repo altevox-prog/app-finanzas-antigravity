@@ -37,7 +37,7 @@ export default function TransactionAccountCategoryFields({
       {/* Categoría y Subcategoría */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
+          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
             Categoría Principal *
           </label>
           <CategoryCombobox
@@ -50,7 +50,7 @@ export default function TransactionAccountCategoryFields({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">
+          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
             Subcategoría
           </label>
           <SubcategoryCombobox

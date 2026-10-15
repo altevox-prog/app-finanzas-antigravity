@@ -67,23 +67,25 @@ export default function CategoryCombobox({
     setIsOpen(false);
   };
 
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
-    if (isOpen) {
-      setIsCreatingNew(false);
+  const toggleDropdown = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    setIsOpen(prev => !prev);
+    setIsCreatingNew(false);
   };
 
   return (
-    <div className="relative w-full" ref={containerRef}>
-      {/* Botón táctil para evitar levantar teclado en celular */}
+    <div className="relative w-full select-none touch-manipulation" ref={containerRef}>
+      {/* Botón táctil con altura adecuada (44px) y prevención de selección de texto */}
       <button 
         type="button"
         onClick={toggleDropdown}
-        className="w-full relative flex items-center justify-between pl-3 pr-8 py-2 border border-transparent rounded-xl text-xs font-semibold focus:outline-none transition-all cursor-pointer text-left select-none"
+        className="w-full min-h-[44px] h-11 relative flex items-center justify-between pl-3 pr-9 py-2.5 border border-transparent rounded-xl text-xs font-semibold focus:outline-none transition-all cursor-pointer text-left select-none touch-manipulation active:scale-[0.99]"
         style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 select-none pointer-events-none">
           {selectedCategory ? (
             <>
               <CategoryIcon 
@@ -93,21 +95,23 @@ export default function CategoryCombobox({
                 size="sm" 
                 withBadge={true} 
               />
-              <span className="truncate font-semibold">{selectedCategory.name}</span>
+              <span className="truncate font-semibold select-none">{selectedCategory.name}</span>
             </>
           ) : (
-            <span className="truncate opacity-50 font-normal">Selecciona categoría...</span>
+            <span className="truncate opacity-50 font-normal select-none">Selecciona categoría...</span>
           )}
         </div>
-        <ChevronDown 
-          className={`w-4 h-4 opacity-50 absolute right-3 pointer-events-none transition-transform ${isOpen ? 'rotate-180' : ''}`} 
-        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center select-none pointer-events-none">
+          <ChevronDown 
+            className={`w-4 h-4 opacity-50 select-none pointer-events-none transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          />
+        </div>
       </button>
 
       {/* Dropdown menu con todas las categorías predefinidas */}
       {isOpen && (
         <div 
-          className="absolute left-0 right-0 top-full mt-1 rounded-2xl shadow-2xl border max-h-60 overflow-y-auto z-50 animate-slide-up p-1.5 divide-y"
+          className="absolute left-0 right-0 top-full mt-1 rounded-2xl shadow-2xl border max-h-60 overflow-y-auto z-50 animate-slide-up p-1.5 divide-y select-none touch-manipulation"
           style={{ backgroundColor: 'var(--modal-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
         >
           <div className="space-y-0.5">
@@ -118,12 +122,12 @@ export default function CategoryCombobox({
                   key={cat.id}
                   type="button"
                   onClick={() => handleSelect(cat)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left cursor-pointer ${
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left cursor-pointer select-none touch-manipulation ${
                     isSelected ? 'bg-blue-500/15 font-bold text-[#007AFF]' : 'hover:bg-black/5 dark:hover:bg-white/5 font-medium'
                   }`}
                   style={{ color: isSelected ? 'var(--accent-color)' : 'var(--text-main)' }}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0 select-none pointer-events-none">
                     <CategoryIcon 
                       icon={cat.icon} 
                       category={cat} 
@@ -131,9 +135,9 @@ export default function CategoryCombobox({
                       size="sm" 
                       withBadge={true} 
                     />
-                    <span className="truncate">{cat.name}</span>
+                    <span className="truncate select-none">{cat.name}</span>
                   </div>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-[#007AFF] shrink-0" />}
+                  {isSelected && <Check className="w-3.5 h-3.5 text-[#007AFF] shrink-0 select-none" />}
                 </button>
               );
             })}
@@ -148,10 +152,10 @@ export default function CategoryCombobox({
                   setIsCreatingNew(true);
                   setNewCatName('');
                 }}
-                className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#007AFF] hover:bg-[#007AFF]/10 transition-colors text-left cursor-pointer"
+                className="w-full min-h-[40px] flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#007AFF] hover:bg-[#007AFF]/10 transition-colors text-left cursor-pointer select-none touch-manipulation"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Crear nueva categoría</span>
+                <Plus className="w-3.5 h-3.5 select-none pointer-events-none" />
+                <span className="select-none pointer-events-none">+ Crear nueva categoría</span>
               </button>
             ) : (
               <div className="p-2 rounded-xl bg-slate-50 dark:bg-white/5 space-y-2 border border-blue-500/30">

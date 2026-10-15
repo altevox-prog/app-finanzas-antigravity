@@ -1,9 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, Layers, Pencil, Trash2, X, Plus } from 'lucide-react';
-
-const PRESET_COLORS = [
-  '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#5AC8FA', '#007AFF', '#AF52DE'
-];
+import { ChevronDown, Check, Layers, Plus } from 'lucide-react';
 
 export default function SubcategoryCombobox({
   subcategories = [],
@@ -16,11 +12,6 @@ export default function SubcategoryCombobox({
   placeholder = "Seleccionar subcategoría (opcional)"
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [editingSubId, setEditingSubId] = useState(null);
-  const [editSubName, setEditSubName] = useState('');
-  const [editSubColor, setEditSubColor] = useState('#007AFF');
-
-  // Estado para "+ Crear nueva subcategoría"
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newSubName, setNewSubName] = useState('');
 
@@ -41,11 +32,13 @@ export default function SubcategoryCombobox({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
-    if (isOpen) {
-      setIsCreatingNew(false);
+  const toggleDropdown = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    setIsOpen(prev => !prev);
+    setIsCreatingNew(false);
   };
 
   const handleSelect = (sub) => {
@@ -70,31 +63,33 @@ export default function SubcategoryCombobox({
   };
 
   return (
-    <div className="relative w-full" ref={containerRef}>
-      {/* Botón selector táctil (NO editable para evitar levantar teclado ni selección de texto en móvil) */}
+    <div className="relative w-full select-none touch-manipulation" ref={containerRef}>
+      {/* Botón selector táctil (altura 44px, no editable, no selección de texto) */}
       <button 
         type="button"
         onClick={toggleDropdown}
-        className="w-full relative flex items-center justify-between pl-3 pr-8 py-2.5 border border-transparent rounded-xl text-xs font-semibold focus:outline-none transition-all cursor-pointer text-left select-none"
+        className="w-full min-h-[44px] h-11 relative flex items-center justify-between pl-3 pr-9 py-2.5 border border-transparent rounded-xl text-xs font-semibold focus:outline-none transition-all cursor-pointer text-left select-none touch-manipulation active:scale-[0.99]"
         style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Layers className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        <div className="flex items-center gap-2 min-w-0 flex-1 select-none pointer-events-none">
+          <Layers className="w-3.5 h-3.5 text-slate-400 shrink-0 select-none" />
           {selectedSub ? (
-            <span className="truncate font-semibold">{selectedSub.name}</span>
+            <span className="truncate font-semibold select-none">{selectedSub.name}</span>
           ) : (
-            <span className="truncate opacity-50 font-normal">{placeholder}</span>
+            <span className="truncate opacity-50 font-normal select-none">{placeholder}</span>
           )}
         </div>
-        <ChevronDown 
-          className={`w-4 h-4 opacity-50 absolute right-2.5 pointer-events-none transition-transform ${isOpen ? 'rotate-180' : ''}`} 
-        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center select-none pointer-events-none">
+          <ChevronDown 
+            className={`w-4 h-4 opacity-50 select-none pointer-events-none transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          />
+        </div>
       </button>
 
       {/* Menú desplegable táctil */}
       {isOpen && (
         <div 
-          className="absolute left-0 right-0 top-full mt-1 rounded-2xl shadow-2xl border max-h-64 overflow-y-auto z-50 animate-slide-up p-1.5 divide-y"
+          className="absolute left-0 right-0 top-full mt-1 rounded-2xl shadow-2xl border max-h-60 overflow-y-auto z-50 animate-slide-up p-1.5 divide-y select-none touch-manipulation"
           style={{ backgroundColor: 'var(--modal-bg)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
         >
           <div className="space-y-0.5">
@@ -102,139 +97,35 @@ export default function SubcategoryCombobox({
             <button
               type="button"
               onClick={() => handleSelect(null)}
-              className={`w-full px-3 py-2 text-left text-xs rounded-xl transition-colors cursor-pointer ${
-                !selectedSubcategoryId ? 'bg-blue-500/10 text-[#007AFF] font-bold' : 'opacity-60 hover:bg-black/5 dark:hover:bg-white/5'
+              className={`w-full min-h-[40px] flex items-center justify-between px-3 py-2 text-left text-xs rounded-xl transition-colors cursor-pointer select-none touch-manipulation ${
+                !selectedSubcategoryId ? 'bg-blue-500/10 text-[#007AFF] font-bold' : 'opacity-60 hover:bg-black/5 dark:hover:bg-white/5 font-medium'
               }`}
             >
-              (Sin subcategoría)
+              <span className="select-none pointer-events-none">(Sin subcategoría)</span>
+              {!selectedSubcategoryId && <Check className="w-3.5 h-3.5 text-[#007AFF] shrink-0 select-none" />}
             </button>
 
             {subcategoriesList.map((sub) => {
               const isSelected = sub.id === selectedSubcategoryId;
-              const isEditingThis = editingSubId === sub.id;
-
-              if (isEditingThis) {
-                return (
-                  <div
-                    key={sub.id}
-                    className="p-2 rounded-xl border border-[#34C759] space-y-1.5"
-                    style={{ backgroundColor: 'var(--bg-input)' }}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        autoFocus
-                        value={editSubName}
-                        onChange={(e) => setEditSubName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (editSubName.trim() && onUpdateSubcategory) {
-                              onUpdateSubcategory(parentCategoryId, sub.id, editSubName.trim(), editSubColor);
-                            }
-                            setEditingSubId(null);
-                          } else if (e.key === 'Escape') {
-                            setEditingSubId(null);
-                          }
-                        }}
-                        className="flex-1 text-xs bg-transparent focus:outline-none font-semibold"
-                        style={{ color: 'var(--text-main)' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (editSubName.trim() && onUpdateSubcategory) {
-                            onUpdateSubcategory(parentCategoryId, sub.id, editSubName.trim(), editSubColor);
-                          }
-                          setEditingSubId(null);
-                        }}
-                        className="p-1 text-[#34C759] hover:opacity-80 cursor-pointer"
-                        title="Guardar"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingSubId(null)}
-                        className="p-1 opacity-50 hover:opacity-100 cursor-pointer"
-                        style={{ color: 'var(--text-main)' }}
-                        title="Cancelar"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-1 pt-1 border-t" style={{ borderColor: 'var(--border-color)' }}>
-                      <span className="text-[10px] opacity-60 mr-1">Color:</span>
-                      {PRESET_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setEditSubColor(c)}
-                          className={`w-3.5 h-3.5 rounded-full transition-transform cursor-pointer ${
-                            editSubColor === c ? 'scale-125 ring-1 ring-[#34C759]' : 'opacity-80 hover:scale-110'
-                          }`}
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              }
-
               return (
-                <div
+                <button
                   key={sub.id}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors group cursor-pointer ${
+                  type="button"
+                  onClick={() => handleSelect(sub)}
+                  className={`w-full min-h-[40px] flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors text-left cursor-pointer select-none touch-manipulation ${
                     isSelected ? 'bg-blue-500/15 font-bold text-[#007AFF]' : 'hover:bg-black/5 dark:hover:bg-white/5 font-medium'
                   }`}
                   style={{ color: isSelected ? 'var(--accent-color)' : 'var(--text-main)' }}
-                  onClick={() => handleSelect(sub)}
                 >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0 select-none pointer-events-none">
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="w-2 h-2 rounded-full shrink-0 select-none"
                       style={{ backgroundColor: sub.color || '#007AFF' }}
                     />
-                    <span className="truncate">{sub.name}</span>
+                    <span className="truncate select-none">{sub.name}</span>
                   </div>
-
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    {isSelected && <Check className="w-3.5 h-3.5 text-[#007AFF]" />}
-                    {onUpdateSubcategory && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSubId(sub.id);
-                          setEditSubName(sub.name);
-                          setEditSubColor(sub.color || '#007AFF');
-                        }}
-                        className="p-1 opacity-40 hover:opacity-100 hover:text-[#007AFF] rounded transition-opacity cursor-pointer"
-                        title="Editar subcategoría"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                    )}
-                    {onDeleteSubcategory && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`¿Eliminar la subcategoría "${sub.name}"?`)) {
-                            onDeleteSubcategory(parentCategoryId, sub.id);
-                            if (selectedSubcategoryId === sub.id) {
-                              onSelectSubcategory('');
-                            }
-                          }
-                        }}
-                        className="p-1 opacity-40 hover:opacity-100 hover:text-rose-600 rounded transition-opacity cursor-pointer"
-                        title="Eliminar subcategoría"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-[#007AFF] shrink-0 select-none" />}
+                </button>
               );
             })}
           </div>
@@ -252,10 +143,10 @@ export default function SubcategoryCombobox({
                   setIsCreatingNew(true);
                   setNewSubName('');
                 }}
-                className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#007AFF] hover:bg-[#007AFF]/10 transition-colors text-left cursor-pointer"
+                className="w-full min-h-[40px] flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#007AFF] hover:bg-[#007AFF]/10 transition-colors text-left cursor-pointer select-none touch-manipulation"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Crear nueva subcategoría</span>
+                <Plus className="w-3.5 h-3.5 select-none pointer-events-none" />
+                <span className="select-none pointer-events-none">+ Crear nueva subcategoría</span>
               </button>
             ) : (
               <div className="p-2 rounded-xl bg-slate-50 dark:bg-white/5 space-y-2 border border-blue-500/30">
@@ -279,7 +170,7 @@ export default function SubcategoryCombobox({
                   <button
                     type="button"
                     onClick={() => setIsCreatingNew(false)}
-                    className="px-2.5 py-1 text-[11px] rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 cursor-pointer"
+                    className="px-2.5 py-1 text-[11px] rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 cursor-pointer select-none touch-manipulation"
                   >
                     Cancelar
                   </button>
@@ -287,7 +178,7 @@ export default function SubcategoryCombobox({
                     type="button"
                     onClick={handleCreateNew}
                     disabled={!newSubName.trim()}
-                    className="px-3 py-1 text-[11px] font-bold rounded-lg bg-[#007AFF] text-white disabled:opacity-50 cursor-pointer"
+                    className="px-3 py-1 text-[11px] font-bold rounded-lg bg-[#007AFF] text-white disabled:opacity-50 cursor-pointer select-none touch-manipulation"
                   >
                     Guardar
                   </button>
