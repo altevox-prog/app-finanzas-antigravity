@@ -17,18 +17,31 @@ export default function QuickActionsModal(props) {
     setIsOpen,
     onAddExpense,
     onAddIncome,
+    openAddTransaction,
+    handleOpenTransaction,
     onOpenTransaction,
     onOpenNewTransaction,
+    openTransfer,
+    handleOpenTransfer,
     onOpenTransfer,
-    onOpenInvestment,
-    onOpenNewInvestment,
-    onOpenRecurring,
-    onOpenAddRecurring,
+    openAddLoan,
+    openAddDebt,
+    handleOpenAddLoan,
+    handleOpenAddDebt,
     onOpenLoan,
     onOpenAddLoan,
     onOpenDebt,
     onOpenAddDebt,
     onAddDebtOrLoan,
+    openAddRecurring,
+    handleOpenRecurring,
+    onOpenRecurring,
+    onOpenAddRecurring,
+    openInvestment,
+    openAddInvestment,
+    handleOpenInvestment,
+    onOpenInvestment,
+    onOpenNewInvestment,
     setIsAddTransactionModalOpen,
     financeActions,
     modalControls = financeActions,
@@ -49,13 +62,14 @@ export default function QuickActionsModal(props) {
   }, [isOpen, onClose, setIsOpen]);
 
   const handleSelectAction = (actionFn) => {
-    // 1. Cerrar primero el menú desplegable de accesos directos
-    if (typeof onClose === 'function') onClose();
-    if (typeof setIsOpen === 'function') setIsOpen(false);
-
-    // 2. Disparar inmediatamente la acción sin retardo ni pérdida de gesto de usuario
     if (typeof actionFn === 'function') {
       actionFn();
+    }
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+    if (typeof setIsOpen === 'function') {
+      setIsOpen(false);
     }
   };
 
@@ -118,7 +132,11 @@ export default function QuickActionsModal(props) {
             type="button"
             onClick={(e) => {
               handleSelectAction(() => {
-                if (modalControls && typeof modalControls.openAddTransaction === 'function') {
+                if (typeof openAddTransaction === 'function') {
+                  openAddTransaction('expense');
+                } else if (typeof handleOpenTransaction === 'function') {
+                  handleOpenTransaction('expense');
+                } else if (modalControls && typeof modalControls.openAddTransaction === 'function') {
                   modalControls.openAddTransaction('expense');
                 } else if (typeof onOpenTransaction === 'function') {
                   onOpenTransaction('expense');
@@ -149,7 +167,11 @@ export default function QuickActionsModal(props) {
             type="button"
             onClick={() => {
               handleSelectAction(() => {
-                if (modalControls && typeof modalControls.openTransfer === 'function') {
+                if (typeof openTransfer === 'function') {
+                  openTransfer();
+                } else if (typeof handleOpenTransfer === 'function') {
+                  handleOpenTransfer();
+                } else if (modalControls && typeof modalControls.openTransfer === 'function') {
                   modalControls.openTransfer();
                 } else if (typeof onOpenTransfer === 'function') {
                   onOpenTransfer();
@@ -178,7 +200,11 @@ export default function QuickActionsModal(props) {
             type="button"
             onClick={() => {
               handleSelectAction(() => {
-                if (modalControls && typeof modalControls.openAddRecurring === 'function') {
+                if (typeof openAddRecurring === 'function') {
+                  openAddRecurring();
+                } else if (typeof handleOpenRecurring === 'function') {
+                  handleOpenRecurring();
+                } else if (modalControls && typeof modalControls.openAddRecurring === 'function') {
                   modalControls.openAddRecurring();
                 } else if (typeof onOpenAddRecurring === 'function') {
                   onOpenAddRecurring();
@@ -209,7 +235,15 @@ export default function QuickActionsModal(props) {
             type="button"
             onClick={(e) => {
               handleSelectAction(() => {
-                if (modalControls && typeof modalControls.openAddLoan === 'function') {
+                if (typeof openAddLoan === 'function') {
+                  openAddLoan('payable');
+                } else if (typeof openAddDebt === 'function') {
+                  openAddDebt('payable');
+                } else if (typeof handleOpenAddLoan === 'function') {
+                  handleOpenAddLoan('payable');
+                } else if (typeof handleOpenAddDebt === 'function') {
+                  handleOpenAddDebt('payable');
+                } else if (modalControls && typeof modalControls.openAddLoan === 'function') {
                   modalControls.openAddLoan('payable');
                 } else if (modalControls && typeof modalControls.openAddDebt === 'function') {
                   modalControls.openAddDebt('payable');
@@ -244,7 +278,13 @@ export default function QuickActionsModal(props) {
             type="button"
             onClick={(e) => {
               handleSelectAction(() => {
-                if (modalControls && typeof modalControls.openAddInvestment === 'function') {
+                if (typeof openInvestment === 'function') {
+                  openInvestment();
+                } else if (typeof openAddInvestment === 'function') {
+                  openAddInvestment();
+                } else if (typeof handleOpenInvestment === 'function') {
+                  handleOpenInvestment();
+                } else if (modalControls && typeof modalControls.openAddInvestment === 'function') {
                   modalControls.openAddInvestment();
                 } else if (modalControls && typeof modalControls.openInvestment === 'function') {
                   modalControls.openInvestment();

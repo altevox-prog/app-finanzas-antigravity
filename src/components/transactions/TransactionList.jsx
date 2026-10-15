@@ -92,8 +92,6 @@ export default function TransactionList({
     return matchesSearch && matchesType && matchesAccount;
   });
 
-  console.log('[TransactionsView] Total recibidas:', transactions?.length, 'Filtradas para mostrar:', filteredTransactions?.length);
-
   const displayTransactions = limit ? filteredTransactions.slice(0, limit) : filteredTransactions;
 
   const handleOpenEdit = (tx) => {

@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
       },
       registerType: 'autoUpdate',
       workbox: {
-        cacheId: 'monety-v3-' + Date.now(),
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,

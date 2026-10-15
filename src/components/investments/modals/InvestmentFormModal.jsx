@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   TrendingUp, 
@@ -43,6 +43,8 @@ export default function InvestmentFormModal({
   const [shares, setShares] = useState('');
   const [buyPrice, setBuyPrice] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [investedAmount, setInvestedAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -149,49 +151,69 @@ export default function InvestmentFormModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+    if (submittingRef.current || isSubmitting) return;
+
     const finalName = name.trim();
     if (!finalName) return;
 
-    const sNum = parseFloat(shares) || 0;
-    const bNum = parseFloat(buyPrice) || 0;
-    const cNum = parseFloat(currentPrice) || bNum;
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    let invNum = parseFormattedAmount(investedAmount) || 0;
-    if (invNum === 0 && sNum > 0 && bNum > 0) {
-      invNum = Math.round(sNum * bNum * 100) / 100;
+    try {
+      const sNum = parseFloat(shares) || 0;
+      const bNum = parseFloat(buyPrice) || 0;
+      const cNum = parseFloat(currentPrice) || bNum;
+
+      let invNum = parseFormattedAmount(investedAmount) || 0;
+      if (invNum === 0 && sNum > 0 && bNum > 0) {
+        invNum = Math.round(sNum * bNum * 100) / 100;
+      }
+
+      let currNum = currentAmount !== '' ? parseFormattedAmount(currentAmount) : invNum;
+      if (sNum > 0 && cNum > 0 && (currNum === 0 || currNum === invNum)) {
+        currNum = Math.round(sNum * cNum * 100) / 100;
+      }
+
+      const payload = {
+        id: initialInvestment ? initialInvestment.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `inv-${Date.now()}`),
+        name: finalName,
+        ticker: ticker ? ticker.toUpperCase().trim() : '',
+        assetType: category === 'fixed' ? (subType === 'bond' ? 'bond' : 'cdt') : assetType,
+        type: category === 'fixed' ? 'fixed_income' : undefined,
+        category,
+        subType: category === 'fixed' ? subType : undefined,
+        currency,
+        institution: institution.trim() || undefined,
+        shares: sNum > 0 ? sNum : undefined,
+        buyPrice: bNum > 0 ? bNum : undefined,
+        currentPrice: cNum > 0 ? cNum : undefined,
+        investedAmount: invNum,
+        currentAmount: currNum,
+        notes: notes.trim(),
+        interestRate: interestRate ? parseFloat(interestRate) : undefined,
+        startDate: category === 'fixed' ? startDate : undefined,
+        dueDate: category === 'fixed' ? dueDate : undefined,
+        isImmediateLiquidity: category === 'liquidity'
+      };
+
+      if (onSave) {
+        const res = onSave(payload);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[Offline/Sync] Advertencia al persistir inversión:', err);
+          });
+        }
+      }
+      onClose();
+    } catch (err) {
+      console.error('Error al guardar la inversión:', err);
+    } finally {
+      setIsSubmitting(false);
+      submittingRef.current = false;
     }
-
-    let currNum = currentAmount !== '' ? parseFormattedAmount(currentAmount) : invNum;
-    if (sNum > 0 && cNum > 0 && (currNum === 0 || currNum === invNum)) {
-      currNum = Math.round(sNum * cNum * 100) / 100;
-    }
-
-    const payload = {
-      id: initialInvestment ? initialInvestment.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `inv-${Date.now()}`),
-      name: finalName,
-      ticker: ticker ? ticker.toUpperCase().trim() : '',
-      assetType: category === 'fixed' ? (subType === 'bond' ? 'bond' : 'cdt') : assetType,
-      type: category === 'fixed' ? 'fixed_income' : undefined,
-      category,
-      subType: category === 'fixed' ? subType : undefined,
-      currency,
-      institution: institution.trim() || undefined,
-      shares: sNum > 0 ? sNum : undefined,
-      buyPrice: bNum > 0 ? bNum : undefined,
-      currentPrice: cNum > 0 ? cNum : undefined,
-      investedAmount: invNum,
-      currentAmount: currNum,
-      notes: notes.trim(),
-      interestRate: interestRate ? parseFloat(interestRate) : undefined,
-      startDate: category === 'fixed' ? startDate : undefined,
-      dueDate: category === 'fixed' ? dueDate : undefined,
-      isImmediateLiquidity: category === 'liquidity'
-    };
-
-    onSave(payload);
-    onClose();
   };
 
   const handleDelete = () => {
@@ -449,9 +471,10 @@ export default function InvestmentFormModal({
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-blue-600/30 cursor-pointer active:scale-98"
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-blue-600/30 cursor-pointer active:scale-98 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              {isEditing ? 'Guardar Cambios' : 'Añadir Inversión'}
+              {isSubmitting ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Añadir Inversión')}
             </button>
           </div>
         </form>

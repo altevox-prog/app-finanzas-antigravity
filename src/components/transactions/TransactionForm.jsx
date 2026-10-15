@@ -99,28 +99,41 @@ export default function TransactionForm({
     submittingRef.current = true;
     setIsSubmitting(true);
 
-    const { newTx, selectedAccount } = buildTransactionPayload({
-      numAmount, currency, exchangeRate, enableDecimals, type, date, note, receiptImage,
-      categoryId, subcategoryId, accountId, categories, accounts, editingMovement
-    });
+    try {
+      const { newTx, selectedAccount } = buildTransactionPayload({
+        numAmount, currency, exchangeRate, enableDecimals, type, date, note, receiptImage,
+        categoryId, subcategoryId, accountId, categories, accounts, editingMovement
+      });
 
-    await saveTransactionRecord({ txPayload: newTx, account: selectedAccount, isEditing: Boolean(editingMovement) });
+      // 1. Guardado inmediato en estado local y LocalStorage (Local-First)
+      if (typeof onAddTransaction === 'function') onAddTransaction(newTx);
+      if (typeof onSuccess === 'function') onSuccess(newTx);
 
-    if (typeof onAddTransaction === 'function') onAddTransaction(newTx);
-    if (typeof onSuccess === 'function') onSuccess(newTx);
+      // 2. Limpieza de campos y cierre inmediato del modal
+      setAmount('');
+      setCurrency('COP');
+      setExchangeRate(String(trm || 4000));
+      setNote('');
+      setReceiptImage(null);
 
-    setAmount('');
-    setCurrency('COP');
-    setExchangeRate(String(trm || 4000));
-    setNote('');
-    setReceiptImage(null);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
+      if (typeof onClose === 'function') {
+        onClose();
+      } else {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 1500);
+      }
+
+      // 3. Sincronización remota en segundo plano (no bloqueante)
+      saveTransactionRecord({ txPayload: newTx, account: selectedAccount, isEditing: Boolean(editingMovement) })
+        .catch(err => {
+          console.warn('[Offline/Sync] No se pudo sincronizar de inmediato con Supabase. Queda guardado localmente:', err);
+        });
+    } catch (err) {
+      console.error('Error al procesar la transacción:', err);
+    } finally {
       setIsSubmitting(false);
       submittingRef.current = false;
-      if (onClose) onClose();
-    }, 700);
+    }
   };
 
   const formFields = (

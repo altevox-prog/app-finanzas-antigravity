@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { HandCoins, X } from 'lucide-react';
 import DebtTypeTabs from './DebtTypeTabs';
 import DebtFormInputs from './DebtFormInputs';
@@ -42,6 +42,8 @@ export default function DebtFormModal({
   const [installments, setInstallments] = useState('1');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (editingItem) {
@@ -90,20 +92,41 @@ export default function DebtFormModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+    if (submittingRef.current || isSubmitting) return;
+
     const base = parseFormattedAmount(totalAmount);
     if (!name.trim()) return setError('Por favor ingresa el nombre de la persona o entidad.');
     if (isNaN(base) || base <= 0) return setError('Por favor ingresa un monto válido mayor a 0.');
     if (frequency === 'Único' && !dueDate) return setError('Por favor selecciona la fecha límite o de vencimiento.');
 
-    const savedItem = buildDebtPayload({
-      editingItem, type, name, totalAmount, interestRate, insuranceFee, installments,
-      startDate, dueDate, computedDueDate, frequency, biweeklyDay1, biweeklyDay2, dueDay, notes
-    });
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    onSave(savedItem);
-    onClose();
+    try {
+      const savedItem = buildDebtPayload({
+        editingItem, type, name, totalAmount, interestRate, insuranceFee, installments,
+        startDate, dueDate, computedDueDate, frequency, biweeklyDay1, biweeklyDay2, dueDay, notes
+      });
+
+      if (onSave) {
+        const res = onSave(savedItem);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[Offline/Sync] Advertencia al persistir deuda o préstamo:', err);
+          });
+        }
+      }
+      onClose();
+    } catch (err) {
+      console.error('Error al guardar la deuda o préstamo:', err);
+      setError('Error al procesar el guardado. Inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+      submittingRef.current = false;
+    }
   };
 
   return (
@@ -159,11 +182,12 @@ export default function DebtFormModal({
             </button>
             <button
               type="submit"
+              disabled={isSubmitting}
               className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer ${
                 type === 'receivable' ? 'bg-[#34C759] hover:bg-emerald-600' : 'bg-[#FF3B30] hover:bg-red-600'
-              }`}
+              } ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              {editingItem ? 'Guardar Cambios' : (type === 'receivable' ? 'Registrar dinero que presté' : 'Registrar dinero que me prestaron')}
+              {isSubmitting ? 'Guardando...' : (editingItem ? 'Guardar Cambios' : (type === 'receivable' ? 'Registrar dinero que presté' : 'Registrar dinero que me prestaron'))}
             </button>
           </div>
         </form>

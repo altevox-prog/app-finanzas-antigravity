@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeftRight, 
@@ -56,6 +56,8 @@ export default function TransferModal({
   const [note, setNote] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Sincronizar cuentas si accountsList llega después de la carga inicial
   React.useEffect(() => {
@@ -97,8 +99,11 @@ export default function TransferModal({
     destAmount = convertFromCOP(copEquivalent, toCurrency, trm);
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+    if (submittingRef.current || isSubmitting) return;
+
     setErrorMsg('');
 
     if (!fromAccountId || !toAccountId) {
@@ -116,24 +121,44 @@ export default function TransferModal({
       return;
     }
 
-    if (onTransfer) {
-      onTransfer({
-        fromAcc,
-        toAcc,
-        amount: numAmount,
-        destAmount,
-        fromCurrency,
-        toCurrency,
-        date,
-        note: note.trim()
-      });
-    }
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    setIsSuccess(true);
-    setTimeout(() => {
-      setIsSuccess(false);
-      onClose();
-    }, 400);
+    try {
+      if (typeof onTransfer === 'function') {
+        const transferPayload = {
+          fromAcc,
+          toAcc,
+          amount: numAmount,
+          destAmount,
+          fromCurrency,
+          toCurrency,
+          date,
+          note: note.trim()
+        };
+
+        const res = onTransfer(transferPayload);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[Offline/Sync] Advertencia en persistencia de transferencia:', err);
+          });
+        }
+      }
+
+      setIsSuccess(true);
+      setAmount('');
+      setNote('');
+
+      if (typeof onClose === 'function') {
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error al procesar la transferencia:', err);
+      setErrorMsg('Error al procesar la transferencia. Inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+      submittingRef.current = false;
+    }
   };
 
   if (!isOpen) return null;
@@ -348,10 +373,12 @@ export default function TransferModal({
             </button>
             <button
               type="submit"
-              disabled={isSuccess}
-              className="px-5 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              disabled={isSubmitting || isSuccess}
+              className={`px-5 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer ${(isSubmitting || isSuccess) ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              {isSuccess ? (
+              {isSubmitting ? (
+                <span>Transfiriendo...</span>
+              ) : isSuccess ? (
                 <>
                   <Check className="w-4 h-4" />
                   <span>Transferido</span>

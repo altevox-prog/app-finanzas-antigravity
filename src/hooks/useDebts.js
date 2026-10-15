@@ -6,6 +6,7 @@ import { calculateElapsedMonths } from '../utils/debtAlerts';
 import { toast } from '../utils/toast';
 import { ensureUUID } from '../services/syncEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { toSafeNumber } from '../utils/financeMath';
 
 function getInitialDebts() {
   const saved = localStorage.getItem('user_debts') ||
@@ -43,13 +44,34 @@ export function useDebts({
   const handleAddDebtOrLoan = useCallback(async (newItem) => {
     const itemWithId = {
       ...newItem,
-      id: newItem.id || crypto.randomUUID()
+      id: newItem.id || crypto.randomUUID(),
+      updated_at: new Date().toISOString()
     };
     setDebtsAndLoans((prev) => {
       const nextDebts = [itemWithId, ...prev];
       saveDebtsToStorage(nextDebts);
       return nextDebts;
     });
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.id) {
+          supabase.from('debts').upsert({
+            id: ensureUUID(itemWithId.id),
+            user_id: user.id,
+            name: itemWithId.name || itemWithId.personName || 'Deuda',
+            type: itemWithId.type,
+            amount: toSafeNumber(itemWithId.totalAmount || itemWithId.amount),
+            notes: itemWithId.notes || '',
+            due_date: itemWithId.dueDate || itemWithId.computedDueDate || null,
+            updated_at: itemWithId.updated_at
+          }, { onConflict: 'id' }).catch((e) => {
+            console.warn('[useDebts] Advertencia upsert Supabase:', e);
+          });
+        }
+      }).catch(() => {});
+    }
+
     return itemWithId;
   }, []);
 
@@ -57,12 +79,36 @@ export function useDebts({
 
   // Actualizar deuda o préstamo
   const handleUpdateDebtOrLoan = useCallback(async (updatedItem) => {
+    const sanitized = {
+      ...updatedItem,
+      updated_at: new Date().toISOString()
+    };
     setDebtsAndLoans((prev) => {
-      const nextDebts = prev.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item));
+      const nextDebts = prev.map((item) => (item.id === sanitized.id ? { ...item, ...sanitized } : item));
       saveDebtsToStorage(nextDebts);
       return nextDebts;
     });
-    return updatedItem;
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.id) {
+          supabase.from('debts').upsert({
+            id: ensureUUID(sanitized.id),
+            user_id: user.id,
+            name: sanitized.name || sanitized.personName || 'Deuda',
+            type: sanitized.type,
+            amount: toSafeNumber(sanitized.totalAmount || sanitized.amount),
+            notes: sanitized.notes || '',
+            due_date: sanitized.dueDate || sanitized.computedDueDate || null,
+            updated_at: sanitized.updated_at
+          }, { onConflict: 'id' }).catch((e) => {
+            console.warn('[useDebts] Advertencia upsert Supabase:', e);
+          });
+        }
+      }).catch(() => {});
+    }
+
+    return sanitized;
   }, []);
 
   // Registrar abono / pago a deuda o préstamo

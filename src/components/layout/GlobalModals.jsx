@@ -34,6 +34,30 @@ export default function GlobalModals({
         onClose={() => setIsActionMenuOpen && setIsActionMenuOpen(false)}
         setIsOpen={setIsActionMenuOpen}
         modalControls={mergedControls}
+
+        // Transacciones
+        openAddTransaction={mergedControls?.openAddTransaction || handleOpenTransaction}
+        handleOpenTransaction={handleOpenTransaction || mergedControls?.openAddTransaction}
+
+        // Transferencias
+        openTransfer={mergedControls?.openTransfer || handleOpenTransfer || mergedControls?.handleOpenTransfer}
+        handleOpenTransfer={handleOpenTransfer || mergedControls?.handleOpenTransfer || mergedControls?.openTransfer}
+
+        // Préstamos / Deudas
+        openAddLoan={mergedControls?.openAddLoan || handleOpenAddLoan || mergedControls?.handleOpenAddLoan}
+        openAddDebt={mergedControls?.openAddDebt || handleOpenAddDebt || mergedControls?.handleOpenAddDebt}
+        handleOpenAddLoan={handleOpenAddLoan || mergedControls?.handleOpenAddLoan || mergedControls?.openAddLoan}
+        handleOpenAddDebt={handleOpenAddDebt || mergedControls?.handleOpenAddDebt || mergedControls?.openAddDebt}
+
+        // Recurrentes / Suscripciones
+        openAddRecurring={mergedControls?.openAddRecurring || handleOpenRecurring || mergedControls?.handleOpenRecurring}
+        handleOpenRecurring={handleOpenRecurring || mergedControls?.handleOpenRecurring || mergedControls?.openAddRecurring}
+
+        // Inversiones
+        openInvestment={mergedControls?.openInvestment || mergedControls?.openAddInvestment || handleOpenInvestment}
+        openAddInvestment={mergedControls?.openAddInvestment || mergedControls?.openInvestment || handleOpenInvestment}
+        handleOpenInvestment={handleOpenInvestment || mergedControls?.handleOpenInvestment || mergedControls?.openInvestment}
+
         onAddExpense={() => {
           if (handleOpenTransaction) handleOpenTransaction('expense');
           else if (mergedControls?.openAddTransaction) mergedControls.openAddTransaction('expense');
@@ -91,6 +115,7 @@ export default function GlobalModals({
         }}
         setActiveTab={handleTabChange}
         financeActions={financeActions}
+        {...mergedControls}
       />
 
       {/* 2. Contenedor Orquestador de Modales y Overlays */}

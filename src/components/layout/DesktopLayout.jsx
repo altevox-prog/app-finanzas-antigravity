@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { Calendar, Pencil, Sparkles, ChevronDown } from 'lucide-react';
 import DesktopSidebar from './DesktopSidebar';
 import DesktopMonthPicker from './DesktopMonthPicker';
-import AddTransactionModal from '../AddTransactionModal';
-import SettingsModal from '../SettingsModal';
-import AddLoanModal from '../AddLoanModal';
-import AddRecurringModal from '../AddRecurringModal';
+
+const AddTransactionModal = lazy(() => import('../AddTransactionModal'));
+const AddLoanModal = lazy(() => import('../AddLoanModal'));
+const AddRecurringModal = lazy(() => import('../AddRecurringModal'));
 
 export default function DesktopLayout({
   activeTab = 'dashboard',
@@ -146,32 +146,28 @@ export default function DesktopLayout({
       />
 
       {/* Modales integrados en versión escritorio */}
-      {isAddTransactionOpen && (
-        <AddTransactionModal
-          isOpen={isAddTransactionOpen}
-          onClose={() => setIsAddTransactionOpen?.(false)}
-        />
-      )}
-      {isSettingsOpen && (
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen?.(false)}
-        />
-      )}
-      {isAddLoanOpen && (
-        <AddLoanModal
-          isOpen={isAddLoanOpen}
-          initialType={addLoanInitialType}
-          defaultType={addLoanInitialType}
-          onClose={() => setIsAddLoanOpen?.(false)}
-        />
-      )}
-      {isAddRecurringOpen && (
-        <AddRecurringModal
-          isOpen={isAddRecurringOpen}
-          onClose={() => setIsAddRecurringOpen?.(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {isAddTransactionOpen && (
+          <AddTransactionModal
+            isOpen={isAddTransactionOpen}
+            onClose={() => setIsAddTransactionOpen?.(false)}
+          />
+        )}
+        {isAddLoanOpen && (
+          <AddLoanModal
+            isOpen={isAddLoanOpen}
+            initialType={addLoanInitialType}
+            defaultType={addLoanInitialType}
+            onClose={() => setIsAddLoanOpen?.(false)}
+          />
+        )}
+        {isAddRecurringOpen && (
+          <AddRecurringModal
+            isOpen={isAddRecurringOpen}
+            onClose={() => setIsAddRecurringOpen?.(false)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

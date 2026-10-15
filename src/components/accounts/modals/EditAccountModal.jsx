@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Trash2, Check } from 'lucide-react';
 import BrandIcon from '../../BrandIcon';
 import { 
@@ -32,6 +32,8 @@ export default function EditAccountModal({
   const [closingDate, setClosingDate] = useState('25');
   const [color, setColor] = useState('#007AFF');
   const [icon, setIcon] = useState('Building2');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (account) {
@@ -64,54 +66,71 @@ export default function EditAccountModal({
 
   if (!account) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+    if (submittingRef.current || isSubmitting) return;
     if (!name.trim()) return;
 
-    const isInvestment = type === 'investment';
-    const isCreditEdit = normalizeAccountType(type) === 'credit';
-    const sharesNum = isInvestment && shares ? parseFloat(shares) : undefined;
-    const unitPriceNum = isInvestment && unitPrice ? parseFloat(unitPrice) : undefined;
-    let initBal = parseFloat(balance) || 0;
-    if (isInvestment && sharesNum && unitPriceNum && (!balance || parseFloat(balance) === 0)) {
-      initBal = sharesNum * unitPriceNum;
-    }
-    // Las tarjetas de crédito almacenan el saldo como deuda (negativo)
-    if (isCreditEdit && initBal > 0) {
-      initBal = -Math.abs(initBal);
-    }
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    const normalizedType = normalizeAccountType(type);
-    const numericBalance = parseFloat(initBal) || 0;
-    const updated = {
-      ...account,
-      name: name.trim(),
-      type: normalizedType,
-      currency: currency || 'COP',
-      balance: numericBalance,
-      initial_balance: numericBalance,
-      current_balance: numericBalance,
-      initialBalance: numericBalance,
-      currentBalance: numericBalance,
-      color,
-      icon,
-      ...(normalizedType === 'credit' || type === 'card' ? {
-        creditLimit: parseFloat(creditLimit) || 5000000,
-        paymentDueDate: parseInt(paymentDueDate, 10) || 17,
-        closingDate: closingDate ? parseInt(closingDate, 10) : undefined
-      } : {}),
-      ...(isInvestment ? {
-        ticker: ticker.trim().toUpperCase(),
-        shares: sharesNum,
-        unitPrice: unitPriceNum
-      } : {})
-    };
+    try {
+      const isInvestment = type === 'investment';
+      const isCreditEdit = normalizeAccountType(type) === 'credit';
+      const sharesNum = isInvestment && shares ? parseFloat(shares) : undefined;
+      const unitPriceNum = isInvestment && unitPrice ? parseFloat(unitPrice) : undefined;
+      let initBal = parseFloat(balance) || 0;
+      if (isInvestment && sharesNum && unitPriceNum && (!balance || parseFloat(balance) === 0)) {
+        initBal = sharesNum * unitPriceNum;
+      }
+      // Las tarjetas de crédito almacenan el saldo como deuda (negativo)
+      if (isCreditEdit && initBal > 0) {
+        initBal = -Math.abs(initBal);
+      }
 
-    if (onSave) {
-      onSave(updated);
-    }
-    if (onClose) {
-      onClose();
+      const normalizedType = normalizeAccountType(type);
+      const numericBalance = parseFloat(initBal) || 0;
+      const updated = {
+        ...account,
+        name: name.trim(),
+        type: normalizedType,
+        currency: currency || 'COP',
+        balance: numericBalance,
+        initial_balance: numericBalance,
+        current_balance: numericBalance,
+        initialBalance: numericBalance,
+        currentBalance: numericBalance,
+        color,
+        icon,
+        ...(normalizedType === 'credit' || type === 'card' ? {
+          creditLimit: parseFloat(creditLimit) || 5000000,
+          paymentDueDate: parseInt(paymentDueDate, 10) || 17,
+          closingDate: closingDate ? parseInt(closingDate, 10) : undefined
+        } : {}),
+        ...(isInvestment ? {
+          ticker: ticker.trim().toUpperCase(),
+          shares: sharesNum,
+          unitPrice: unitPriceNum
+        } : {})
+      };
+
+      if (onSave) {
+        const res = onSave(updated);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[Offline/Sync] Advertencia al actualizar cuenta:', err);
+          });
+        }
+      }
+      if (onClose) {
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error al actualizar la cuenta:', err);
+    } finally {
+      setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -444,10 +463,11 @@ export default function EditAccountModal({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                disabled={isSubmitting}
+                className={`px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>Guardar Cuenta</span>
+                <span>{isSubmitting ? 'Guardando...' : 'Guardar Cuenta'}</span>
               </button>
             </div>
           </div>

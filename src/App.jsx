@@ -166,19 +166,11 @@ export default function App() {
 
         {/* Modales Globales y Overlays Centralizados */}
         <GlobalModals
-          isActionMenuOpen={state.isActionMenuOpen}
-          setIsActionMenuOpen={state.setIsActionMenuOpen}
           modalControls={modalControls}
-          handleOpenTransaction={state.handleOpenTransaction}
-          handleOpenTransfer={state.handleOpenTransfer}
-          handleOpenRecurring={state.handleOpenRecurring}
-          handleOpenAddDebt={state.handleOpenAddDebt}
-          handleOpenAddLoan={state.handleOpenAddLoan}
-          handleOpenInvestment={state.handleOpenInvestment}
-          handleTabChange={state.handleTabChange}
           financeData={state.financeData}
           financeActions={state.financeActions}
           onLogout={state.handleGlobalLogout}
+          {...state}
         />
 
         {/* Banner Flotante de Actualización PWA */}

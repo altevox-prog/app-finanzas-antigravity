@@ -1,21 +1,11 @@
-import React, { Suspense, lazy } from 'react';
-import { Loader2 } from 'lucide-react';
+import React from 'react';
 import DashboardView from './DashboardView';
-
-const TransactionsView = lazy(() => import('./TransactionsView'));
-const AccountsView = lazy(() => import('./AccountsView'));
-const DebtsView = lazy(() => import('./DebtsView'));
-const InvestmentsView = lazy(() => import('./InvestmentsView'));
-const RecurringView = lazy(() => import('./RecurringView'));
-const TaxView = lazy(() => import('./TaxView'));
-
-function ViewFallbackLoader() {
-  return (
-    <div className="flex h-64 w-full items-center justify-center p-8">
-      <Loader2 className="h-8 w-8 animate-spin text-emerald-500 opacity-80" />
-    </div>
-  );
-}
+import TransactionsView from './TransactionsView';
+import AccountsView from './AccountsView';
+import DebtsView from './DebtsView';
+import InvestmentsView from './InvestmentsView';
+import RecurringView from './RecurringView';
+import TaxView from './TaxView';
 
 /**
  * ViewRouter
@@ -154,7 +144,6 @@ export default function ViewRouter({
         />
       )}
 
-      <Suspense fallback={<ViewFallbackLoader />}>
         {/* Tab 2: Movimientos */}
       {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
         <TransactionsView
@@ -276,7 +265,6 @@ export default function ViewRouter({
           fromSettings={fromSettings}
         />
       )}
-      </Suspense>
     </>
   );
 }

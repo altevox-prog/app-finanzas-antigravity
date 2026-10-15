@@ -1,7 +1,5 @@
 export { default as AnimatedCounter } from './AnimatedCounter';
 export { default as BentoMetricsGrid } from './BentoMetricsGrid';
-export { default as FinancialIcon } from './FinancialIcon';
-export { default as PillBarChart } from './PillBarChart';
 export { default as SegmentedControl } from './SegmentedControl';
 export { default as ActionMenu } from './ActionMenu';
 export { default as AddActionSheet } from './AddActionSheet';

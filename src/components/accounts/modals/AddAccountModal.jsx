@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { TrendingUp } from 'lucide-react';
 import BrandIcon from '../../BrandIcon';
 import { 
@@ -32,6 +32,8 @@ export default function AddAccountModal({
   const [newAccClosingDate, setNewAccClosingDate] = useState('25');
   const [newAccColor, setNewAccColor] = useState('#007AFF');
   const [newAccIcon, setNewAccIcon] = useState('Building2');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const resetForm = () => {
     setNewAccName('');
@@ -58,63 +60,80 @@ export default function AddAccountModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+    if (submittingRef.current || isSubmitting) return;
     if (!newAccName.trim()) return;
 
-    let iconName = newAccIcon;
-    if (!iconName) {
-      if (newAccType === 'cash') iconName = 'Wallet';
-      else if (newAccType === 'card' || newAccType === 'credit') iconName = 'CreditCard';
-      else if (newAccType === 'savings') iconName = 'Smartphone';
-      else if (newAccType === 'investment') iconName = 'TrendingUp';
-      else iconName = 'Building2';
-    }
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    const isInvestment = newAccType === 'investment';
-    const isCreditNew = normalizeAccountType(newAccType) === 'credit';
-    const sharesNum = isInvestment && newAccShares ? parseFloat(newAccShares) : undefined;
-    const unitPriceNum = isInvestment && newAccUnitPrice ? parseFloat(newAccUnitPrice) : undefined;
-    let initBal = parseFloat(newAccBalance) || 0;
-    if (isInvestment && sharesNum && unitPriceNum && (!newAccBalance || parseFloat(newAccBalance) === 0)) {
-      initBal = sharesNum * unitPriceNum;
-    }
-    // Las tarjetas de crédito almacenan el saldo como deuda (negativo)
-    if (isCreditNew && initBal > 0) {
-      initBal = -Math.abs(initBal);
-    }
+    try {
+      let iconName = newAccIcon;
+      if (!iconName) {
+        if (newAccType === 'cash') iconName = 'Wallet';
+        else if (newAccType === 'card' || newAccType === 'credit') iconName = 'CreditCard';
+        else if (newAccType === 'savings') iconName = 'Smartphone';
+        else if (newAccType === 'investment') iconName = 'TrendingUp';
+        else iconName = 'Building2';
+      }
 
-    const normalizedType = normalizeAccountType(newAccType);
-    const numericNewBalance = parseFloat(initBal) || 0;
-    const newAcc = {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('acc-' + Date.now()),
-      name: newAccName.trim(),
-      type: normalizedType,
-      currency: newAccCurrency || 'COP',
-      balance: numericNewBalance,
-      initial_balance: numericNewBalance,
-      current_balance: numericNewBalance,
-      initialBalance: numericNewBalance,
-      currentBalance: numericNewBalance,
-      color: newAccColor,
-      icon: iconName,
-      ...(normalizedType === 'credit' || newAccType === 'card' ? {
-        creditLimit: parseFloat(newAccCreditLimit) || 5000000,
-        paymentDueDate: parseInt(newAccPaymentDueDate, 10) || 17,
-        closingDate: newAccClosingDate ? parseInt(newAccClosingDate, 10) : undefined
-      } : {}),
-      ...(isInvestment ? {
-        ticker: newAccTicker.trim().toUpperCase(),
-        shares: sharesNum,
-        unitPrice: unitPriceNum
-      } : {})
-    };
+      const isInvestment = newAccType === 'investment';
+      const isCreditNew = normalizeAccountType(newAccType) === 'credit';
+      const sharesNum = isInvestment && newAccShares ? parseFloat(newAccShares) : undefined;
+      const unitPriceNum = isInvestment && newAccUnitPrice ? parseFloat(newAccUnitPrice) : undefined;
+      let initBal = parseFloat(newAccBalance) || 0;
+      if (isInvestment && sharesNum && unitPriceNum && (!newAccBalance || parseFloat(newAccBalance) === 0)) {
+        initBal = sharesNum * unitPriceNum;
+      }
+      // Las tarjetas de crédito almacenan el saldo como deuda (negativo)
+      if (isCreditNew && initBal > 0) {
+        initBal = -Math.abs(initBal);
+      }
 
-    if (onCreateAccount) {
-      onCreateAccount(newAcc);
+      const normalizedType = normalizeAccountType(newAccType);
+      const numericNewBalance = parseFloat(initBal) || 0;
+      const newAcc = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('acc-' + Date.now()),
+        name: newAccName.trim(),
+        type: normalizedType,
+        currency: newAccCurrency || 'COP',
+        balance: numericNewBalance,
+        initial_balance: numericNewBalance,
+        current_balance: numericNewBalance,
+        initialBalance: numericNewBalance,
+        currentBalance: numericNewBalance,
+        color: newAccColor,
+        icon: iconName,
+        ...(normalizedType === 'credit' || newAccType === 'card' ? {
+          creditLimit: parseFloat(newAccCreditLimit) || 5000000,
+          paymentDueDate: parseInt(newAccPaymentDueDate, 10) || 17,
+          closingDate: newAccClosingDate ? parseInt(newAccClosingDate, 10) : undefined
+        } : {}),
+        ...(isInvestment ? {
+          ticker: newAccTicker.trim().toUpperCase(),
+          shares: sharesNum,
+          unitPrice: unitPriceNum
+        } : {})
+      };
+
+      if (onCreateAccount) {
+        const res = onCreateAccount(newAcc);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.warn('[Offline/Sync] Advertencia al persistir cuenta:', err);
+          });
+        }
+      }
+      resetForm();
+      if (onClose) onClose();
+    } catch (err) {
+      console.error('Error al guardar la cuenta:', err);
+    } finally {
+      setIsSubmitting(false);
+      submittingRef.current = false;
     }
-    resetForm();
-    if (onClose) onClose();
   };
 
   return (
@@ -422,9 +441,10 @@ export default function AddAccountModal({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer"
+              disabled={isSubmitting}
+              className={`px-5 py-2.5 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              Guardar Cuenta
+              {isSubmitting ? 'Guardando...' : 'Guardar Cuenta'}
             </button>
           </div>
         </form>

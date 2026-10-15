@@ -75,6 +75,26 @@ export function useInvestments(isResettingRef) {
       saveInvestmentsToStorage(next);
       return next;
     });
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.id) {
+          supabase.from('investments').upsert({
+            id: ensureUUID(sanitizedInv.id),
+            user_id: user.id,
+            name: sanitizedInv.name,
+            asset_type: sanitizedInv.assetType || sanitizedInv.category || 'other',
+            current_value: toSafeNumber(sanitizedInv.currentAmount || sanitizedInv.investedAmount),
+            invested_amount: toSafeNumber(sanitizedInv.investedAmount),
+            currency: sanitizedInv.currency || 'USD',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' }).catch((e) => {
+            console.warn('[useInvestments] Advertencia upsert Supabase:', e);
+          });
+        }
+      }).catch(() => {});
+    }
+
     toast.success('Inversión guardada correctamente');
     return sanitizedInv;
   }, []);
@@ -89,6 +109,26 @@ export function useInvestments(isResettingRef) {
       saveInvestmentsToStorage(next);
       return next;
     });
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.id) {
+          supabase.from('investments').upsert({
+            id: ensureUUID(sanitizedInv.id),
+            user_id: user.id,
+            name: sanitizedInv.name,
+            asset_type: sanitizedInv.assetType || sanitizedInv.category || 'other',
+            current_value: toSafeNumber(sanitizedInv.currentAmount || sanitizedInv.investedAmount),
+            invested_amount: toSafeNumber(sanitizedInv.investedAmount),
+            currency: sanitizedInv.currency || 'USD',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' }).catch((e) => {
+            console.warn('[useInvestments] Advertencia upsert Supabase:', e);
+          });
+        }
+      }).catch(() => {});
+    }
+
     toast.success('Inversión actualizada correctamente');
     return sanitizedInv;
   }, []);
