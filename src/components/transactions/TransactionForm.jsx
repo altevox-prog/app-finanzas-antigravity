@@ -8,7 +8,7 @@ import { SubmitBtn, SuccessAlert } from './TransactionFeedback';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../../utils/currencyFormatter';
-import { buildTransactionPayload, saveTransactionRecord } from '../../services/transactionSubmitService';
+import { buildTransactionPayload, saveTransactionRecord } from '../../services/transactions/transactionSubmitService';
 
 export default function TransactionForm({
   accounts: propAccounts, categories: propCategories, onAddTransaction, onAddCategory,

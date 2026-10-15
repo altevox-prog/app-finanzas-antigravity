@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { PrivacyProvider } from './context/PrivacyContext';
 import { AuthProvider } from './context/AuthContext';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import './index.css';
 import { initPWA } from './pwaHelper';
 

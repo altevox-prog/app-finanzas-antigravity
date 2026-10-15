@@ -15,7 +15,7 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
-import AppLogo from '../AppLogo';
+import AppLogo from '../ui/AppLogo';
 import Avatar from '../ui/Avatar';
 
 /**

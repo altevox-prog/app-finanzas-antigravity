@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Calendar, ChevronDown, Bell } from 'lucide-react';
 import Header from './Header';
-import SyncStatusBadge from '../SyncStatusBadge';
-import NotificationCenter from '../NotificationCenter';
+import SyncStatusBadge from '../ui/SyncStatusBadge';
+import NotificationCenter from '../ui/NotificationCenter';
 import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
 
 const TAB_TITLES = {

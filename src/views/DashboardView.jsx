@@ -1,6 +1,6 @@
 import React from 'react';
-import DebtAlertBanner from '../components/DebtAlertBanner';
-import Dashboard from '../components/Dashboard';
+import DebtAlertBanner from '../components/debts/DebtAlertBanner';
+import Dashboard from '../components/dashboard/Dashboard';
 
 /**
  * DashboardView

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Receipt, ArrowRight } from 'lucide-react';
-import { getCategoryEmoji } from '../../ReportsAndCharts';
+import { getCategoryEmoji } from '../../reports/ReportsAndCharts';
 
 /**
  * RecentTransactionsWidget

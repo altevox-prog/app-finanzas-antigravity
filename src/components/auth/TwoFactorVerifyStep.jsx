@@ -12,7 +12,7 @@ import {
   Mail, 
   Send 
 } from 'lucide-react';
-import OtpSixDigitInput from '../OtpSixDigitInput';
+import OtpSixDigitInput from './components/OtpSixDigitInput';
 
 /**
  * TwoFactorVerifyStep

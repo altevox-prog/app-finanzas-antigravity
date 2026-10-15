@@ -1,5 +1,5 @@
 import React from 'react';
-import CoreTransactionsView from '../components/TransactionsView';
+import CoreTransactionsView from '../components/transactions/TransactionsView';
 
 /**
  * TransactionsView

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { usePrivacy } from '../../../context/PrivacyContext';
-import CategoriesView from '../../CategoriesView';
-import TaxView from '../../TaxView';
+import CategoriesView from '../../categories/CategoriesView';
+import TaxView from '../../taxes/TaxView';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase, isSupabaseConfigured } from '../../../services/supabaseClient';

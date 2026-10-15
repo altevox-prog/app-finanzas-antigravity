@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Fingerprint, Delete, ShieldCheck, AlertCircle } from 'lucide-react';
-import AppLogo from '../AppLogo';
+import AppLogo from '../ui/AppLogo';
 
 const KEYPAD_KEYS = [
   { num: 1, letters: '' },

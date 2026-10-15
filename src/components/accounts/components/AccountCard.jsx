@@ -5,7 +5,7 @@ import {
   Pencil, 
   Trash2 
 } from 'lucide-react';
-import BrandIcon from '../../BrandIcon';
+import BrandIcon from '../../ui/BrandIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { 
   formatNativeCurrency, 

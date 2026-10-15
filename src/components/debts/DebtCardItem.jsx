@@ -1,5 +1,5 @@
 import React from 'react';
-import DebtCard from '../DebtCard';
+import DebtCard from './DebtCard';
 
 /**
  * DebtCardItem

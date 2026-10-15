@@ -29,9 +29,9 @@ import BalanceCardsWidget, {
 } from './BalanceCardsWidget';
 import WeeklyExpensesChart from './WeeklyExpensesChart';
 import RecentMovementsSection from './RecentMovementsSection';
-import BalanceWidget from '../BalanceWidget';
-import BudgetWidget from '../BudgetWidget';
-import ReportsAndCharts from '../ReportsAndCharts';
+import BalanceWidget from './widgets/BalanceWidget';
+import BudgetWidget from './widgets/BudgetWidget';
+import ReportsAndCharts from '../reports/ReportsAndCharts';
 import BentoMetricsGrid from '../common/BentoMetricsGrid';
 import MetricCardsGrid from './widgets/MetricCardsGrid';
 import TopAccountsWidget from './widgets/TopAccountsWidget';

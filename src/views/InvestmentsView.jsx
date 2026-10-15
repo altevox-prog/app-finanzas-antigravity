@@ -1,5 +1,5 @@
 import React from 'react';
-import CoreInvestmentsView from '../components/InvestmentsView';
+import CoreInvestmentsView from '../components/investments/InvestmentsView';
 
 /**
  * InvestmentsView

@@ -1,5 +1,5 @@
 import React from 'react';
-import CoreTaxView from '../components/TaxView';
+import CoreTaxView from '../components/taxes/TaxView';
 
 /**
  * TaxView

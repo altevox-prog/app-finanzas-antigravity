@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import TransactionForm from '../../TransactionForm';
+import TransactionForm from '../TransactionForm';
 import { INITIAL_ACCOUNTS, INITIAL_CATEGORIES } from '../../../data/initialData';
 
 /**

@@ -1,5 +1,5 @@
 import React from 'react';
-import AppLogo from '../AppLogo';
+import AppLogo from '../ui/AppLogo';
 
 /**
  * SplashScreen - Pantalla de carga inicial con el isotipo oficial de Monety

@@ -6,7 +6,7 @@ import {
   Trash2, 
   X 
 } from 'lucide-react';
-import BrandIcon from '../../BrandIcon';
+import BrandIcon from '../../ui/BrandIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 import { formatTxDateTime } from './ReceiptModal';

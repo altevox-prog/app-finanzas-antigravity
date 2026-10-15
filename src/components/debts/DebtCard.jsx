@@ -10,7 +10,7 @@ import {
   HandCoins,
   ArrowUpRight
 } from 'lucide-react';
-import BrandIcon, { hasBrandIcon } from '../BrandIcon';
+import BrandIcon, { hasBrandIcon } from '../ui/BrandIcon';
 import { toSafeNumber, calculateDebtStats } from '../../utils/financeMath';
 
 export default function DebtCard({

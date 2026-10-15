@@ -1,7 +1,7 @@
 import React from 'react';
 import DebtModal from './DebtFormModal';
-import DebtReceiptModal from '../DebtReceiptModal';
-import AddDisbursementModal from '../AddDisbursementModal';
+import DebtReceiptModal from './DebtReceiptModal';
+import AddDisbursementModal from './AddDisbursementModal';
 import DebtPaymentModal from './DebtPaymentModal';
 import { calculateItemStats } from '../../services/debts/debtCalculationService';
 

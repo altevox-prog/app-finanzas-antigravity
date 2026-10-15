@@ -12,7 +12,7 @@ import {
   FileJson, 
   AlertCircle 
 } from 'lucide-react';
-import AppLogo from '../AppLogo';
+import AppLogo from '../ui/AppLogo';
 
 export default function StepProfileSetup({
   name,

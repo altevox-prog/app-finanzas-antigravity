@@ -9,7 +9,7 @@ import {
   Loader2 
 } from 'lucide-react';
 import { useBackHandler } from '../../hooks/useBackHandler';
-import AppLogo from '../AppLogo';
+import AppLogo from '../ui/AppLogo';
 
 export const handleShareReceipt = async (receiptRef, debtorName = 'Cliente') => {
   try {

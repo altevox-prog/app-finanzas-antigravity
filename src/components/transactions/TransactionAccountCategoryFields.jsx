@@ -1,7 +1,7 @@
 import React from 'react';
-import CategoryCombobox from '../CategoryCombobox';
-import SubcategoryCombobox from '../SubcategoryCombobox';
-import AccountCombobox from '../AccountCombobox';
+import CategoryCombobox from '../categories/components/CategoryCombobox';
+import SubcategoryCombobox from '../categories/components/SubcategoryCombobox';
+import AccountCombobox from '../accounts/components/AccountCombobox';
 
 export default function TransactionAccountCategoryFields({
   type,

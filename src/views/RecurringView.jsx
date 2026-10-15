@@ -1,5 +1,5 @@
 import React from 'react';
-import CoreRecurringView from '../components/RecurringView';
+import CoreRecurringView from '../components/recurring/RecurringView';
 
 /**
  * RecurringView

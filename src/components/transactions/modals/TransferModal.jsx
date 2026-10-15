@@ -3,23 +3,18 @@ import { createPortal } from 'react-dom';
 import { 
   ArrowLeftRight, 
   X, 
-  Wallet, 
   Check, 
-  AlertCircle,
-  Calendar,
-  FileText
+  AlertCircle 
 } from 'lucide-react';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { useBackHandler } from '../../../hooks/useBackHandler';
-import BrandIcon from '../../BrandIcon';
+import BrandIcon from '../../ui/BrandIcon';
 import { 
   getAccountNativeBalance, 
   formatNativeCurrency, 
   convertToCOP, 
-  convertFromCOP,
-  formatCOP
+  convertFromCOP
 } from '../../../utils/currencyUtils';
-import { INITIAL_ACCOUNTS } from '../../../data/initialData';
 
 export default function TransferModal({
   isOpen = false,

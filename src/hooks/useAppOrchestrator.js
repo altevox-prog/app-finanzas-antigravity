@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePrivacy } from '../context/PrivacyContext';
 import { useAuth } from '../context/AuthContext';
+import { clearSessionFinancialStorage } from '../services/storage/storageCleaner';
 import { useViewMode } from './useViewMode';
 import { useDebtAlerts } from './useDebtAlerts';
 import { useTheme } from './useTheme';
@@ -33,22 +34,7 @@ import { useFinanceContext } from './useFinanceContext';
  */
 export function useAppOrchestrator() {
   const { formatMoney } = usePrivacy();
-  const { user, loading: authLoading, signOut } = useAuth();
-
-  // Cierre de sesión seguro y desacoplado de la pantalla de bloqueo por PIN
-  const handleGlobalLogout = useCallback(async () => {
-    try {
-      if (typeof signOut === 'function') await signOut();
-      if (typeof window !== 'undefined') {
-        Object.keys(localStorage).forEach(k => (k.startsWith('sb-') || k.includes('supabase') || k.includes('auth-token')) && localStorage.removeItem(k));
-        sessionStorage.clear();
-        window.location.href = '/';
-      }
-    } catch (err) {
-      console.error('Error al cerrar sesión:', err);
-      if (typeof window !== 'undefined') window.location.href = '/';
-    }
-  }, [signOut]);
+  const { user, setUser, loading: authLoading, signOut } = useAuth();
 
   const { theme, setTheme, handleToggleTheme } = useTheme();
 
@@ -163,6 +149,67 @@ export function useAppOrchestrator() {
     setSelectedDay, setIsLocked, setShowTutorial, completeOnboarding
   });
 
+  // Limpieza total y reactiva de los estados financieros de React a cero
+  const resetAllFinancialStates = useCallback(() => {
+    if (isResettingRef) isResettingRef.current = true;
+    try {
+      resetTransactions?.();
+      resetAccounts?.();
+      resetDebts?.();
+      resetInvestments?.();
+      resetRecurringPayments?.();
+      resetSavingsGoals?.();
+      resetBudgets?.();
+      resetCategories?.();
+
+      setTransactions([]);
+      setAccounts([]);
+      setDebtsAndLoans([]);
+      setInvestments([]);
+      setRecurringPayments([]);
+      setSavingsGoals([]);
+      setCategories([]);
+      setBudgets({ global: 0, categories: {} });
+      setUserProfile({ name: 'Usuario', email: '' });
+      setIsLocked(false);
+      setSecuritySettings({ pinEnabled: false, pin: '', biometricsEnabled: false });
+    } catch (resetErr) {
+      console.warn('[useAppOrchestrator] Error al resetear estados de React:', resetErr);
+    } finally {
+      setTimeout(() => {
+        if (isResettingRef) isResettingRef.current = false;
+      }, 300);
+    }
+  }, [
+    isResettingRef, resetTransactions, resetAccounts, resetDebts, resetInvestments,
+    resetRecurringPayments, resetSavingsGoals, resetBudgets, resetCategories,
+    setTransactions, setAccounts, setDebtsAndLoans, setInvestments,
+    setRecurringPayments, setSavingsGoals, setCategories, setBudgets,
+    setUserProfile, setIsLocked, setSecuritySettings
+  ]);
+
+  // Cierre de sesión seguro, reactivo y desacoplado (sin recarga forzada)
+  const handleGlobalLogout = useCallback(async () => {
+    try {
+      resetAllFinancialStates();
+      clearSessionFinancialStorage();
+      if (typeof signOut === 'function') {
+        await signOut();
+      }
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+    }
+  }, [resetAllFinancialStates, signOut]);
+
+  // Escuchar evento monety:signout en caso de que signOut provenga de otra fuente
+  useEffect(() => {
+    const handleSignoutEvent = () => {
+      resetAllFinancialStates();
+    };
+    window.addEventListener('monety:signout', handleSignoutEvent);
+    return () => window.removeEventListener('monety:signout', handleSignoutEvent);
+  }, [resetAllFinancialStates]);
+
   // Sincronización en segundo plano con Supabase (Local-First Cloud Sync)
   const { syncStatus, syncUser, isCloudEnabled, pushLocalToCloud, pullCloudToLocal } = useDataSync({
     accounts, setAccounts, transactions, setTransactions, debtsAndLoans, setDebtsAndLoans,
@@ -221,7 +268,7 @@ export function useAppOrchestrator() {
   });
 
   return {
-    user, authLoading, isOnboardingActive, handleOnboardingComplete, handleRestoreBackup, viewMode, isForcedMobile,
+    user, setUser, authLoading, isOnboardingActive, handleOnboardingComplete, handleRestoreBackup, viewMode, isForcedMobile,
     isForcedDesktop, desktopOnlyClass, desktopBlockClass, mobileOnlyClass, activeTab, setActiveTab, tabResetKeys,
     handleTabChange, handleResetTab, mainContentRef, fromSettings, setFromSettings, handleGoBackFromSubView, theme,
     setTheme, handleToggleTheme, securitySettings, setSecuritySettings, isLocked, setIsLocked, handleUnlock,

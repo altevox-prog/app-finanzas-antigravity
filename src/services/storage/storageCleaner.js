@@ -153,3 +153,35 @@ export async function clearRemoteUserData(userId) {
     console.warn('[storageCleaner] Error al eliminar datos en Supabase durante el reset:', cloudErr);
   }
 }
+
+/**
+ * Limpia totalmente todas las claves de datos financieros y de sesión en localStorage,
+ * sessionStorage e IndexedDB al cerrar sesión, preservando únicamente preferencias de tema visual.
+ */
+export function clearSessionFinancialStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    const keysToPreserve = ['presu_theme', 'app_theme', 'theme'];
+    const preserved = {};
+    for (const key of keysToPreserve) {
+      const val = localStorage.getItem(key);
+      if (val !== null) preserved[key] = val;
+    }
+
+    localStorage.clear();
+
+    // Restaurar únicamente la preferencia de tema visual
+    for (const [key, val] of Object.entries(preserved)) {
+      localStorage.setItem(key, val);
+    }
+
+    if (window.sessionStorage) {
+      sessionStorage.clear();
+    }
+
+    // Limpieza asíncrona de IndexedDB
+    clearIndexedDatabases().catch(() => {});
+  } catch (err) {
+    console.warn('[storageCleaner] Error al limpiar almacenamiento financiero:', err);
+  }
+}

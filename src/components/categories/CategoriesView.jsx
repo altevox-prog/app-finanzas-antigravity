@@ -5,7 +5,7 @@ import {
   Tag 
 } from 'lucide-react';
 import CategoryIcon, { DynamicIcon, AVAILABLE_ICONS } from './components/CategoryIcon';
-import EmojiPickerModal from '../EmojiPickerModal';
+import EmojiPickerModal from '../common/EmojiPickerModal';
 import SegmentedControl from '../common/SegmentedControl';
 import { DEFAULT_CATEGORIES } from '../../data/initialData';
 import { PRESET_COLORS } from './constants';

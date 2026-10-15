@@ -1,6 +1,6 @@
 import React from 'react';
 import confetti from 'canvas-confetti';
-import AddDebtPaymentModal from '../AddDebtPaymentModal';
+import AddDebtPaymentModal from './AddDebtPaymentModal';
 
 /**
  * DebtPaymentModal

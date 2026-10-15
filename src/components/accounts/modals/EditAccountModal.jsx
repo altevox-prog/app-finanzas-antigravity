@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Trash2, Check } from 'lucide-react';
-import BrandIcon from '../../BrandIcon';
+import BrandIcon from '../../ui/BrandIcon';
 import { 
   formatNativeCurrency, 
   convertToCOP 

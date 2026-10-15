@@ -9,7 +9,7 @@ import {
   X, 
   CornerDownRight 
 } from 'lucide-react';
-import CategoryIcon from '../../CategoryIcon';
+import CategoryIcon from './CategoryIcon';
 import { PRESET_COLORS } from '../constants';
 
 export default function CategoryCard({

@@ -1,5 +1,5 @@
 import React from 'react';
-import AccountsAndCategories from '../components/AccountsAndCategories';
+import AccountsAndCategories from '../components/accounts/AccountsAndCategories';
 
 /**
  * AccountsView

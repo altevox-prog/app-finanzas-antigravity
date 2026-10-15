@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
-import AppLogo from '../AppLogo';
+import AppLogo from '../ui/AppLogo';
 import { supabase } from '../../lib/supabase';
 import { getURL } from '../../utils/urlHelper';
 import EmailConfirmationSentStep from './EmailConfirmationSentStep';
@@ -15,8 +15,8 @@ import TwoFactorVerifyStep from './TwoFactorVerifyStep';
 import AuthForm from './components/AuthForm';
 import CustomSupabaseConfig from './components/CustomSupabaseConfig';
 
-export default function AuthModal({ isOpen, onClose }) {
-  useBackHandler(isOpen, onClose);
+export default function AuthModal({ isOpen, onClose, isRequired = false, onContinueLocal }) {
+  useBackHandler(isOpen && !isRequired, onClose);
 
   const { 
     user, 
@@ -202,7 +202,7 @@ export default function AuthModal({ isOpen, onClose }) {
   const modalContent = (
     <div 
       className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
-      onClick={onClose}
+      onClick={isRequired ? undefined : onClose}
     >
       <div 
         onClick={(e) => e.stopPropagation()}
@@ -303,15 +303,17 @@ export default function AuthModal({ isOpen, onClose }) {
           /* 5. FORMULARIO PRINCIPAL: LOGIN / REGISTRO / RECUPERACIÓN */
           <div className="pt-2 space-y-4">
             {/* Botón de cerrar superior */}
-            <div className="flex justify-end -mb-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            {!isRequired && (
+              <div className="flex justify-end -mb-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {/* Identidad Visual Oficial: AppLogo centralizado */}
             <div className="flex flex-col items-center justify-center text-center mb-6">
@@ -389,6 +391,18 @@ export default function AuthModal({ isOpen, onClose }) {
                 </div>
               )}
             </AuthForm>
+
+            {Boolean(onContinueLocal) && (
+              <div className="pt-3 border-t border-slate-100 dark:border-white/5 text-center">
+                <button
+                  type="button"
+                  onClick={onContinueLocal}
+                  className="text-xs text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 font-medium hover:underline cursor-pointer transition-colors"
+                >
+                  Continuar en modo local (sin cuenta en la nube)
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

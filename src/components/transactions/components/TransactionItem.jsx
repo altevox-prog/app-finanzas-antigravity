@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pencil, Camera } from 'lucide-react';
-import BrandIcon from '../../BrandIcon';
-import CategoryIcon from '../../CategoryIcon';
+import BrandIcon from '../../ui/BrandIcon';
+import CategoryIcon from '../../categories/components/CategoryIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { MONTH_NAMES } from '../../../data/initialData';
 

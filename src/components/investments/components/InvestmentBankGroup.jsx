@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import BrandIcon from '../../BrandIcon';
+import BrandIcon from '../../ui/BrandIcon';
 import InvestmentCard from './InvestmentCard';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatCurrency, formatUSD } from '../../../data/initialData';

@@ -5,5 +5,4 @@ export { default as DebtsView } from './DebtsView';
 export { default as InvestmentsView } from './InvestmentsView';
 export { default as RecurringView } from './RecurringView';
 export { default as TaxView } from './TaxView';
-export { default as CategoriesView } from './CategoriesView';
 export { default as ViewRouter } from './ViewRouter';

@@ -3,9 +3,9 @@ import { Calendar, Pencil, Sparkles, ChevronDown } from 'lucide-react';
 import DesktopSidebar from './DesktopSidebar';
 import DesktopMonthPicker from './DesktopMonthPicker';
 
-const AddTransactionModal = lazy(() => import('../AddTransactionModal'));
-const AddLoanModal = lazy(() => import('../AddLoanModal'));
-const AddRecurringModal = lazy(() => import('../AddRecurringModal'));
+import AddTransactionModal from '../transactions/modals/AddTransactionModal';
+import AddLoanModal from '../debts/AddLoanModal';
+import AddRecurringModal from '../recurring/modals/AddRecurringModal';
 
 export default function DesktopLayout({
   activeTab = 'dashboard',

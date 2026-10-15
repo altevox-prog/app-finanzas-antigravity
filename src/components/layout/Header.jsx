@@ -9,7 +9,7 @@ import {
   CheckCircle2, 
   Target 
 } from 'lucide-react';
-import AppLogo from '../AppLogo';
+import AppLogo from '../ui/AppLogo';
 import Avatar from '../ui/Avatar';
 import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
 

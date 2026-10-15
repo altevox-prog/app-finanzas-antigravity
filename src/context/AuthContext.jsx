@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured, signInWithGoogle, signOutUser, signOutSupabase } from '../services/supabaseClient';
+import { clearSessionFinancialStorage } from '../services/storage/storageCleaner';
 
 const AuthContext = createContext(null);
 
@@ -34,10 +35,19 @@ export function AuthProvider({ children }) {
     });
 
     // 2. Suscripción a cambios de autenticación en tiempo real
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
-      setSession(currentSession || null);
-      setUser(currentSession?.user || null);
+      if (event === 'SIGNED_OUT') {
+        clearSessionFinancialStorage();
+        setSession(null);
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('monety:signout'));
+        }
+      } else {
+        setSession(currentSession || null);
+        setUser(currentSession?.user || null);
+      }
       setLoading(false);
     });
 
@@ -94,23 +104,15 @@ export function AuthProvider({ children }) {
       console.warn('Error en supabase signOut:', err);
     } finally {
       try {
-        if (typeof window !== 'undefined') {
-          Object.keys(localStorage).forEach((key) => {
-            if (
-              key.startsWith('sb-') ||
-              key.includes('supabase.auth.token') ||
-              key.includes('supabase-auth')
-            ) {
-              localStorage.removeItem(key);
-            }
-          });
-          sessionStorage.clear();
-        }
+        clearSessionFinancialStorage();
       } catch (storageErr) {
-        console.warn('Error limpiando auth tokens en storage:', storageErr);
+        console.warn('Error limpiando almacenamiento en signOut:', storageErr);
       }
       setUser(null);
       setSession(null);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('monety:signout'));
+      }
     }
     return { error: null };
   };

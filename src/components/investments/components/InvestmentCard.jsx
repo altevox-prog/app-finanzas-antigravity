@@ -7,7 +7,7 @@ import {
   Trash2, 
   CheckCircle2 
 } from 'lucide-react';
-import BrandIcon from '../../BrandIcon';
+import BrandIcon from '../../ui/BrandIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatCurrency, formatUSD } from '../../../data/initialData';
 import { 

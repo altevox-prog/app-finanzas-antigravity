@@ -3,6 +3,7 @@ import { AppHeader, BottomNav, DesktopSidebar } from './components/layout';
 import { ViewRouter } from './views';
 import SplashScreen from './components/onboarding/SplashScreen';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
+import AuthModal from './components/auth/AuthModal';
 import GlobalModals from './components/layout/GlobalModals';
 import PwaUpdateBanner from './components/ui/PwaUpdateBanner';
 import { RotateCcw } from 'lucide-react';
@@ -16,7 +17,26 @@ export default function App() {
     return <SplashScreen message="Verificando tu espacio..." />;
   }
 
-  if (state.isOnboardingActive && (!state.user || state.user.id === 'local-user')) {
+  // 1. Condición de autenticación: Si no existe un usuario activo (!user),
+  // no renderizar la aplicación con datos cargados. Renderizar inmediatamente login / bienvenida.
+  if (!state.user) {
+    return (
+      <div className="min-h-[100dvh] bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden transition-colors font-sans antialiased">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+        <AuthModal
+          isOpen={true}
+          onClose={() => {}}
+          isRequired={true}
+          onContinueLocal={() => {
+            state.setUser({ id: 'local-user', email: 'Modo Local' });
+          }}
+        />
+        <Toaster position="top-right" />
+      </div>
+    );
+  }
+
+  if (state.isOnboardingActive && state.user.id === 'local-user') {
     return (
       <OnboardingWizard 
         onComplete={state.handleOnboardingComplete} 

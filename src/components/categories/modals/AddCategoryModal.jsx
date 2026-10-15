@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import CategoryIcon from '../../CategoryIcon';
+import CategoryIcon from '../components/CategoryIcon';
 import { PRESET_COLORS } from '../constants';
 
 export default function AddCategoryModal({

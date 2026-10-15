@@ -1,5 +1,5 @@
 import React from 'react';
-import LoansAndDebts from '../components/LoansAndDebts';
+import LoansAndDebts from '../components/debts/LoansAndDebts';
 
 /**
  * DebtsView

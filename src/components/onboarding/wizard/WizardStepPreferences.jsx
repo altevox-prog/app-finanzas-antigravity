@@ -10,7 +10,7 @@ import {
   Percent, 
   Mail 
 } from 'lucide-react';
-import AppLogo from '../../AppLogo';
+import AppLogo from '../../ui/AppLogo';
 import { signInWithGoogle } from '../../../services/supabaseClient';
 
 export default function WizardStepPreferences({

@@ -1,5 +1,5 @@
 import React from 'react';
-import AccountsWidgetComponent from '../../AccountsWidget';
+import AccountsWidgetComponent from '../../accounts/AccountsWidget';
 
 /**
  * AccountsWidget

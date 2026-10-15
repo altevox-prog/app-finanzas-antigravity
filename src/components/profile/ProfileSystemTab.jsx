@@ -5,7 +5,7 @@ import {
   Coins, 
   RefreshCw 
 } from 'lucide-react';
-import UpdateAppButton from '../UpdateAppButton';
+import UpdateAppButton from '../ui/UpdateAppButton';
 
 /**
  * ProfileSystemTab

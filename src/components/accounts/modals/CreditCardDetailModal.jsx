@@ -13,7 +13,7 @@ import {
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { safeNumber } from '../../../utils/financeMath';
 import { DynamicIcon } from '../../categories/components/CategoryIcon';
-import BrandIcon from '../../BrandIcon';
+import BrandIcon from '../../ui/BrandIcon';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 import CreditCardPaymentSection from '../../credit-cards/CreditCardPaymentSection';
 

@@ -13,7 +13,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
-import BrandIcon from '../BrandIcon';
+import BrandIcon from '../ui/BrandIcon';
 import CategoryIcon from '../categories/components/CategoryIcon';
 import AddRecurringModal from './modals/AddRecurringModal';
 import { safeNumber } from '../../utils/financeMath';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight, Wallet, Plus, CreditCard } from 'lucide-react';
-import BrandIcon from '../BrandIcon';
+import BrandIcon from '../ui/BrandIcon';
 import { getAccountNativeBalance, formatNativeCurrency, safeNumber } from '../../utils/currencyUtils';
 
 /**

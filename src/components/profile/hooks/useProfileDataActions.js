@@ -3,6 +3,7 @@ import {
   supabase as defaultSupabase, 
   isSupabaseConfigured as defaultIsSupabaseConfigured 
 } from '../../../services/supabaseClient';
+import { clearSessionFinancialStorage } from '../../../services/storage/storageCleaner';
 
 /**
  * useProfileDataActions
@@ -67,27 +68,14 @@ export function useProfileDataActions({
         } else if (isSupabaseConfigured && supabase) {
           await supabase.auth.signOut();
         }
-        try {
-          if (typeof window !== 'undefined') {
-            localStorage.clear();
-            sessionStorage.clear();
-          }
-        } catch (storageErr) {
-          console.warn('Error limpiando storage:', storageErr);
-        }
-        setShowLogoutConfirm(false);
-        if (typeof onClose === 'function') onClose();
-        if (showToast) showToast('Sesión cerrada exitosamente.');
-        if (typeof window !== 'undefined') {
-          window.location.reload();
-        }
+        clearSessionFinancialStorage();
       }
+      setShowLogoutConfirm(false);
+      if (typeof onClose === 'function') onClose();
+      if (showToast) showToast('Sesión cerrada exitosamente.');
     } catch (err) {
       console.error('Error al cerrar sesión:', err);
       if (showToast) showToast('Error al cerrar sesión', true);
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
     } finally {
       setIsLoggingOut(false);
     }
