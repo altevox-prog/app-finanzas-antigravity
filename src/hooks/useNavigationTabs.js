@@ -22,6 +22,8 @@ export function useNavigationTabs({
   }, []);
 
   const [fromSettings, setFromSettings] = useState(false);
+  const [debtsInitialTab, setDebtsInitialTab] = useState('receivable');
+  const [historyStack, setHistoryStack] = useState([initialTab]);
   const mainContentRef = useRef(null);
 
   // Claves de reseteo para forzar estado inicial limpio al seleccionar cualquier pestaña
@@ -33,7 +35,8 @@ export function useNavigationTabs({
     investments: 0,
     debts: 0,
     accounts: 0,
-    recurring: 0
+    recurring: 0,
+    net_worth: 0
   });
 
   // Función para forzar reseteo de una pestaña específica o la actual
@@ -75,6 +78,13 @@ export function useNavigationTabs({
       tab = 'dashboard';
     }
 
+    // Gestionar subpestaña inicial para Préstamos vs Deudas
+    if (rawTab === 'loans') {
+      setDebtsInitialTab('receivable');
+    } else if (rawTab === 'debts') {
+      setDebtsInitialTab(fromSource === 'net_worth' ? 'payable' : 'receivable');
+    }
+
     // Si se pulsa la pestaña actualmente activa, scroll suave/inmediato al tope
     if (tab === activeTab) {
       scrollToTop();
@@ -83,8 +93,20 @@ export function useNavigationTabs({
 
     if (fromSource === 'settings') {
       setFromSettings(true);
-    } else if (fromSource !== 'keep') {
+      setHistoryStack(['dashboard', tab]);
+    } else if (fromSource === 'net_worth') {
       setFromSettings(false);
+      setHistoryStack((prev) => {
+        const base = prev.includes('net_worth') 
+          ? prev.slice(0, prev.indexOf('net_worth') + 1) 
+          : [...prev, 'net_worth'];
+        return [...base, tab];
+      });
+    } else if (fromSource === 'keep') {
+      // Mantener la pila de historial intacta
+    } else {
+      setFromSettings(false);
+      setHistoryStack([tab]);
     }
 
     // Disparar callback de limpieza (modales, popups, filtros)
@@ -111,15 +133,37 @@ export function useNavigationTabs({
     setActiveTab(tab);
   }, [activeTab, onTabChange, onOpenProfile, scrollToTop, setActiveTab]);
 
-  // Retorno desde sub-vistas hacia ajustes o dashboard
+  // Retorno desde sub-vistas hacia ajustes, net_worth o dashboard
   const handleGoBackFromSubView = useCallback(() => {
+    // Si estamos en net_worth y venimos de settings, regresar a settings
+    if (activeTab === 'net_worth' && fromSettings) {
+      setFromSettings(false);
+      if (onOpenProfile) onOpenProfile();
+      return;
+    }
+
+    if (historyStack.length > 1) {
+      const newStack = [...historyStack];
+      newStack.pop();
+      const prevTab = newStack[newStack.length - 1];
+      setHistoryStack(newStack);
+      if (prevTab) {
+        if (prevTab === 'net_worth') {
+          rawSetActiveTab('net_worth');
+          return;
+        }
+        handleTabChange(prevTab, 'keep');
+        return;
+      }
+    }
+
     if (fromSettings) {
       setFromSettings(false);
       if (onOpenProfile) onOpenProfile();
     } else {
       handleTabChange('dashboard');
     }
-  }, [fromSettings, onOpenProfile, handleTabChange]);
+  }, [activeTab, historyStack, fromSettings, onOpenProfile, handleTabChange]);
 
   // Redirección de seguridad si activeTab toma valor de configuración
   useEffect(() => {
@@ -140,6 +184,7 @@ export function useNavigationTabs({
     fromSettings,
     setFromSettings,
     handleGoBackFromSubView,
+    debtsInitialTab,
     scrollToTop
   };
 }

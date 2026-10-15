@@ -13,7 +13,7 @@ import { formatCurrency, formatUSD } from '../../../data/initialData';
  * Cabecera principal del módulo de inversiones:
  * - Título, indicador "En vivo" y timestamp de última actualización
  * - Controles: selector/toggle de divisa, botón de refresco de cotizaciones y botón "Nueva inversión"
- * - Tarjetas de KPI: Patrimonio Total y Ganancia/Pérdida acumulada (PnL)
+ * - Tarjetas de KPI: Capital Invertido, Valor Actual del Portafolio y Rendimiento acumulado (PnL)
  * - Barra segmentada de distribución de activos por categoría
  */
 export default function PortfolioSummaryHeader({
@@ -127,23 +127,42 @@ export default function PortfolioSummaryHeader({
         </div>
       </div>
 
-      {/* 2 Tarjetas Principales del Portafolio: Patrimonio Total y Ganancia Histórica */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-        {/* Tarjeta 1: Patrimonio en Inversiones Total (COP consolidado y USD) */}
+      {/* 3 Tarjetas Principales del Portafolio: Capital Invertido, Valor Actual y Rendimiento */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Tarjeta 1: Capital Invertido (Costo base) */}
         <div 
-          className="p-4 rounded-2xl border flex flex-col justify-between"
+          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between"
           style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
         >
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
-              Patrimonio en Inversiones Total
+              Capital Invertido
             </span>
-            <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums mt-1 text-slate-900 dark:text-zinc-100">
+            <div className="text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums mt-1 text-slate-900 dark:text-zinc-100">
+              {formatMoney(portfolioMetrics?.totalCostCOP || 0, 'COP')}
+            </div>
+          </div>
+
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
+            <span className="font-mono tabular-nums tracking-tight">≈ {formatMoney(portfolioMetrics?.totalCostUSD || 0, 'USD')}</span>
+          </div>
+        </div>
+
+        {/* Tarjeta 2: Valor Actual de Mercado / Valor Total del Portafolio */}
+        <div 
+          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between"
+          style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
+        >
+          <div>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
+              Valor Total del Portafolio
+            </span>
+            <div className="text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">
               {formatMoney(portfolioMetrics?.totalValueCOP || 0, 'COP')}
             </div>
           </div>
 
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 font-medium">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 font-medium flex-wrap">
             <span className="font-mono tabular-nums tracking-tight">≈ {formatMoney(portfolioMetrics?.totalValueUSD || 0, 'USD')}</span>
             <span>•</span>
             <span className="font-mono tabular-nums tracking-tight text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
@@ -152,24 +171,24 @@ export default function PortfolioSummaryHeader({
           </div>
         </div>
 
-        {/* Tarjeta 2: Ganancia Total Histórica (PnL acumulado con indicador verde/rojo) */}
+        {/* Tarjeta 3: Rendimiento no realizado / Ganancia */}
         <div 
-          className="p-4 rounded-2xl border flex flex-col justify-between"
+          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between"
           style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
         >
           <div>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
-              Ganancia / Pérdida Total (PnL Histórico)
+              Rendimiento no realizado
             </span>
-            <div className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums mt-1 ${
+            <div className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums mt-1 ${
               portfolioMetrics?.isPositive ? 'text-emerald-500' : 'text-rose-500'
             }`}>
               {portfolioMetrics?.isPositive ? '+' : ''}{formatMoney(portfolioMetrics?.netGainCOP || 0, 'COP')}
             </div>
           </div>
 
-          <div className="mt-2 flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono tracking-tight tabular-nums border ${
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold font-mono tracking-tight tabular-nums border ${
               portfolioMetrics?.isPositive 
                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                 : 'bg-rose-500/10 text-rose-500 border-rose-500/20'

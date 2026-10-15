@@ -335,7 +335,7 @@ export function useAppOrchestrator() {
   // Gestión centralizada de pestañas, scroll y reseteos
   const {
     activeTab, setActiveTab, tabResetKeys, handleTabChange, handleResetTab,
-    mainContentRef, fromSettings, setFromSettings, handleGoBackFromSubView
+    mainContentRef, fromSettings, setFromSettings, handleGoBackFromSubView, debtsInitialTab
   } = useNavigationTabs({
     initialTab: 'dashboard',
     onTabChange: handleCloseOverlaysOnTabChange,
@@ -379,7 +379,7 @@ export function useAppOrchestrator() {
   return {
     user, setUser, authLoading, isOnboardingActive, handleOnboardingComplete, handleRestoreBackup, viewMode, isForcedMobile,
     isForcedDesktop, desktopOnlyClass, desktopBlockClass, mobileOnlyClass, activeTab, setActiveTab, tabResetKeys,
-    handleTabChange, handleResetTab, mainContentRef, fromSettings, setFromSettings, handleGoBackFromSubView, theme,
+    handleTabChange, handleResetTab, mainContentRef, fromSettings, setFromSettings, handleGoBackFromSubView, debtsInitialTab, theme,
     setTheme, handleToggleTheme, securitySettings, setSecuritySettings, isLocked, setIsLocked, handleUnlock,
     handleVerifyPin, handleUpdatePin, failedAttempts, lockApp, handleGlobalLogout, modalControls, isAddTxOpen,
     setIsAddTxOpen, isSettingsOpen, setIsSettingsOpen, isActionMenuOpen, setIsActionMenuOpen, handleOpenTransaction,

@@ -34,7 +34,7 @@ export default function AssetLiabilityBreakdown({
 
   const handleNav = (tab) => {
     if (typeof onNavigate === 'function') {
-      onNavigate(tab);
+      onNavigate(tab, 'net_worth');
     }
   };
 
@@ -115,7 +115,7 @@ export default function AssetLiabilityBreakdown({
 
           {/* 3. Préstamos por Cobrar */}
           <div
-            onClick={() => handleNav('debts')}
+            onClick={() => handleNav('loans')}
             className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm hover:border-emerald-500/40 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
           >
             <div>

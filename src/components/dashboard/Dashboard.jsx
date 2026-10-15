@@ -11,7 +11,6 @@ import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import DashboardModals from './DashboardModals';
 
 // Re-exports de compatibilidad para módulos que consumían widgets satélite desde Dashboard.jsx
-export { default as NetWorthWidget } from './widgets/NetWorthWidget';
 export { default as DebtsWidget } from './widgets/DebtsWidget';
 export { default as InvestmentsWidget } from './widgets/InvestmentsWidget';
 export { default as AccountsWidget } from './widgets/AccountsWidget';

@@ -204,7 +204,8 @@ export default function ViewRouter({
       {/* Tab 4: Préstamos y Deudas */}
       {(activeTab === 'debts' || activeTab === 'loans') && (
         <DebtsView
-          key={`debts-${tabResetKeys?.debts || 0}`}
+          key={`debts-${tabResetKeys?.debts || 0}-${merged.debtsInitialTab || activeTab}`}
+          initialTab={merged.debtsInitialTab || (activeTab === 'loans' ? 'receivable' : 'payable')}
           onBack={handleBack}
           debtsAndLoans={debtsAndLoans}
           accounts={accounts}
@@ -292,7 +293,11 @@ export default function ViewRouter({
           debtsAndLoans={debtsAndLoans}
           trm={trm}
           onBack={handleBack}
-          onNavigate={handleTabChange}
+          onNavigate={(targetTab, source) => {
+            if (typeof handleTabChange === 'function') {
+              handleTabChange(targetTab, source || 'net_worth');
+            }
+          }}
           fromSettings={fromSettings}
         />
       )}

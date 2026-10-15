@@ -221,7 +221,11 @@ export default function NetWorthView({
         receivableCount={receivableCount}
         payableCount={payableCount}
         formatMoney={formatVal}
-        onNavigate={onNavigate}
+        onNavigate={(tab, source) => {
+          if (typeof onNavigate === 'function') {
+            onNavigate(tab, source || 'net_worth');
+          }
+        }}
       />
 
       {/* Bloque 4 - Indicador de Salud Financiera */}

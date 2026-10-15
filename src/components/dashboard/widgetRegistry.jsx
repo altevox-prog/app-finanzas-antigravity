@@ -14,7 +14,6 @@ import {
   CalendarSync 
 } from 'lucide-react';
 import { normalizeWidgetId } from '../../utils/widgetsConfig';
-import NetWorthWidget from './widgets/NetWorthWidget';
 import InvestmentsWidget from './widgets/InvestmentsWidget';
 import DebtsWidget from './widgets/DebtsWidget';
 import AccountsWidget from './widgets/AccountsWidget';
@@ -101,18 +100,6 @@ export function createWidgetRegistry({
   formatMoney = (val) => val
 } = {}) {
   return {
-    net_worth: (
-      <NetWorthWidget
-        netWorthCOP={netWorthCOP}
-        totalAssetsCOP={totalAssetsCOP}
-        totalPayableCOP={debtsAndLoansMetrics.totalPayableCOP}
-        isNetWorthPositive={isNetWorthPositive}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        formatMoney={formatMoney}
-      />
-    ),
-
     investments: (
       <InvestmentsWidget
         investmentsMetrics={investmentsMetrics}

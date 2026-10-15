@@ -30,14 +30,6 @@ export const DEFAULT_WIDGETS_CONFIG = [
     visible: true 
   },
   { 
-    id: 'net_worth', 
-    label: 'Patrimonio total', 
-    name: 'Patrimonio total', 
-    description: 'Total activos, cuentas e inversiones menos obligaciones', 
-    icon: 'Landmark', 
-    visible: false 
-  },
-  { 
     id: 'investments', 
     label: 'Inversiones', 
     name: 'Inversiones', 
