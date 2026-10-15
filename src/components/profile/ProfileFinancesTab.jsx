@@ -43,7 +43,7 @@ export default function ProfileFinancesTab({
         </div>
 
         <div className="space-y-2">
-          {/* Presupuestos de Gasto */}
+          {/* Presupuesto mensual */}
           <button
             type="button"
             onClick={() => setCurrentView('budgets')}
@@ -55,7 +55,7 @@ export default function ProfileFinancesTab({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-colors">
-                  Presupuestos de Gasto
+                  Presupuesto mensual
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   {budgets?.global && Number(budgets.global) > 0

@@ -141,7 +141,7 @@ export default function ProfileHeader({
             <h2 className="text-[17px] sm:text-[18px] font-bold tracking-tight">
               {currentView === 'subscriptions' && 'Suscripciones Recurrentes'}
               {currentView === 'pin_setup' && 'Configurar PIN de Seguridad'}
-              {currentView === 'budgets' && 'Presupuestos de Gasto'}
+              {currentView === 'budgets' && 'Presupuesto Mensual'}
               {currentView === 'savings_goals' && 'Metas de Ahorro'}
               {currentView === 'categories' && 'Mis Categorías'}
               {currentView === 'tax' && 'Impuestos y Declaración de Renta'}
