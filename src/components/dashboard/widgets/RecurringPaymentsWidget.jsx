@@ -51,11 +51,11 @@ export default function RecurringPaymentsWidget({
       className="min-h-[140px] p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
     >
       <div>
-        {/* Cabecera interna limpia ([📅] Gasto fijo proyectado) sin elementos flotantes externos */}
+        {/* Cabecera interna limpia ([📅] Presupuesto mensual) sin elementos flotantes externos */}
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 min-w-0">
             <CalendarSync className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="truncate uppercase">GASTO FIJO PROYECTADO</span>
+            <span className="truncate uppercase">PRESUPUESTO MENSUAL</span>
           </span>
           <button
             type="button"

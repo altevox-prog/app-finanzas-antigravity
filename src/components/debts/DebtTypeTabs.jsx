@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 const DEBT_TABS = [
-  { id: 'receivable', label: 'Me Deben (Por Cobrar)', icon: ArrowUpRight, activeClass: 'text-emerald-600 dark:text-emerald-400 font-bold', bgClass: 'bg-emerald-500/15 dark:bg-emerald-500/20 border-emerald-500/30' },
-  { id: 'payable', label: 'Debo (Por Pagar)', icon: ArrowDownLeft, activeClass: 'text-rose-600 dark:text-rose-400 font-bold', bgClass: 'bg-rose-500/15 dark:bg-rose-500/20 border-rose-500/30' }
+  { id: 'receivable', label: 'Préstamo', icon: ArrowUpRight, activeClass: 'text-emerald-600 dark:text-emerald-400 font-bold', bgClass: 'bg-emerald-500/15 dark:bg-emerald-500/20 border-emerald-500/30' },
+  { id: 'payable', label: 'Deuda', icon: ArrowDownLeft, activeClass: 'text-rose-600 dark:text-rose-400 font-bold', bgClass: 'bg-rose-500/15 dark:bg-rose-500/20 border-rose-500/30' }
 ];
 
 export default function DebtTypeTabs({ type, setType }) {

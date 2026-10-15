@@ -70,8 +70,8 @@ export default function LoansAndDebts({
         <div className="w-full mb-4">
           <SegmentedControl
             options={[
-              { id: 'receivable', label: 'Me Deben', icon: ArrowUpRight, count: safeLoans.filter(d => d.type === 'receivable').length },
-              { id: 'payable', label: 'Debo', icon: ArrowDownLeft, count: safeLoans.filter(d => d.type === 'payable').length }
+              { id: 'receivable', label: 'Préstamo', icon: ArrowUpRight, count: safeLoans.filter(d => d.type === 'receivable').length },
+              { id: 'payable', label: 'Deuda', icon: ArrowDownLeft, count: safeLoans.filter(d => d.type === 'payable').length }
             ]}
             value={activeTab} onChange={setActiveTab} size="md"
           />

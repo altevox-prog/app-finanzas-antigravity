@@ -143,7 +143,7 @@ export default function DebtFormModal({
                 {editingItem ? (type === 'receivable' ? 'Editar dinero que presté' : 'Editar dinero que me prestaron') : (type === 'receivable' ? 'Registrar dinero que presté' : 'Registrar dinero que me prestaron')}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {type === 'receivable' ? 'Dinero prestado por cobrar a terceros (Me deben)' : 'Pasivo o compromiso por pagar (Debo)'}
+                {type === 'receivable' ? 'Dinero prestado por cobrar a terceros (Préstamo)' : 'Pasivo o compromiso por pagar (Deuda)'}
               </p>
             </div>
           </div>
