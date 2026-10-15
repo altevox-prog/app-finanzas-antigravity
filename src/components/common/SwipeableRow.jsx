@@ -151,13 +151,19 @@ export default function SwipeableRow({
   };
 
   const handleExecuteEdit = (e) => {
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setOffset(0);
     if (onEdit) onEdit();
   };
 
   const handleExecuteDelete = (e) => {
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setOffset(0);
     if (onDelete) onDelete();
   };
@@ -176,9 +182,14 @@ export default function SwipeableRow({
             width: `${Math.max(actionWidth + 10, offset)}px`,
             opacity: offset > 5 ? 1 : 0
           }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={handleExecuteEdit}
             className="h-full px-4 sm:px-5 flex flex-col items-center justify-center gap-1 text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer font-bold select-none"
             title="Editar"
@@ -198,9 +209,14 @@ export default function SwipeableRow({
             width: `${Math.max(actionWidth + 10, -offset)}px`,
             opacity: offset < -5 ? 1 : 0
           }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={handleExecuteDelete}
             className="h-full px-4 sm:px-5 flex flex-col items-center justify-center gap-1 text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer font-bold select-none"
             title="Eliminar"
@@ -235,11 +251,15 @@ export default function SwipeableRow({
           className={`hidden md:flex items-center gap-1 absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-1.5 py-1 rounded-xl shadow-md border border-slate-200/80 dark:border-white/10 pointer-events-auto transition-opacity ${
             offset !== 0 ? 'opacity-0 pointer-events-none' : 'opacity-0 group-hover:opacity-100'
           }`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           {onEdit && (
             <button
               type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={handleExecuteEdit}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
               title="Editar"
@@ -251,6 +271,8 @@ export default function SwipeableRow({
           {onDelete && (
             <button
               type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={handleExecuteDelete}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
               title="Eliminar"

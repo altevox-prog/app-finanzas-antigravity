@@ -55,17 +55,18 @@ export default function TransactionItem({
   const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
 
   const handleDelete = () => {
-    if (onDelete) {
-      onDelete(tx);
-    } else if (onSelect) {
-      onSelect(tx);
+    const txLabel = tx.note || tx.categoryName || 'este movimiento';
+    if (window.confirm(`¿Eliminar permanentemente "${txLabel}"?`)) {
+      if (onDelete) {
+        onDelete(tx.id || tx);
+      }
     }
   };
 
   return (
     <SwipeableRow
       onEdit={onEdit ? () => onEdit(tx) : undefined}
-      onDelete={onDelete || onSelect ? handleDelete : undefined}
+      onDelete={onDelete ? handleDelete : undefined}
       className="w-full"
       contentClassName="bg-white dark:bg-zinc-900"
     >

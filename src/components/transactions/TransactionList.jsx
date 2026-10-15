@@ -234,6 +234,7 @@ export default function TransactionList({
               account={accounts.find(a => a.id === tx.accountId)}
               onSelect={setSelectedDetailTx}
               onEdit={handleOpenEdit}
+              onDelete={onDeleteTransaction}
               onViewReceipt={setViewingReceiptTx}
             />
           ))}
