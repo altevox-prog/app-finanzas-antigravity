@@ -333,10 +333,6 @@ const SWAP_THROTTLE_MS = 100;
     const touch = e.touches && e.touches[0];
     if (!touch) return;
 
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-
     // Throttling: evitar procesar ráfagas de eventos táctiles
     const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     if (now - lastSwapTimeRef.current < SWAP_THROTTLE_MS) {

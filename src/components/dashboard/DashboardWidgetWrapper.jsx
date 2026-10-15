@@ -75,10 +75,11 @@ export default function DashboardWidgetWrapper({
         onDrop={onDrop}
         className={`relative ${
           wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'
-        } w-full select-none touch-pan-y ${transitionClass} ${animationClass} ${
+        } w-full select-none touch-none ${transitionClass} ${animationClass} ${
           isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : (isDragging ? '' : 'hover:scale-[1.01]')
         } ${className}`}
         style={{
+          touchAction: 'none',
           willChange: isReordering ? 'transform' : 'auto',
           transform: 'translate3d(0, 0, 0)',
         }}
@@ -98,6 +99,7 @@ export default function DashboardWidgetWrapper({
           onDragOver={(e) => onDragOver?.(e, index)}
           onDrop={onDrop}
           onDragEnd={onDragEnd}
+          style={{ touchAction: 'none' }}
           className="absolute -top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/95 dark:bg-zinc-800 text-white shadow-xl border border-white/20 cursor-grab active:cursor-grabbing touch-none select-none pointer-events-auto"
           title="Arrastra desde aquí para mover el widget"
           aria-label="Manija para mover widget"
