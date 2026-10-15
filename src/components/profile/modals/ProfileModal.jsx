@@ -63,6 +63,8 @@ export default function ProfileModal({
   onFactoryReset,
   onOpenTutorial,
   onNavigateToRecurring,
+  onNavigateToNetWorth,
+  onNavigate,
   onManualCloudSync,
   onLogout
 }) {
@@ -278,6 +280,8 @@ export default function ProfileModal({
                   subscriptions={subscriptions}
                   totalMonthlySubscriptions={finances.totalMonthlySubscriptions}
                   onNavigateToRecurring={onNavigateToRecurring}
+                  onNavigateToNetWorth={onNavigateToNetWorth}
+                  onNavigate={onNavigate}
                   onClose={onClose}
                   onOpenAccounts={onOpenAccounts}
                   accountsCount={accountsCount}

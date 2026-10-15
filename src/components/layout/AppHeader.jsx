@@ -19,7 +19,10 @@ const TAB_TITLES = {
   tax: 'Impuestos y declaración de renta',
   debts: 'Préstamos y deudas',
   loans: 'Préstamos y deudas',
-  investments: 'Inversiones y patrimonio'
+  investments: 'Inversiones y patrimonio',
+  net_worth: 'Patrimonio neto y balance',
+  networth: 'Patrimonio neto y balance',
+  patrimonio: 'Patrimonio neto y balance'
 };
 
 /**

@@ -6,6 +6,7 @@ import DebtsView from './DebtsView';
 import InvestmentsView from './InvestmentsView';
 import RecurringView from './RecurringView';
 import TaxView from './TaxView';
+import NetWorthView from './NetWorthView';
 
 /**
  * ViewRouter
@@ -277,6 +278,21 @@ export default function ViewRouter({
           investments={investments}
           onBack={handleBack}
           onClose={handleBack}
+          fromSettings={fromSettings}
+        />
+      )}
+
+      {/* Vista Dedicada: Patrimonio Neto & Balance */}
+      {(activeTab === 'net_worth' || activeTab === 'networth' || activeTab === 'patrimonio') && (
+        <NetWorthView
+          key={`networth-${tabResetKeys?.net_worth || 0}`}
+          accounts={accounts}
+          transactions={transactions}
+          investments={investments}
+          debtsAndLoans={debtsAndLoans}
+          trm={trm}
+          onBack={handleBack}
+          onNavigate={handleTabChange}
           fromSettings={fromSettings}
         />
       )}

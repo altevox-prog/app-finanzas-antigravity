@@ -386,6 +386,18 @@ export default function ModalContainer({
             if (setFromSettings) setFromSettings(true);
             if (handleTabChange) handleTabChange('recurring', 'settings');
           }}
+          onNavigateToNetWorth={() => {
+            if (setIsSettingsOpen) setIsSettingsOpen(false);
+            if (setIsProfileOpen) setIsProfileOpen(false);
+            if (setFromSettings) setFromSettings(true);
+            if (handleTabChange) handleTabChange('net_worth', 'settings');
+          }}
+          onNavigate={(tab) => {
+            if (setIsSettingsOpen) setIsSettingsOpen(false);
+            if (setIsProfileOpen) setIsProfileOpen(false);
+            if (setFromSettings) setFromSettings(true);
+            if (handleTabChange) handleTabChange(tab, 'settings');
+          }}
           onOpenTutorial={() => {
             if (setIsSettingsOpen) setIsSettingsOpen(false);
             if (setShowTutorial) setShowTutorial(true);

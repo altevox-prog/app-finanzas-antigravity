@@ -94,6 +94,7 @@ export default function DesktopLayout({
                 {activeTab === 'tax' && 'Impuestos y declaración de renta'}
                 {activeTab === 'debts' && 'Préstamos y deudas'}
                 {activeTab === 'investments' && 'Inversiones y patrimonio'}
+                {(activeTab === 'net_worth' || activeTab === 'networth' || activeTab === 'patrimonio') && 'Patrimonio neto y balance'}
               </h1>
               <p className="text-xs text-slate-400 dark:text-slate-500">
                 Bienvenido de nuevo, {userProfile?.name?.split(' ')[0] || 'Usuario'} • {currentMonthLabel}
