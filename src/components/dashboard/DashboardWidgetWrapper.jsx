@@ -44,6 +44,7 @@ export default function DashboardWidgetWrapper({
   onDrop,
   onDragEnd,
   onToggleVisibility,
+  className = '',
   children
 }) {
   const widgetId = id || widget?.id;
@@ -76,7 +77,7 @@ export default function DashboardWidgetWrapper({
           wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'
         } w-full select-none touch-pan-y ${transitionClass} ${animationClass} ${
           isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : (isDragging ? '' : 'hover:scale-[1.01]')
-        }`}
+        } ${className}`}
         style={{
           willChange: isReordering ? 'transform' : 'auto',
           transform: 'translate3d(0, 0, 0)',
@@ -143,7 +144,7 @@ export default function DashboardWidgetWrapper({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
-      className={`w-full touch-pan-y ${wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'}`}
+      className={`w-full touch-pan-y ${wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'} ${className}`}
       style={{
         transform: 'translate3d(0, 0, 0)',
       }}

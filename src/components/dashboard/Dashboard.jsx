@@ -7,6 +7,7 @@ import QuickActionsFab from './QuickActionsFab';
 import HiddenWidgetsSection from './HiddenWidgetsSection';
 import DashboardWidgetWrapper from './DashboardWidgetWrapper';
 import { useWidgetRegistry, getWidgetComponent, WIDGET_ICON_MAP } from './widgetRegistry';
+import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import DashboardModals from './DashboardModals';
 
 // Re-exports de compatibilidad para módulos que consumían widgets satélite desde Dashboard.jsx
@@ -33,7 +34,7 @@ export default function Dashboard({
   onSelectCreditCardDetail = () => {}, currentMonthLabel = '', trm = 4050,
   widgetsConfig = null, widgets: widgetsProp = null, onCustomizeWidgets = null,
   onSaveWidgets = null, allowedWidgetIds = null, className = null,
-  financeData = {}, financeActions = {}
+  financeData = {}, financeActions = {}, isForcedMobile = false
 }) {
   const { formatMoney } = usePrivacy();
   const [modalsState, setModalsState] = useState({});
@@ -112,16 +113,29 @@ export default function Dashboard({
         </div>
       )}
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full items-start touch-pan-y ${isReordering ? 'select-none [&_*]:!transition-none' : ''} ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5 w-full items-start touch-pan-y ${isReordering ? 'select-none [&_*]:!transition-none' : ''} ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
         {visibleWidgets.map((w, index) => {
+          const norm = normalizeWidgetId(w.id);
+          const isInvestments = norm === 'investments' || w.id === 'investments';
           const widgetComponent = getWidget(w.id);
           if (!widgetComponent) return null;
           return (
             <DashboardWidgetWrapper
-              key={w.id} id={w.id} index={index} isReordering={isReordering} draggedIndex={draggedIndex}
-              onPressStart={handlePressStart} onPressEnd={handlePressEnd}
-              onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
-              onDragStart={handleDragStart} onDragOver={handleDragOver} onDrop={handleDrop} onDragEnd={handleDragEnd}
+              key={w.id} 
+              id={w.id} 
+              index={index} 
+              isReordering={isReordering} 
+              draggedIndex={draggedIndex}
+              className={isInvestments ? (isForcedMobile ? 'hidden' : 'hidden md:block') : ''}
+              onPressStart={handlePressStart} 
+              onPressEnd={handlePressEnd}
+              onTouchStart={handleTouchStart} 
+              onTouchMove={handleTouchMove} 
+              onTouchEnd={handleTouchEnd}
+              onDragStart={handleDragStart} 
+              onDragOver={handleDragOver} 
+              onDrop={handleDrop} 
+              onDragEnd={handleDragEnd}
               onToggleVisibility={handleToggleVisibility}
             >
               {widgetComponent}

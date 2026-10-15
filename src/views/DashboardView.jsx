@@ -56,8 +56,10 @@ export default function DashboardView(props) {
     financeActions = {},
     ...restProps
   } = props;
+  const isForcedMobile = Boolean(props.isForcedMobile || restProps.isForcedMobile || financeData?.isForcedMobile);
+
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className="w-full flex flex-col gap-3.5 sm:gap-4 pb-4 sm:pb-6 lg:pb-0">
       {/* Banner preventivo de recordatorios y alertas para mañana */}
       {alerts && alerts.length > 0 && (
         <DebtAlertBanner
@@ -70,6 +72,7 @@ export default function DashboardView(props) {
 
       {/* Widgets Financieros Modulares y Dinámicos */}
       <Dashboard
+        isForcedMobile={isForcedMobile}
         financeData={financeData}
         financeActions={financeActions}
         accounts={accounts}

@@ -152,7 +152,16 @@ export default function App() {
         />
 
         {/* Main Content Area */}
-        <main ref={state.mainContentRef} className="flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 pb-10 sm:pb-12 lg:pb-12 relative overflow-y-auto overscroll-y-contain space-y-3.5 sm:space-y-4 lg:space-y-0">
+        <main
+          ref={state.mainContentRef}
+          className={`flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 ${
+            isForcedMobile
+              ? 'pb-28 sm:pb-32 pb-[calc(7.5rem+env(safe-area-inset-bottom))]'
+              : isForcedDesktop
+              ? 'pb-12'
+              : 'pb-28 sm:pb-32 lg:pb-12 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:pb-12'
+          } relative overflow-y-auto overscroll-y-contain space-y-3.5 sm:space-y-4 lg:space-y-0`}
+        >
           <div className="w-full lg:max-w-[1550px] lg:mx-auto lg:px-6 lg:py-6">
             <ViewRouter
               activeTab={state.activeTab}

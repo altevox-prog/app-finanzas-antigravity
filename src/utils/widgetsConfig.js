@@ -6,75 +6,11 @@ export const WIDGETS_ORDER_STORAGE_KEY_V2 = 'monety_widgets_order_v2';
  */
 export const DEFAULT_WIDGETS_CONFIG = [
   { 
-    id: 'net_worth', 
-    label: 'Patrimonio total', 
-    name: 'Patrimonio total', 
-    description: 'Total activos, cuentas e inversiones menos obligaciones', 
-    icon: 'Landmark', 
-    visible: true 
-  },
-  { 
-    id: 'investments', 
-    label: 'Inversiones', 
-    name: 'Inversiones', 
-    description: 'Portafolio por banco, capital aportado y rentabilidad neta', 
-    icon: 'TrendingUp', 
-    visible: true 
-  },
-  { 
-    id: 'debts', 
-    label: 'Préstamos y deudas', 
-    name: 'Préstamos y deudas', 
-    description: 'Montos por cobrar y compromisos por pagar', 
-    icon: 'HandCoins', 
-    visible: true 
-  },
-  { 
     id: 'liquid_balance', 
     label: 'Saldo disponible líquido', 
     name: 'Saldo disponible líquido', 
     description: 'Saldo total disponible en cuentas y efectivo', 
     icon: 'Wallet', 
-    visible: true 
-  },
-  { 
-    id: 'monthly_expense', 
-    label: 'Gasto del mes', 
-    name: 'Gasto del mes', 
-    description: 'Total de gastos y egresos del mes en curso', 
-    icon: 'ArrowUpRight', 
-    visible: true 
-  },
-  { 
-    id: 'monthly_income', 
-    label: 'Ingreso del mes', 
-    name: 'Ingreso del mes', 
-    description: 'Total de ingresos y entradas registradas en el mes', 
-    icon: 'ArrowDownRight', 
-    visible: true 
-  },
-  { 
-    id: 'savings_rate', 
-    label: 'Tasa de ahorro / Superávit', 
-    name: 'Tasa de ahorro / Superávit', 
-    description: 'Porcentaje de ahorro y excedente de liquidez libre', 
-    icon: 'PiggyBank', 
-    visible: true 
-  },
-  { 
-    id: 'weekly_cashflow', 
-    label: 'Flujo de caja semanal', 
-    name: 'Flujo de caja semanal', 
-    description: 'Evolución y comparación semanal de ingresos vs. gastos', 
-    icon: 'Activity', 
-    visible: true 
-  },
-  { 
-    id: 'expenses_category', 
-    label: 'Tus gastos', 
-    name: 'Tus gastos', 
-    description: 'Distribución y desglose de gastos por categoría', 
-    icon: 'PieChart', 
     visible: true 
   },
   { 
@@ -94,12 +30,76 @@ export const DEFAULT_WIDGETS_CONFIG = [
     visible: true 
   },
   { 
+    id: 'net_worth', 
+    label: 'Patrimonio total', 
+    name: 'Patrimonio total', 
+    description: 'Total activos, cuentas e inversiones menos obligaciones', 
+    icon: 'Landmark', 
+    visible: false 
+  },
+  { 
+    id: 'investments', 
+    label: 'Inversiones', 
+    name: 'Inversiones', 
+    description: 'Portafolio por banco, capital aportado y rentabilidad neta', 
+    icon: 'TrendingUp', 
+    visible: false 
+  },
+  { 
+    id: 'debts', 
+    label: 'Préstamos y deudas', 
+    name: 'Préstamos y deudas', 
+    description: 'Montos por cobrar y compromisos por pagar', 
+    icon: 'HandCoins', 
+    visible: false 
+  },
+  { 
+    id: 'monthly_expense', 
+    label: 'Gasto del mes', 
+    name: 'Gasto del mes', 
+    description: 'Total de gastos y egresos del mes en curso', 
+    icon: 'ArrowUpRight', 
+    visible: false 
+  },
+  { 
+    id: 'monthly_income', 
+    label: 'Ingreso del mes', 
+    name: 'Ingreso del mes', 
+    description: 'Total de ingresos y entradas registradas en el mes', 
+    icon: 'ArrowDownRight', 
+    visible: false 
+  },
+  { 
+    id: 'savings_rate', 
+    label: 'Tasa de ahorro / Superávit', 
+    name: 'Tasa de ahorro / Superávit', 
+    description: 'Porcentaje de ahorro y excedente de liquidez libre', 
+    icon: 'PiggyBank', 
+    visible: false 
+  },
+  { 
+    id: 'weekly_cashflow', 
+    label: 'Flujo de caja semanal', 
+    name: 'Flujo de caja semanal', 
+    description: 'Evolución y comparación semanal de ingresos vs. gastos', 
+    icon: 'Activity', 
+    visible: false 
+  },
+  { 
+    id: 'expenses_category', 
+    label: 'Tus gastos', 
+    name: 'Tus gastos', 
+    description: 'Distribución y desglose de gastos por categoría', 
+    icon: 'PieChart', 
+    visible: false 
+  },
+  { 
     id: 'recurring_payments', 
     label: 'Pagos recurrentes', 
     name: 'Pagos recurrentes', 
     description: 'Suscripciones y gastos fijos al mes', 
     icon: 'CalendarSync', 
-    visible: true 
+    visible: false 
   }
 ];
 
