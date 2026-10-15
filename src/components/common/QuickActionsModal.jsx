@@ -222,7 +222,7 @@ export default function QuickActionsModal(props) {
             </div>
             <div className="min-w-0 flex-1">
               <span className="font-semibold text-sm text-slate-900 dark:text-white block truncate">
-                Pago recurrente o suscripción
+                Pago recurrente
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
                 Arriendo, servicios o streaming

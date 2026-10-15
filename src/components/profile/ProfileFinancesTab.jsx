@@ -3,7 +3,6 @@ import {
   Target, 
   PieChart, 
   PiggyBank, 
-  CalendarSync, 
   CreditCard, 
   Tag, 
   ChevronRight 
@@ -12,7 +11,7 @@ import {
 /**
  * ProfileFinancesTab
  * Subcomponente independiente para la pestaña "Gestión & Finanzas" del Centro de Control / Perfil.
- * Incluye los bloques de Planificación Financiera (Presupuestos, Metas de Ahorro, Pagos Recurrentes)
+ * Incluye los bloques de Planificación Financiera (Presupuesto mensual, Metas de Ahorro)
  * y Cuentas y Métodos (Mis Cuentas, Mis Categorías).
  */
 export default function ProfileFinancesTab({
@@ -83,34 +82,6 @@ export default function ProfileFinancesTab({
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   {savingsGoals.length} metas ({formatMoney(totalSavedAcrossGoals)} de {formatMoney(totalTargetAcrossGoals)})
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-          </button>
-
-          {/* Pagos Recurrentes (Dentro de Planificación Financiera) */}
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof onNavigateToRecurring === 'function') {
-                onNavigateToRecurring();
-              } else {
-                setCurrentView('subscriptions');
-              }
-            }}
-            className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                <CalendarSync className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">
-                  Pagos Recurrentes
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {subscriptions.length} configurados ({formatMoney(totalMonthlySubscriptions)}/mes)
                 </p>
               </div>
             </div>
