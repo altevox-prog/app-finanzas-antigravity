@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pencil, Camera } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import CategoryIcon from '../../categories/components/CategoryIcon';
+import SwipeableRow from '../../common/SwipeableRow';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { MONTH_NAMES } from '../../../data/initialData';
 
@@ -35,7 +36,7 @@ export const formatTxDateClean = (tx) => {
 
 /**
  * TransactionItem
- * Renderizado de fila individual de un movimiento en la lista.
+ * Renderizado de fila individual de un movimiento en la lista con Swipe Actions.
  */
 export default function TransactionItem({
   transaction: tx,
@@ -43,6 +44,7 @@ export default function TransactionItem({
   account,
   onSelect,
   onEdit,
+  onDelete,
   onViewReceipt
 }) {
   const { formatMoney } = usePrivacy();
@@ -52,63 +54,61 @@ export default function TransactionItem({
   const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
   const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
 
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(tx);
+    } else if (onSelect) {
+      onSelect(tx);
+    }
+  };
+
   return (
-    <div 
-      onClick={() => onSelect && onSelect(tx)}
-      className="min-h-[52px] p-3 sm:p-4 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex flex-col justify-center gap-1 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05]"
+    <SwipeableRow
+      onEdit={onEdit ? () => onEdit(tx) : undefined}
+      onDelete={onDelete || onSelect ? handleDelete : undefined}
+      className="w-full"
+      contentClassName="bg-white dark:bg-zinc-900"
     >
-      {/* Línea 1 (Superior): Concepto/Descripción a la izq y Monto a la der */}
-      <div className="flex items-center justify-between gap-2">
-        {/* Izquierda: Icono de categoría + Concepto/Descripción */}
-        <div className="flex items-center gap-2 min-w-0 max-w-[60%]">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60 dark:border-white/[0.06] shadow-sm">
-            <BrandIcon
-              name={tx.note || tx.categoryName || ''}
-              size={14}
-              fallback={
-                <CategoryIcon
-                  category={category || tx.categoryName}
-                  status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
-                  size={14}
-                  withBadge={false}
-                />
-              }
-            />
+      <div 
+        onClick={() => onSelect && onSelect(tx)}
+        className="min-h-[52px] p-3 sm:p-4 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex flex-col justify-center gap-1 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05]"
+      >
+        {/* Línea 1 (Superior): Concepto/Descripción a la izq y Monto a la der */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Izquierda: Icono de categoría + Concepto/Descripción */}
+          <div className="flex items-center gap-2 min-w-0 max-w-[60%]">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60 dark:border-white/[0.06] shadow-sm">
+              <BrandIcon
+                name={tx.note || tx.categoryName || ''}
+                size={14}
+                fallback={
+                  <CategoryIcon
+                    category={category || tx.categoryName}
+                    status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
+                    size={14}
+                    withBadge={false}
+                  />
+                }
+              />
+            </div>
+            <span className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
+              {tx.note || tx.categoryName}
+            </span>
           </div>
-          <span className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
-            {tx.note || tx.categoryName}
-          </span>
-        </div>
 
-        {/* Derecha: Monto monetario */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums whitespace-nowrap ${
-            isExpense 
-              ? 'text-rose-500 dark:text-rose-400' 
-              : isIncome 
-                ? 'text-emerald-500 dark:text-emerald-400' 
-                : 'text-slate-600 dark:text-zinc-300'
-          }`}>
-            {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
-          </span>
-
-          {/* Botón de acción / editar (en desktop / tablet) */}
-          {onEdit && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(tx);
-              }}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg active:scale-95 transition-colors cursor-pointer hidden md:flex"
-              title="Editar movimiento"
-              aria-label="Editar"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-          )}
+          {/* Derecha: Monto monetario */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums whitespace-nowrap ${
+              isExpense 
+                ? 'text-rose-500 dark:text-rose-400' 
+                : isIncome 
+                  ? 'text-emerald-500 dark:text-emerald-400' 
+                  : 'text-slate-600 dark:text-zinc-300'
+            }`}>
+              {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
+            </span>
+          </div>
         </div>
-      </div>
 
       {/* Línea 2 (Inferior): Badge compacto de cuenta a la izq y Fecha/hora a la der */}
       <div className="flex items-center justify-between gap-2">
@@ -160,5 +160,6 @@ export default function TransactionItem({
         </div>
       </div>
     </div>
+  </SwipeableRow>
   );
 }

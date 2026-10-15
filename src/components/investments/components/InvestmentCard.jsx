@@ -8,6 +8,7 @@ import {
   CheckCircle2 
 } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
+import SwipeableRow from '../../common/SwipeableRow';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatCurrency, formatUSD } from '../../../data/initialData';
 import { 
@@ -161,111 +162,97 @@ export default function InvestmentCard({
     inv.assetType === 'fund' || inv.category === 'liquidity' ? 'Fondo' : 'Inversión';
 
   return (
-    <div
-      key={inv.id}
-      className={`p-4 sm:p-5 rounded-2xl border shadow-sm space-y-3.5 transition-all ${
-        isMatured 
-          ? 'border-amber-500/40 bg-amber-500/[0.03] dark:bg-amber-500/[0.04]' 
-          : 'hover:border-emerald-500/30'
-      }`}
-      style={{ backgroundColor: isMatured ? undefined : 'var(--bg-card)', borderColor: isMatured ? undefined : 'var(--border-color)' }}
+    <SwipeableRow
+      onEdit={onEdit ? () => onEdit(inv) : undefined}
+      onDelete={onDelete ? () => onDelete(inv) : undefined}
+      className="rounded-2xl"
+      contentClassName="rounded-2xl"
     >
-      {/* 1. CABECERA DE LA TARJETA */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {/* Logo/Icono del Activo */}
-          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 shrink-0">
-            {isPrivateLoan ? (
-              <div className="w-full h-full flex items-center justify-center text-emerald-500">
-                <HandCoins className="w-6 h-6" />
-              </div>
-            ) : (
-              <BrandIcon name={m.ticker || inv.name} type={inv.assetType || inv.category} size={28} />
-            )}
-          </div>
-
-          <div className="truncate">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white uppercase tracking-tight">
-                {isPrivateLoan ? (inv.borrower || inv.name) : (m.ticker || inv.name)}
-              </span>
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
-                {assetTypeLabel}
-              </span>
-              {isMatured && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shrink-0">
-                  <AlertCircle className="w-3 h-3" />
-                  <span>Vencido / Por liquidar</span>
-                </span>
-              )}
-              {inv.institution && (
-                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                  {inv.institution}
-                </span>
+      <div
+        key={inv.id}
+        className={`p-4 sm:p-5 rounded-2xl border shadow-sm space-y-3.5 transition-all ${
+          isMatured 
+            ? 'border-amber-500/40 bg-amber-500/[0.03] dark:bg-amber-500/[0.04]' 
+            : 'hover:border-emerald-500/30'
+        }`}
+        style={{ backgroundColor: isMatured ? undefined : 'var(--bg-card)', borderColor: isMatured ? undefined : 'var(--border-color)' }}
+      >
+        {/* 1. CABECERA DE LA TARJETA */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Logo/Icono del Activo */}
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 shrink-0">
+              {isPrivateLoan ? (
+                <div className="w-full h-full flex items-center justify-center text-emerald-500">
+                  <HandCoins className="w-6 h-6" />
+                </div>
+              ) : (
+                <BrandIcon name={m.ticker || inv.name} type={inv.assetType || inv.category} size={28} />
               )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
-              {inv.name}
-            </p>
+
+            <div className="truncate">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white uppercase tracking-tight">
+                  {isPrivateLoan ? (inv.borrower || inv.name) : (m.ticker || inv.name)}
+                </span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
+                  {assetTypeLabel}
+                </span>
+                {isMatured && (
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1 shrink-0">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Vencido / Por liquidar</span>
+                  </span>
+                )}
+                {inv.institution && (
+                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    {inv.institution}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
+                {inv.name}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Badge de Rendimiento (Fintech) */}
+            <div className={`px-2.5 py-1 rounded-xl text-xs font-bold font-mono tracking-tight tabular-nums border ${
+              isPrivateLoan
+                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                : isCDT
+                  ? isMatured 
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                  : m.isPositive 
+                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                    : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+            }`}>
+              {isPrivateLoan 
+                ? `+${Number(inv.monthlyRate || 0).toFixed(1)}% M.V.`
+                : isCDT
+                  ? `+${Number(inv.interestRate || 0).toFixed(2)}% E.A.`
+                  : `${m.isPositive ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%`
+              }
+            </div>
+
+            {/* Botón de acción discreto: Actualizar cotización */}
+            <button
+              type="button"
+              onClick={() => {
+                if (onQuickUpdate) {
+                  onQuickUpdate(inv, String(inv.currentAmount || m.currentValueOrigin || 0));
+                }
+              }}
+              className="p-1.5 text-slate-400 hover:text-emerald-500 rounded-lg transition-colors cursor-pointer"
+              title="Actualizar valor de mercado rápido"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Badge de Rendimiento (Fintech) */}
-          <div className={`px-2.5 py-1 rounded-xl text-xs font-bold font-mono tracking-tight tabular-nums border ${
-            isPrivateLoan
-              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-              : isCDT
-                ? isMatured 
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                  : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                : m.isPositive 
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-          }`}>
-            {isPrivateLoan 
-              ? `+${Number(inv.monthlyRate || 0).toFixed(1)}% M.V.`
-              : isCDT
-                ? `+${Number(inv.interestRate || 0).toFixed(2)}% E.A.`
-                : `${m.isPositive ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%`
-            }
-          </div>
-
-          {/* Botones de acción discretos */}
-          <button
-            type="button"
-            onClick={() => {
-              if (onQuickUpdate) {
-                onQuickUpdate(inv, String(inv.currentAmount || m.currentValueOrigin || 0));
-              }
-            }}
-            className="p-1.5 text-slate-400 hover:text-emerald-500 rounded-lg transition-colors cursor-pointer"
-            title="Actualizar valor de mercado rápido"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onEdit && onEdit(inv)}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
-            title="Editar inversión"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (onDelete) {
-                onDelete(inv);
-              }
-            }}
-            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
-            title="Eliminar inversión"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
 
       {/* 2. CUERPO DE LA TARJETA: Valor Actual Grande y Conversión a COP */}
       <div className="space-y-0.5 pt-1">
@@ -448,5 +435,6 @@ export default function InvestmentCard({
         </div>
       )}
     </div>
+  </SwipeableRow>
   );
 }
