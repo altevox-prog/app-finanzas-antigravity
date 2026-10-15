@@ -9,7 +9,7 @@ import {
   TrendingUp, 
   Download, 
   UploadCloud, 
-  AlertTriangle 
+  ChevronDown 
 } from 'lucide-react';
 import { signInWithGoogle } from '../../services/supabaseClient';
 import { 
@@ -26,10 +26,9 @@ import ProfileBackupPreviewModal from './components/ProfileBackupPreviewModal';
  * del Centro de Control / Perfil.
  * Incluye de forma independiente:
  * - Acceso y sincronización en la nube (Google Auth / Supabase Auth)
- * - Estado de almacenamiento y privacidad (Cloud vs Local)
  * - Exportación de copia JSON, CSV de transacciones y CSV de portafolio
+ *   (responsivo: menú desplegable en móvil, 3 tarjetas en escritorio)
  * - Carga, validación y modal de confirmación de restauración JSON
- * - Zona de peligro (Restablecimiento de fábrica)
  */
 export default function ProfileCloudTab({
   user,
@@ -39,8 +38,6 @@ export default function ProfileCloudTab({
   handleCloudSync,
   onLogout,
   setShowLogoutConfirm,
-  onResetData,
-  onOpenResetConfirm,
   transactions = [],
   investments = [],
   accounts = [],
@@ -58,6 +55,7 @@ export default function ProfileCloudTab({
   const restoreInputRef = useRef(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [backupPreview, setBackupPreview] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const handleExportJSON = () => {
     try {
@@ -126,14 +124,6 @@ export default function ProfileCloudTab({
       onLogout();
     } else if (typeof setShowLogoutConfirm === 'function') {
       setShowLogoutConfirm(true);
-    }
-  };
-
-  const triggerResetData = () => {
-    if (typeof onResetData === 'function') {
-      onResetData();
-    } else if (typeof onOpenResetConfirm === 'function') {
-      onOpenResetConfirm();
     }
   };
 
@@ -216,38 +206,6 @@ export default function ProfileCloudTab({
         )}
       </div>
 
-      {/* Tarjeta Unificada de Estado: Almacenamiento y Privacidad */}
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-2 px-1">
-          <ShieldCheck className={`w-4 h-4 ${isCloudUser ? 'text-emerald-500' : 'text-amber-500'}`} />
-          <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Almacenamiento y Privacidad
-          </h3>
-        </div>
-
-        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 sm:mt-0 ${
-              isCloudUser
-                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
-                : 'bg-amber-500/10 border border-amber-500/20 text-amber-500'
-            }`}>
-              {isCloudUser ? <Cloud className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                {isCloudUser ? 'Sincronización en la Nube' : 'Modo Local'}
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                {isCloudUser
-                  ? 'Tus datos se respaldan de forma segura en tu cuenta en la nube, con una copia local en este dispositivo para respuesta instantánea y disponibilidad offline.'
-                  : 'Tus datos residen únicamente en este navegador (localStorage). Inicia sesión con tu correo para habilitar respaldo multi-dispositivo.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Módulo de Copias de Seguridad y Archivos */}
       <div className="space-y-3 pt-1">
         <div className="flex items-center gap-2 px-1">
@@ -257,18 +215,106 @@ export default function ProfileCloudTab({
           </h3>
         </div>
 
-        {/* Grid organizado de 3 accesos con diseño homogéneo */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {/* 1. Vista Móvil (md:hidden): Botón / Selector desplegable compacto de exportación */}
+        <div className="md:hidden relative">
+          <button
+            type="button"
+            onClick={() => setShowExportMenu((prev) => !prev)}
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all cursor-pointer shadow-sm select-none"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                <Download className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Exportar datos...
+                </p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Copia JSON, Gastos a Excel o Inversiones
+                </p>
+              </div>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${showExportMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showExportMenu && (
+            <div className="mt-2 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl space-y-1 animate-fadeIn">
+              <button
+                type="button"
+                onClick={() => {
+                  handleExportJSON();
+                  setShowExportMenu(false);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors text-left cursor-pointer group"
+              >
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                  <Database className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-amber-500 transition-colors">
+                    Copia de seguridad completa
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Formato JSON</p>
+                </div>
+                <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-500 shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  downloadTransactionsCSV(transactions);
+                  setShowExportMenu(false);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors text-left cursor-pointer group"
+              >
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-emerald-500 transition-colors">
+                    Gastos a Excel
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Archivo CSV</p>
+                </div>
+                <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  downloadInvestmentsCSV(investments, trm);
+                  setShowExportMenu(false);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors text-left cursor-pointer group"
+              >
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shrink-0">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-blue-500 transition-colors">
+                    Inversiones a Excel
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Portafolio CSV</p>
+                </div>
+                <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 shrink-0" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 2. Vista Escritorio (md: en adelante): 3 tarjetas organizadas horizontalmente */}
+        <div className="hidden md:grid md:grid-cols-3 gap-2.5">
           {/* Respaldo JSON */}
           <button
             type="button"
             onClick={handleExportJSON}
-            className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
+            className="flex flex-col items-start justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
           >
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0 sm:mb-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0 mb-2.5">
               <Database className="w-4 h-4" />
             </div>
-            <div className="min-w-0 pr-2 sm:pr-0">
+            <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-amber-500 transition-colors">
                 Copia de seguridad completa
               </p>
@@ -276,19 +322,18 @@ export default function ProfileCloudTab({
                 Formato JSON
               </p>
             </div>
-            <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-500 shrink-0 sm:hidden" />
           </button>
 
           {/* Gastos a Excel */}
           <button
             type="button"
             onClick={() => downloadTransactionsCSV(transactions)}
-            className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
+            className="flex flex-col items-start justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 sm:mb-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 mb-2.5">
               <FileSpreadsheet className="w-4 h-4" />
             </div>
-            <div className="min-w-0 pr-2 sm:pr-0">
+            <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-emerald-500 transition-colors">
                 Gastos a Excel
               </p>
@@ -296,19 +341,18 @@ export default function ProfileCloudTab({
                 Archivo CSV
               </p>
             </div>
-            <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 shrink-0 sm:hidden" />
           </button>
 
           {/* Inversiones a Excel */}
           <button
             type="button"
             onClick={() => downloadInvestmentsCSV(investments, trm)}
-            className="flex sm:flex-col items-center sm:items-start justify-between sm:justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
+            className="flex flex-col items-start justify-center p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 active:scale-95 transition-all cursor-pointer group text-left shadow-sm"
           >
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shrink-0 sm:mb-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shrink-0 mb-2.5">
               <TrendingUp className="w-4 h-4" />
             </div>
-            <div className="min-w-0 pr-2 sm:pr-0">
+            <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-blue-500 transition-colors">
                 Inversiones a Excel
               </p>
@@ -316,7 +360,6 @@ export default function ProfileCloudTab({
                 Portafolio CSV
               </p>
             </div>
-            <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 shrink-0 sm:hidden" />
           </button>
         </div>
 
@@ -353,31 +396,6 @@ export default function ProfileCloudTab({
           onChange={handleFileSelect} 
           className="hidden" 
         />
-      </div>
-
-      {/* Zona de peligro: restablecer app */}
-      <div className="pt-2">
-        <div className="p-3.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 space-y-2.5">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400">Zona de peligro: restablecer datos</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                Elimina de forma permanente todas las transacciones, cuentas e inversiones en la nube y en este dispositivo, manteniendo tu sesión activa.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={triggerResetData}
-            className="w-full py-2 px-3 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs transition-colors cursor-pointer active:scale-98"
-          >
-            Restablecer y borrar todos los datos
-          </button>
-        </div>
       </div>
 
       {/* Modal de confirmación de restauración */}

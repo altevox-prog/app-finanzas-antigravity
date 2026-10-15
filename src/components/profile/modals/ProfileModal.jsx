@@ -284,7 +284,6 @@ export default function ProfileModal({
                   onManualCloudSync={onManualCloudSync}
                   isCloudSyncing={dataActions.isCloudSyncing}
                   onLogout={() => dataActions.setShowLogoutConfirm(true)}
-                  onResetData={() => dataActions.setShowResetConfirm(true)}
                   transactions={transactions}
                   investments={investments}
                   trm={trm}
@@ -308,6 +307,7 @@ export default function ProfileModal({
                   onThemeChange={onThemeChange}
                   enableDecimals={enableDecimals}
                   toggleEnableDecimals={toggleEnableDecimals}
+                  onResetData={() => dataActions.setShowResetConfirm(true)}
                 />
               )}
             </>

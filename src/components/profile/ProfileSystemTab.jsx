@@ -3,7 +3,8 @@ import {
   Moon, 
   Sun, 
   Coins, 
-  RefreshCw 
+  RefreshCw,
+  AlertTriangle 
 } from 'lucide-react';
 import UpdateAppButton from '../ui/UpdateAppButton';
 
@@ -15,12 +16,14 @@ import UpdateAppButton from '../ui/UpdateAppButton';
  * - Apariencia y Tema (Selector Claro / Oscuro)
  * - Preferencias de Moneda (Toggle permitir decimales en montos)
  * - Versión del Sistema y botón de actualización PWA
+ * - Zona de peligro (Restablecimiento y borrado de datos)
  */
 export default function ProfileSystemTab({
   theme = 'dark',
   onThemeChange,
   enableDecimals = false,
-  toggleEnableDecimals
+  toggleEnableDecimals,
+  onResetData
 }) {
   return (
     <div className="space-y-5 animate-fadeIn">
@@ -140,6 +143,31 @@ export default function ProfileSystemTab({
           <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium tabular-nums">
             Monety v1.0.0 (Producción PWA)
           </span>
+        </div>
+      </div>
+
+      {/* 4. Zona de peligro: restablecer datos */}
+      <div className="pt-2">
+        <div className="p-3.5 rounded-2xl border border-rose-500/30 bg-rose-500/5 space-y-2.5">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400">Zona de peligro: restablecer datos</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                Elimina de forma permanente todas las transacciones, cuentas e inversiones en la nube y en este dispositivo, manteniendo tu sesión activa.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onResetData}
+            className="w-full py-2.5 px-3 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs transition-colors cursor-pointer active:scale-98"
+          >
+            Restablecer y borrar todos los datos
+          </button>
         </div>
       </div>
     </div>
