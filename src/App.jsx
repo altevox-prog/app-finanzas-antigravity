@@ -48,11 +48,11 @@ export default function App() {
   const { isForcedMobile, isForcedDesktop, modalControls } = state;
 
   return (
-    <div className={`min-h-[100dvh] bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-slate-100 flex ${
+    <div className={`h-dvh max-h-dvh bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-slate-100 flex ${
       isForcedMobile ? 'flex-col items-center justify-start p-2 sm:p-4' :
       isForcedDesktop ? 'flex-row items-stretch justify-start p-0' :
       'flex-col lg:flex-row items-center lg:items-stretch justify-start sm:justify-center lg:justify-start p-0 sm:p-4 md:p-6 lg:p-0'
-    } transition-colors font-sans antialiased w-full overflow-x-hidden`}>
+    } transition-colors font-sans antialiased w-full overflow-hidden`}>
       {/* 1. BARRA LATERAL FIJA EN ESCRITORIO */}
       <DesktopSidebar
         modalControls={modalControls}
@@ -83,7 +83,7 @@ export default function App() {
       />
 
       {/* Indicador superior en pantallas móviles simuladas (< lg) */}
-      <div className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between w-full max-w-[440px] px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium`}>
+      <div className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between w-full max-w-[440px] px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium shrink-0`}>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="font-semibold text-slate-800 dark:text-slate-200">Monety</span>
@@ -106,11 +106,11 @@ export default function App() {
       <div 
         className={`w-full ${
           isForcedMobile 
-            ? 'max-w-[440px] mx-auto min-h-[100dvh] rounded-[40px] shadow-2xl border-[8px] border-slate-300 dark:border-slate-800' 
+            ? 'max-w-[440px] mx-auto h-full max-h-dvh rounded-[40px] shadow-2xl border-[8px] border-slate-300 dark:border-slate-800' 
             : isForcedDesktop 
-            ? 'max-w-none h-screen rounded-none shadow-none border-0 overflow-hidden' 
-            : 'sm:max-w-[440px] lg:max-w-none min-h-[100dvh] lg:h-screen sm:rounded-[40px] lg:rounded-none sm:shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:sm:shadow-[0_25px_70px_rgba(0,0,0,0.7)] lg:shadow-none sm:border-[8px] lg:border-0 sm:border-slate-300 dark:sm:border-slate-800 lg:overflow-hidden'
-        } flex flex-col justify-between relative transition-colors bg-[#F8FAFC] dark:bg-zinc-950 flex-1`}
+            ? 'max-w-none h-full rounded-none shadow-none border-0' 
+            : 'sm:max-w-[440px] lg:max-w-none h-full max-h-dvh sm:rounded-[40px] lg:rounded-none sm:shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:sm:shadow-[0_25px_70px_rgba(0,0,0,0.7)] lg:shadow-none sm:border-[8px] lg:border-0 sm:border-slate-300 dark:sm:border-slate-800'
+        } flex flex-col overflow-hidden relative transition-colors bg-[#F8FAFC] dark:bg-zinc-950 flex-1`}
         style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
       >
         {/* Cabecera Unificada */}
@@ -152,7 +152,7 @@ export default function App() {
         />
 
         {/* Main Content Area */}
-        <main ref={state.mainContentRef} className="flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 pb-28 sm:pb-32 lg:pb-12 relative lg:overflow-y-auto space-y-3.5 sm:space-y-4 lg:space-y-0">
+        <main ref={state.mainContentRef} className="flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 pb-10 sm:pb-12 lg:pb-12 relative overflow-y-auto overscroll-y-contain space-y-3.5 sm:space-y-4 lg:space-y-0">
           <div className="w-full lg:max-w-[1550px] lg:mx-auto lg:px-6 lg:py-6">
             <ViewRouter
               activeTab={state.activeTab}
@@ -183,7 +183,7 @@ export default function App() {
         />
 
         {/* Barra Home Indicator de iOS para Desktop */}
-        <div className={`${isForcedMobile ? 'block' : isForcedDesktop ? 'hidden' : 'hidden sm:block lg:hidden'} fixed bottom-1 left-0 right-0 sm:max-w-[440px] sm:left-1/2 sm:-translate-x-1/2 z-50 pointer-events-none`}>
+        <div className={`${isForcedMobile ? 'block' : isForcedDesktop ? 'hidden' : 'hidden sm:block lg:hidden'} absolute bottom-1 left-0 right-0 pointer-events-none z-50`}>
           <div className="w-32 h-1 bg-slate-400/40 rounded-full mx-auto" />
         </div>
 

@@ -83,7 +83,7 @@ export default function DesktopLayout({
       {/* 2. Área Principal Panorámica */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#07090E]">
         {/* Barra Superior Panorámica */}
-        <header className="border-b border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-md sticky top-0 z-20 shrink-0 select-none">
+        <header className="border-b border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-slate-900/80 dark:bg-[#0B0E14]/80 backdrop-blur-md sticky top-0 z-40 shrink-0 select-none shadow-xs">
           <div className="max-w-[1550px] w-full mx-auto px-6 py-4.5 flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">

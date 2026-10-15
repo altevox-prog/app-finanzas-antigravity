@@ -41,7 +41,7 @@ export default function BottomNav({
   return (
     <nav 
       aria-label="Navegación principal móvil"
-      className={`fixed bottom-0 left-0 right-0 sm:max-w-[440px] sm:left-1/2 sm:-translate-x-1/2 z-40 backdrop-blur-xl border-t pt-1.5 px-2 pb-2 sm:pb-3 grid grid-cols-5 items-center justify-items-center shadow-lg bg-white/95 dark:bg-[#18181b]/95 border-slate-200/80 dark:border-white/[0.08] ${mobileOnlyClass || className}`}
+      className={`shrink-0 w-full z-40 backdrop-blur-xl border-t pt-1.5 px-2 pb-2 sm:pb-3 grid grid-cols-5 items-center justify-items-center shadow-lg bg-white/95 dark:bg-[#18181b]/95 border-slate-200/80 dark:border-white/[0.08] ${mobileOnlyClass || className}`}
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
       {/* 1. Inicio */}

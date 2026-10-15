@@ -67,7 +67,7 @@ export default function Header({
 
   return (
     <header 
-      className="backdrop-blur-xl border-b sticky top-0 z-30 transition-all px-4 pb-3"
+      className="backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/80 dark:border-white/[0.08] shrink-0 z-40 w-full transition-all px-4 pb-3 shadow-xs"
       style={{ 
         backgroundColor: 'var(--header-bg)', 
         borderColor: 'var(--border-color)',

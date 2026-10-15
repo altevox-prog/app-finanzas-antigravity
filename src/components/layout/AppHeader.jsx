@@ -166,25 +166,25 @@ export default function AppHeader({
 
   return (
     <>
-      {/* Barra de Estado iOS simulada para móviles en tablet reducida (< lg) */}
-      <div 
-        className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between px-7 pt-3 pb-1 text-xs font-semibold select-none shrink-0 z-40 bg-slate-50/90 dark:bg-[#09090b]/90 text-slate-900 dark:text-slate-100`} 
-        style={{ backgroundColor: 'var(--header-bg)', color: 'var(--text-main)' }}
-      >
-        <span className="text-[11px] font-bold">9:41</span>
-        <div className="w-24 h-4.5 bg-black rounded-full shadow-inner flex items-center justify-end px-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px]">
-          <span className="font-bold">5G</span>
-          <div className="w-4 h-2.5 border border-current rounded-xs p-0.5 flex items-center">
-            <div className="w-full h-full bg-current rounded-2xs"></div>
+      {/* Top Header Móvil (< lg) anclado fijamente */}
+      <div className={`${mobileOnlyClass} shrink-0 z-40 w-full`}>
+        {/* Barra de Estado iOS simulada para móviles en tablet reducida (< lg) */}
+        <div 
+          className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between px-7 pt-3 pb-1 text-xs font-semibold select-none shrink-0 bg-slate-50/90 dark:bg-[#09090b]/90 text-slate-900 dark:text-slate-100`} 
+          style={{ backgroundColor: 'var(--header-bg)', color: 'var(--text-main)' }}
+        >
+          <span className="text-[11px] font-bold">9:41</span>
+          <div className="w-24 h-4.5 bg-black rounded-full shadow-inner flex items-center justify-end px-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px]">
+            <span className="font-bold">5G</span>
+            <div className="w-4 h-2.5 border border-current rounded-xs p-0.5 flex items-center">
+              <div className="w-full h-full bg-current rounded-2xs"></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Top Header Móvil (< lg) */}
-      <div className={mobileOnlyClass}>
         <Header 
           monthlyStats={monthlyStats} 
           userProfile={userProfile}
@@ -207,7 +207,7 @@ export default function AppHeader({
       </div>
 
       {/* Top Header Panorámico de Escritorio (visible en lg:) */}
-      <header className={`${desktopOnlyClass} border-b border-slate-200/80 dark:border-white/[0.08] bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-20 shrink-0 select-none`}>
+      <header className={`${desktopOnlyClass} border-b border-slate-200/80 dark:border-white/[0.08] bg-white/80 dark:bg-slate-900/80 dark:bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-40 shrink-0 select-none shadow-xs`}>
         <div className="max-w-[1550px] w-full mx-auto px-6 py-4.5 flex sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
