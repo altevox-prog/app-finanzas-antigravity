@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CalendarSync, 
   ArrowLeft, 
@@ -10,7 +10,9 @@ import {
   CheckCircle2, 
   AlertCircle,
   Clock,
-  MoreVertical
+  MoreVertical,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import BrandIcon from '../ui/BrandIcon';
@@ -18,6 +20,7 @@ import CategoryIcon from '../categories/components/CategoryIcon';
 import AddRecurringModal from './modals/AddRecurringModal';
 import SwipeableRow from '../common/SwipeableRow';
 import { safeNumber } from '../../utils/financeMath';
+import { processDueRecurringPayments } from '../../services/recurring/recurringAutoProcessor';
 
 export default function RecurringView({
   recurringPayments = [],
@@ -35,7 +38,8 @@ export default function RecurringView({
   categories = [],
   onAddCategory,
   onAddSubcategory,
-  trm = 4000
+  trm = 4000,
+  onAddTransaction = null
 }) {
   const { formatMoney } = usePrivacy();
 
@@ -82,30 +86,61 @@ export default function RecurringView({
     setEditingItem(null);
   };
 
-  // Calculate monthly projected total (active items)
+  // Filtro de visualización: 'all' | 'expense' | 'income'
+  const [filterType, setFilterType] = useState('all');
+
+  // Evaluación y ejecución automática de movimientos vencidos al cargar la vista
+  useEffect(() => {
+    if (typeof onAddTransaction === 'function' && typeof onUpdateRecurring === 'function' && recurringPayments?.length > 0) {
+      processDueRecurringPayments({
+        recurringPayments,
+        onAddTransaction,
+        onUpdateRecurring
+      });
+    }
+  }, [recurringPayments, onAddTransaction, onUpdateRecurring]);
+
+  // Lista normalizada y elementos activos
   const safeRecurring = Array.isArray(recurringPayments) ? recurringPayments : [];
-  const activeItems = safeRecurring.filter(item => item.isActive !== false);
-  const autoItems = safeRecurring.filter(item => (item.mode || 'auto') !== 'manual');
-  const manualItems = safeRecurring.filter(item => item.mode === 'manual');
+  const activeItems = safeRecurring.filter(item => item.isActive !== false && item.active !== false);
 
   const autoCount = activeItems.filter(item => (item.mode || 'auto') !== 'manual').length;
   const manualCount = activeItems.filter(item => item.mode === 'manual').length;
 
-  // Monthly projection calculation
-  const totalMonthlyProjected = activeItems.reduce((sum, item) => {
+  // Función de proyección mensual según frecuencia
+  const toMonthlyAmount = (item) => {
     const amt = safeNumber(item.amount);
-    if (item.type === 'income') return sum; // Projection of recurring expenses
-    if (item.frequency === 'weekly') return sum + Math.round(amt * 4.33);
-    if (item.frequency === 'biweekly') return sum + (amt * 2);
-    if (item.frequency === 'monthly') return sum + amt;
-    if (item.frequency === 'bimonthly') return sum + Math.round(amt / 2);
-    if (item.frequency === 'quarterly') return sum + Math.round(amt / 3);
-    if (item.frequency === 'semiannual') return sum + Math.round(amt / 6);
-    if (item.frequency === 'yearly') return sum + Math.round(amt / 12);
-    return sum + amt; // default monthly
-  }, 0);
+    switch (item.frequency) {
+      case 'weekly': return Math.round(amt * 4.33);
+      case 'biweekly': return amt * 2;
+      case 'monthly': return amt;
+      case 'bimonthly': return Math.round(amt / 2);
+      case 'quarterly': return Math.round(amt / 3);
+      case 'semiannual': return Math.round(amt / 6);
+      case 'yearly': return Math.round(amt / 12);
+      default: return amt;
+    }
+  };
 
-  const hasActivePayments = activeItems.length > 0;
+  // 1. Total Ingresos Recurrentes esperados
+  const totalIncomeProjected = activeItems
+    .filter(item => item.type === 'income')
+    .reduce((sum, item) => sum + toMonthlyAmount(item), 0);
+
+  // 2. Total Gastos Recurrentes comprometidos
+  const totalExpenseProjected = activeItems
+    .filter(item => item.type !== 'income')
+    .reduce((sum, item) => sum + toMonthlyAmount(item), 0);
+
+  // Filtrado reactivo de elementos para la lista
+  const filteredRecurring = safeRecurring.filter(item => {
+    if (filterType === 'expense') return item.type !== 'income';
+    if (filterType === 'income') return item.type === 'income';
+    return true;
+  });
+
+  const autoItems = filteredRecurring.filter(item => (item.mode || 'auto') !== 'manual');
+  const manualItems = filteredRecurring.filter(item => item.mode === 'manual');
 
   // Helper for human-readable frequency text
   const formatFrequencyLabel = (item) => {
@@ -283,51 +318,87 @@ export default function RecurringView({
         </button>
       </div>
 
-      {/* B. Tarjeta de Resumen Mensual (KPI Card) */}
-      <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] p-5 shadow-sm relative overflow-hidden">
-        {/* Halo esmeralda tenue */}
-        <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full blur-3xl pointer-events-none opacity-20 dark:opacity-30 bg-emerald-500" />
-
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 relative z-10">
-          Tus pagos recurrentes al mes
-        </p>
-
-        <div className="flex items-baseline gap-2 relative z-10 my-1">
-          {hasActivePayments ? (
-            <>
-              <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">
-                {formatMoney(totalMonthlyProjected)}
-              </span>
-              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                / mes
-              </span>
-            </>
-          ) : (
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-extrabold text-slate-400 dark:text-slate-500">—</span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">Sin pagos automáticos</span>
-            </div>
-          )}
+      {/* B. Tarjetas de Resumen Financiero Recurrente (KPIs) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Total Ingresos Recurrentes esperados */}
+        <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              Ingresos esperados
+            </span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          </div>
+          <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-emerald-500 dark:text-emerald-400">
+            +{formatMoney(totalIncomeProjected)}
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
+            Proyección mensual activa
+          </p>
         </div>
 
-        {/* Micro desglose opcional */}
-        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 pt-2.5 border-t border-slate-100 dark:border-white/5 mt-3 relative z-10">
-          <span className="inline-flex items-center gap-1.5 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-            {autoCount} {autoCount === 1 ? 'automático activo' : 'automáticos activos'}
-          </span>
-          <span className="opacity-40">•</span>
-          <span className="inline-flex items-center gap-1.5 font-medium">
-            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-            {manualCount} {manualCount === 1 ? 'recordatorio manual' : 'recordatorios manuales'}
-          </span>
+        {/* Total Gastos Recurrentes comprometidos */}
+        <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+              Gastos comprometidos
+            </span>
+            <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+          </div>
+          <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-rose-500 dark:text-rose-400">
+            -{formatMoney(totalExpenseProjected)}
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
+            {autoCount} automáticos • {manualCount} manuales
+          </p>
         </div>
       </div>
 
-      {/* C. Explicación sutil */}
-      <p className="text-xs text-slate-500 dark:text-slate-400 italic px-2 my-3">
-        Renta, servicios, cuotas fijas y lo que pagas periódicamente. Configura cuáles anota la app sola y de cuáles deseas recibir un aviso para confirmarlos.
-      </p>
+      {/* C. Filtros de vista ("Todos" | "Gastos" | "Ingresos") */}
+      {safeRecurring.length > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60 dark:border-white/5">
+            <button
+              type="button"
+              onClick={() => setFilterType('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                filterType === 'all'
+                  ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Todos ({safeRecurring.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('expense')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                filterType === 'expense'
+                  ? 'bg-white dark:bg-zinc-900 text-rose-500 dark:text-rose-400 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400'
+              }`}
+            >
+              Gastos ({safeRecurring.filter(r => r.type !== 'income').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterType('income')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                filterType === 'income'
+                  ? 'bg-white dark:bg-zinc-900 text-emerald-500 dark:text-emerald-400 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400'
+              }`}
+            >
+              Ingresos ({safeRecurring.filter(r => r.type === 'income').length})
+            </button>
+          </div>
+
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+            Mostrando {filteredRecurring.length} de {safeRecurring.length}
+          </span>
+        </div>
+      )}
 
       {/* D. Estado Vacío (Empty State) - Si no hay recurrentes registrados */}
       {recurringPayments.length === 0 ? (
@@ -356,6 +427,14 @@ export default function RecurringView({
       ) : (
         /* E. Listado Activo (Cuando ya existen elementos creados) */
         <div className="space-y-6">
+          {filteredRecurring.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 p-8 text-center bg-slate-50/50 dark:bg-white/[0.01]">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                No hay movimientos recurrentes registrados para el filtro de {filterType === 'expense' ? 'Gastos' : 'Ingresos'}.
+              </p>
+            </div>
+          )}
+
           {/* Sección 1: Anotación automática */}
           {autoItems.length > 0 && (
             <div className="space-y-3">

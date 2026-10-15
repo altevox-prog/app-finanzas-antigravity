@@ -26,6 +26,7 @@ import { useModalControls } from './useModalControls';
 import { useDataSync } from './useDataSync';
 import { useScrollRestoration } from './useScrollRestoration';
 import { useFinanceContext } from './useFinanceContext';
+import { processDueRecurringPayments } from '../services/recurring/recurringAutoProcessor';
 
 /**
  * useAppOrchestrator
@@ -127,6 +128,16 @@ export function useAppOrchestrator() {
     handleAddRecurring, handleSaveRecurring, handleUpdateRecurring, handleDeleteRecurring,
     handleToggleActiveRecurring, resetRecurringPayments
   } = useRecurringPayments(isResettingRef);
+
+  // Evaluación y ejecución automática de movimientos recurrentes vencidos
+  useEffect(() => {
+    if (isResettingRef?.current || !recurringPayments || recurringPayments.length === 0) return;
+    processDueRecurringPayments({
+      recurringPayments,
+      onAddTransaction: baseAddTransaction,
+      onUpdateRecurring: handleUpdateRecurring
+    });
+  }, [recurringPayments, baseAddTransaction, handleUpdateRecurring, isResettingRef]);
 
   // Presupuestos & Metas state & actions
   const { budgets, setBudgets, updateGlobalBudget, updateCategoryBudget, removeCategoryBudget, resetBudgets } = useBudgets(isResettingRef);

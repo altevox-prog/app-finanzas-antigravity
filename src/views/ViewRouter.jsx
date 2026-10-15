@@ -251,6 +251,7 @@ export default function ViewRouter({
           onAddCategory={handleAddCategory}
           onAddSubcategory={handleAddSubcategory}
           trm={trm}
+          onAddTransaction={handleAddTransaction}
         />
       )}
 
