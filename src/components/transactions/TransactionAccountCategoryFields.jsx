@@ -1,6 +1,5 @@
 import React from 'react';
-import CategoryCombobox from '../categories/components/CategoryCombobox';
-import SubcategoryCombobox from '../categories/components/SubcategoryCombobox';
+import CategoryBottomSheetPicker from '../categories/components/CategoryBottomSheetPicker';
 import AccountCombobox from '../accounts/components/AccountCombobox';
 
 export default function TransactionAccountCategoryFields({
@@ -25,45 +24,23 @@ export default function TransactionAccountCategoryFields({
 }) {
   const catsToUse = availableCategories || categories;
 
-  // Derivación segura de subcategorías si no se pasan explícitamente
-  const safeCats = Array.isArray(catsToUse) ? catsToUse.filter(Boolean) : [];
-  const activeCategory = safeCats.find(c => c && c.id === categoryId) || null;
-  const subcatsToUse = availableSubcategories !== undefined 
-    ? availableSubcategories 
-    : (Array.isArray(activeCategory?.subcategories) ? activeCategory.subcategories.filter(Boolean) : []);
-
   return (
     <>
-      {/* Categoría y Subcategoría */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
-            Categoría Principal *
-          </label>
-          <CategoryCombobox
-            categories={catsToUse}
-            selectedCategoryId={categoryId}
-            onSelectCategory={setCategoryId}
-            onAddCategory={onAddCategory}
-            type={type}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
-            Subcategoría
-          </label>
-          <SubcategoryCombobox
-            subcategories={subcatsToUse}
-            selectedSubcategoryId={subcategoryId}
-            onSelectSubcategory={setSubcategoryId}
-            onAddSubcategory={onAddSubcategory}
-            onUpdateSubcategory={onUpdateSubcategory}
-            onDeleteSubcategory={onDeleteSubcategory}
-            parentCategoryId={categoryId}
-            placeholder={categoryId ? "Selecciona o escribe..." : "Elige categoría"}
-          />
-        </div>
+      {/* Categoría Unificada con Subcategoría Contextual */}
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
+          Categoría *
+        </label>
+        <CategoryBottomSheetPicker
+          categories={catsToUse}
+          selectedCategoryId={categoryId}
+          onSelectCategory={setCategoryId}
+          selectedSubcategoryId={subcategoryId}
+          onSelectSubcategory={setSubcategoryId}
+          onAddCategory={onAddCategory}
+          onAddSubcategory={onAddSubcategory}
+          type={type}
+        />
       </div>
 
       {/* Cuenta y Fecha */}

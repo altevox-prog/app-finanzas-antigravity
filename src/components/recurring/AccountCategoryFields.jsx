@@ -1,12 +1,11 @@
 import React from 'react';
-import CategoryCombobox from '../categories/components/CategoryCombobox';
-import SubcategoryCombobox from '../categories/components/SubcategoryCombobox';
+import CategoryBottomSheetPicker from '../categories/components/CategoryBottomSheetPicker';
 import AccountCombobox from '../accounts/components/AccountCombobox';
 
 /**
  * AccountCategoryFields
  * Subcomponente para los selectores de clasificación del pago recurrente:
- * Categoría principal (con opción de creación rápida), subcategoría y cuenta o método de cargo.
+ * Categoría principal y subcategoría contextual unificada, y cuenta o método de cargo.
  *
  * @param {Object} props
  * @param {string} props.type Tipo de flujo ('expense' | 'income')
@@ -48,42 +47,23 @@ export default function AccountCategoryFields({
     ? safeAccounts
     : (Array.isArray(accounts) ? accounts.filter(Boolean) : []);
 
-  const selectedCat = categoriesList.find((c) => c && c.id === categoryId) || null;
-
-  const subcats = availableSubcategories !== undefined
-    ? availableSubcategories
-    : (Array.isArray(selectedCat?.subcategories) ? selectedCat.subcategories.filter(Boolean) : []);
-
   return (
     <>
-      {/* 1. Categoría y Subcategoría */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1 select-none">
-            Categoría Principal *
-          </label>
-          <CategoryCombobox
-            categories={categoriesList}
-            selectedCategoryId={categoryId}
-            onSelectCategory={setCategoryId}
-            onAddCategory={onAddCategory}
-            type={type}
-          />
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-semibold opacity-60 mb-1 select-none">
-            Subcategoría
-          </label>
-          <SubcategoryCombobox
-            subcategories={subcats}
-            selectedSubcategoryId={subcategoryId}
-            onSelectSubcategory={setSubcategoryId}
-            onAddSubcategory={onAddSubcategory}
-            parentCategoryId={categoryId}
-            placeholder={categoryId ? 'Selecciona o escribe...' : 'Elige categoría'}
-          />
-        </div>
+      {/* 1. Categoría Unificada */}
+      <div>
+        <label className="block text-[11px] font-semibold opacity-60 mb-1 select-none">
+          Categoría *
+        </label>
+        <CategoryBottomSheetPicker
+          categories={categoriesList}
+          selectedCategoryId={categoryId}
+          onSelectCategory={setCategoryId}
+          selectedSubcategoryId={subcategoryId}
+          onSelectSubcategory={setSubcategoryId}
+          onAddCategory={onAddCategory}
+          onAddSubcategory={onAddSubcategory}
+          type={type}
+        />
       </div>
 
       {/* 2. Cuenta / Tarjeta de Cargo Asociada */}

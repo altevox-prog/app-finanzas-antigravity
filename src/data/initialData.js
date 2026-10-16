@@ -52,7 +52,7 @@ export const DEFAULT_CATEGORIES = [
     color: '#007AFF',
     icon: '🚗',
     subcategories: [
-      { id: 'sub-gasolina', name: '⛽ Gasolina / Combustible' },
+      { id: 'sub-gasolina', name: '⛽ Gasolina' },
       { id: 'sub-taxi-uber', name: '🚕 Taxi / Uber / Didi' },
       { id: 'sub-pasajes', name: '🚌 Pasajes / Transmilenio / Metro' },
       { id: 'sub-taller', name: '🔧 Mantenimiento y taller' },
@@ -92,7 +92,6 @@ export const DEFAULT_CATEGORIES = [
     color: '#5856D6',
     icon: '📚',
     subcategories: [
-      { id: 'sub-universidad', name: '🎓 Universidad / Colegio' },
       { id: 'sub-libros', name: '📖 Libros y material' },
       { id: 'sub-cursos', name: '💻 Cursos y certificaciones' },
       { id: 'sub-idiomas', name: '🗣️ Idiomas' }
