@@ -19,16 +19,63 @@ const PRESET_COLORS = [
 const PRESET_EMOJIS = ['🏷️', '🍔', '🚗', '🏠', '🍿', '💊', '📚', '🛍️', '💰', '☕', '💡', '✈️'];
 
 /**
+ * Determina si una categoría corresponde a compromisos fijos, servicios, deudas o suscripciones
+ */
+function isRecurringCategory(cat, selectedId) {
+  if (!cat) return false;
+  // Si coincide con la selección actual del registro, mantenerla para no perder datos al editar
+  if (selectedId && (cat.id === selectedId || cat.name === selectedId)) return true;
+
+  // Categorías personalizadas del usuario creadas al vuelo o marcadas como custom
+  if (
+    cat.is_custom || 
+    cat.custom || 
+    cat.isCustom || 
+    String(cat.id).startsWith('cat-custom') || 
+    /cat-\d+/.test(String(cat.id))
+  ) {
+    return true;
+  }
+
+  // Si es de tipo ingreso, permitir en pagos recurrentes (salario, arriendos, rentas)
+  if (cat.type === 'income') return true;
+
+  const id = (cat.id || '').toLowerCase();
+  const name = (cat.name || '').toLowerCase();
+
+  // Exclusiones explícitas de consumo variable / impulsivo
+  if (
+    id === 'cat-alimentacion' || name.includes('alimentac') || name.includes('restaurante') ||
+    id === 'cat-compras' || name.includes('compras') || name.includes('ropa') ||
+    id === 'cat-viajes' || name.includes('viaje') ||
+    id === 'cat-cuidado-personal' || name.includes('cuidado personal')
+  ) {
+    return false;
+  }
+
+  // Inclusiones de gastos fijos y suscripciones recurrentes
+  const isVivienda = id === 'cat-vivienda' || name.includes('vivienda') || name.includes('hogar');
+  const isServicios = id === 'cat-servicios' || name.includes('servicio');
+  const isSuscripciones = id === 'cat-ocio' || name.includes('suscripci') || name.includes('streaming') || name.includes('ocio');
+  const isTransporte = id === 'cat-transporte' || name.includes('transporte');
+  const isSalud = id === 'cat-salud' || name.includes('salud') || name.includes('bienestar');
+  const isFinanzas = id === 'cat-finanzas-seguros' || name.includes('finanza') || name.includes('seguro') || name.includes('deuda');
+  const isEducacion = id === 'cat-educacion' || name.includes('educaci');
+
+  return isVivienda || isServicios || isSuscripciones || isTransporte || isSalud || isFinanzas || isEducacion;
+}
+
+/**
  * CategoryBottomSheetPicker
  * Wheel Picker nativo de una sola capa con Scroll Snap limpio:
+ * - Soporte para prop scope ('all' para catálogo completo o 'recurring' para compromisos fijos y suscripciones).
  * - Una sola pista en el DOM sin capas duplicadas y sin estilos 3D.
  * - Viewport central acotado a h-[220px] (5 filas exactas de 44px).
  * - Padding vertical de 88px para centrado milimétrico del primer y último ítem.
- * - Cápsula focal estilizada de alta gama (w-4/5 max-w-xs py-2.5 px-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/30).
+ * - Cápsula focal estilizada de alta gama con alineación geométrica centrada.
  * - Contraste calibrado para categorías adyacentes (distancia 1: opacity-65, distancia >= 2: opacity-30).
  * - Scroll programático exacto al hacer tap con bandera isProgrammaticScroll para eliminar el overshoot.
- * - Carrusel de subcategorías optimizado: sin píldora redundante 'Solo {Categoría}', botón [+ Nueva] al frente y píldoras con whitespace-nowrap.
- * - Normalización de combustible a '⛽ Gasolina' para evitar desbordes.
+ * - Carrusel de subcategorías optimizado: botón [+ Nueva] al frente y píldoras con whitespace-nowrap.
  */
 export default function CategoryBottomSheetPicker({
   categories = [],
@@ -39,6 +86,7 @@ export default function CategoryBottomSheetPicker({
   onAddCategory = null,
   onAddSubcategory = null,
   type = 'expense', // 'expense' | 'income'
+  scope = 'all', // 'all' | 'recurring'
   placeholder = 'Seleccionar categoría',
   disabled = false,
   className = ''
@@ -59,11 +107,17 @@ export default function CategoryBottomSheetPicker({
   const isProgrammaticScroll = useRef(false);
   const programmaticScrollTimer = useRef(null);
 
-  // Lista base filtrada por tipo de movimiento
+  // Lista base filtrada por tipo de movimiento y ámbito (scope)
   const categoriesList = useMemo(() => {
     const arr = Array.isArray(categories) ? categories.filter(Boolean) : [];
-    return arr.filter(c => !c.type || c.type === type || c.type === 'both');
-  }, [categories, type]);
+    const byType = arr.filter(c => !c.type || c.type === type || c.type === 'both');
+
+    if (scope === 'recurring') {
+      return byType.filter(cat => isRecurringCategory(cat, selectedCategoryId));
+    }
+
+    return byType;
+  }, [categories, type, scope, selectedCategoryId]);
 
   // Filtrado de búsqueda
   const filteredCategories = useMemo(() => {
@@ -273,7 +327,8 @@ export default function CategoryBottomSheetPicker({
       type,
       color: randomColor,
       icon: newCatEmoji || (type === 'income' ? '💰' : '🏷️'),
-      subcategories: []
+      subcategories: [],
+      is_custom: true
     };
 
     onAddCategory(newCat);
@@ -339,16 +394,16 @@ export default function CategoryBottomSheetPicker({
 
       {/* 2. Modal Selector en Portal (Tarjeta flotante centrada) */}
       {isOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 animate-fadeIn">
           {/* Backdrop con cierre al tocar fuera */}
           <div 
             onClick={() => setIsOpen(false)}
-            className="absolute inset-0 cursor-pointer"
+            className="fixed inset-0 z-[999998] bg-black/60 backdrop-blur-sm cursor-pointer"
           />
 
           {/* Caja del modal flotante */}
           <div 
-            className="relative z-10 w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col overflow-hidden animate-scaleIn"
+            className="relative z-[999999] w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col overflow-hidden animate-scaleIn"
           >
             {/* A. Cabecera fija */}
             <div className="flex-shrink-0 pt-4 pb-2.5 px-5 border-b border-slate-100 dark:border-slate-800/60">

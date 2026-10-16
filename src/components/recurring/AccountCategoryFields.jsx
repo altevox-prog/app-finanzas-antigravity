@@ -6,22 +6,7 @@ import AccountCombobox from '../accounts/components/AccountCombobox';
  * AccountCategoryFields
  * Subcomponente para los selectores de clasificación del pago recurrente:
  * Categoría principal y subcategoría contextual unificada, y cuenta o método de cargo.
- *
- * @param {Object} props
- * @param {string} props.type Tipo de flujo ('expense' | 'income')
- * @param {string} props.categoryId ID de categoría seleccionada
- * @param {Function} props.setCategoryId Setter para la categoría
- * @param {string} props.subcategoryId ID de subcategoría seleccionada
- * @param {Function} props.setSubcategoryId Setter para la subcategoría
- * @param {Array} [props.localCategories] Categorías disponibles
- * @param {Array} [props.availableCategories] Alias para categorías disponibles
- * @param {Array} [props.availableSubcategories] Subcategorías filtradas por la categoría activa
- * @param {Function} [props.onAddCategory] Callback de creación rápida de categoría
- * @param {Function} [props.onAddSubcategory] Callback de creación rápida de subcategoría
- * @param {string} props.accountId ID de cuenta de cargo seleccionada
- * @param {Function} props.setAccountId Setter para la cuenta
- * @param {Array} [props.accounts] Lista de cuentas disponibles
- * @param {Array} [props.safeAccounts] Alias de cuentas seguras
+ * Configurado con scope="recurring" para filtrar gastos fijos y suscripciones.
  */
 export default function AccountCategoryFields({
   type,
@@ -29,6 +14,7 @@ export default function AccountCategoryFields({
   setCategoryId,
   subcategoryId,
   setSubcategoryId,
+  categories = [],
   localCategories,
   availableCategories,
   availableSubcategories,
@@ -39,23 +25,21 @@ export default function AccountCategoryFields({
   accounts = [],
   safeAccounts
 }) {
-  const categoriesList = Array.isArray(availableCategories)
-    ? availableCategories
-    : (Array.isArray(localCategories) ? localCategories.filter(Boolean) : []);
+  const categoriesList = availableCategories || localCategories || categories;
+  const safeCats = Array.isArray(categoriesList) ? categoriesList.filter(Boolean) : [];
 
-  const accountsList = Array.isArray(safeAccounts)
-    ? safeAccounts
-    : (Array.isArray(accounts) ? accounts.filter(Boolean) : []);
+  const accountsList = safeAccounts || accounts;
+  const safeAccs = Array.isArray(accountsList) ? accountsList.filter(Boolean) : [];
 
   return (
     <>
-      {/* 1. Categoría Unificada */}
+      {/* 1. Categoría Unificada con Subcategoría Contextual (filtrada para pagos recurrentes) */}
       <div>
-        <label className="block text-[11px] font-semibold opacity-60 mb-1 select-none">
+        <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
           Categoría *
         </label>
         <CategoryBottomSheetPicker
-          categories={categoriesList}
+          categories={safeCats}
           selectedCategoryId={categoryId}
           onSelectCategory={setCategoryId}
           selectedSubcategoryId={subcategoryId}
@@ -63,16 +47,17 @@ export default function AccountCategoryFields({
           onAddCategory={onAddCategory}
           onAddSubcategory={onAddSubcategory}
           type={type}
+          scope="recurring"
         />
       </div>
 
       {/* 2. Cuenta / Tarjeta de Cargo Asociada */}
       <div>
-        <label className="block text-[11px] font-semibold opacity-60 mb-1">
+        <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
           Cuenta de Cargo / Método *
         </label>
         <AccountCombobox
-          accounts={accountsList}
+          accounts={safeAccs}
           selectedAccountId={accountId}
           onSelectAccount={setAccountId}
         />
