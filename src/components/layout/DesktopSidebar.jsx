@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   ArrowUpDown,
+  PlusCircle,
   CreditCard,
   CalendarSync,
   Scale,
@@ -170,7 +171,7 @@ export default function DesktopSidebar({
               className="fixed left-6 top-32 z-[9990] w-64 bg-white dark:bg-[#27272a] border border-slate-200 dark:border-white/[0.08] rounded-2xl p-2 shadow-2xl space-y-1 animate-slide-up pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Opción Movimiento (Gasto o ingreso) */}
+              {/* Opción Registrar transacción */}
               <button
                 type="button"
                 onClick={(e) => {
@@ -185,27 +186,8 @@ export default function DesktopSidebar({
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
               >
-                <ArrowUpDown className="w-4 h-4 text-emerald-500" />
-                <span>Registrar gasto o ingreso</span>
-              </button>
-              
-              {/* Opción Transferencia */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsMenuOpen(false);
-                  if (modalControls && typeof modalControls.openTransfer === 'function') {
-                    modalControls.openTransfer();
-                  } else if (typeof onOpenTransfer === 'function') {
-                    onOpenTransfer();
-                  }
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
-              >
-                <ArrowLeftRight className="w-4 h-4 text-blue-500" />
-                <span>Transferencia entre cuentas</span>
+                <PlusCircle className="w-4 h-4 text-emerald-500" />
+                <span>Registrar transacción</span>
               </button>
 
               {/* Opción Pagos Recurrentes */}

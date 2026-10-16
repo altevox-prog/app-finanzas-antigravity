@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
-  ArrowUpDown, 
-  ArrowLeftRight, 
+  PlusCircle, 
   CalendarSync, 
   HandCoins, 
   TrendingUp, 
@@ -146,7 +145,7 @@ export default function QuickActionsFab({
 
           {/* Opciones */}
           <div className="flex flex-col gap-1 pt-1">
-            {/* 1. Gasto o Ingreso */}
+            {/* 1. Registrar transacción (Gasto, Ingreso o Transferencia) */}
             <button
               type="button"
               onClick={() => handleAction('transaction', () => {
@@ -156,35 +155,14 @@ export default function QuickActionsFab({
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] text-left group"
             >
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <ArrowUpDown className="w-4 h-4" />
+                <PlusCircle className="w-4 h-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <span className="font-bold text-xs text-slate-900 dark:text-zinc-100 block truncate">
-                  Gasto o Ingreso
+                  Registrar transacción
                 </span>
                 <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate">
-                  Registrar transacción general
-                </span>
-              </div>
-            </button>
-
-            {/* 2. Transferencia */}
-            <button
-              type="button"
-              onClick={() => handleAction('transfer', () => {
-                if (typeof onOpenTransfer === 'function') onOpenTransfer();
-              })}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] text-left group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <ArrowLeftRight className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="font-bold text-xs text-slate-900 dark:text-zinc-100 block truncate">
-                  Transferencia
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate">
-                  Mover saldo entre cuentas
+                  Gasto, ingreso o transferencia
                 </span>
               </div>
             </button>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeftRight } from 'lucide-react';
 import TransactionTypeSelector from './TransactionTypeSelector';
 import TransactionAccountCategoryFields from './TransactionAccountCategoryFields';
+import AccountCombobox from '../accounts/components/AccountCombobox';
 import CurrencySelector from './CurrencySelector';
 import TransactionDetailsFields from './TransactionDetailsFields';
 import TransactionFormModalLayout from './TransactionFormModalLayout';
@@ -9,13 +11,29 @@ import { useBackHandler } from '../../hooks/useBackHandler';
 import { usePrivacy } from '../../context/PrivacyContext';
 import AmountInput from '../common/AmountInput';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../../utils/currencyFormatter';
+import { convertToCOP, convertFromCOP, formatNativeCurrency } from '../../utils/currencyUtils';
 import { buildTransactionPayload, saveTransactionRecord } from '../../services/transactions/transactionSubmitService';
 
 export default function TransactionForm({
-  accounts: propAccounts, categories: propCategories, onAddTransaction, onAddCategory,
-  onAddSubcategory, onUpdateSubcategory, onDeleteSubcategory, onAddAccount,
-  defaultDate, defaultType = 'expense', defaultAmount, transactionToEdit,
-  initialData, movement, isModal = false, onClose = null, onSuccess = null, trm = 4000
+  accounts: propAccounts, 
+  categories: propCategories, 
+  onAddTransaction, 
+  onTransfer,
+  onAddCategory,
+  onAddSubcategory, 
+  onUpdateSubcategory, 
+  onDeleteSubcategory, 
+  onAddAccount,
+  defaultDate, 
+  defaultType = 'expense', 
+  defaultAmount, 
+  transactionToEdit,
+  initialData, 
+  movement, 
+  isModal = false, 
+  onClose = null, 
+  onSuccess = null, 
+  trm = 4050
 }) {
   const accounts = Array.isArray(propAccounts) ? propAccounts.filter(Boolean) : [];
   const categories = Array.isArray(propCategories) ? propCategories.filter(Boolean) : [];
@@ -34,7 +52,13 @@ export default function TransactionForm({
   });
   const [categoryId, setCategoryId] = useState(editingMovement?.categoryId || categories[0]?.id || '');
   const [subcategoryId, setSubcategoryId] = useState(editingMovement?.subcategoryId || '');
-  const [accountId, setAccountId] = useState(editingMovement?.accountId || accounts[0]?.id || '');
+  const [accountId, setAccountId] = useState(editingMovement?.accountId || editingMovement?.fromAccountId || accounts[0]?.id || '');
+  const [toAccountId, setToAccountId] = useState(() => {
+    if (editingMovement?.toAccountId) return editingMovement.toAccountId;
+    const initialFrom = editingMovement?.accountId || accounts[0]?.id;
+    const other = accounts.find(a => a?.id !== initialFrom);
+    return other ? other.id : (accounts[1]?.id || accounts[0]?.id || '');
+  });
   const [date, setDate] = useState(editingMovement?.date || defaultDate || new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState(editingMovement?.note || '');
   const [receiptImage, setReceiptImage] = useState(editingMovement?.receiptImage || null);
@@ -56,6 +80,8 @@ export default function TransactionForm({
     if (editingMovement.categoryId) setCategoryId(editingMovement.categoryId);
     if (editingMovement.subcategoryId) setSubcategoryId(editingMovement.subcategoryId);
     if (editingMovement.accountId) setAccountId(editingMovement.accountId);
+    if (editingMovement.fromAccountId) setAccountId(editingMovement.fromAccountId);
+    if (editingMovement.toAccountId) setToAccountId(editingMovement.toAccountId);
     if (editingMovement.note) setNote(editingMovement.note);
     if (editingMovement.receiptImage) setReceiptImage(editingMovement.receiptImage);
   }, [editingMovement, enableDecimals]);
@@ -76,41 +102,170 @@ export default function TransactionForm({
   const availableSubcategories = (Array.isArray(selectedCategory?.subcategories) ? selectedCategory.subcategories : []).filter(Boolean);
 
   useEffect(() => {
-    if (availableCategories.length > 0 && !availableCategories.some(c => c?.id === categoryId)) {
+    if (type !== 'transfer' && availableCategories.length > 0 && !availableCategories.some(c => c?.id === categoryId)) {
       setCategoryId(availableCategories[0]?.id || '');
     }
   }, [type, availableCategories, categoryId]);
 
   useEffect(() => {
-    setSubcategoryId(availableSubcategories.some(s => s?.id === subcategoryId) ? subcategoryId : (availableSubcategories[0]?.id || ''));
-  }, [categoryId, availableSubcategories, subcategoryId]);
+    if (type !== 'transfer') {
+      setSubcategoryId(availableSubcategories.some(s => s?.id === subcategoryId) ? subcategoryId : (availableSubcategories[0]?.id || ''));
+    }
+  }, [type, categoryId, availableSubcategories, subcategoryId]);
 
   useEffect(() => {
-    if (accounts.length > 0 && !accounts.some(a => a?.id === accountId)) setAccountId(accounts[0]?.id || '');
-  }, [accounts, accountId]);
+    if (accounts.length > 0 && !accounts.some(a => a?.id === accountId)) {
+      setAccountId(accounts[0]?.id || '');
+    }
+    if (accounts.length > 1 && (!toAccountId || toAccountId === accountId)) {
+      const other = accounts.find(a => a?.id !== accountId);
+      if (other) setToAccountId(other.id);
+    }
+  }, [accounts, accountId, toAccountId]);
+
+  // Cuentas origen y destino para transferencias
+  const fromAcc = accounts.find(a => a?.id === accountId) || accounts[0] || null;
+  const toAcc = accounts.find(a => a?.id === toAccountId) || accounts.find(a => a?.id !== accountId) || null;
+
+  const numAmount = parseFormattedAmount(amount);
+
+  // Cálculo de monto destino en transferencias multidivisa
+  let destAmount = numAmount;
+  if (fromAcc?.currency && toAcc?.currency && fromAcc.currency !== toAcc.currency && numAmount > 0) {
+    const copEquivalent = convertToCOP(numAmount, fromAcc.currency, trm);
+    destAmount = convertFromCOP(copEquivalent, toAcc.currency, trm);
+  }
+
+  // Intercambio rápido de cuentas origen y destino
+  const handleSwapAccounts = () => {
+    if (!toAccountId) return;
+    const temp = accountId;
+    setAccountId(toAccountId);
+    setToAccountId(temp);
+  };
 
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
     if (e?.stopPropagation) e.stopPropagation();
     if (submittingRef.current || isSubmitting) return;
 
-    const numAmount = parseFormattedAmount(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
+      // 1. Caso Transferencia entre cuentas
+      if (type === 'transfer') {
+        if (!fromAcc || !toAcc || fromAcc.id === toAcc.id) {
+          setIsSubmitting(false);
+          submittingRef.current = false;
+          return;
+        }
+
+        const fromCurrency = fromAcc?.currency || currency || 'COP';
+        const toCurrency = toAcc?.currency || 'COP';
+
+        const transferPayload = {
+          fromAcc,
+          toAcc,
+          amount: numAmount,
+          destAmount,
+          fromCurrency,
+          toCurrency,
+          date,
+          note: note.trim()
+        };
+
+        if (typeof onTransfer === 'function') {
+          await onTransfer(transferPayload);
+        } else {
+          // Generación atómica local-first de transacciones de salida y entrada
+          const rate = fromCurrency === 'USD' ? (Number(trm) || 4050) : fromCurrency === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
+          const copAmount = fromCurrency === 'COP' ? numAmount : Math.round(numAmount * rate);
+          const inRate = toCurrency === 'USD' ? (Number(trm) || 4050) : toCurrency === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
+
+          const outId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tx-out-' + Date.now();
+          const inId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tx-in-' + (Date.now() + 1);
+
+          const outTx = {
+            id: outId,
+            date: date || new Date().toISOString().split('T')[0],
+            type: 'expense',
+            amount: copAmount,
+            originalAmount: numAmount,
+            originalCurrency: fromCurrency,
+            exchangeRate: rate,
+            categoryId: 'cat-transfer',
+            categoryName: 'Transferencias',
+            subcategoryId: 'sub-transfer-out',
+            subcategoryName: 'Transferencia Enviada',
+            accountId: fromAcc.id,
+            accountName: fromAcc.name,
+            fromAccountId: fromAcc.id,
+            toAccountId: toAcc.id,
+            note: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
+            notes: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
+            isTransfer: true,
+            updated_at: new Date().toISOString()
+          };
+
+          const inTx = {
+            id: inId,
+            date: date || new Date().toISOString().split('T')[0],
+            type: 'income',
+            amount: copAmount,
+            originalAmount: destAmount,
+            originalCurrency: toCurrency,
+            exchangeRate: inRate,
+            categoryId: 'cat-transfer',
+            categoryName: 'Transferencias',
+            subcategoryId: 'sub-transfer-in',
+            subcategoryName: 'Transferencia Recibida',
+            accountId: toAcc.id,
+            accountName: toAcc.name,
+            fromAccountId: fromAcc.id,
+            toAccountId: toAcc.id,
+            note: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
+            notes: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
+            isTransfer: true,
+            updated_at: new Date().toISOString()
+          };
+
+          if (typeof onAddTransaction === 'function') {
+            onAddTransaction(outTx);
+            onAddTransaction(inTx);
+          }
+          if (typeof onSuccess === 'function') {
+            onSuccess(outTx);
+          }
+
+          saveTransactionRecord({ txPayload: outTx, account: fromAcc, isEditing: false }).catch(() => {});
+          saveTransactionRecord({ txPayload: inTx, account: toAcc, isEditing: false }).catch(() => {});
+        }
+
+        setAmount('');
+        setNote('');
+        setReceiptImage(null);
+
+        if (typeof onClose === 'function') {
+          onClose();
+        } else {
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 1500);
+        }
+        return;
+      }
+
+      // 2. Caso Gasto o Ingreso Ordinario
       const { newTx, selectedAccount } = buildTransactionPayload({
         numAmount, currency, exchangeRate, enableDecimals, type, date, note, receiptImage,
         categoryId, subcategoryId, accountId, categories, accounts, editingMovement
       });
 
-      // 1. Guardado inmediato en estado local y LocalStorage (Local-First)
       if (typeof onAddTransaction === 'function') onAddTransaction(newTx);
       if (typeof onSuccess === 'function') onSuccess(newTx);
 
-      // 2. Limpieza de campos y cierre inmediato del modal
       setAmount('');
       setCurrency('COP');
       setExchangeRate(String(trm || 4000));
@@ -124,7 +279,6 @@ export default function TransactionForm({
         setTimeout(() => setShowSuccess(false), 1500);
       }
 
-      // 3. Sincronización remota en segundo plano (no bloqueante)
       saveTransactionRecord({ txPayload: newTx, account: selectedAccount, isEditing: Boolean(editingMovement) })
         .catch(err => {
           console.warn('[Offline/Sync] No se pudo sincronizar de inmediato con Supabase. Queda guardado localmente:', err);
@@ -163,13 +317,75 @@ export default function TransactionForm({
           onCurrencyChange={(c, r) => { setCurrency(c); if (r) setExchangeRate(r); }}
         />
       </div>
-      <TransactionAccountCategoryFields
-        type={type} accountId={accountId} setAccountId={setAccountId} accounts={accounts} onAddAccount={onAddAccount}
-        categoryId={categoryId} setCategoryId={setCategoryId} categories={categories} availableCategories={availableCategories}
-        onAddCategory={onAddCategory} subcategoryId={subcategoryId} setSubcategoryId={setSubcategoryId}
-        availableSubcategories={availableSubcategories} onAddSubcategory={onAddSubcategory}
-        onUpdateSubcategory={onUpdateSubcategory} onDeleteSubcategory={onDeleteSubcategory}
-      />
+
+      {type === 'transfer' ? (
+        /* Selectores emparejados de Cuenta Origen y Cuenta Destino para Transferencia */
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center relative">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
+                Cuenta Origen (sale dinero) *
+              </label>
+              <AccountCombobox
+                accounts={accounts}
+                selectedAccountId={accountId}
+                onSelectAccount={(newFromId) => {
+                  setAccountId(newFromId);
+                  if (newFromId === toAccountId) {
+                    const nextOther = accounts.find(a => a?.id !== newFromId);
+                    if (nextOther) setToAccountId(nextOther.id);
+                  }
+                }}
+                onAddAccount={onAddAccount}
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 select-none">
+                  Cuenta Destino (entra dinero) *
+                </label>
+                {accounts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleSwapAccounts}
+                    className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Intercambiar origen y destino"
+                  >
+                    <ArrowLeftRight className="w-3 h-3" />
+                    <span>Invertir</span>
+                  </button>
+                )}
+              </div>
+              <AccountCombobox
+                accounts={accounts.filter(a => a?.id !== accountId)}
+                selectedAccountId={toAccountId}
+                onSelectAccount={setToAccountId}
+                onAddAccount={onAddAccount}
+              />
+            </div>
+          </div>
+
+          {fromAcc?.currency && toAcc?.currency && fromAcc.currency !== toAcc.currency && numAmount > 0 && (
+            <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between">
+              <span>Monto a recibir estimado:</span>
+              <span className="font-bold font-mono">
+                ~{formatNativeCurrency(destAmount, toAcc.currency)}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Categoría y Cuenta única para Gasto o Ingreso */
+        <TransactionAccountCategoryFields
+          type={type} accountId={accountId} setAccountId={setAccountId} accounts={accounts} onAddAccount={onAddAccount}
+          categoryId={categoryId} setCategoryId={setCategoryId} categories={categories} availableCategories={availableCategories}
+          onAddCategory={onAddCategory} subcategoryId={subcategoryId} setSubcategoryId={setSubcategoryId}
+          availableSubcategories={availableSubcategories} onAddSubcategory={onAddSubcategory}
+          onUpdateSubcategory={onUpdateSubcategory} onDeleteSubcategory={onDeleteSubcategory}
+        />
+      )}
+
       <TransactionDetailsFields
         date={date} setDate={setDate} note={note} setNote={setNote}
         receiptImage={receiptImage} setReceiptImage={setReceiptImage}
@@ -180,8 +396,9 @@ export default function TransactionForm({
   if (isModal) {
     return (
       <TransactionFormModalLayout
-        onClose={onClose} onSubmit={handleSubmit} isSubmitting={isSubmitting}
-        showSuccess={showSuccess} type={type}
+        isModal={isModal} isSubmitting={isSubmitting} showSuccess={showSuccess}
+        editingMovement={editingMovement} handleSubmit={handleSubmit} onClose={onClose}
+        type={type}
       >
         {formFields}
       </TransactionFormModalLayout>
@@ -189,18 +406,12 @@ export default function TransactionForm({
   }
 
   return (
-    <div className="ios-card p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h2 className="text-sm font-bold flex items-center gap-1.5"><span>Registro Rápido</span></h2>
-          <p className="text-[11px] opacity-60">Ingresa transacciones detalladas</p>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {formFields}
+      <SuccessAlert show={showSuccess} />
+      <div className="flex justify-end pt-2">
+        <SubmitBtn type={type} isSubmitting={isSubmitting} />
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {formFields}
-        <div className="pt-2"><SubmitBtn type={type} isSubmitting={isSubmitting} fullWidth /></div>
-        <SuccessAlert show={showSuccess} />
-      </form>
-    </div>
+    </form>
   );
 }

@@ -17,6 +17,10 @@ import {
   convertFromCOP
 } from '../../../utils/currencyUtils';
 
+/**
+ * @deprecated TransferModal is deprecated and kept for backwards compatibility.
+ * Transfer between accounts has been integrated into TransactionForm / AddTransactionModal as the 'transfer' tab.
+ */
 export default function TransferModal({
   isOpen = false,
   onClose,

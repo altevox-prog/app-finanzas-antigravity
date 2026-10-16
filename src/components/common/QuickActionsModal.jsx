@@ -2,8 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowUpDown, 
-  ArrowLeftRight, 
+  PlusCircle, 
   TrendingUp, 
   CalendarSync, 
   HandCoins,
@@ -127,7 +126,7 @@ export default function QuickActionsModal(props) {
 
         {/* Lista de Opciones */}
         <div className="flex flex-col gap-2">
-          {/* 1. Nuevo movimiento (Gasto o Ingreso) */}
+          {/* 1. Registrar transacción (Gasto, Ingreso o Transferencia) */}
           <button
             type="button"
             onClick={(e) => {
@@ -150,47 +149,14 @@ export default function QuickActionsModal(props) {
             className="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 active:bg-slate-100 dark:active:bg-white/10 hover:bg-slate-100/80 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/5 text-left transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 hover:shadow-md cursor-pointer select-none group pointer-events-auto"
           >
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <ArrowUpDown className="w-5 h-5" />
+              <PlusCircle className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
               <span className="font-semibold text-sm text-slate-900 dark:text-white block truncate">
-                Nuevo movimiento
+                Registrar transacción
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                Registrar gasto o ingreso
-              </span>
-            </div>
-          </button>
-
-          {/* 2. Transferencia */}
-          <button
-            type="button"
-            onClick={() => {
-              handleSelectAction(() => {
-                if (typeof openTransfer === 'function') {
-                  openTransfer();
-                } else if (typeof handleOpenTransfer === 'function') {
-                  handleOpenTransfer();
-                } else if (modalControls && typeof modalControls.openTransfer === 'function') {
-                  modalControls.openTransfer();
-                } else if (typeof onOpenTransfer === 'function') {
-                  onOpenTransfer();
-                } else if (financeActions && typeof financeActions.openTransfer === 'function') {
-                  financeActions.openTransfer();
-                }
-              });
-            }}
-            className="w-full flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 active:bg-slate-100 dark:active:bg-white/10 hover:bg-slate-100/80 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/5 text-left transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 hover:shadow-md cursor-pointer select-none group pointer-events-auto"
-          >
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <ArrowLeftRight className="w-5 h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="font-semibold text-sm text-slate-900 dark:text-white block truncate">
-                Transferencia
-              </span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                Mover dinero entre tus cuentas
+                Gasto, ingreso o transferencia
               </span>
             </div>
           </button>

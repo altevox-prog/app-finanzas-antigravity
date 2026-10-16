@@ -14,6 +14,7 @@ export default function AddTransactionModal({
   onClose,
   onSave,
   onAddTransaction,
+  onTransfer,
   accounts: propAccounts,
   categories: propCategories,
   trm = 4050,
@@ -68,6 +69,7 @@ export default function AddTransactionModal({
         accounts={accounts}
         categories={categories}
         onAddTransaction={handleSave}
+        onTransfer={onTransfer || rest.onTransfer}
         isModal={true}
         onClose={onClose}
         trm={trm}

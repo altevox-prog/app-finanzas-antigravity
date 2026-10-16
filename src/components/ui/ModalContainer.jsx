@@ -203,6 +203,7 @@ export default function ModalContainer({
             onClose={merged.closeAddTransaction || merged.closeTx || merged.closeTransactionModal || closeTx}
             onSave={handleSaveTransaction}
             onAddTransaction={handleAddTransaction}
+            onTransfer={merged.onTransfer || handleExecuteTransfer}
             accounts={accounts}
             categories={categories}
             onAddCategory={handleAddCategory}

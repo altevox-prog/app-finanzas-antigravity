@@ -29,7 +29,9 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
   // Setters defensivos y robustos
   const setIsAddTransactionOpen = useCallback((val) => {
     if (typeof val === 'string') {
-      const safeType = (val === 'income' || val === 'ingreso') ? 'income' : 'expense';
+      let safeType = 'expense';
+      if (val === 'income' || val === 'ingreso') safeType = 'income';
+      else if (val === 'transfer' || val === 'transferencia') safeType = 'transfer';
       setTxDefaultType(safeType);
       setIsAddTxOpen(true);
     } else {
@@ -58,7 +60,11 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
 
   // Handlers de apertura obligatoria (con o sin argumento)
   const openAddTransaction = useCallback((type = 'expense') => {
-    const safeType = (typeof type === 'string' && (type === 'income' || type === 'ingreso')) ? 'income' : 'expense';
+    let safeType = 'expense';
+    if (typeof type === 'string') {
+      if (type === 'income' || type === 'ingreso') safeType = 'income';
+      else if (type === 'transfer' || type === 'transferencia') safeType = 'transfer';
+    }
     setTxDefaultType(safeType);
     setIsAddTxOpen(true);
   }, []);
@@ -85,8 +91,8 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
   const handleOpenAddDebt = openAddDebt;
 
   const handleOpenTransfer = useCallback(() => {
-    setIsTransferModalOpen(true);
-  }, []);
+    openAddTransaction('transfer');
+  }, [openAddTransaction]);
 
   const openTransfer = handleOpenTransfer;
 
