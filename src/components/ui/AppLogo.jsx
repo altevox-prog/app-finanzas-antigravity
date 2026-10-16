@@ -47,7 +47,6 @@ export default function AppLogo({
             <span className={`font-black tracking-tight leading-none text-slate-900 dark:text-white ${textClassName || 'text-base sm:text-lg'}`}>
               Monety
             </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
           </div>
           {subtitle && (
             <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 tracking-wide mt-0.5">

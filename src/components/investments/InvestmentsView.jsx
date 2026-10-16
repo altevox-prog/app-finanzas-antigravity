@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Plus } from 'lucide-react';
 import { 
   INVESTMENT_CATEGORIES, 
   formatCurrency, 
@@ -76,6 +76,32 @@ export default function InvestmentsView({
     setLivePrices
   } = useInvestmentQuotes({ investments });
 
+  // Notificar estado de refresco a TopAppBar
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('monety:investment-quotes-status', {
+      detail: { isRefreshing }
+    }));
+  }, [isRefreshing]);
+
+  // Escuchar eventos globales de TopAppBar (añadir inversión y refrescar cotizaciones)
+  useEffect(() => {
+    const handleOpenAdd = () => {
+      setEditingInvestment(null);
+      setIsFormModalOpen(true);
+    };
+    const handleRefresh = () => {
+      handleRefreshQuotes();
+    };
+
+    window.addEventListener('monety:open-add-investment', handleOpenAdd);
+    window.addEventListener('monety:refresh-investment-quotes', handleRefresh);
+
+    return () => {
+      window.removeEventListener('monety:open-add-investment', handleOpenAdd);
+      window.removeEventListener('monety:refresh-investment-quotes', handleRefresh);
+    };
+  }, [handleRefreshQuotes]);
+
   // Modal State for Add / Edit Investment
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState(null);
@@ -151,23 +177,12 @@ export default function InvestmentsView({
   return (
     <div className="space-y-4 pb-36 animate-fadeIn">
       {/* ============================================================== */}
-      {/* 1. RESUMEN TOTAL DEL PORTAFOLIO DE INVERSIONES (CABECERA) */}
+      {/* 1. RESUMEN TOTAL DEL PORTAFOLIO DE INVERSIONES (HERO CARD 3 EN 1) */}
       {/* ============================================================== */}
       <PortfolioSummaryHeader
         portfolioMetrics={portfolioMetrics}
         allocationByCategory={allocationByCategory}
-        viewCurrency={viewCurrency}
-        onToggleCurrency={handleSetViewCurrency}
-        isRefreshing={isRefreshing}
-        lastRefreshedAt={lastRefreshedAt}
-        onRefreshQuotes={handleRefreshQuotes}
-        onNewInvestment={() => {
-          setEditingInvestment(null);
-          setIsFormModalOpen(true);
-        }}
         trm={trm}
-        investmentsCount={investments.length}
-        onBack={onBack}
       />
 
       {/* ============================================================== */}
@@ -187,18 +202,41 @@ export default function InvestmentsView({
       <div className="space-y-3">
         {filteredInvestments.length === 0 ? (
           <div 
-            className="text-center py-10 px-4 border border-dashed rounded-3xl"
+            className="text-center py-6 px-4 border border-dashed rounded-2xl flex flex-col items-center justify-center"
             style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card-sub)' }}
           >
-            <TrendingUp className="w-8 h-8 opacity-30 mx-auto mb-2 text-emerald-500" />
+            <TrendingUp className="w-7 h-7 opacity-35 mx-auto mb-2 text-emerald-500" />
             <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
               {investments.length === 0 
                 ? 'No tienes inversiones registradas' 
                 : 'No hay inversiones en esta categoría'}
             </p>
-            <p className="text-[11px] opacity-50 mt-0.5">
-              Usa el botón central (+) para registrar acciones, ETFs, criptoactivos o CDTs con cotización en tiempo real.
+            <p className="text-[11px] opacity-60 mt-1 max-w-sm text-center">
+              {investments.length === 0 
+                ? 'Registra tus acciones, ETFs, criptoactivos o CDTs para hacer seguimiento en tiempo real.'
+                : 'No se encontraron activos con el filtro seleccionado.'}
             </p>
+            {investments.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingInvestment(null);
+                  setIsFormModalOpen(true);
+                }}
+                className="mt-3.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Registrar primera inversión</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryFilter('all')}
+                className="mt-3 px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-700/80 transition-all cursor-pointer active:scale-95"
+              >
+                Ver todas las inversiones
+              </button>
+            )}
           </div>
         ) : viewGrouping === 'flat' ? (
           /* ============================================================== */

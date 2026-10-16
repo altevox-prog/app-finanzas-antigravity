@@ -13,7 +13,8 @@ import {
   CreditCard, 
   Receipt, 
   Target, 
-  AlertTriangle 
+  AlertTriangle,
+  RotateCw 
 } from 'lucide-react';
 import AppLogo from '../ui/AppLogo';
 import Avatar from '../ui/Avatar';
@@ -88,6 +89,9 @@ export default function TopAppBar({
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const [activeFilterCount, setActiveFilterCount] = useState(0);
 
+  // Estado para refresco de cotizaciones en tiempo real
+  const [isRefreshingQuotes, setIsRefreshingQuotes] = useState(false);
+
   // Estado del modal de notificaciones
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -107,7 +111,7 @@ export default function TopAppBar({
     savingsGoals
   });
 
-  // Suscripción a eventos de filtros y búsqueda desde TransactionList
+  // Suscripción a eventos de filtros y búsqueda desde TransactionList e Inversiones
   useEffect(() => {
     const handleFilterStatus = (e) => {
       if (e?.detail) {
@@ -120,13 +124,20 @@ export default function TopAppBar({
         setIsSearchActive(Boolean(e.detail.isSearchOpen || e.detail.hasSearchTerm));
       }
     };
+    const handleQuotesStatus = (e) => {
+      if (e?.detail) {
+        setIsRefreshingQuotes(Boolean(e.detail.isRefreshing));
+      }
+    };
 
     window.addEventListener('monety:filter-status-changed', handleFilterStatus);
     window.addEventListener('monety:search-status-changed', handleSearchStatus);
+    window.addEventListener('monety:investment-quotes-status', handleQuotesStatus);
 
     return () => {
       window.removeEventListener('monety:filter-status-changed', handleFilterStatus);
       window.removeEventListener('monety:search-status-changed', handleSearchStatus);
+      window.removeEventListener('monety:investment-quotes-status', handleQuotesStatus);
     };
   }, []);
 
@@ -167,6 +178,14 @@ export default function TopAppBar({
     }
   };
 
+  const handleRefreshQuotesClick = () => {
+    setIsRefreshingQuotes(true);
+    window.dispatchEvent(new CustomEvent('monety:refresh-investment-quotes'));
+    setTimeout(() => {
+      setIsRefreshingQuotes(false);
+    }, 1500);
+  };
+
   const handleAddDebtClick = () => {
     if (typeof onOpenAddDebt === 'function') {
       onOpenAddDebt();
@@ -184,99 +203,125 @@ export default function TopAppBar({
   };
 
   return (
-    <header 
-      className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md border-b border-slate-200/60 dark:border-zinc-800/60 transition-all select-none shadow-xs shrink-0 relative"
-      style={{ 
-        paddingTop: 'max(env(safe-area-inset-top), 0px)'
-      }}
-    >
-      {/* ============================================================== */}
-      {/* SECCIÓN IZQUIERDA: Logo (Dashboard) o Botón Retroceso (Vistas) */}
-      {/* ============================================================== */}
-      <div className="flex items-center shrink-0 z-10">
-        {isDashboard ? (
-          <AppLogo size="md" showText={true} />
-        ) : (
-          <button
-            type="button"
-            onClick={handleBack}
-            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer border border-slate-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xs shrink-0"
-            aria-label="Volver al inicio"
-            title="Volver al inicio"
-          >
-            <ArrowLeft className="w-4.5 h-4.5" />
-          </button>
-        )}
-      </div>
+    <>
+      <header 
+        className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between transition-all select-none shrink-0 relative overflow-hidden bg-slate-950/90 dark:bg-black/95 backdrop-blur-md border-b border-emerald-500/35 shadow-lg shadow-black/20"
+        style={{ 
+          paddingTop: 'max(env(safe-area-inset-top), 0px)'
+        }}
+      >
+        {/* Línea base sutil con difuminado lateral */}
+        <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent pointer-events-none z-0" />
+       
+        {/* Haz de resplandor neón ascendente concentrado en el centro */}
+        <div 
+          className="absolute inset-x-0 bottom-0 h-6 pointer-events-none z-0"
+          style={{
+            background: 'radial-gradient(ellipse 60% 100% at 50% 100%, rgba(16, 185, 129, 0.28) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 100%)'
+          }}
+        />
 
-      {/* ============================================================== */}
-      {/* SECCIÓN CENTRAL: Título Rigurosamente Centrado (Vistas sec.)   */}
-      {/* ============================================================== */}
-      {!isDashboard && (
-        <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] sm:max-w-[65%] text-center pointer-events-none px-2 z-0">
-          <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate tracking-tight">
-            {title}
-          </h1>
+        {/* ============================================================== */}
+        {/* SECCIÓN IZQUIERDA: Logo (Dashboard) o Botón Retroceso (Vistas) */}
+        {/* ============================================================== */}
+        <div className="flex items-center shrink-0 relative z-10">
+          {isDashboard ? (
+            <div className="flex items-center gap-2.5">
+              <AppLogo size="md" showText={false} />
+              <span className="text-base sm:text-lg font-bold text-slate-100 tracking-tight select-none">
+                Finanzas al día
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
+              aria-label="Volver al inicio"
+              title="Volver al inicio"
+            >
+              <ArrowLeft className="w-4.5 h-4.5" />
+            </button>
+          )}
         </div>
-      )}
 
-      {/* ============================================================== */}
-      {/* SECCIÓN DERECHA: Acciones Contextuales                          */}
-      {/* ============================================================== */}
-      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto z-10">
-        {/* Caso 1: Dashboard -> Campana + Avatar */}
+        {/* ============================================================== */}
+        {/* SECCIÓN CENTRAL: Título Rigurosamente Centrado (Vistas sec.)   */}
+        {/* ============================================================== */}
+        {!isDashboard && (
+          <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] sm:max-w-[65%] text-center pointer-events-none px-2 z-10">
+            <h1 className="text-base sm:text-lg font-bold text-slate-100 truncate tracking-tight">
+              {title}
+            </h1>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* SECCIÓN DERECHA: Acciones Contextuales                          */}
+        {/* ============================================================== */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto relative z-10">
+        {/* Caso 1: Dashboard -> Campana + Avatar con Anillo de Luz Neón */}
         {isDashboard && (
           <>
-            {/* Campana de Notificaciones con Badge dinámico */}
+            {/* Campana de Notificaciones Dark Neón */}
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(true)}
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 transition-all relative cursor-pointer text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-xs"
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all relative cursor-pointer shadow-sm"
               title={hasNotifications ? `${activeAlerts.length} alertas pendientes` : "Sin notificaciones"}
               aria-label="Notificaciones"
             >
               <Bell className="w-4.5 h-4.5" />
               {hasNotifications && (
                 <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border-2 border-white dark:border-[#09090b]" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-950" />
                 </span>
               )}
             </button>
 
-            {/* Avatar de Perfil Interactivo */}
+            {/* Avatar de Perfil con Anillo Neón Adherido (Cero Separación) */}
             <button
               type="button"
               onClick={() => {
                 if (onOpenProfile) onOpenProfile();
                 else if (onOpenSettings) onOpenSettings();
               }}
-              className="flex items-center justify-center select-none cursor-pointer active:scale-95 transition-transform p-0.5 rounded-full focus:outline-none"
+              className="flex items-center justify-center select-none cursor-pointer active:scale-95 transition-transform focus:outline-none"
               title={`Perfil - ${userProfile?.name || 'Usuario'}`}
               aria-label={`Perfil - ${userProfile?.name || 'Usuario'}`}
             >
-              <Avatar 
-                src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
-                name={syncUser?.user_metadata?.full_name || userProfile?.name} 
-                email={syncUser?.email || userProfile?.email}
-                size="sm" 
-                showStatus={false} 
-              />
+              <div className="relative inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10">
+                {/* Anillo de pulso neón adherido al perímetro exacto */}
+                <span className="absolute inset-0 rounded-full border-2 border-emerald-400 dark:border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.85)] animate-pulse pointer-events-none z-0" />
+                
+                {/* Círculo interior del avatar/iniciales encajado al 100% */}
+                <div className="relative z-10 w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                  <Avatar 
+                    src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
+                    name={syncUser?.user_metadata?.full_name || userProfile?.name} 
+                    email={syncUser?.email || userProfile?.email}
+                    size="sm" 
+                    className="!w-full !h-full"
+                    showStatus={false} 
+                  />
+                </div>
+              </div>
             </button>
           </>
         )}
 
-        {/* Caso 2: Transacciones -> Lupa (Search) + Filtros avanzados */}
+        {/* Caso 2: Transacciones -> Lupa (Search) + Filtros avanzados Dark Glass */}
         {isTransactions && (
           <>
             {/* Botón Lupa */}
             <button
               type="button"
               onClick={handleToggleSearch}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border shadow-2xs active:scale-95 ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
                 isSearchActive
-                  ? 'bg-[#007AFF] text-white border-[#007AFF]'
-                  : 'bg-slate-100 dark:bg-zinc-800/80 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-200 border-slate-200/70 dark:border-white/10'
+                  ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
+                  : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
               }`}
               title="Buscar movimientos"
               aria-label="Buscar movimientos"
@@ -284,21 +329,21 @@ export default function TopAppBar({
               <Search className="w-4 h-4" />
             </button>
 
-            {/* Botón Filtros Avanzados con badge numérico */}
+            {/* Botón Filtros Avanzados con badge verde esmeralda */}
             <button
               type="button"
               onClick={handleOpenFilterModal}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border shadow-2xs active:scale-95 relative ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm relative ${
                 hasActiveFilters
-                  ? 'bg-[#007AFF]/15 text-[#007AFF] border-[#007AFF]/40'
-                  : 'bg-slate-100 dark:bg-zinc-800/80 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-200 border-slate-200/70 dark:border-white/10'
+                  ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
+                  : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
               }`}
               title="Filtros avanzados"
               aria-label="Filtros avanzados"
             >
               <SlidersHorizontal className="w-4 h-4" />
               {hasActiveFilters && (
-                <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#007AFF] text-white text-[9px] font-mono font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm">
+                <span className="min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-slate-950 font-bold text-[10px] flex items-center justify-center absolute -top-1 -right-1 shadow-sm">
                   {activeFilterCount}
                 </span>
               )}
@@ -306,37 +351,55 @@ export default function TopAppBar({
           </>
         )}
 
-        {/* Caso 3: Inversiones -> Modo discreto (Privacidad) + Botón + Inversión */}
+        {/* Caso 3: Inversiones -> Modo discreto + Refrescar cotizaciones + Botón + Inversión Dark Glass */}
         {isInvestments && (
           <>
+            {/* 1. Botón Ocultar/Mostrar Saldos */}
             <button
               type="button"
               onClick={togglePrivacyMode}
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-200 border border-slate-200/70 dark:border-white/10 shadow-2xs active:scale-95 transition-all cursor-pointer"
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+                isPrivacyMode
+                  ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
+                  : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+              }`}
               title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"}
               aria-label="Modo discreto"
             >
-              {isPrivacyMode ? <EyeOff className="w-4 h-4 text-amber-500" /> : <Eye className="w-4 h-4" />}
+              {isPrivacyMode ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
             </button>
 
+            {/* 2. Botón Icono Circular Refrescar Cotizaciones */}
+            <button
+              type="button"
+              onClick={handleRefreshQuotesClick}
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 active:rotate-180 transition-all cursor-pointer shadow-sm"
+              title="Actualizar cotizaciones en tiempo real"
+              aria-label="Actualizar cotizaciones"
+            >
+              <RotateCw className={`w-4 h-4 ${isRefreshingQuotes ? 'animate-spin text-emerald-400' : ''}`} />
+            </button>
+
+            {/* 3. Botón de Acción Rápida + para Registrar Nueva Inversión */}
             <button
               type="button"
               onClick={handleAddInvestmentClick}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="w-9 h-9 sm:w-auto sm:px-3 sm:py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
               title="Registrar nueva inversión"
+              aria-label="Registrar nueva inversión"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
               <span className="hidden sm:inline">Inversión</span>
             </button>
           </>
         )}
 
-        {/* Caso 4: Préstamos y Deudas -> Botón + Nuevo */}
+        {/* Caso 4: Préstamos y Deudas -> Botón + Nuevo Dark Glass */}
         {isDebts && (
           <button
             type="button"
             onClick={handleAddDebtClick}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
             title="Registrar nuevo préstamo o deuda"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -344,12 +407,12 @@ export default function TopAppBar({
           </button>
         )}
 
-        {/* Caso 5: Cuentas y Métodos -> Botón + Cuenta */}
+        {/* Caso 5: Cuentas y Métodos -> Botón + Cuenta Dark Glass */}
         {isAccounts && (
           <button
             type="button"
             onClick={handleAddAccountClick}
-            className="px-3 py-1.5 rounded-xl bg-[#007AFF] hover:bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
             title="Añadir nueva cuenta"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -357,25 +420,26 @@ export default function TopAppBar({
           </button>
         )}
 
-        {/* Caso 6: Otras vistas (recurrentes, impuestos, etc.) -> Campana o fallback */}
+        {/* Caso 6: Otras vistas secundarias -> Campana Dark Glass */}
         {!isDashboard && !isTransactions && !isInvestments && !isDebts && !isAccounts && (
           <button
             type="button"
             onClick={() => setIsNotificationsOpen(true)}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 transition-all relative cursor-pointer text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-xs"
+            className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all relative cursor-pointer shadow-sm"
             title={hasNotifications ? `${activeAlerts.length} alertas pendientes` : "Sin notificaciones"}
             aria-label="Notificaciones"
           >
             <Bell className="w-4.5 h-4.5" />
             {hasNotifications && (
               <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border-2 border-white dark:border-[#09090b]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-950" />
               </span>
             )}
           </button>
         )}
       </div>
+    </header>
 
       {/* ============================================================== */}
       {/* DRAWER / MODAL DE NOTIFICACIONES                               */}
@@ -562,6 +626,6 @@ export default function TopAppBar({
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

@@ -22,14 +22,14 @@ export default function InvestmentFilterBar({
   return (
     <>
       {/* 1. BARRA DE FILTROS POR CATEGORÍA */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full">
         <button
           type="button"
           onClick={() => onSelectCategory && onSelectCategory('all')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer active:scale-95 ${
             selectedCategory === 'all'
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'bg-white dark:bg-[#121622] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+              ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+              : 'bg-white/80 dark:bg-zinc-900/80 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800/60'
           }`}
         >
           Todos ({totalCount})
@@ -48,10 +48,10 @@ export default function InvestmentFilterBar({
               key={cat.id}
               type="button"
               onClick={() => onSelectCategory && onSelectCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                 isSelected
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-[#121622] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5'
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                  : 'bg-white/80 dark:bg-zinc-900/80 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800/60'
               }`}
             >
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />

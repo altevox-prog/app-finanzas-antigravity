@@ -1,18 +1,18 @@
 import React from 'react';
 import { 
   TrendingUp, 
-  TrendingDown, 
-  RefreshCw
+  TrendingDown 
 } from 'lucide-react';
 import { usePrivacy } from '../../../context/PrivacyContext';
-import { formatCurrency, formatUSD } from '../../../data/initialData';
+import { formatCurrency } from '../../../data/initialData';
 
 /**
  * PortfolioSummaryHeader
- * Cabecera principal del módulo de inversiones:
- * - Título, indicador "En vivo" y timestamp de última actualización
- * - Controles: selector/toggle de divisa, botón de refresco de cotizaciones y botón "Nueva inversión"
- * - Tarjetas de KPI: Capital Invertido, Valor Actual del Portafolio y Rendimiento acumulado (PnL)
+ * Hero Card de Portafolio consolidada (3 en 1):
+ * - Bloque Superior: Valor Total del Portafolio + Badge dinámico de Rendimiento porcentual
+ * - Divisor sutil
+ * - Bloque Inferior: Grid de 2 columnas compactas (Capital Invertido | Rendimiento no realizado)
+ * - Pie de tarjeta: TRM y equivalente en USD
  * - Barra segmentada de distribución de activos por categoría
  */
 export default function PortfolioSummaryHeader({
@@ -29,172 +29,95 @@ export default function PortfolioSummaryHeader({
   investmentsCount = 0,
   onBack = null
 }) {
-  const { formatMoney, isPrivacyMode, enableDecimals } = usePrivacy();
-  const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
+  const { formatMoney, isPrivacyMode } = usePrivacy();
 
-  const formatInvestMoney = (amount, currency = viewCurrency) => {
-    if (currency === 'USD') {
-      return formatUSD(amount, isPrivacyMode, showDecimals);
-    }
-    return formatCurrency(amount, isPrivacyMode, showDecimals);
-  };
-
-  const handleCurrencySelect = (currency) => {
-    if (onToggleCurrency) {
-      onToggleCurrency(currency);
-    } else if (setViewCurrency) {
-      setViewCurrency(currency);
-    }
-  };
+  const isPositive = portfolioMetrics?.isPositive ?? true;
+  const totalValueCOP = portfolioMetrics?.totalValueCOP || 0;
+  const totalCostCOP = portfolioMetrics?.totalCostCOP || 0;
+  const netGainCOP = portfolioMetrics?.netGainCOP || 0;
+  const totalValueUSD = portfolioMetrics?.totalValueUSD || 0;
+  const totalPercentage = portfolioMetrics?.totalPercentage || 0;
 
   return (
-    <div 
-      className="p-4 sm:p-5 rounded-3xl border shadow-sm space-y-4"
-      style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
-    >
-      {/* Sub-barra de controles: Estado En vivo + Moneda y Actualización */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--border-color)' }}>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>En vivo</span>
+    <div className="rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-zinc-800/80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-sm shadow-sm space-y-3">
+      {/* ============================================================== */}
+      {/* BLOQUE SUPERIOR: Métrica Principal (Valor Total del Portafolio)*/}
+      {/* ============================================================== */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 block tracking-normal">
+            Valor Total del Portafolio
           </span>
-          {lastRefreshedAt && (
-            <span className="text-[11px] text-slate-400 font-medium">
-              • {lastRefreshedAt.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          )}
+          <div className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight tabular-nums mt-1 text-slate-900 dark:text-white">
+            {formatMoney(totalValueCOP, 'COP')}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Selector / Toggle de Moneda */}
-          {(onToggleCurrency || setViewCurrency) && (
-            <div className="flex items-center rounded-xl bg-slate-100 dark:bg-white/5 p-0.5 border border-slate-200/60 dark:border-white/10">
-              <button
-                type="button"
-                onClick={() => handleCurrencySelect('COP')}
-                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  viewCurrency === 'COP'
-                    ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                COP
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCurrencySelect('USD')}
-                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  viewCurrency === 'USD'
-                    ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                USD
-              </button>
-            </div>
-          )}
-
-          {/* Botón de Actualización Rápida */}
-          <button
-            type="button"
-            onClick={onRefreshQuotes}
-            disabled={isRefreshing || investmentsCount === 0}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200/60 dark:border-white/10 active:scale-95 disabled:opacity-50"
-            title="Actualizar cotizaciones en tiempo real"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isRefreshing ? 'Actualizando...' : '↺ Actualizar cotizaciones'}</span>
-          </button>
+        {/* Badge dinámico de rendimiento porcentual */}
+        <div className="self-start sm:self-end">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold font-mono tracking-tight tabular-nums border ${
+            isPositive 
+              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+              : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+          }`}>
+            {isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+            <span>
+              {isPrivacyMode ? '••••%' : `${isPositive ? '+' : ''}${totalPercentage.toFixed(2)}%`}
+            </span>
+          </span>
         </div>
       </div>
 
-      {/* 3 Tarjetas Principales del Portafolio: Capital Invertido, Valor Actual y Rendimiento */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Tarjeta 1: Capital Invertido (Costo base) */}
-        <div 
-          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between"
-          style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-        >
-          <div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
-              Capital Invertido
-            </span>
-            <div className="text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums mt-1 text-slate-900 dark:text-zinc-100">
-              {formatMoney(portfolioMetrics?.totalCostCOP || 0, 'COP')}
-            </div>
-          </div>
+      {/* DIVISOR SUTIL */}
+      <div className="border-t border-slate-100 dark:border-zinc-800/60 my-3" />
 
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
-            <span className="font-mono tabular-nums tracking-tight">≈ {formatMoney(portfolioMetrics?.totalCostUSD || 0, 'USD')}</span>
+      {/* ============================================================== */}
+      {/* BLOQUE INFERIOR: Grid de 2 columnas compactas                  */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        {/* Columna 1: Capital Invertido */}
+        <div>
+          <span className="text-xs text-slate-500 dark:text-zinc-400 block font-medium">
+            Capital Invertido
+          </span>
+          <div className="text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums mt-0.5 text-slate-800 dark:text-zinc-200">
+            {formatMoney(totalCostCOP, 'COP')}
           </div>
         </div>
 
-        {/* Tarjeta 2: Valor Actual de Mercado / Valor Total del Portafolio */}
-        <div 
-          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between"
-          style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-        >
-          <div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
-              Valor Total del Portafolio
-            </span>
-            <div className="text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums mt-1 text-emerald-600 dark:text-emerald-400">
-              {formatMoney(portfolioMetrics?.totalValueCOP || 0, 'COP')}
-            </div>
-          </div>
-
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 font-medium flex-wrap">
-            <span className="font-mono tabular-nums tracking-tight">≈ {formatMoney(portfolioMetrics?.totalValueUSD || 0, 'USD')}</span>
-            <span>•</span>
-            <span className="font-mono tabular-nums tracking-tight text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-              TRM: {formatInvestMoney(trm || 4050, 'COP')}
-            </span>
-          </div>
-        </div>
-
-        {/* Tarjeta 3: Rendimiento no realizado / Ganancia */}
-        <div 
-          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between"
-          style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}
-        >
-          <div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block tracking-normal">
-              Rendimiento no realizado
-            </span>
-            <div className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums mt-1 ${
-              portfolioMetrics?.isPositive ? 'text-emerald-500' : 'text-rose-500'
-            }`}>
-              {portfolioMetrics?.isPositive ? '+' : ''}{formatMoney(portfolioMetrics?.netGainCOP || 0, 'COP')}
-            </div>
-          </div>
-
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold font-mono tracking-tight tabular-nums border ${
-              portfolioMetrics?.isPositive 
-                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-            }`}>
-              {portfolioMetrics?.isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-              {portfolioMetrics?.isPositive ? '+' : ''}{(portfolioMetrics?.totalPercentage || 0).toFixed(2)}%
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono tracking-tight tabular-nums">
-              ({portfolioMetrics?.isPositive ? '+' : ''}{formatMoney(portfolioMetrics?.netGainUSD || 0, 'USD')})
-            </span>
+        {/* Columna 2: Rendimiento no realizado */}
+        <div>
+          <span className="text-xs text-slate-500 dark:text-zinc-400 block font-medium">
+            Rendimiento no realizado
+          </span>
+          <div className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums mt-0.5 ${
+            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'
+          }`}>
+            {isPositive ? '+' : ''}{formatMoney(netGainCOP, 'COP')}
           </div>
         </div>
       </div>
 
-      {/* Distribución de Activos Segmentada */}
+      {/* ============================================================== */}
+      {/* PIE DE TARJETA: TRM y Equivalente en USD                       */}
+      {/* ============================================================== */}
+      <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/40 flex items-center justify-between text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
+        <span>≈ {formatMoney(totalValueUSD, 'USD')}</span>
+        <span>TRM: {formatCurrency(trm || 4050, false, false)}</span>
+      </div>
+
+      {/* ============================================================== */}
+      {/* DISTRIBUCIÓN DE ACTIVOS SEGMENTADA                              */}
+      {/* ============================================================== */}
       {allocationByCategory && allocationByCategory.length > 0 && (
-        <div className="pt-2 space-y-2 border-t" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div className="pt-2 space-y-1.5 border-t border-slate-100 dark:border-zinc-800/40">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-zinc-400">
             <span className="font-semibold">Distribución de Activos</span>
-            <span className="tabular-nums font-mono text-[11px]">100% Portafolio</span>
+            <span className="tabular-nums font-mono">100% Portafolio</span>
           </div>
 
           {/* Barra segmentada */}
-          <div className="w-full h-2.5 bg-black/5 dark:bg-white/10 rounded-full flex overflow-hidden p-0.5 gap-0.5">
+          <div className="w-full h-2 bg-black/5 dark:bg-white/10 rounded-full flex overflow-hidden p-0.5 gap-0.5">
             {allocationByCategory.map(item => (
               <div
                 key={item.id}
@@ -208,13 +131,13 @@ export default function PortfolioSummaryHeader({
             ))}
           </div>
 
-          {/* Leyenda de Categorías */}
-          <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px]">
+          {/* Leyenda compacta de Categorías */}
+          <div className="flex flex-wrap items-center gap-2.5 pt-0.5 text-[10px]">
             {allocationByCategory.map(item => (
-              <div key={item.id} className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+              <div key={item.id} className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                 <span className="font-bold text-slate-700 dark:text-slate-300">{item.shortName}:</span>
-                <span className="opacity-70 tabular-nums">{item.percent}%</span>
+                <span className="text-slate-500 dark:text-zinc-400 tabular-nums">{item.percent}%</span>
               </div>
             ))}
           </div>
