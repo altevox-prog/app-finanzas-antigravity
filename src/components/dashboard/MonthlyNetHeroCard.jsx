@@ -83,7 +83,7 @@ export default function MonthlyNetHeroCard({
 
   return (
     <div 
-      className={`w-full bg-white dark:bg-zinc-900/90 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-white/[0.08] shadow-sm select-none transition-all ${className}`}
+      className={`w-full bg-white dark:bg-zinc-900/90 rounded-2xl sm:rounded-3xl p-4 sm:p-4.5 border border-slate-200/80 dark:border-white/[0.08] shadow-sm select-none transition-all ${className}`}
     >
       {/* 1. Cabecera */}
       <div className="flex items-center justify-between gap-3">
@@ -125,7 +125,7 @@ export default function MonthlyNetHeroCard({
       </div>
 
       {/* 2. Cifra Central Protagonista */}
-      <div className="my-3.5 sm:my-4 flex items-center gap-3">
+      <div className="my-2 sm:my-2.5 flex items-center gap-2.5 sm:gap-3">
         {/* Dot / Indicador de estado dinámico */}
         <span 
           className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full shrink-0 transition-all ${
@@ -156,25 +156,25 @@ export default function MonthlyNetHeroCard({
       </div>
 
       {/* 3. Bandeja inferior integrada (cápsula interna estilizada: DOS columnas simétricas 50% / 50%) */}
-      <div className="mt-4 sm:mt-5 p-3.5 sm:p-4 rounded-2xl bg-slate-50/90 dark:bg-zinc-800/40 border border-slate-200/70 dark:border-white/[0.06] grid grid-cols-2 divide-x divide-slate-200/70 dark:divide-white/[0.08]">
+      <div className="mt-3 sm:mt-3.5 py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-2xl bg-slate-50/90 dark:bg-zinc-800/40 border border-slate-200/70 dark:border-white/[0.06] grid grid-cols-2 divide-x divide-slate-200/70 dark:divide-white/[0.08]">
         {/* Columna 1: Ingresos */}
-        <div className="pr-3.5 sm:pr-5 flex flex-col justify-center min-w-0">
+        <div className="pr-2.5 sm:pr-4 flex flex-col justify-center min-w-0">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
             <ArrowDownRight className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Ingresos</span>
           </div>
-          <span className="mt-1 text-base sm:text-xl font-bold font-mono tabular-nums text-slate-900 dark:text-white truncate">
+          <span className="mt-0.5 text-base sm:text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-white truncate">
             {formatMoney(totalIncome)}
           </span>
         </div>
 
         {/* Columna 2: Gastos */}
-        <div className="pl-3.5 sm:pl-5 flex flex-col justify-center min-w-0">
+        <div className="pl-2.5 sm:pl-4 flex flex-col justify-center min-w-0">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider">
             <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Gastos</span>
           </div>
-          <span className="mt-1 text-base sm:text-xl font-bold font-mono tabular-nums text-slate-900 dark:text-white truncate">
+          <span className="mt-0.5 text-base sm:text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-white truncate">
             {formatMoney(totalExpense)}
           </span>
         </div>

@@ -83,21 +83,16 @@ export default function AccountsWidget({
     : "w-[calc(50%-5px)] min-w-[calc(50%-5px)] sm:w-[260px] sm:min-w-[260px] md:w-[280px]";
 
   return (
-    <div className="w-full space-y-2.5">
+    <div className="w-full space-y-2">
       {/* Cabecera del bloque estático de cuentas: KPI consolidado de liquidez + Subtexto */}
       <div 
         onClick={handleNavigateToAccounts}
         className="flex items-center justify-between px-0.5 cursor-pointer group select-none"
       >
         <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 group-hover:text-emerald-500 transition-colors">
-              Saldo disponible
-            </span>
-            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
-              • {accountList.length} {accountList.length === 1 ? 'cuenta' : 'cuentas'}
-            </span>
-          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 group-hover:text-emerald-500 transition-colors">
+            Saldo disponible
+          </span>
           <div className="flex items-baseline gap-2 mt-0.5">
             <span className="font-mono font-bold text-lg sm:text-xl text-slate-900 dark:text-white tabular-nums tracking-tight">
               {formatMoney(liquidBalance)}
@@ -111,17 +106,17 @@ export default function AccountsWidget({
 
       {/* Galería horizontal deslizable con no-scrollbar en móvil / grid alineado en PC */}
       <div 
-        className={`flex gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-1.5 pt-0.5 px-0.5 ${containerResponsiveClasses}`}
+        className={`flex gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-1 pt-0.5 px-0.5 ${containerResponsiveClasses}`}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {accountList.length === 0 ? (
           <div 
             onClick={handleNavigateToAccounts}
-            className="w-full sm:w-[320px] p-4 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 transition-all group"
+            className="w-full sm:w-[320px] p-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Plus className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Plus className="w-4 h-4" />
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">
@@ -164,38 +159,38 @@ export default function AccountsWidget({
               <div 
                 key={acc?.id || `acc-car-${index}`}
                 onClick={() => handleCardClick(acc)}
-                className={`shrink-0 snap-start ${cardResponsiveClasses} p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-sm hover:shadow-sm cursor-pointer active:scale-98 transition-all hover:border-slate-300 dark:hover:border-white/20 group`}
+                className={`shrink-0 snap-start ${cardResponsiveClasses} p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-xs hover:shadow-sm cursor-pointer active:scale-98 transition-all hover:border-slate-300 dark:hover:border-white/20 group`}
               >
                 {/* Cabecera de la tarjeta: Logo + Tipo + Moneda */}
-                <div className="flex items-center justify-between gap-1 mb-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <div className="p-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0 overflow-hidden">
                       <BrandIcon 
                         name={acc?.name || 'Cuenta'} 
                         type={acc?.type}
-                        size={20} 
+                        size={18} 
                       />
                     </div>
                     <span 
-                      className="text-xs font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 truncate max-w-[95px] bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400"
+                      className="text-[11px] font-medium px-1.5 py-0.5 rounded-md inline-flex items-center gap-1 truncate max-w-[95px] bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400"
                     >
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: acc?.color || '#3b82f6' }} />
                       <span className="truncate">{typeLabel}</span>
                     </span>
                   </div>
 
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] shrink-0">
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] shrink-0">
                     {currency}
                   </span>
                 </div>
 
                 {/* Detalle y Saldo */}
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate leading-snug">
+                  <div className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate leading-tight">
                     {acc?.name || 'Sin nombre'}
                   </div>
 
-                  <div className={`text-base sm:text-lg font-bold font-mono mt-1 tracking-tight leading-none tabular-nums truncate ${
+                  <div className={`text-sm sm:text-base font-bold font-mono mt-0.5 tracking-tight leading-none tabular-nums truncate ${
                     isCreditCard 
                       ? (cardOutstandingDebt > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400') 
                       : balNative < 0 

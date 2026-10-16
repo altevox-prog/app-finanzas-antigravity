@@ -154,7 +154,7 @@ export default function ReportsAndCharts({
           handleNav('transactions');
         }
       }}
-      className="min-h-[140px] p-5 sm:p-6 rounded-3xl border shadow-sm flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group relative overflow-hidden"
+      className="min-h-[120px] p-4 sm:p-4.5 rounded-3xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 transition-colors active:scale-[0.99] group relative overflow-hidden"
       style={{ 
         backgroundColor: 'var(--bg-card, #ffffff)', 
         borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
@@ -250,28 +250,6 @@ export default function ReportsAndCharts({
             </div>
           )}
         </div>
-      </div>
-
-      {/* Footer homogéneo */}
-      <div 
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (financeActions && typeof financeActions.setActiveTab === 'function') {
-            financeActions.setActiveTab('transactions');
-          } else {
-            handleNav('transactions');
-          }
-        }}
-        className="pt-2.5 mt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs cursor-pointer"
-      >
-        <span className="text-slate-500 dark:text-slate-400 font-medium">
-          Distribución de gastos
-        </span>
-        <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 text-[11px] group-hover:translate-x-0.5 transition-transform">
-          <span>Historial de movimientos</span>
-          <ArrowRight className="w-3 h-3" />
-        </span>
       </div>
 
       {/* Modales de Historial y Detalle de Categoría */}

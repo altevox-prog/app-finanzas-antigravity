@@ -150,7 +150,7 @@ export default function Dashboard({
         formatMoney={formatMoney}
       />
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5 w-full items-start touch-pan-y ${isReordering ? 'select-none [&_*]:!transition-none' : ''} ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3.5 lg:gap-4 w-full items-start touch-pan-y ${isReordering ? 'select-none [&_*]:!transition-none' : ''} ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
         {visibleWidgets.map((w, index) => {
           const norm = normalizeWidgetId(w.id);
           // Omitir widgets ya consolidados en la cabecera estática superior
