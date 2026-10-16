@@ -6,22 +6,6 @@ export const WIDGETS_ORDER_STORAGE_KEY_V2 = 'monety_widgets_order_v2';
  */
 export const DEFAULT_WIDGETS_CONFIG = [
   { 
-    id: 'liquid_balance', 
-    label: 'Saldo disponible líquido', 
-    name: 'Saldo disponible líquido', 
-    description: 'Saldo total disponible en cuentas y efectivo', 
-    icon: 'Wallet', 
-    visible: true 
-  },
-  { 
-    id: 'my_accounts', 
-    label: 'Mis cuentas', 
-    name: 'Mis cuentas', 
-    description: 'Acceso rápido y saldos de cuentas principales', 
-    icon: 'CreditCard', 
-    visible: true 
-  },
-  { 
     id: 'recent_movements', 
     label: 'Últimos movimientos', 
     name: 'Últimos movimientos', 
@@ -86,6 +70,7 @@ export const normalizeWidgetId = (id) => {
   if (id === 'prestamos' || id === 'prestamos_deudas') return 'debts';
   if (id === 'balance') return 'balance_general';
   if (id === 'mis_cuentas' || id === 'accounts') return 'my_accounts';
+  if (id === 'saldo_disponible' || id === 'available_balance' || id === 'liquid_balance' || id === 'balance_summary') return 'liquid_balance';
   if (id === 'gastos_categoria' || id === 'charts' || id === 'expenses') return 'expenses_category';
   if (id === 'movimientos_recientes' || id === 'recent_transactions' || id === 'recent') return 'recent_movements';
   if (id === 'pagos_recurrentes' || id === 'recurring') return 'recurring_payments';
@@ -115,6 +100,8 @@ export const getStoredWidgetsConfig = () => {
       .map((item) => {
         const rawId = typeof item === 'string' ? item : item.id;
         const normalizedId = normalizeWidgetId(rawId);
+        // Descartar widgets ahora anclados estáticamente o depurados
+        if (normalizedId === 'liquid_balance' || normalizedId === 'my_accounts') return null;
         const def = DEFAULT_WIDGETS_CONFIG.find((d) => d.id === normalizedId);
         if (!def) return null;
 

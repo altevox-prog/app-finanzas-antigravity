@@ -81,8 +81,14 @@ export default function EditWidgetsModal({
 
   const ensureAllWidgets = (list) => {
     if (!Array.isArray(list)) return [...DEFAULT_WIDGETS_CONFIG];
-    const existingIds = new Set(list.map(w => normalizeWidgetId(w.id)));
-    const merged = [...list];
+    const validDefIds = new Set(DEFAULT_WIDGETS_CONFIG.map(dw => dw.id));
+    // Filtrar widgets que ahora son estáticos o fueron retirados
+    const filteredList = list.filter(w => {
+      const norm = normalizeWidgetId(w.id);
+      return norm !== 'liquid_balance' && norm !== 'my_accounts' && validDefIds.has(norm);
+    });
+    const existingIds = new Set(filteredList.map(w => normalizeWidgetId(w.id)));
+    const merged = [...filteredList];
     DEFAULT_WIDGETS_CONFIG.forEach(dw => {
       const norm = normalizeWidgetId(dw.id);
       if (!existingIds.has(norm)) {

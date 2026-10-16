@@ -417,7 +417,16 @@ const SWAP_THROTTLE_MS = 100;
     return widgets.filter(w => {
       if (!w.visible) return false;
       const norm = normalizeWidgetId(w.id);
-      if (norm === 'trm' || norm === 'trm_oficial' || w.id === 'trm' || w.id === 'trm_oficial') return false;
+      if (
+        norm === 'trm' || 
+        norm === 'trm_oficial' || 
+        w.id === 'trm' || 
+        w.id === 'trm_oficial' ||
+        norm === 'liquid_balance' ||
+        norm === 'available_balance' ||
+        norm === 'my_accounts' ||
+        norm === 'accounts'
+      ) return false;
       if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
         if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
       }
@@ -427,13 +436,29 @@ const SWAP_THROTTLE_MS = 100;
 
   // Widgets ocultos (para la bandeja inferior durante reorganización)
   const hiddenWidgets = useMemo(() => {
-    const list = widgets.filter((w) => w.visible === false || w.hidden === true);
+    const list = widgets.filter((w) => {
+      const norm = normalizeWidgetId(w.id);
+      if (
+        norm === 'liquid_balance' ||
+        norm === 'available_balance' ||
+        norm === 'my_accounts' ||
+        norm === 'accounts'
+      ) return false;
+      return w.visible === false || w.hidden === true;
+    });
     const visibleIds = new Set(visibleWidgets.map(w => normalizeWidgetId(w.id)));
     const existingHiddenIds = new Set(list.map(w => normalizeWidgetId(w.id)));
 
     DEFAULT_WIDGETS_CONFIG.forEach(dw => {
       const norm = normalizeWidgetId(dw.id);
-      if (norm === 'trm' || norm === 'trm_oficial') return;
+      if (
+        norm === 'trm' || 
+        norm === 'trm_oficial' ||
+        norm === 'liquid_balance' ||
+        norm === 'available_balance' ||
+        norm === 'my_accounts' ||
+        norm === 'accounts'
+      ) return;
       if (allowedWidgetIds && Array.isArray(allowedWidgetIds) && !allowedWidgetIds.includes(norm)) return;
       if (!visibleIds.has(norm) && !existingHiddenIds.has(norm)) {
         list.push({ ...dw, visible: false, hidden: true });

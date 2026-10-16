@@ -1,25 +1,52 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ArrowRight, Wallet, Plus, CreditCard } from 'lucide-react';
 import BrandIcon from '../ui/BrandIcon';
 import { getAccountNativeBalance, formatNativeCurrency, safeNumber } from '../../utils/currencyUtils';
+import { usePrivacy } from '../../context/PrivacyContext';
 
 /**
- * AccountsWidget: Galería horizontal deslizable de cuentas y métodos de pago (Carrusel Monety)
+ * AccountsWidget: Bloque estático consolidado de liquidez y tarjetas de cuentas (Carrusel / Grid Monety)
  */
 export default function AccountsWidget({
   accounts = [],
   transactions = [],
   trm = 4050,
+  availableLiquidBalance: propLiquidBalance,
   onNavigateToTab = () => {},
   onOpenAccounts,
   setActiveTab,
   onSelectCreditCardDetail = () => {},
-  formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
+  formatMoney: propFormatMoney,
   isReordering = false
 }) {
+  const { formatMoney: privacyFormatMoney } = usePrivacy();
+  const formatMoney = propFormatMoney || privacyFormatMoney;
+
   const accountList = Array.isArray(accounts) ? accounts : [];
   const isTwoAccounts = accountList.length === 2;
   const isThreeOrMore = accountList.length >= 3;
+
+  const isLiquidAccount = (acc) => {
+    if (!acc) return false;
+    const t = String(acc.type || '').toLowerCase();
+    return !(t === 'card' || t === 'credit' || t === 'credit_card' || t === 'debt' || t === 'loan' || t === 'liability');
+  };
+
+  const liquidBalance = useMemo(() => {
+    const liquidTotal = accountList.filter(isLiquidAccount).reduce((sum, acc) => {
+      const balNative = safeNumber(getAccountNativeBalance(acc, transactions, trm));
+      if (balNative <= 0) return sum;
+      const currency = acc?.currency || 'COP';
+      const rate = currency === 'USD' ? Number(trm || 4000) : currency === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1;
+      return sum + (balNative * rate);
+    }, 0);
+
+    if (liquidTotal > 0) return liquidTotal;
+    if (propLiquidBalance !== undefined && propLiquidBalance !== null && Number(propLiquidBalance) > 0) {
+      return Number(propLiquidBalance);
+    }
+    return liquidTotal;
+  }, [accountList, transactions, trm, propLiquidBalance]);
 
   const handleNavigateToAccounts = () => {
     if (isReordering) return;
@@ -29,6 +56,15 @@ export default function AccountsWidget({
       onNavigateToTab('accounts');
     } else if (typeof setActiveTab === 'function') {
       setActiveTab('accounts');
+    }
+  };
+
+  const handleCardClick = (acc) => {
+    if (isReordering) return;
+    if ((acc?.type === 'card' || acc?.type === 'credit') && typeof onSelectCreditCardDetail === 'function') {
+      onSelectCreditCardDetail(acc);
+    } else {
+      handleNavigateToAccounts();
     }
   };
 
@@ -48,18 +84,28 @@ export default function AccountsWidget({
 
   return (
     <div className="w-full space-y-2.5">
-      {/* Header del widget */}
+      {/* Cabecera del bloque estático de cuentas: KPI consolidado de liquidez + Subtexto */}
       <div 
         onClick={handleNavigateToAccounts}
-        className="flex items-center justify-between px-0.5 cursor-pointer group"
+        className="flex items-center justify-between px-0.5 cursor-pointer group select-none"
       >
-        <div className="flex items-center gap-2">
-          <h3 className="text-[15px] sm:text-[16px] font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">
-            Mis Cuentas
-          </h3>
-          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-            {accountList.length} {accountList.length === 1 ? 'cuenta' : 'cuentas'}
-          </span>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400 group-hover:text-emerald-500 transition-colors">
+              Saldo disponible
+            </span>
+            <span className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+              • {accountList.length} {accountList.length === 1 ? 'cuenta' : 'cuentas'}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2 mt-0.5">
+            <span className="font-mono font-bold text-lg sm:text-xl text-slate-900 dark:text-white tabular-nums tracking-tight">
+              {formatMoney(liquidBalance)}
+            </span>
+            <span className="text-[11px] text-slate-400 dark:text-zinc-500 hidden xs:inline truncate">
+              Total en cuentas a la vista
+            </span>
+          </div>
         </div>
       </div>
 
@@ -117,7 +163,7 @@ export default function AccountsWidget({
             return (
               <div 
                 key={acc?.id || `acc-car-${index}`}
-                onClick={handleNavigateToAccounts}
+                onClick={() => handleCardClick(acc)}
                 className={`shrink-0 snap-start ${cardResponsiveClasses} p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-sm hover:shadow-sm cursor-pointer active:scale-98 transition-all hover:border-slate-300 dark:hover:border-white/20 group`}
               >
                 {/* Cabecera de la tarjeta: Logo + Tipo + Moneda */}

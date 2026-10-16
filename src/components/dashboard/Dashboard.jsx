@@ -10,6 +10,7 @@ import { useWidgetRegistry, getWidgetComponent, WIDGET_ICON_MAP } from './widget
 import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import DashboardModals from './DashboardModals';
 import MonthlyNetHeroCard from './MonthlyNetHeroCard';
+import AccountsWidget from './widgets/AccountsWidget';
 
 // Re-exports de compatibilidad para módulos que consumían widgets satélite desde Dashboard.jsx
 export { default as MonthlyNetHeroCard } from './MonthlyNetHeroCard';
@@ -136,9 +137,32 @@ export default function Dashboard({
         formatMoney={formatMoney}
       />
 
+      {/* Bloque estático e inamovible de Cuentas (Consolidado de liquidez y tarjetas, fuera del grid) */}
+      <AccountsWidget
+        accounts={accounts}
+        transactions={transactions}
+        trm={trm}
+        availableLiquidBalance={metrics.availableLiquidBalance}
+        onNavigateToTab={navigateToTab}
+        setActiveTab={navigateToTab}
+        onOpenAccounts={() => navigateToTab('accounts')}
+        onSelectCreditCardDetail={onSelectCreditCardDetail}
+        formatMoney={formatMoney}
+      />
+
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5 w-full items-start touch-pan-y ${isReordering ? 'select-none [&_*]:!transition-none' : ''} ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
         {visibleWidgets.map((w, index) => {
           const norm = normalizeWidgetId(w.id);
+          // Omitir widgets ya consolidados en la cabecera estática superior
+          if (
+            norm === 'liquid_balance' || 
+            norm === 'available_balance' || 
+            norm === 'balance_summary' || 
+            norm === 'my_accounts' || 
+            norm === 'accounts'
+          ) {
+            return null;
+          }
           const isInvestments = norm === 'investments' || w.id === 'investments';
           const widgetComponent = getWidget(w.id);
           if (!widgetComponent) return null;
