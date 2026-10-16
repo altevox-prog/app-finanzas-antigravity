@@ -23,8 +23,6 @@ export default function AccountsWidget({
   const formatMoney = propFormatMoney || privacyFormatMoney;
 
   const accountList = Array.isArray(accounts) ? accounts : [];
-  const isTwoAccounts = accountList.length === 2;
-  const isThreeOrMore = accountList.length >= 3;
 
   const isLiquidAccount = (acc) => {
     if (!acc) return false;
@@ -68,20 +66,6 @@ export default function AccountsWidget({
     }
   };
 
-  // En PC (md: en adelante): 2 columnas al 100% alineadas con el Dashboard si hay 2 cuentas, o 3 columnas si hay 3 o más
-  // En Móvil (< md): carrusel horizontal táctil (flex overflow-x-auto snap-x gap-3)
-  const containerResponsiveClasses = isTwoAccounts
-    ? "md:grid md:grid-cols-2 md:gap-4 w-full md:overflow-visible"
-    : isThreeOrMore
-    ? "md:grid md:grid-cols-3 md:gap-4 w-full md:overflow-visible"
-    : "w-full md:flex md:gap-4";
-
-  const cardResponsiveClasses = accountList.length === 1
-    ? "w-full min-w-0 md:w-full"
-    : (isTwoAccounts || isThreeOrMore)
-    ? "w-[calc(50%-5px)] min-w-[calc(50%-5px)] sm:w-[calc(50%-6px)] sm:min-w-[calc(50%-6px)] md:w-full md:min-w-0 md:shrink"
-    : "w-[calc(50%-5px)] min-w-[calc(50%-5px)] sm:w-[260px] sm:min-w-[260px] md:w-[280px]";
-
   return (
     <div className="w-full space-y-2">
       {/* Cabecera del bloque estático de cuentas: KPI consolidado de liquidez + Subtexto */}
@@ -104,15 +88,15 @@ export default function AccountsWidget({
         </div>
       </div>
 
-      {/* Galería horizontal deslizable con no-scrollbar en móvil / grid alineado en PC */}
+      {/* Contenedor de cuentas: Fila única horizontal continua universal con snap táctil */}
       <div 
-        className={`flex gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory pb-1 pt-0.5 px-0.5 ${containerResponsiveClasses}`}
+        className="flex flex-row items-stretch overflow-x-auto no-scrollbar snap-x snap-mandatory gap-2.5 md:gap-3 pb-1 pt-0.5 px-0.5 w-full"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {accountList.length === 0 ? (
           <div 
             onClick={handleNavigateToAccounts}
-            className="w-full sm:w-[320px] p-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 transition-all group"
+            className="w-full sm:w-80 p-3 rounded-2xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 transition-all group shrink-0"
           >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -159,20 +143,20 @@ export default function AccountsWidget({
               <div 
                 key={acc?.id || `acc-car-${index}`}
                 onClick={() => handleCardClick(acc)}
-                className={`shrink-0 snap-start ${cardResponsiveClasses} p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-xs hover:shadow-sm cursor-pointer active:scale-98 transition-all hover:border-slate-300 dark:hover:border-white/20 group`}
+                className={`${accountList.length === 1 ? 'w-full' : 'w-[calc((100%-0.625rem)/2)]'} shrink-0 snap-start md:w-56 md:shrink-0 p-2.5 sm:p-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-xs hover:shadow-sm cursor-pointer active:scale-98 transition-all hover:border-slate-300 dark:hover:border-white/20 group`}
               >
                 {/* Cabecera de la tarjeta: Logo + Tipo + Moneda */}
-                <div className="flex items-center justify-between gap-1 mb-1.5">
+                <div className="flex items-center justify-between gap-1 mb-1 sm:mb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <div className="p-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="p-1 sm:p-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0 overflow-hidden">
                       <BrandIcon 
                         name={acc?.name || 'Cuenta'} 
                         type={acc?.type}
-                        size={18} 
+                        size={16} 
                       />
                     </div>
                     <span 
-                      className="text-[11px] font-medium px-1.5 py-0.5 rounded-md inline-flex items-center gap-1 truncate max-w-[95px] bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400"
+                      className="text-[10.5px] sm:text-[11px] font-medium px-1.5 py-0.5 rounded-md inline-flex items-center gap-1 truncate max-w-[85px] sm:max-w-[95px] bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400"
                     >
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: acc?.color || '#3b82f6' }} />
                       <span className="truncate">{typeLabel}</span>
@@ -185,12 +169,12 @@ export default function AccountsWidget({
                 </div>
 
                 {/* Detalle y Saldo */}
-                <div className="min-w-0">
-                  <div className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate leading-tight">
+                <div className="min-w-0 mt-1 sm:mt-1.5">
+                  <div className="text-xs sm:text-[13px] font-semibold text-slate-900 dark:text-zinc-100 truncate leading-tight">
                     {acc?.name || 'Sin nombre'}
                   </div>
 
-                  <div className={`text-sm sm:text-base font-bold font-mono mt-0.5 tracking-tight leading-none tabular-nums truncate ${
+                  <div className={`text-[13px] sm:text-sm font-bold font-mono mt-0.5 tracking-tight leading-none tabular-nums truncate ${
                     isCreditCard 
                       ? (cardOutstandingDebt > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400') 
                       : balNative < 0 
@@ -206,13 +190,13 @@ export default function AccountsWidget({
                   </div>
 
                   {isForeign && !isCreditCard && (
-                    <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium mt-1 truncate tabular-nums">
+                    <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono tracking-tight leading-none mt-0.5 truncate tabular-nums">
                       ≈ $ {Math.round(copBal).toLocaleString('es-CO')} COP
                     </div>
                   )}
 
                   {isInvestment && shares > 0 && (
-                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1 truncate">
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 truncate leading-none">
                       {shares} {shares === 1 ? 'acc' : 'accs'}{unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)}` : ''}
                     </div>
                   )}
