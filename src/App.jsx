@@ -116,6 +116,12 @@ export default function App() {
         {/* Cabecera Unificada */}
         <AppHeader
           activeTab={state.activeTab}
+          currentView={state.activeTab}
+          onNavigate={state.handleTabChange}
+          onBack={() => state.handleTabChange('dashboard')}
+          onOpenAddInvestment={() => modalControls.openAddInvestment()}
+          onOpenAddDebt={() => modalControls.openAddLoan('payable')}
+          onOpenAddLoan={() => modalControls.openAddLoan('receivable')}
           userProfile={state.userProfile}
           currentMonthLabel={state.currentMonthLabel}
           selectedDate={state.selectedDate}

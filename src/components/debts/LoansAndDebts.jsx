@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HandCoins, ArrowUpRight, ArrowDownLeft, ArrowLeft } from 'lucide-react';
+import { HandCoins, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import DebtCardItem from './DebtCardItem';
 import DebtMetricsSummary from './DebtMetricsSummary';
@@ -44,32 +44,6 @@ export default function LoansAndDebts({
   return (
     <div className="space-y-4 px-4 sm:px-6">
       <div className="ios-card p-4 sm:p-5">
-        {/* Header con Botón de Regreso y Título */}
-        <div className="w-full flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={onBack ? onBack : () => {
-                if (typeof window !== 'undefined' && window.history.length > 2) window.history.back();
-              }}
-              className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-              aria-label="Volver"
-              title="Volver"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-[18px] sm:text-[20px] font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                <HandCoins className="w-5 h-5 text-[#34C759] shrink-0" />
-                <span className="truncate">Préstamos y Deudas</span>
-              </h2>
-              <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate font-normal mt-0.5">
-                {activeTab === 'receivable' ? 'Cuentas por cobrar a terceros' : 'Pasivos y compromisos por pagar'}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Segmented Control */}
         <div className="w-full mb-4">
           <SegmentedControl

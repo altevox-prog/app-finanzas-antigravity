@@ -3,7 +3,6 @@ import {
   Inbox, 
   X, 
   ArrowRight,
-  ArrowLeft,
   Search,
   SlidersHorizontal,
   ChevronDown,
@@ -92,6 +91,43 @@ export default function TransactionList({
   // Indicador de filtros activos
   const hasActiveFilters = typeFilter !== 'all' || accountFilter !== 'all' || categoryFilter !== 'all' || Boolean(selectedDay);
   const activeFilterCount = (typeFilter !== 'all' ? 1 : 0) + (accountFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0) + (selectedDay ? 1 : 0);
+
+  // Sincronización con TopAppBar para toggle de búsqueda y apertura de modal de filtros
+  useEffect(() => {
+    const handleToggleSearch = () => {
+      setIsSearchOpen(prev => {
+        const next = !prev;
+        if (!next) setSearchTerm('');
+        return next;
+      });
+    };
+
+    const handleOpenFilter = () => {
+      setIsFilterModalOpen(true);
+    };
+
+    window.addEventListener('monety:toggle-search', handleToggleSearch);
+    window.addEventListener('monety:open-filter-modal', handleOpenFilter);
+
+    return () => {
+      window.removeEventListener('monety:toggle-search', handleToggleSearch);
+      window.removeEventListener('monety:open-filter-modal', handleOpenFilter);
+    };
+  }, []);
+
+  // Notificar estado de filtros a TopAppBar
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('monety:filter-status-changed', {
+      detail: { hasActiveFilters, activeFilterCount }
+    }));
+  }, [hasActiveFilters, activeFilterCount]);
+
+  // Notificar estado de búsqueda a TopAppBar
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('monety:search-status-changed', {
+      detail: { isSearchOpen, hasSearchTerm: Boolean(searchTerm) }
+    }));
+  }, [isSearchOpen, searchTerm]);
 
   // Sort transactions by date descending (newest first)
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
@@ -199,103 +235,52 @@ export default function TransactionList({
 
   return (
     <div className={`ios-card ${isCompact ? 'p-3.5 sm:p-4' : 'p-3.5 sm:p-5'}`}>
-      {/* Nivel 1: Barra superior unificada (Navegación + Título/Período + Lupa/Filtros) */}
-      <div className="flex items-center justify-between gap-2 mb-2 min-h-[40px]">
-        {isSearchOpen ? (
-          <div className="flex items-center gap-2 w-full animate-in fade-in duration-150">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Buscar por nota, categoría o cuenta..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center text-[10px] hover:bg-slate-300 dark:hover:bg-zinc-600 transition-colors cursor-pointer"
-                  title="Limpiar texto"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setIsSearchOpen(false);
-                setSearchTerm('');
-              }}
-              className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer shrink-0"
-            >
-              Cancelar
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-              {!isCompact && (
-                <button
-                  type="button"
-                  onClick={onBack ? onBack : () => {
-                    if (typeof window !== 'undefined' && window.history.length > 2) window.history.back();
-                  }}
-                  className="w-9 h-9 sm:w-10 sm:h-10 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-                  aria-label="Volver"
-                  title="Volver"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              )}
+      {/* Cabecera para modo compacto (Widget Dashboard) */}
+      {isCompact && (
+        <div className="flex items-center justify-between gap-2 mb-2 min-h-[36px]">
+          <h2 className="text-[17px] sm:text-[19px] font-bold tracking-tight text-slate-900 dark:text-white truncate">
+            Movimientos Recientes
+          </h2>
+        </div>
+      )}
 
-              <div className="min-w-0 flex-1">
-                <h2 className="text-[17px] sm:text-[20px] font-bold tracking-tight text-slate-900 dark:text-white truncate">
-                  {isCompact ? 'Movimientos Recientes' : 'Transacciones'}
-                </h2>
-              </div>
-            </div>
-
-            {/* Acciones Rápidas (Lupa + Filtro) */}
-            {!isCompact && (
-              <div className="flex items-center gap-1 shrink-0">
-                {/* Botón 1: Lupa */}
-                <button
-                  type="button"
-                  onClick={() => setIsSearchOpen(true)}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors relative cursor-pointer"
-                  aria-label="Buscar movimientos"
-                  title="Buscar movimientos"
-                >
-                  <Search className="w-4 h-4" />
-                  {searchTerm && (
-                    <span className="w-2 h-2 rounded-full bg-[#007AFF] absolute top-1.5 right-1.5" />
-                  )}
-                </button>
-
-                {/* Botón 2: Filtros avanzados */}
-                <button
-                  type="button"
-                  onClick={() => setIsFilterModalOpen(true)}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors relative cursor-pointer"
-                  aria-label="Filtros avanzados"
-                  title="Filtros avanzados"
-                >
-                  <SlidersHorizontal className="w-4 h-4" />
-                  {hasActiveFilters && (
-                    <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#007AFF] text-white text-[9px] font-bold flex items-center justify-center absolute -top-0.5 -right-0.5 shadow-sm">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-              </div>
+      {/* Barra de búsqueda expandible (controlada desde TopAppBar o atajos) */}
+      {!isCompact && isSearchOpen && (
+        <div className="flex items-center gap-2 w-full mb-3 animate-in fade-in duration-150">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Buscar por nota, categoría o cuenta..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all"
+              autoFocus
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center text-[10px] hover:bg-slate-300 dark:hover:bg-zinc-600 transition-colors cursor-pointer"
+                title="Limpiar texto"
+              >
+                ✕
+              </button>
             )}
-          </>
-        )}
-      </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsSearchOpen(false);
+              setSearchTerm('');
+            }}
+            className="px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer shrink-0"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
 
       {/* Tarjeta Cabecera de Resumen Financiero (Hero Card) */}
       {!isCompact && (

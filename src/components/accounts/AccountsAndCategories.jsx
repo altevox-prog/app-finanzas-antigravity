@@ -61,6 +61,13 @@ export default function AccountsAndCategories({
   // Modal de Edición de Cuenta
   const [editingAccount, setEditingAccount] = useState(null);
 
+  // Escuchar evento de TopAppBar para abrir modal de agregar cuenta
+  useEffect(() => {
+    const handleOpenAdd = () => setShowAddAccount(true);
+    window.addEventListener('monety:open-add-account', handleOpenAdd);
+    return () => window.removeEventListener('monety:open-add-account', handleOpenAdd);
+  }, []);
+
   // Live balance for accounts in their native currency and COP equivalent (defensivo)
   const accountsWithBalance = useMemo(() => {
     try {
@@ -373,29 +380,29 @@ export default function AccountsAndCategories({
       
       {/* CUENTAS BANCARIAS Y EFECTIVO */}
       <section className="bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={handleGoBack}
-              className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-              aria-label="Volver"
-              title="Volver"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base sm:text-lg md:text-xl font-bold flex items-center gap-2 leading-tight min-w-0" style={{ color: 'var(--text-main)' }}>
-                <CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" />
-                <span className="leading-tight">Cuentas y Métodos de Pago</span>
-              </h2>
-              <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-normal">
-                Saldos sincronizados automáticamente
-              </p>
+        {fromSettings && (
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={handleGoBack}
+                className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+                aria-label="Volver"
+                title="Volver"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base sm:text-lg md:text-xl font-bold flex items-center gap-2 leading-tight min-w-0" style={{ color: 'var(--text-main)' }}>
+                  <CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" />
+                  <span className="leading-tight">Cuentas y Métodos de Pago</span>
+                </h2>
+                <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-normal">
+                  Saldos sincronizados automáticamente
+                </p>
+              </div>
             </div>
-          </div>
 
-          {fromSettings && (
             <button
               type="button"
               onClick={() => setShowAddAccount(!showAddAccount)}
@@ -404,8 +411,8 @@ export default function AccountsAndCategories({
             >
               <Plus className={`w-4 h-4 transition-transform duration-200 ${showAddAccount ? 'rotate-45' : ''}`} />
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Modal / Sheet Formulario Nueva Cuenta */}
         <AddAccountModal

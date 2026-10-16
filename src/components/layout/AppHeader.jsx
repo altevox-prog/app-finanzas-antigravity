@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Calendar, ChevronDown, Bell } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, ChevronDown, Bell, Search, SlidersHorizontal } from 'lucide-react';
 import Header from './Header';
+import TopAppBar from './TopAppBar';
 import SyncStatusBadge from '../ui/SyncStatusBadge';
 import NotificationCenter from '../ui/NotificationCenter';
 import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
@@ -36,6 +37,12 @@ const TAB_TITLES = {
  */
 export default function AppHeader({
   activeTab = 'dashboard',
+  currentView,
+  onNavigate,
+  onBack,
+  onOpenAddInvestment,
+  onOpenAddDebt,
+  onOpenAddAccount,
   userProfile = { name: 'Usuario' },
   currentMonthLabel = '',
   selectedDay = null,
@@ -67,6 +74,33 @@ export default function AppHeader({
   onUpdateRecurring = null
 }) {
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+
+  // Estados interactivos sincronizados para escritorio (Lupa y Filtros)
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [hasActiveFilters, setHasActiveFilters] = useState(false);
+  const [activeFilterCount, setActiveFilterCount] = useState(0);
+
+  useEffect(() => {
+    const handleFilterStatus = (e) => {
+      if (e?.detail) {
+        setHasActiveFilters(Boolean(e.detail.hasActiveFilters));
+        setActiveFilterCount(Number(e.detail.activeFilterCount || 0));
+      }
+    };
+    const handleSearchStatus = (e) => {
+      if (e?.detail) {
+        setIsSearchActive(Boolean(e.detail.isSearchOpen || e.detail.hasSearchTerm));
+      }
+    };
+
+    window.addEventListener('monety:filter-status-changed', handleFilterStatus);
+    window.addEventListener('monety:search-status-changed', handleSearchStatus);
+
+    return () => {
+      window.removeEventListener('monety:filter-status-changed', handleFilterStatus);
+      window.removeEventListener('monety:search-status-changed', handleSearchStatus);
+    };
+  }, []);
 
   // Hook unificado para evaluación de vencimientos y alertas financieras
   const {
@@ -190,7 +224,14 @@ export default function AppHeader({
           </div>
         </div>
 
-        <Header 
+        <TopAppBar 
+          currentView={currentView || activeTab}
+          activeTab={activeTab}
+          onNavigate={onNavigate}
+          onBack={onBack}
+          onOpenAddInvestment={onOpenAddInvestment}
+          onOpenAddDebt={onOpenAddDebt}
+          onOpenAddAccount={onOpenAddAccount}
           monthlyStats={monthlyStats} 
           userProfile={userProfile}
           syncUser={syncUser}
@@ -224,6 +265,43 @@ export default function AppHeader({
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Acciones contextuales para Transacciones en Escritorio */}
+            {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
+              <div className="flex items-center gap-1.5 mr-1">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('monety:toggle-search'))}
+                  className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                    isSearchActive
+                      ? 'bg-[#007AFF] text-white border-[#007AFF]'
+                      : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/10'
+                  }`}
+                  title="Buscar movimientos"
+                  aria-label="Buscar movimientos"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('monety:open-filter-modal'))}
+                  className={`p-2 rounded-xl border transition-all cursor-pointer relative ${
+                    hasActiveFilters
+                      ? 'bg-[#007AFF]/15 text-[#007AFF] border-[#007AFF]/40'
+                      : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/10'
+                  }`}
+                  title="Filtros avanzados"
+                  aria-label="Filtros avanzados"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  {hasActiveFilters && (
+                    <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#007AFF] text-white text-[9px] font-mono font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
             {/* Selector de Mes Interactivo */}
             <button
               type="button"
