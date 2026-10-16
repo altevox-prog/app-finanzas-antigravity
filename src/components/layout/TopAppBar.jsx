@@ -185,41 +185,45 @@ export default function TopAppBar({
 
   return (
     <header 
-      className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md border-b border-slate-200/60 dark:border-zinc-800/60 transition-all select-none shadow-xs shrink-0"
+      className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between bg-white/85 dark:bg-zinc-900/85 backdrop-blur-md border-b border-slate-200/60 dark:border-zinc-800/60 transition-all select-none shadow-xs shrink-0 relative"
       style={{ 
         paddingTop: 'max(env(safe-area-inset-top), 0px)'
       }}
     >
       {/* ============================================================== */}
-      {/* SECCIÓN IZQUIERDA: Contextual por Vista                         */}
+      {/* SECCIÓN IZQUIERDA: Logo (Dashboard) o Botón Retroceso (Vistas) */}
       {/* ============================================================== */}
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex items-center shrink-0 z-10">
         {isDashboard ? (
-          <div className="flex items-center shrink-0">
-            <AppLogo size="md" showText={true} />
-          </div>
+          <AppLogo size="md" showText={true} />
         ) : (
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer border border-slate-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xs shrink-0"
-              aria-label="Volver al inicio"
-              title="Volver al inicio"
-            >
-              <ArrowLeft className="w-4.5 h-4.5" />
-            </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate tracking-tight">
-              {title}
-            </h1>
-          </div>
+          <button
+            type="button"
+            onClick={handleBack}
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer border border-slate-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xs shrink-0"
+            aria-label="Volver al inicio"
+            title="Volver al inicio"
+          >
+            <ArrowLeft className="w-4.5 h-4.5" />
+          </button>
         )}
       </div>
 
       {/* ============================================================== */}
+      {/* SECCIÓN CENTRAL: Título Rigurosamente Centrado (Vistas sec.)   */}
+      {/* ============================================================== */}
+      {!isDashboard && (
+        <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] sm:max-w-[65%] text-center pointer-events-none px-2 z-0">
+          <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate tracking-tight">
+            {title}
+          </h1>
+        </div>
+      )}
+
+      {/* ============================================================== */}
       {/* SECCIÓN DERECHA: Acciones Contextuales                          */}
       {/* ============================================================== */}
-      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto z-10">
         {/* Caso 1: Dashboard -> Campana + Avatar */}
         {isDashboard && (
           <>
