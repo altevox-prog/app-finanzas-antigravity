@@ -9,8 +9,10 @@ import DashboardWidgetWrapper from './DashboardWidgetWrapper';
 import { useWidgetRegistry, getWidgetComponent, WIDGET_ICON_MAP } from './widgetRegistry';
 import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import DashboardModals from './DashboardModals';
+import MonthlyNetHeroCard from './MonthlyNetHeroCard';
 
 // Re-exports de compatibilidad para módulos que consumían widgets satélite desde Dashboard.jsx
+export { default as MonthlyNetHeroCard } from './MonthlyNetHeroCard';
 export { default as DebtsWidget } from './widgets/DebtsWidget';
 export { default as InvestmentsWidget } from './widgets/InvestmentsWidget';
 export { default as AccountsWidget } from './widgets/AccountsWidget';
@@ -24,7 +26,7 @@ export default function Dashboard({
   accounts = [], investments = [], debtsAndLoans = [], transactions = [],
   monthlyTransactions = null, categories = [], recurringPayments = [], subscriptions = [],
   monthlyStats = {}, selectedDate = new Date(), selectedDay = null, onSelectDay = () => {},
-  onOpenCalendar = () => {}, onNavigateToTab = () => {}, setActiveTab = null,
+  onOpenCalendar = () => {}, onOpenMonthPicker = null, onNavigateToTab = () => {}, setActiveTab = null,
   onOpenTransaction = () => {}, onOpenAddTransaction = null, onOpenAddDebt = null,
   onOpenAddLoan = null, onOpenAddRecurring = null, onAddDebtOrLoan = null,
   onAddRecurring = null, onAddTransaction = null, onDeleteTransaction = () => {},
@@ -120,6 +122,19 @@ export default function Dashboard({
           </button>
         </div>
       )}
+
+      {/* Hero Net Summary Card (Fijo y estático, fuera del grid de widgets reordenables) */}
+      <MonthlyNetHeroCard
+        netBalance={metrics.netBalance}
+        totalIncome={metrics.totalIncome}
+        totalExpense={metrics.totalExpense}
+        selectedDate={selectedDate}
+        selectedDay={selectedDay}
+        currentMonthLabel={currentMonthLabel}
+        onOpenCalendar={onOpenCalendar}
+        onOpenMonthPicker={onOpenMonthPicker || onOpenCalendar}
+        formatMoney={formatMoney}
+      />
 
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5 w-full items-start touch-pan-y ${isReordering ? 'select-none [&_*]:!transition-none' : ''} ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
         {visibleWidgets.map((w, index) => {

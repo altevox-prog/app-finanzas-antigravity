@@ -31,6 +31,7 @@ export default function DashboardView(props) {
     selectedDay,
     onSelectDay,
     onOpenCalendar,
+    onOpenMonthPicker,
     onNavigateToTab,
     onOpenTransaction,
     onOpenAddTransaction,
@@ -88,6 +89,7 @@ export default function DashboardView(props) {
         selectedDay={selectedDay}
         onSelectDay={onSelectDay}
         onOpenCalendar={onOpenCalendar}
+        onOpenMonthPicker={onOpenMonthPicker || props.onOpenMonthPicker || financeActions?.onOpenMonthPicker || onOpenCalendar}
         onNavigateToTab={onNavigateToTab || financeActions?.handleTabChange || financeActions?.setActiveTab}
         onOpenTransaction={onOpenTransaction || onOpenAddTransaction || modalControls?.openAddTransaction || modalControls?.openTransactionModal || financeActions?.openAddTransaction || financeActions?.handleOpenTransaction}
         onOpenAddTransaction={onOpenAddTransaction || onOpenTransaction || modalControls?.openAddTransaction || modalControls?.openTransactionModal || financeActions?.openAddTransaction || financeActions?.handleOpenTransaction}

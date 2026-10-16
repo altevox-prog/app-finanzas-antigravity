@@ -162,7 +162,7 @@ export default function QuickActionsFab({
                   Registrar transacción
                 </span>
                 <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate">
-                  Gasto, ingreso o transferencia
+                  Gasto, ingreso o traspaso entre cuentas
                 </span>
               </div>
             </button>

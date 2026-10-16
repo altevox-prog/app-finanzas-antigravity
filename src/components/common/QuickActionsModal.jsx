@@ -156,7 +156,7 @@ export default function QuickActionsModal(props) {
                 Registrar transacción
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
-                Gasto, ingreso o transferencia
+                Gasto, ingreso o traspaso entre cuentas
               </span>
             </div>
           </button>

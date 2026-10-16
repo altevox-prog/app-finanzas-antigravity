@@ -6,7 +6,6 @@ import LockScreen from '../auth/LockScreen';
 import { DEFAULT_WIDGETS_CONFIG } from '../../utils/widgetsConfig';
 
 import AddTransactionModal from '../transactions/modals/AddTransactionModal';
-import TransferModal from '../transactions/modals/TransferModal';
 import AddLoanModal from '../debts/AddLoanModal';
 import AddInvestmentModal from '../investments/modals/AddInvestmentModal';
 import AddAccountModal from '../accounts/modals/AddAccountModal';
@@ -118,13 +117,21 @@ export default function ModalContainer({
     onLogout
   } = merged;
 
+  const isTransferOpen = Boolean(
+    merged.isTransferOpen ||
+    merged.isTransferModalOpen
+  );
   const isTxOpen = Boolean(
     merged.isAddTransactionOpen ||
     merged.isTxOpen ||
     merged.isAddTxOpen ||
     merged.isTransactionModalOpen ||
-    merged.isNewTxModalOpen
+    merged.isNewTxModalOpen ||
+    isTransferOpen
   );
+  const effectiveTxDefaultType = isTransferOpen
+    ? 'transfer'
+    : (txDefaultType || 'expense');
   const isLoanOpen = Boolean(
     merged.isAddLoanOpen ||
     merged.isLoanOpen ||
@@ -137,10 +144,6 @@ export default function ModalContainer({
     merged.isRecurringOpen ||
     merged.isRecurringModalOpen ||
     merged.isNewRecurringModalOpen
-  );
-  const isTransferOpen = Boolean(
-    merged.isTransferOpen ||
-    merged.isTransferModalOpen
   );
   const isInvestmentOpen = Boolean(
     merged.isAddInvestmentOpen ||
@@ -156,6 +159,10 @@ export default function ModalContainer({
     if (typeof merged.setIsAddTxOpen === 'function') merged.setIsAddTxOpen(false);
     if (typeof merged.setIsAddTransactionOpen === 'function') merged.setIsAddTransactionOpen(false);
     if (typeof merged.setIsNewTxModalOpen === 'function') merged.setIsNewTxModalOpen(false);
+    if (typeof merged.closeTransfer === 'function') merged.closeTransfer();
+    else if (typeof merged.closeTransferModal === 'function') merged.closeTransferModal();
+    else if (typeof merged.handleCloseTransfer === 'function') merged.handleCloseTransfer();
+    if (typeof merged.setIsTransferModalOpen === 'function') merged.setIsTransferModalOpen(false);
   };
 
   const closeLoan = () => {
@@ -212,29 +219,14 @@ export default function ModalContainer({
             onDeleteSubcategory={handleDeleteSubcategory}
             onAddAccount={handleAddAccount}
             defaultDate={selectedDay || new Date().toISOString().split('T')[0]}
-            defaultType={txDefaultType || 'expense'}
+            defaultType={effectiveTxDefaultType}
             trm={trm}
             {...merged}
           />
         )}
       </AnimatePresence>
 
-      {/* 2. Modal Global para Transferencia entre Cuentas */}
-      {Boolean(isTransferOpen) && (
-        <TransferModal
-          isOpen={isTransferOpen}
-          onClose={merged.closeTransfer || merged.closeTransferModal || closeTransfer}
-          accounts={accounts}
-          transactions={transactions}
-          onTransfer={async (transferData) => {
-            if (handleExecuteTransfer) await handleExecuteTransfer(transferData);
-            closeTransfer();
-          }}
-          trm={trm}
-        />
-      )}
-
-      {/* 3. Modal Global para Nueva Inversión */}
+      {/* 2. Modal Global para Nueva Inversión */}
       <AnimatePresence mode="wait">
         {Boolean(isInvestmentOpen) && (
           <AddInvestmentModal

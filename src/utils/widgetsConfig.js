@@ -46,22 +46,6 @@ export const DEFAULT_WIDGETS_CONFIG = [
     visible: false 
   },
   { 
-    id: 'monthly_expense', 
-    label: 'Gasto del mes', 
-    name: 'Gasto del mes', 
-    description: 'Total de gastos y egresos del mes en curso', 
-    icon: 'ArrowUpRight', 
-    visible: false 
-  },
-  { 
-    id: 'monthly_income', 
-    label: 'Ingreso del mes', 
-    name: 'Ingreso del mes', 
-    description: 'Total de ingresos y entradas registradas en el mes', 
-    icon: 'ArrowDownRight', 
-    visible: false 
-  },
-  { 
     id: 'savings_rate', 
     label: 'Tasa de ahorro / Superávit', 
     name: 'Tasa de ahorro / Superávit', 

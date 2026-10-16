@@ -128,6 +128,7 @@ export default function ViewRouter({
           selectedDay={selectedDay}
           onSelectDay={setSelectedDay}
           onOpenCalendar={() => setIsCalendarOpen && setIsCalendarOpen(true)}
+          onOpenMonthPicker={merged.setShowMonthPicker ? () => merged.setShowMonthPicker(true) : (() => setIsCalendarOpen && setIsCalendarOpen(true))}
           onNavigateToTab={handleTabChange}
           onOpenTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}
           onOpenAddTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}
