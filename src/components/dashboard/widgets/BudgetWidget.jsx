@@ -38,7 +38,7 @@ export default function BudgetWidget({
 
   return (
     <div 
-      className="p-4 sm:p-5 rounded-2xl border shadow-sm transition-all relative overflow-hidden bg-white dark:bg-zinc-900/90 border-slate-200/80 dark:border-white/[0.08]"
+      className="p-4 sm:p-5 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition-all relative overflow-hidden bg-white dark:bg-zinc-900/90"
     >
       <div className="flex items-center justify-between mb-3.5 gap-2">
         <div className="flex items-center gap-2.5 min-w-0">

@@ -11,7 +11,8 @@ import {
   CreditCard, 
   Receipt, 
   PieChart, 
-  CalendarSync 
+  CalendarSync,
+  Target
 } from 'lucide-react';
 import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import InvestmentsWidget from './widgets/InvestmentsWidget';
@@ -48,7 +49,8 @@ export const WIDGET_ICON_MAP = {
   PieChart,
   CreditCard,
   Receipt,
-  CalendarSync
+  CalendarSync,
+  Target
 };
 
 /**

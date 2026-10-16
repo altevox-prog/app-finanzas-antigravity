@@ -135,7 +135,7 @@ export default function WeeklyExpensesChart({
 
   return (
     <div
-      className={`bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm p-5 select-none relative ${className}`}
+      className={`bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] p-5 select-none relative ${className}`}
     >
       {/* Encabezado del Widget */}
       <div className="flex items-center justify-between mb-4">
@@ -161,9 +161,9 @@ export default function WeeklyExpensesChart({
         )}
       </div>
 
-      {/* Área del gráfico de barras cilíndricas */}
+      {/* Área del gráfico de barras cilíndricas: Compacto y centrado */}
       <div
-        className="flex items-end justify-between gap-2 pt-10 relative"
+        className="flex items-end justify-center gap-3 sm:gap-4 md:gap-5 max-w-sm sm:max-w-md mx-auto pt-6 sm:pt-8 relative w-full"
         style={{ height: `${height}px` }}
       >
         {weeksData.map((item, idx) => {
@@ -173,7 +173,7 @@ export default function WeeklyExpensesChart({
           return (
             <div
               key={item.label}
-              className="relative flex-1 flex flex-col items-center justify-end h-full pt-8 cursor-pointer group select-none"
+              className="relative flex-1 max-w-[52px] sm:max-w-[60px] flex flex-col items-center justify-end h-full pt-6 cursor-pointer group select-none"
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={() => setHoveredIndex(idx)}
@@ -195,7 +195,7 @@ export default function WeeklyExpensesChart({
 
               {/* Cápsula de la barra */}
               <div
-                className={`w-full max-w-[28px] h-full flex items-end justify-center rounded-full p-1 transition-all duration-200 ${
+                className={`w-full max-w-[28px] sm:max-w-[32px] h-full flex items-end justify-center rounded-full p-1 transition-all duration-200 ${
                   isHovered
                     ? 'bg-rose-500/20 ring-2 ring-rose-500/50'
                     : 'bg-slate-100/90 dark:bg-white/5'

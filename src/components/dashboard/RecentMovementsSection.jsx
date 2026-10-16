@@ -46,7 +46,7 @@ export default function RecentMovementsSection({
   return (
     <div
       onClick={handleViewAll}
-      className={`bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm p-4 sm:p-5 flex flex-col justify-between transition-all select-none hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group ${className}`}
+      className={`bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] p-4 sm:p-5 flex flex-col justify-between transition-all select-none hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group ${className}`}
     >
       <div>
         {/* Encabezado del widget */}

@@ -6,12 +6,44 @@ export const WIDGETS_ORDER_STORAGE_KEY_V2 = 'monety_widgets_order_v2';
  */
 export const DEFAULT_WIDGETS_CONFIG = [
   { 
+    id: 'expenses_category', 
+    label: 'Tus gastos', 
+    name: 'Tus gastos', 
+    description: 'Distribución y desglose de gastos por categoría', 
+    icon: 'PieChart', 
+    visible: true 
+  },
+  { 
+    id: 'weekly_cashflow', 
+    label: 'Actividad de gastos', 
+    name: 'Actividad de gastos', 
+    description: 'Evolución y comparación semanal de gastos', 
+    icon: 'Activity', 
+    visible: true 
+  },
+  { 
+    id: 'budget', 
+    label: 'Meta y Presupuesto', 
+    name: 'Meta y Presupuesto', 
+    description: 'Consumo mensual de ingresos y estado del presupuesto', 
+    icon: 'Target', 
+    visible: true 
+  },
+  { 
     id: 'recent_movements', 
     label: 'Últimos movimientos', 
     name: 'Últimos movimientos', 
     description: 'Últimos movimientos con acceso rápido', 
     icon: 'Receipt', 
     visible: true 
+  },
+  { 
+    id: 'recurring_payments', 
+    label: 'Pagos recurrentes', 
+    name: 'Pagos recurrentes', 
+    description: 'Suscripciones y gastos fijos al mes', 
+    icon: 'CalendarSync', 
+    visible: false 
   },
   { 
     id: 'investments', 
@@ -35,30 +67,6 @@ export const DEFAULT_WIDGETS_CONFIG = [
     name: 'Tasa de ahorro / Superávit', 
     description: 'Porcentaje de ahorro y excedente de liquidez libre', 
     icon: 'PiggyBank', 
-    visible: false 
-  },
-  { 
-    id: 'weekly_cashflow', 
-    label: 'Flujo de caja semanal', 
-    name: 'Flujo de caja semanal', 
-    description: 'Evolución y comparación semanal de ingresos vs. gastos', 
-    icon: 'Activity', 
-    visible: false 
-  },
-  { 
-    id: 'expenses_category', 
-    label: 'Tus gastos', 
-    name: 'Tus gastos', 
-    description: 'Distribución y desglose de gastos por categoría', 
-    icon: 'PieChart', 
-    visible: false 
-  },
-  { 
-    id: 'recurring_payments', 
-    label: 'Pagos recurrentes', 
-    name: 'Pagos recurrentes', 
-    description: 'Suscripciones y gastos fijos al mes', 
-    icon: 'CalendarSync', 
     visible: false 
   }
 ];

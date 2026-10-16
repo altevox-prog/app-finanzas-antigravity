@@ -111,6 +111,8 @@ export default function ViewRouter({
           key={`dashboard-${tabResetKeys?.dashboard || tabResetKeys?.inicio || 0}`}
           financeData={financeData}
           financeActions={financeActions}
+          userProfile={merged.userProfile || financeData?.userProfile}
+          isForcedDesktop={merged.isForcedDesktop}
           alerts={tomorrowDebtAlerts}
           onReviewAlert={handleReviewDebtAlert}
           onDismissAlert={handleDismissAlert}

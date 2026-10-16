@@ -18,6 +18,7 @@ export default function BottomNav({
   onOpenLoan,
   onOpenDebt,
   onOpenInvestment,
+  onQuickAction,
   className = '',
   mobileOnlyClass = ''
 }) {
@@ -29,7 +30,9 @@ export default function BottomNav({
   const handleFabClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (setIsActionMenuOpen) {
+    if (onQuickAction) {
+      onQuickAction(e);
+    } else if (setIsActionMenuOpen) {
       setIsActionMenuOpen((prev) => !prev);
     } else if (onOpenAddTx) {
       onOpenAddTx();
@@ -39,79 +42,121 @@ export default function BottomNav({
   };
 
   return (
-    <nav 
-      aria-label="Navegación principal móvil"
-      className={`shrink-0 w-full z-40 backdrop-blur-xl border-t pt-1.5 px-2 pb-2 sm:pb-3 grid grid-cols-5 items-center justify-items-center shadow-lg bg-white/95 dark:bg-[#18181b]/95 border-slate-200/80 dark:border-white/[0.08] ${mobileOnlyClass || className}`}
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+    <div 
+      className={`fixed bottom-4 inset-x-0 z-40 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom,0px)] ${mobileOnlyClass || className}`}
     >
-      {/* 1. Inicio */}
-      <button
-        id="dock-tab-dashboard"
-        type="button"
-        onClick={() => handleTab('dashboard')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none cursor-pointer ${
-          activeTab === 'dashboard' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
-        }`}
+      <nav 
+        aria-label="Navegación principal móvil"
+        className="pointer-events-auto relative flex items-center justify-between px-4 py-2.5 h-16 w-full max-w-md mx-auto rounded-3xl bg-slate-950/90 backdrop-blur-xl border border-emerald-500/25 shadow-[0_12px_36px_rgba(0,0,0,0.6),0_0_15px_rgba(16,185,129,0.12)]"
       >
-        <LayoutDashboard className="w-5 h-5 stroke-[2]" />
-        <span className="text-[10px] leading-tight text-center truncate max-w-full">Inicio</span>
-      </button>
+        {/* Haz decorativo sutil en el borde superior de la cápsula */}
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent pointer-events-none rounded-t-3xl" />
 
-      {/* 2. Movs */}
-      <button
-        id="dock-tab-transactions"
-        type="button"
-        onClick={() => handleTab('transactions')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none cursor-pointer ${
-          activeTab === 'transactions' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
-        }`}
-      >
-        <Receipt className="w-5 h-5 stroke-[2]" />
-        <span className="text-[10px] leading-tight text-center truncate max-w-full">Movs</span>
-      </button>
+        {/* Grupo Izquierdo (50% menos margen del botón central): Inicio y Movs */}
+        <div className="flex items-center justify-around w-[calc(50%-28px)]">
+          {/* 1. Inicio */}
+          <button
+            id="dock-tab-dashboard"
+            type="button"
+            onClick={() => handleTab('dashboard')}
+            className={`cursor-pointer select-none py-1 px-1.5 flex flex-col items-center gap-0.5 text-[10px] sm:text-xs transition-colors ${
+              activeTab === 'dashboard'
+                ? 'text-emerald-400 font-semibold'
+                : 'text-slate-400 hover:text-slate-200 font-medium'
+            }`}
+          >
+            <LayoutDashboard className={`w-5 h-5 stroke-[2] ${
+              activeTab === 'dashboard'
+                ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.75)] scale-110 transition-all duration-200'
+                : 'transition-all duration-200'
+            }`} />
+            <span className="leading-tight text-center">
+              Inicio
+            </span>
+          </button>
 
-      {/* 3. Botón Central (+) Elevado y Verde Esmeralda */}
-      <div className="flex items-center justify-center relative z-50">
-        <button
-          id="dock-btn-fab"
-          type="button"
-          onClick={handleFabClick}
-          className="relative -top-5 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-600/40 hover:shadow-emerald-600/60 transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 z-50 pointer-events-auto cursor-pointer select-none"
-          aria-label="Nuevo movimiento y acciones"
-        >
-          <Plus 
-            className={`w-7 h-7 transition-transform duration-300 ${
-              isActionMenuOpen ? 'rotate-45 text-rose-200' : ''
-            }`} 
-          />
-        </button>
-      </div>
+          {/* 2. Movs */}
+          <button
+            id="dock-tab-transactions"
+            type="button"
+            onClick={() => handleTab('transactions')}
+            className={`cursor-pointer select-none py-1 px-1.5 flex flex-col items-center gap-0.5 text-[10px] sm:text-xs transition-colors ${
+              activeTab === 'transactions'
+                ? 'text-emerald-400 font-semibold'
+                : 'text-slate-400 hover:text-slate-200 font-medium'
+            }`}
+          >
+            <Receipt className={`w-5 h-5 stroke-[2] ${
+              activeTab === 'transactions'
+                ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.75)] scale-110 transition-all duration-200'
+                : 'transition-all duration-200'
+            }`} />
+            <span className="leading-tight text-center">
+              Movs
+            </span>
+          </button>
+        </div>
 
-      {/* 4. Inversión */}
-      <button
-        id="dock-tab-investments"
-        type="button"
-        onClick={() => handleTab('investments')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none cursor-pointer ${
-          activeTab === 'investments' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
-        }`}
-      >
-        <TrendingUp className="w-5 h-5 stroke-[2]" />
-        <span className="text-[10px] leading-tight text-center truncate max-w-full">Inversión</span>
-      </button>
+        {/* Botón Central '+' con Centrado Absoluto Matemático Exacto */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+          {/* Resplandor decorativo de luz neón desenfocada */}
+          <div className="absolute -inset-1 rounded-full bg-emerald-500/25 blur-md pointer-events-none -z-10 translate-y-1" />
+          <button 
+            id="dock-btn-fab"
+            type="button"
+            onClick={handleFabClick}
+            className="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-emerald-400 text-slate-950 font-bold shadow-[0_8px_22px_rgba(16,185,129,0.5)] flex items-center justify-center transition-all active:scale-95 focus:outline-none cursor-pointer select-none"
+            aria-label="Registrar nueva operación"
+          >
+            <Plus className={`w-6 h-6 stroke-[2.5] transition-transform duration-300 ${isActionMenuOpen ? 'rotate-45' : ''}`}/>
+          </button>
+        </div>
 
-      {/* 5. Deudas */}
-      <button
-        id="dock-tab-debts"
-        type="button"
-        onClick={() => handleTab('debts')}
-        className={`flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 w-full rounded-xl transition-all duration-150 ease-out active:scale-[0.92] active:brightness-95 select-none relative cursor-pointer ${
-          activeTab === 'debts' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400 opacity-70 hover:opacity-100'
-        }`}
-      >
-        <HandCoins className="w-5 h-5 stroke-[2]" />
-        <span className="text-[10px] leading-tight text-center truncate max-w-full">Deudas</span>
-      </button>
-    </nav>
+        {/* Grupo Derecho (50% menos margen del botón central): Inversión y Deudas */}
+        <div className="flex items-center justify-around w-[calc(50%-28px)]">
+          {/* 3. Inversión */}
+          <button
+            id="dock-tab-investments"
+            type="button"
+            onClick={() => handleTab('investments')}
+            className={`cursor-pointer select-none py-1 px-1.5 flex flex-col items-center gap-0.5 text-[10px] sm:text-xs transition-colors ${
+              activeTab === 'investments'
+                ? 'text-emerald-400 font-semibold'
+                : 'text-slate-400 hover:text-slate-200 font-medium'
+            }`}
+          >
+            <TrendingUp className={`w-5 h-5 stroke-[2] ${
+              activeTab === 'investments'
+                ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.75)] scale-110 transition-all duration-200'
+                : 'transition-all duration-200'
+            }`} />
+            <span className="leading-tight text-center">
+              Inversión
+            </span>
+          </button>
+
+          {/* 4. Deudas */}
+          <button
+            id="dock-tab-debts"
+            type="button"
+            onClick={() => handleTab('debts')}
+            className={`cursor-pointer select-none py-1 px-1.5 flex flex-col items-center gap-0.5 text-[10px] sm:text-xs transition-colors ${
+              activeTab === 'debts'
+                ? 'text-emerald-400 font-semibold'
+                : 'text-slate-400 hover:text-slate-200 font-medium'
+            }`}
+          >
+            <HandCoins className={`w-5 h-5 stroke-[2] ${
+              activeTab === 'debts'
+                ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.75)] scale-110 transition-all duration-200'
+                : 'transition-all duration-200'
+            }`} />
+            <span className="leading-tight text-center">
+              Deudas
+            </span>
+          </button>
+        </div>
+      </nav>
+    </div>
   );
 }

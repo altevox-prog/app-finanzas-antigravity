@@ -5,34 +5,34 @@
 :root,
 html.light,
 body[data-theme="light"] {
-  --surface-base: #F7FCF5;
+  --surface-base: #F8F9FA;
   --surface-level1: #FFFFFF;
-  --surface-level2: #F3FEE8;
-  --bg-app: #F7FCF5;
+  --surface-level2: #F1F5F9;
+  --bg-app: #F8F9FA;
   --bg-card: #FFFFFF;
-  --bg-card-sub: #F3FEE8;
-  --bg-input: #F3FEE8;
-  --bg-segmented: rgba(18, 60, 21, 0.06);
+  --bg-card-sub: #F8FAFC;
+  --bg-input: #F1F5F9;
+  --bg-segmented: rgba(15, 23, 42, 0.05);
   --bg-segmented-btn-active: #FFFFFF;
-  --text-main: #122315;
-  --text-muted: #49634D;
-  --text-tertiary: #8BA89C;
-  --border-color: #DBEED8;
-  --border-alpha: rgba(18, 60, 21, 0.12);
-  --header-bg: rgba(247, 252, 245, 0.92);
+  --text-main: #1E293B;
+  --text-muted: #64748B;
+  --text-tertiary: #94A3B8;
+  --border-color: #E2E8F0;
+  --border-alpha: rgba(226, 232, 240, 0.6);
+  --header-bg: rgba(248, 249, 250, 0.92);
   --dock-bg: rgba(255, 255, 255, 0.96);
   --modal-bg: #FFFFFF;
-  --pill-bg: #F3FEE8;
-  --accent-color: #123C15;
-  --brand-primary: #123C15;
+  --pill-bg: #F1F5F9;
+  --accent-color: #10B981;
+  --brand-primary: #10B981;
   --brand-primary-text: #FFFFFF;
-  --brand-accent: #B1EB71;
-  --brand-accent-bg: #F3FEE8;
-  --card-shadow: 0 4px 16px -2px rgba(18, 35, 21, 0.05), 0 2px 4px -2px rgba(18, 35, 21, 0.03);
-  --balance-card-bg: linear-gradient(145deg, #FFFFFF 0%, #F7FCF5 100%);
-  --balance-card-border: #DBEED8;
-  --balance-card-sub-bg: rgba(243, 254, 232, 0.85);
-  --balance-card-text: #122315;
+  --brand-accent: #10B981;
+  --brand-accent-bg: #ECFDF5;
+  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+  --balance-card-bg: #FFFFFF;
+  --balance-card-border: #E2E8F0;
+  --balance-card-sub-bg: #F8FAFC;
+  --balance-card-text: #1E293B;
 }
 
 html.dark,

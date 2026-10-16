@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronDown, Bell, Search, SlidersHorizontal } from 'lucide-react';
+import { Calendar, ChevronDown, Bell, Search, SlidersHorizontal, Eye, EyeOff } from 'lucide-react';
 import Header from './Header';
 import TopAppBar from './TopAppBar';
+import AppLogo from '../ui/AppLogo';
+import Avatar from '../ui/Avatar';
 import SyncStatusBadge from '../ui/SyncStatusBadge';
 import NotificationCenter from '../ui/NotificationCenter';
 import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
+import { usePrivacy } from '../../context/PrivacyContext';
 import { 
   advanceNextDate, 
   getTodayLocalString, 
@@ -36,6 +39,8 @@ const TAB_TITLES = {
  * - Cabecera panorámica de escritorio con título dinámico de sección, selector de fecha, campana de notificaciones y TRM (>= lg)
  */
 export default function AppHeader({
+  desktopOnly = false,
+  mobileOnly = false,
   activeTab = 'dashboard',
   currentView,
   onNavigate,
@@ -200,169 +205,216 @@ export default function AppHeader({
     else if (setShowMonthPicker) setShowMonthPicker(true);
   };
 
-  const headerTitle = TAB_TITLES[activeTab] || 'Panel financiero';
-  const userName = userProfile?.name?.split(' ')[0] || 'Usuario';
+  const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
+
+  const userName = userProfile?.name?.split(' ')[0] || 'Alex';
+  const headerTitle = activeTab === 'dashboard' 
+    ? (userProfile?.name ? `Hola, ${userProfile.name.split(' ')[0]}` : 'Hola, Alex') 
+    : (TAB_TITLES[activeTab] || 'Panel financiero');
 
   return (
     <>
       {/* Top Header Móvil (< lg) anclado fijamente */}
-      <div className={`${mobileOnlyClass} shrink-0 z-40 w-full`}>
-        {/* Barra de Estado iOS simulada para móviles en tablet reducida (< lg) */}
-        <div 
-          className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between px-7 pt-3 pb-1 text-xs font-semibold select-none shrink-0 bg-slate-50/90 dark:bg-[#09090b]/90 text-slate-900 dark:text-slate-100`} 
-          style={{ backgroundColor: 'var(--header-bg)', color: 'var(--text-main)' }}
-        >
-          <span className="text-[11px] font-bold">9:41</span>
-          <div className="w-24 h-4.5 bg-black rounded-full shadow-inner flex items-center justify-end px-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          </div>
-          <div className="flex items-center gap-1.5 text-[10px]">
-            <span className="font-bold">5G</span>
-            <div className="w-4 h-2.5 border border-current rounded-xs p-0.5 flex items-center">
-              <div className="w-full h-full bg-current rounded-2xs"></div>
+      {!desktopOnly && (
+        <div className={`${mobileOnlyClass} shrink-0 z-40 w-full`}>
+          {/* Barra de Estado iOS simulada para móviles en tablet reducida (< lg) */}
+          <div 
+            className={`${isForcedMobile ? 'flex' : isForcedDesktop ? 'hidden' : 'hidden sm:flex lg:hidden'} items-center justify-between px-7 pt-3 pb-1 text-xs font-semibold select-none shrink-0 bg-slate-50/90 dark:bg-[#09090b]/90 text-slate-900 dark:text-slate-100`} 
+            style={{ backgroundColor: 'var(--header-bg)', color: 'var(--text-main)' }}
+          >
+            <span className="text-[11px] font-bold">9:41</span>
+            <div className="w-24 h-4.5 bg-black rounded-full shadow-inner flex items-center justify-end px-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <span className="font-bold">5G</span>
+              <div className="w-4 h-2.5 border border-current rounded-xs p-0.5 flex items-center">
+                <div className="w-full h-full bg-current rounded-2xs"></div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <TopAppBar 
-          currentView={currentView || activeTab}
-          activeTab={activeTab}
-          onNavigate={onNavigate}
-          onBack={onBack}
-          onOpenAddInvestment={onOpenAddInvestment}
-          onOpenAddDebt={onOpenAddDebt}
-          onOpenAddAccount={onOpenAddAccount}
-          monthlyStats={monthlyStats} 
-          userProfile={userProfile}
-          syncUser={syncUser}
-          theme={theme}
-          onToggleTheme={onToggleTheme}
-          onOpenProfile={onOpenProfile}
-          onOpenSettings={onOpenSettings || onOpenProfile}
-          onOpenAuth={onOpenAuth}
-          onLogout={onLogout}
-          accounts={accounts}
-          investments={investments}
-          subscriptions={subscriptions}
-          recurringPayments={recurringPayments}
-          debtsAndLoans={debtsAndLoans}
-          savingsGoals={savingsGoals}
+          <TopAppBar 
+            currentView={currentView || activeTab}
+            activeTab={activeTab}
+            onNavigate={onNavigate}
+            onBack={onBack}
+            onOpenAddInvestment={onOpenAddInvestment}
+            onOpenAddDebt={onOpenAddDebt}
+            onOpenAddAccount={onOpenAddAccount}
+            monthlyStats={monthlyStats} 
+            userProfile={userProfile}
+            syncUser={syncUser}
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            onOpenProfile={onOpenProfile}
+            onOpenSettings={onOpenSettings || onOpenProfile}
+            onOpenAuth={onOpenAuth}
+            onLogout={onLogout}
+            accounts={accounts}
+            investments={investments}
+            subscriptions={subscriptions}
+            recurringPayments={recurringPayments}
+            debtsAndLoans={debtsAndLoans}
+            savingsGoals={savingsGoals}
+            onApproveRecurring={handleApproveRecurring}
+            onSkipRecurring={handleSkipRecurring}
+          />
+        </div>
+      )}
+
+      {/* Top Header Panorámico de Escritorio (visible en lg:) continuo full-width con acabado Dark Glass Neón */}
+      {!mobileOnly && (
+        <header className={`${desktopOnlyClass} sticky top-0 z-40 w-full h-16 shrink-0 select-none relative overflow-hidden bg-slate-950/90 dark:bg-black/95 backdrop-blur-md border-b border-emerald-500/35 shadow-lg shadow-black/20 flex items-center`}>
+          {/* Línea base sutil con difuminado lateral */}
+          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent pointer-events-none z-0" />
+         
+          {/* Haz de resplandor neón ascendente */}
+          <div 
+            className="absolute inset-x-0 bottom-0 h-6 pointer-events-none z-0"
+            style={{
+              background: 'radial-gradient(ellipse 60% 100% at 50% 100%, rgba(16, 185, 129, 0.28) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 100%)'
+            }}
+          />
+
+          <div className="w-full px-6 flex items-center justify-between gap-3 relative z-10">
+            {/* Extremo Izquierdo: Logotipo e isotipo 'Finanzas al día' con texto blanco */}
+            <div className="flex items-center gap-3 shrink-0">
+              <AppLogo size="sm" showText={false} />
+              <span className="text-base sm:text-lg font-bold text-white tracking-tight select-none">
+                Finanzas al día
+              </span>
+            </div>
+
+            {/* Extremo Derecho: TRM, Ojo, Notificaciones, Avatar de usuario */}
+            <div className="flex items-center gap-2.5">
+              {/* Acciones contextuales para Transacciones en Escritorio */}
+              {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
+                <div className="flex items-center gap-1.5 mr-1">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('monety:toggle-search'))}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+                      isSearchActive
+                        ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
+                        : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                    }`}
+                    title="Buscar movimientos"
+                    aria-label="Buscar movimientos"
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('monety:open-filter-modal'))}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer relative active:scale-95 shadow-sm ${
+                      hasActiveFilters
+                        ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
+                        : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                    }`}
+                    title="Filtros avanzados"
+                    aria-label="Filtros avanzados"
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    {hasActiveFilters && (
+                      <span className="min-w-[16px] h-4 px-1 rounded-full bg-emerald-500 text-slate-950 text-[9px] font-mono font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* TRM Oficial Automatizado (No editable) */}
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-semibold text-slate-200 select-none shadow-sm"
+                title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>TRM Oficial: ${Number(trm).toLocaleString('es-CO')} COP</span>
+              </div>
+
+              {/* Botón Toggle de Visibilidad / Modo Discreto */}
+              <button
+                type="button"
+                onClick={togglePrivacyMode}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+                  isPrivacyMode
+                    ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
+                    : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                }`}
+                title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"}
+                aria-label="Modo discreto"
+              >
+                {isPrivacyMode ? (
+                  <EyeOff className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Botón de Campana de Notificaciones en Escritorio */}
+              <button
+                type="button"
+                onClick={() => setIsNotificationCenterOpen(true)}
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 relative transition-colors cursor-pointer shadow-sm active:scale-95"
+                title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"}
+                aria-label="Centro de notificaciones"
+              >
+                <Bell className="w-4.5 h-4.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Avatar de Usuario con anillo verde esmeralda */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenProfile) onOpenProfile();
+                  else if (onOpenSettings) onOpenSettings();
+                }}
+                className="flex items-center justify-center select-none cursor-pointer active:scale-95 transition-transform focus:outline-none ml-1"
+                title={`Perfil - ${userProfile?.name || 'Usuario'}`}
+                aria-label={`Perfil - ${userProfile?.name || 'Usuario'}`}
+              >
+                <div className="relative inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10">
+                  {/* Anillo de pulso neón adherido al perímetro exacto */}
+                  <span className="absolute inset-0 rounded-full border-2 border-emerald-400 dark:border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.85)] animate-pulse pointer-events-none z-0" />
+                  
+                  {/* Círculo interior del avatar/iniciales encajado al 100% */}
+                  <div className="relative z-10 w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                    <Avatar 
+                      src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
+                      name={syncUser?.user_metadata?.full_name || userProfile?.name} 
+                      email={syncUser?.email || userProfile?.email}
+                      size="sm" 
+                      className="!w-full !h-full"
+                      showStatus={false} 
+                    />
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Modal / Drawer Centro de Notificaciones (Escritorio) */}
+      {!mobileOnly && (
+        <NotificationCenter
+          isOpen={isNotificationCenterOpen}
+          onClose={() => setIsNotificationCenterOpen(false)}
+          notifications={alerts}
+          activeNotifications={activeAlerts}
+          onDismiss={dismissAlert}
+          onMarkAllAsRead={markAllAsRead}
           onApproveRecurring={handleApproveRecurring}
           onSkipRecurring={handleSkipRecurring}
         />
-      </div>
-
-      {/* Top Header Panorámico de Escritorio (visible en lg:) */}
-      <header className={`${desktopOnlyClass} border-b border-slate-200/80 dark:border-white/[0.08] bg-white/80 dark:bg-slate-900/80 dark:bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-40 shrink-0 select-none shadow-xs`}>
-        <div className="max-w-[1550px] w-full mx-auto px-6 py-4.5 flex sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {headerTitle}
-            </h1>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Bienvenido de nuevo, {userName} • {currentMonthLabel}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {/* Acciones contextuales para Transacciones en Escritorio */}
-            {(activeTab === 'transactions' || activeTab === 'movements' || activeTab === 'movimientos') && (
-              <div className="flex items-center gap-1.5 mr-1">
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new CustomEvent('monety:toggle-search'))}
-                  className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                    isSearchActive
-                      ? 'bg-[#007AFF] text-white border-[#007AFF]'
-                      : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/10'
-                  }`}
-                  title="Buscar movimientos"
-                  aria-label="Buscar movimientos"
-                >
-                  <Search className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new CustomEvent('monety:open-filter-modal'))}
-                  className={`p-2 rounded-xl border transition-all cursor-pointer relative ${
-                    hasActiveFilters
-                      ? 'bg-[#007AFF]/15 text-[#007AFF] border-[#007AFF]/40'
-                      : 'bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/10'
-                  }`}
-                  title="Filtros avanzados"
-                  aria-label="Filtros avanzados"
-                >
-                  <SlidersHorizontal className="w-4 h-4" />
-                  {hasActiveFilters && (
-                    <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#007AFF] text-white text-[9px] font-mono font-bold flex items-center justify-center absolute -top-1 -right-1 shadow-sm">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {/* Selector de Mes Interactivo */}
-            <button
-              type="button"
-              onClick={handleOpenPicker}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/80 dark:border-white/[0.08] shadow-sm group"
-              title="Abrir selector de mes y año"
-            >
-              <Calendar className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
-              <span>{selectedDay ? selectedDay : currentMonthLabel}</span>
-              <ChevronDown className="w-3 h-3 opacity-50" />
-            </button>
-
-            {/* Estado de Sincronización en la Nube */}
-            <div className="hidden sm:flex max-w-[190px]">
-              <SyncStatusBadge
-                syncStatus={syncStatus}
-                isCloudEnabled={isCloudEnabled}
-                user={syncUser}
-                onOpenAuth={onOpenAuth}
-              />
-            </div>
-
-            {/* TRM Oficial Automatizado (No editable) */}
-            <div 
-              className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/[0.08] text-xs font-semibold text-slate-700 dark:text-slate-300 select-none shadow-sm"
-              title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>TRM Oficial: ${Number(trm).toLocaleString('es-CO')} COP</span>
-            </div>
-
-            {/* Botón de Campana de Notificaciones en Escritorio */}
-            <button
-              type="button"
-              onClick={() => setIsNotificationCenterOpen(true)}
-              className="p-2 rounded-xl text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 relative transition-colors cursor-pointer"
-              title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"}
-              aria-label="Centro de notificaciones"
-            >
-              <Bell className="w-4.5 h-4.5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Modal / Drawer Centro de Notificaciones (Escritorio) */}
-      <NotificationCenter
-        isOpen={isNotificationCenterOpen}
-        onClose={() => setIsNotificationCenterOpen(false)}
-        notifications={alerts}
-        activeNotifications={activeAlerts}
-        onDismiss={dismissAlert}
-        onMarkAllAsRead={markAllAsRead}
-        onApproveRecurring={handleApproveRecurring}
-        onSkipRecurring={handleSkipRecurring}
-      />
+      )}
     </>
   );
 }

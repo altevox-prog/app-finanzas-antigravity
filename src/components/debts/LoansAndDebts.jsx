@@ -52,7 +52,7 @@ export default function LoansAndDebts({
   const tabTotals = calculateTabTotals(filteredItems, calculateItemStats);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200 p-4 sm:p-6 pb-28 space-y-4 animate-fadeIn">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200 p-4 sm:p-6 pb-32 sm:pb-36 space-y-4 animate-fadeIn">
       {/* 1. Barra de pestañas tipo pastilla compacta y moderna */}
       <div className="bg-slate-200/70 dark:bg-slate-900/80 border border-slate-300/60 dark:border-slate-800/80 rounded-xl p-1 flex gap-1 backdrop-blur-sm w-full">
         {/* Pestaña: Préstamos (Por cobrar) */}

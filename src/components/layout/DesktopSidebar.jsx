@@ -126,25 +126,10 @@ export default function DesktopSidebar({
 
   return (
     <aside 
-      className={`${className} w-64 xl:w-72 h-screen sticky top-0 flex-col justify-between p-5 border-r border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-[#09090b]/90 backdrop-blur-xl z-30 select-none shrink-0 transition-all`}
+      className={`${className} w-64 xl:w-72 h-[calc(100vh-4rem)] sticky top-16 flex-col justify-between p-5 border-r border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-[#09090b]/90 backdrop-blur-xl z-30 select-none shrink-0 transition-all`}
     >
-      {/* SECCIÓN SUPERIOR: Logo + Botón Acción + Navegación */}
+      {/* SECCIÓN SUPERIOR: Botón Acción + Navegación */}
       <div className="space-y-6">
-        {/* Identidad de Marca */}
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-3">
-            <AppLogo className="w-9 h-9" />
-            <div>
-              <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white block leading-tight">
-                Monety
-              </span>
-              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tracking-wider uppercase block">
-                Finanzas Personales
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* Botón Principal de Acción Rápida con Menú Desplegable */}
         <button
           id="desktop-btn-new-transaction"
@@ -280,12 +265,12 @@ export default function DesktopSidebar({
                 onClick={() => handleTab(item.id)}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition-all cursor-pointer group ${
                   isActive
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 shadow-sm'
+                    ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className={isActive ? 'text-emerald-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors'}>
+                  <span className={isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors'}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
@@ -312,14 +297,22 @@ export default function DesktopSidebar({
           title="Abrir configuración y perfil"
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Avatar
-              src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo}
-              name={syncUser?.user_metadata?.full_name || userProfile?.name}
-              email={syncUser?.email || userProfile?.email}
-              size="md"
-              showStatus={Boolean(syncUser?.id && syncUser?.id !== 'local-user')}
-              isOnline={Boolean(syncUser?.id && syncUser?.id !== 'local-user')}
-            />
+            <div className="relative inline-flex items-center justify-center w-10 h-10 shrink-0">
+              {/* Anillo de pulso neón adherido al perímetro exacto */}
+              <span className="absolute inset-0 rounded-full border-2 border-emerald-400 dark:border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.85)] animate-pulse pointer-events-none z-0" />
+              
+              {/* Círculo interior del avatar/iniciales encajado al 100% */}
+              <div className="relative z-10 w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                <Avatar
+                  src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo}
+                  name={syncUser?.user_metadata?.full_name || userProfile?.name}
+                  email={syncUser?.email || userProfile?.email}
+                  size="sm"
+                  className="!w-full !h-full"
+                  showStatus={false}
+                />
+              </div>
+            </div>
             <div className="min-w-0 text-left flex-1">
               <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                 {userProfile?.name || 'Usuario'}

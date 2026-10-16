@@ -146,7 +146,7 @@ export default function DashboardWidgetWrapper({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
-      className={`w-full touch-pan-y ${wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'} ${className}`}
+      className={`w-full touch-pan-y ${className}`}
       style={{
         transform: 'translate3d(0, 0, 0)',
       }}

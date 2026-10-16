@@ -83,7 +83,7 @@ export default function MonthlyNetHeroCard({
 
   return (
     <div 
-      className={`w-full bg-white dark:bg-zinc-900/90 rounded-2xl sm:rounded-3xl p-4 sm:p-4.5 border border-slate-200/80 dark:border-white/[0.08] shadow-sm select-none transition-all ${className}`}
+      className={`w-full bg-white dark:bg-zinc-900/90 rounded-3xl p-4 sm:p-5 border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] select-none transition-all ${className}`}
     >
       {/* 1. Cabecera */}
       <div className="flex items-center justify-between gap-3">
@@ -114,7 +114,7 @@ export default function MonthlyNetHeroCard({
         <button
           type="button"
           onClick={handlePeriodClick}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-slate-700 dark:text-zinc-200 bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700/80 border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer active:scale-95 shadow-2xs"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-200 border border-slate-200/50 dark:border-white/10 transition-all cursor-pointer active:scale-95 shadow-2xs"
           title="Cambiar periodo o mes"
           aria-label="Seleccionar periodo o mes"
         >
@@ -156,7 +156,7 @@ export default function MonthlyNetHeroCard({
       </div>
 
       {/* 3. Bandeja inferior integrada (cápsula interna estilizada: DOS columnas simétricas 50% / 50%) */}
-      <div className="mt-3 sm:mt-3.5 py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-2xl bg-slate-50/90 dark:bg-zinc-800/40 border border-slate-200/70 dark:border-white/[0.06] grid grid-cols-2 divide-x divide-slate-200/70 dark:divide-white/[0.08]">
+      <div className="mt-3 sm:mt-3.5 py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-2xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-200/50 dark:border-white/[0.06] grid grid-cols-2 divide-x divide-slate-200/50 dark:divide-white/[0.08]">
         {/* Columna 1: Ingresos */}
         <div className="pr-2.5 sm:pr-4 flex flex-col justify-center min-w-0">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">

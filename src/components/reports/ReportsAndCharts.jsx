@@ -154,11 +154,7 @@ export default function ReportsAndCharts({
           handleNav('transactions');
         }
       }}
-      className="min-h-[120px] p-4 sm:p-4.5 rounded-3xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-slate-50/50 dark:hover:bg-zinc-800/40 transition-colors active:scale-[0.99] group relative overflow-hidden"
-      style={{ 
-        backgroundColor: 'var(--bg-card, #ffffff)', 
-        borderColor: 'var(--border-color, rgba(226, 232, 240, 0.8))' 
-      }}
+      className="min-h-[120px] p-4 sm:p-5 rounded-3xl bg-white dark:bg-zinc-900/90 border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-all active:scale-[0.99] group relative overflow-hidden"
     >
       <div>
         {/* Cabecera limpia interna sin pastilla de fecha ni texto Detalles > */}
