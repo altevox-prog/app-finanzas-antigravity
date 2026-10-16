@@ -394,16 +394,16 @@ export default function TopAppBar({
           </>
         )}
 
-        {/* Caso 4: Préstamos y Deudas -> Botón + Nuevo Dark Glass */}
+        {/* Caso 4: Préstamos y Deudas -> Botón Circular + Dark Glass */}
         {isDebts && (
           <button
             type="button"
             onClick={handleAddDebtClick}
-            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm"
             title="Registrar nuevo préstamo o deuda"
+            aria-label="Registrar nuevo préstamo o deuda"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Nuevo</span>
+            <Plus className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
           </button>
         )}
 

@@ -1,109 +1,123 @@
 import React from 'react';
+import { usePrivacy } from '../../context/PrivacyContext';
 
 /**
  * DebtMetricsSummary
- * Muestra el resumen de métricas móviles con alto contraste para Préstamos y Deudas.
+ * Hero Card Ejecutiva 3 en 1 para Préstamos y Deudas:
+ * - Bloque Superior: Monto principal pendiente + Badge dinámico de cuentas pendientes
+ * - Barra de progreso de amortización integrada con porcentaje liquidado
+ * - Bloque Inferior: Grid compacto de 3 columnas (Compromiso Total, Total Abonado con desglose, Cuentas Pagadas)
  */
 export default function DebtMetricsSummary({
   activeTab,
-  tabTotals,
+  tabTotals = {},
   formatCurrency,
   filteredItemsCount = 0
 }) {
+  const { isPrivacyMode } = usePrivacy();
   const isReceivable = activeTab === 'receivable';
 
+  // Porcentaje de liquidación de la sección actual
+  const percentPaid = tabTotals.totalToPay > 0 
+    ? Math.min(100, Math.round((tabTotals.totalPaid / tabTotals.totalToPay) * 100))
+    : 0;
+
+  const totalAccounts = filteredItemsCount || (tabTotals.paidCount + tabTotals.pendingCount) || 0;
+
   return (
-    <div className="space-y-2.5 mb-4">
-      {/* Tarjeta Principal: Saldo Pendiente */}
-      <div 
-        className="p-3.5 sm:p-4 rounded-2xl border"
-        style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-      >
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400 tracking-normal truncate">
-            {isReceivable ? 'Saldo por Cobrar Pendiente' : 'Saldo por Pagar Pendiente'}
+    <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm shadow-slate-200/50 dark:shadow-xl dark:shadow-black/40 mb-4 space-y-4">
+      {/* ============================================================== */}
+      {/* BLOQUE SUPERIOR: Monto Principal y Badge de Pendientes         */}
+      {/* ============================================================== */}
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <span className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium block tracking-normal">
+            {isReceivable ? 'Total pendiente por cobrar' : 'Total pendiente por pagar'}
           </span>
-          <span className={`text-[11px] sm:text-[12px] font-semibold font-mono tracking-tight px-2.5 py-0.5 rounded-full shrink-0 tabular-nums ${
-            isReceivable ? 'bg-emerald-500/15 text-[#34C759]' : 'bg-red-500/15 text-[#FF3B30]'
+          <div className={`font-bold font-mono tracking-tight tabular-nums text-2xl sm:text-3xl mt-1 ${
+            isReceivable ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
           }`}>
-            {tabTotals.pendingCount} pendiente{tabTotals.pendingCount !== 1 ? 's' : ''}
-          </span>
+            {formatCurrency(tabTotals.outstandingBalance || 0)}
+          </div>
         </div>
 
-        <div className={`text-[28px] sm:text-[32px] font-bold font-mono tracking-tight truncate my-1 tabular-nums leading-tight ${
-          isReceivable ? 'text-[#34C759]' : 'text-[#FF3B30]'
+        {/* Badge dinámico de cuentas pendientes */}
+        <span className={`text-xs font-semibold font-mono tracking-tight px-2.5 py-1 rounded-full shrink-0 border ${
+          isReceivable 
+            ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30' 
+            : 'bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
         }`}>
-          {formatCurrency(tabTotals.outstandingBalance)}
+          {tabTotals.pendingCount || 0} pendiente{tabTotals.pendingCount !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* ============================================================== */}
+      {/* BARRA DE PROGRESO DE AMORTIZACIÓN INTEGRADA                     */}
+      {/* ============================================================== */}
+      <div>
+        <div className="bg-slate-100 dark:bg-slate-800/80 h-2 rounded-full overflow-hidden my-3 border border-slate-200/50 dark:border-slate-700/50">
+          <div 
+            className={`h-full rounded-full transition-all duration-500 ${
+              isReceivable ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-rose-500 dark:bg-rose-400'
+            }`}
+            style={{ width: `${percentPaid}%` }}
+          />
         </div>
-
-        {tabTotals.remainingInterest > 0 && (
-          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            <span>Cap: <strong className="text-slate-700 dark:text-slate-200 font-bold font-mono tracking-tight tabular-nums">{formatCurrency(tabTotals.remainingCapital)}</strong></span>
-            <span>•</span>
-            <span>Intereses acum.: <strong className="text-amber-500 font-bold font-mono tracking-tight tabular-nums">{formatCurrency(tabTotals.remainingInterest)}</strong></span>
-          </div>
-        )}
-
-        {/* Barra de progreso de liquidación */}
-        <div className="mt-2.5 pt-2 border-t space-y-1.5" style={{ borderColor: 'var(--border-color)' }}>
-          <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
-            <span className="opacity-60">Liquidado de esta sección</span>
-            <span className="font-bold font-mono tracking-tight tabular-nums">
-              {tabTotals.totalToPay > 0 
-                ? `${Math.min(100, Math.round((tabTotals.totalPaid / tabTotals.totalToPay) * 100))}%`
-                : '0%'}
+        <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-mono">
+          <span>Liquidado: <strong className="text-slate-700 dark:text-slate-200">{isPrivacyMode ? '••%' : `${percentPaid}%`}</strong></span>
+          {tabTotals.remainingInterest > 0 && (
+            <span className="truncate">
+              Intereses pend.: <strong className="text-amber-600 dark:text-amber-400 font-mono">{formatCurrency(tabTotals.remainingInterest)}</strong>
             </span>
-          </div>
-          <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--pill-bg)' }}>
-            <div 
-              className={`h-full rounded-full transition-all duration-300 ${
-                isReceivable ? 'bg-[#34C759]' : 'bg-[#FF3B30]'
-              }`}
-              style={{ 
-                width: `${tabTotals.totalToPay > 0 ? Math.min(100, (tabTotals.totalPaid / tabTotals.totalToPay) * 100) : 0}%` 
-              }}
-            />
-          </div>
+          )}
         </div>
       </div>
 
-      {/* 2 Tarjetas Secundarias: Total y Estado */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div 
-          className="p-3 rounded-2xl border"
-          style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-        >
-          <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 block truncate">
-            {isReceivable ? 'Total Prestado' : 'Total Compromiso'}
+      {/* DIVISOR SUTIL */}
+      <div className="border-t border-slate-200/80 dark:border-slate-800/80 my-2" />
+
+      {/* ============================================================== */}
+      {/* BLOQUE INFERIOR: Grid de 3 columnas compactas                  */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 text-left">
+        {/* Columna 1: Compromiso Total */}
+        <div>
+          <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider block truncate">
+            {isReceivable ? 'PRESTADO' : 'COMPROMISO'}
           </span>
-          <span className="text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums truncate block mt-0.5" style={{ color: 'var(--text-main)' }}>
-            {formatCurrency(tabTotals.totalToPay)}
+          <span className="text-slate-800 dark:text-slate-100 font-bold text-sm sm:text-base font-mono tracking-tight block mt-0.5 tabular-nums truncate">
+            {formatCurrency(tabTotals.totalToPay || 0)}
           </span>
-          <div className="text-[10px] opacity-75 mt-1 space-y-0.5">
-            <div>Abonado: <span className="text-[#34C759] font-bold font-mono tracking-tight tabular-nums">{formatCurrency(tabTotals.totalPaid)}</span></div>
-            <div className="text-[9px] text-slate-500 dark:text-slate-400">
-              Cap: <span className="font-mono tabular-nums">{formatCurrency(tabTotals.totalCapitalPaid)}</span> | Int: <span className="font-mono tabular-nums">{formatCurrency(tabTotals.totalInterestPaid)}</span>
-            </div>
+        </div>
+
+        {/* Columna 2: Total Abonado */}
+        <div>
+          <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider block truncate">
+            TOTAL ABONADO
+          </span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm sm:text-base font-mono tracking-tight block mt-0.5 tabular-nums truncate">
+            {formatCurrency(tabTotals.totalPaid || 0)}
+          </span>
+          <div className="text-slate-500 dark:text-slate-400 text-xs font-mono mt-0.5 hidden sm:block truncate">
+            Cap: {formatCurrency(tabTotals.totalCapitalPaid || 0)} | Int: {formatCurrency(tabTotals.totalInterestPaid || 0)}
           </div>
         </div>
 
-        <div 
-          className="p-3 rounded-2xl border flex flex-col justify-between"
-          style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-        >
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 block truncate">
-              Cuentas Pagadas
-            </span>
-            <span className="text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums truncate block mt-0.5" style={{ color: 'var(--text-main)' }}>
-              {tabTotals.paidCount} de {filteredItemsCount}
-            </span>
-          </div>
-          <div className="mt-1">
-            <span className="text-[10px] font-bold text-[#34C759] block truncate">
-              {filteredItemsCount === 0 ? 'Sin cuentas' : tabTotals.pendingCount === 0 ? '✓ 100% al día' : `${tabTotals.pendingCount} pendiente(s)`}
-            </span>
-          </div>
+        {/* Columna 3: Cuentas Pagadas */}
+        <div>
+          <span className="text-[10px] sm:text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider block truncate">
+            PAGADAS
+          </span>
+          <span className="text-slate-800 dark:text-slate-100 font-bold text-sm sm:text-base font-mono tracking-tight block mt-0.5 tabular-nums truncate">
+            {tabTotals.paidCount || 0} de {totalAccounts}
+          </span>
+          <span className="text-slate-500 dark:text-slate-400 text-xs font-medium block truncate mt-0.5">
+            {totalAccounts === 0 
+              ? 'Sin cuentas' 
+              : tabTotals.pendingCount === 0 
+                ? '✓ 100% al día' 
+                : `${tabTotals.pendingCount} pend.`}
+          </span>
         </div>
       </div>
     </div>
