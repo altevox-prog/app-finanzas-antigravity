@@ -260,14 +260,29 @@ export default function TopAppBar({
         {/* SECCIÓN DERECHA: Acciones Contextuales                          */}
         {/* ============================================================== */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto relative z-10">
-        {/* Caso 1: Dashboard -> Campana + Avatar con Anillo de Luz Neón */}
+        {/* Caso 1: Dashboard -> Privacidad + Campana + Avatar con Anillo de Luz Neón */}
         {isDashboard && (
           <>
-            {/* Campana de Notificaciones Dark Neón */}
+            {/* 1. Botón de Privacidad (Ocultar / Mostrar saldos) */}
+            <button
+              type="button"
+              onClick={togglePrivacyMode}
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm ${
+                isPrivacyMode
+                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 ring-1 ring-emerald-500/30'
+                  : 'bg-slate-900/80 border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+              }`}
+              title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"}
+              aria-label="Modo discreto"
+            >
+              {isPrivacyMode ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
+            </button>
+
+            {/* 2. Botón de Notificaciones Dark Neón */}
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(true)}
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all relative cursor-pointer shadow-sm"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all relative cursor-pointer shadow-sm"
               title={hasNotifications ? `${activeAlerts.length} alertas pendientes` : "Sin notificaciones"}
               aria-label="Notificaciones"
             >
@@ -280,7 +295,7 @@ export default function TopAppBar({
               )}
             </button>
 
-            {/* Avatar de Perfil con Anillo Neón Adherido (Cero Separación) */}
+            {/* 3. Avatar de Perfil con Anillo Neón Adherido (Cero Separación) */}
             <button
               type="button"
               onClick={() => {
@@ -351,25 +366,10 @@ export default function TopAppBar({
           </>
         )}
 
-        {/* Caso 3: Inversiones -> Modo discreto + Refrescar cotizaciones + Botón + Inversión Dark Glass */}
+        {/* Caso 3: Inversiones -> Refrescar cotizaciones + Botón + Inversión Dark Glass */}
         {isInvestments && (
           <>
-            {/* 1. Botón Ocultar/Mostrar Saldos */}
-            <button
-              type="button"
-              onClick={togglePrivacyMode}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
-                isPrivacyMode
-                  ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                  : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
-              }`}
-              title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"}
-              aria-label="Modo discreto"
-            >
-              {isPrivacyMode ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
-            </button>
-
-            {/* 2. Botón Icono Circular Refrescar Cotizaciones */}
+            {/* 1. Botón Icono Circular Refrescar Cotizaciones */}
             <button
               type="button"
               onClick={handleRefreshQuotesClick}
@@ -380,7 +380,7 @@ export default function TopAppBar({
               <RotateCw className={`w-4 h-4 ${isRefreshingQuotes ? 'animate-spin text-emerald-400' : ''}`} />
             </button>
 
-            {/* 3. Botón de Acción Rápida + para Registrar Nueva Inversión */}
+            {/* 2. Botón de Acción Rápida + para Registrar Nueva Inversión */}
             <button
               type="button"
               onClick={handleAddInvestmentClick}
