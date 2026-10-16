@@ -174,8 +174,12 @@ export default function ViewRouter({
           categories={categories}
           accounts={accounts}
           currentMonthLabel={currentMonthLabel}
+          selectedDate={selectedDate}
           selectedDay={selectedDay}
           onSelectDay={setSelectedDay}
+          monthlyStats={monthlyStats}
+          onOpenMonthPicker={merged.setShowMonthPicker ? () => merged.setShowMonthPicker(true) : (merged.onOpenMonthPicker || (() => setIsCalendarOpen && setIsCalendarOpen(true)))}
+          onOpenCalendar={() => setIsCalendarOpen && setIsCalendarOpen(true)}
           modalControls={merged.modalControls || merged}
           onOpenTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}
           onOpenAddTransaction={merged.openAddTransaction || merged.openTransactionModal || merged.handleOpenTransaction || handleOpenTransaction}

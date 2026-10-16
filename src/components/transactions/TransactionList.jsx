@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Inbox, 
   X, 
@@ -18,6 +18,7 @@ import TransactionItem from './components/TransactionItem';
 import EditTransactionModal from './modals/EditTransactionModal';
 import ReceiptModal from './modals/ReceiptModal';
 import TransactionDetailModal from './modals/TransactionDetailModal';
+import TransactionsHeroCard from './TransactionsHeroCard';
 
 export default function TransactionList({ 
   transactions, 
@@ -31,8 +32,12 @@ export default function TransactionList({
   categories, 
   accounts, 
   currentMonthLabel, 
+  selectedDate = new Date(),
   selectedDay, 
   onSelectDay, 
+  monthlyStats = {},
+  onOpenMonthPicker = null,
+  onOpenCalendar = null,
   limit, 
   isCompact = false, 
   onViewAll,
@@ -46,9 +51,9 @@ export default function TransactionList({
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'income' | 'expense'
   const [accountFilter, setAccountFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
   const searchInputRef = useRef(null);
 
   const { formatMoney, enableDecimals: privacyEnableDecimals } = usePrivacy();
@@ -75,7 +80,6 @@ export default function TransactionList({
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setIsFilterModalOpen(false);
-        setIsPeriodMenuOpen(false);
         if (isSearchOpen) {
           setIsSearchOpen(false);
         }
@@ -86,8 +90,8 @@ export default function TransactionList({
   }, [isSearchOpen]);
 
   // Indicador de filtros activos
-  const hasActiveFilters = typeFilter !== 'all' || accountFilter !== 'all' || Boolean(selectedDay);
-  const activeFilterCount = (typeFilter !== 'all' ? 1 : 0) + (accountFilter !== 'all' ? 1 : 0) + (selectedDay ? 1 : 0);
+  const hasActiveFilters = typeFilter !== 'all' || accountFilter !== 'all' || categoryFilter !== 'all' || Boolean(selectedDay);
+  const activeFilterCount = (typeFilter !== 'all' ? 1 : 0) + (accountFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0) + (selectedDay ? 1 : 0);
 
   // Sort transactions by date descending (newest first)
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
@@ -96,6 +100,56 @@ export default function TransactionList({
     const dateB = b?.date ? String(b.date).split('T')[0] : (b?.created_at ? String(b.created_at).split('T')[0] : '');
     return new Date((dateB || '1970-01-01') + 'T00:00:00') - new Date((dateA || '1970-01-01') + 'T00:00:00');
   });
+
+  // Cálculo de métricas del periodo seleccionado (Ingresos, Gastos, Balance) para TransactionsHeroCard
+  const isTransferTx = (t) => Boolean(
+    t && (
+      t.isTransfer ||
+      t.is_transfer ||
+      t.type === 'transfer' ||
+      t.type === 'transferencia' ||
+      t.categoryId === 'cat-transfer' ||
+      t.category_id === 'cat-transfer' ||
+      t.subcategoryId === 'sub-transfer-in' ||
+      t.subcategoryId === 'sub-transfer-out'
+    )
+  );
+
+  const heroIncome = useMemo(() => {
+    if (selectedDay) {
+      return (safeTransactions || [])
+        .filter(t => {
+          const d = t?.date ? String(t.date).split('T')[0] : (t?.created_at ? String(t.created_at).split('T')[0] : '');
+          return d === String(selectedDay).split('T')[0] && (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t);
+        })
+        .reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
+    }
+    if (monthlyStats?.totalIncome !== undefined) {
+      return Number(monthlyStats.totalIncome) || 0;
+    }
+    return (safeTransactions || [])
+      .filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t))
+      .reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
+  }, [selectedDay, safeTransactions, monthlyStats?.totalIncome]);
+
+  const heroExpense = useMemo(() => {
+    if (selectedDay) {
+      return (safeTransactions || [])
+        .filter(t => {
+          const d = t?.date ? String(t.date).split('T')[0] : (t?.created_at ? String(t.created_at).split('T')[0] : '');
+          return d === String(selectedDay).split('T')[0] && (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t);
+        })
+        .reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
+    }
+    if (monthlyStats?.totalExpense !== undefined) {
+      return Number(monthlyStats.totalExpense) || 0;
+    }
+    return (safeTransactions || [])
+      .filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t))
+      .reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
+  }, [selectedDay, safeTransactions, monthlyStats?.totalExpense]);
+
+  const heroBalance = heroIncome - heroExpense;
 
   // Filter by day if selectedDay is active, plus search, type, and account filters
   const filteredTransactions = sortedTransactions.filter((tx) => {
@@ -126,7 +180,10 @@ export default function TransactionList({
     const txAccountId = tx.accountId || tx.account_id;
     const matchesAccount = accountFilter === 'all' || txAccountId === accountFilter;
 
-    return matchesSearch && matchesType && matchesAccount;
+    const txCatId = tx.categoryId || tx.category_id;
+    const matchesCategory = categoryFilter === 'all' || txCatId === categoryFilter || tx.category === categoryFilter;
+
+    return matchesSearch && matchesType && matchesAccount && matchesCategory;
   });
 
   const displayTransactions = limit ? filteredTransactions.slice(0, limit) : filteredTransactions;
@@ -196,101 +253,9 @@ export default function TransactionList({
               )}
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-[15px] sm:text-[18px] font-bold tracking-tight text-slate-900 dark:text-white truncate">
-                    {isCompact ? 'Movimientos Recientes' : 'Movimientos'}
-                  </h2>
-                  {!isCompact && (
-                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 shrink-0">
-                      ({filteredTransactions.length})
-                    </span>
-                  )}
-                </div>
-
-                {/* Subtítulo / Selector de fecha interactivo con popover */}
-                {!isCompact && (
-                  <div className="relative inline-block mt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsPeriodMenuOpen(!isPeriodMenuOpen)}
-                      className="group/period flex items-center gap-1 text-[11px] sm:text-[12px] font-medium text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors cursor-pointer"
-                    >
-                      <span className="truncate max-w-[190px] sm:max-w-[280px]">
-                        {selectedDay 
-                          ? `Día ${selectedDay.split('-')[2]} de ${MONTH_NAMES[parseInt(selectedDay.split('-')[1]) - 1] || ''}` 
-                          : (currentMonthLabel || 'Mes actual')}
-                      </span>
-                      <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isPeriodMenuOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {/* Popover flotante compacto para selección de período */}
-                    {isPeriodMenuOpen && (
-                      <>
-                        <div 
-                          className="fixed inset-0 z-40" 
-                          onClick={() => setIsPeriodMenuOpen(false)} 
-                        />
-                        <div className="absolute left-0 top-full mt-1.5 z-50 min-w-[240px] bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-white/10 p-2 text-xs space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                            Período de consulta
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (onSelectDay) onSelectDay(null);
-                              setIsPeriodMenuOpen(false);
-                            }}
-                            className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                              !selectedDay 
-                                ? 'bg-[#007AFF]/10 text-[#007AFF] font-bold' 
-                                : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800'
-                            }`}
-                          >
-                            <span>Ver todo el mes ({currentMonthLabel || 'Mes actual'})</span>
-                            {!selectedDay && <Check className="w-3.5 h-3.5" />}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (onSelectDay) {
-                                const todayStr = new Date().toISOString().split('T')[0];
-                                onSelectDay(selectedDay || todayStr);
-                              }
-                              setIsPeriodMenuOpen(false);
-                            }}
-                            className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                              selectedDay 
-                                ? 'bg-[#007AFF]/10 text-[#007AFF] font-bold' 
-                                : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800'
-                            }`}
-                          >
-                            <span>Filtrar por día específico</span>
-                            {selectedDay && <Check className="w-3.5 h-3.5" />}
-                          </button>
-
-                          {selectedDay && onSelectDay && (
-                            <div className="pt-1.5 mt-1 border-t border-slate-100 dark:border-white/5 space-y-1">
-                              <label className="text-[10px] text-slate-400 font-semibold px-2 block">
-                                Seleccionar día:
-                              </label>
-                              <input
-                                type="date"
-                                value={selectedDay}
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    onSelectDay(e.target.value);
-                                  }
-                                }}
-                                className="w-full text-xs bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white rounded-xl px-2.5 py-1.5 border border-slate-200/80 dark:border-white/10"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+                <h2 className="text-[17px] sm:text-[20px] font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                  {isCompact ? 'Movimientos Recientes' : 'Transacciones'}
+                </h2>
               </div>
             </div>
 
@@ -332,47 +297,37 @@ export default function TransactionList({
         )}
       </div>
 
-      {/* Nivel 2: Fila única de segmentación rápida (Carrusel horizontal con scroll suave) */}
+      {/* Tarjeta Cabecera de Resumen Financiero (Hero Card) */}
+      {!isCompact && (
+        <>
+          <div className="my-2.5 sm:my-3">
+            <TransactionsHeroCard
+              income={heroIncome}
+              expense={heroExpense}
+              balance={heroBalance}
+              transactions={safeTransactions}
+              selectedDate={selectedDate}
+              selectedDay={selectedDay}
+              currentMonthLabel={currentMonthLabel}
+              typeFilter={typeFilter}
+              onTypeFilterChange={setTypeFilter}
+              onOpenMonthPicker={onOpenMonthPicker || onOpenCalendar}
+              onOpenCalendar={onOpenCalendar}
+              formatMoney={formatMoney}
+            />
+          </div>
+
+          <div className="flex items-center justify-between mt-3.5 mb-1 px-1">
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+              Movimientos • {filteredTransactions.length} items
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* Nivel 2: Fila única de segmentación rápida (Carrusel horizontal de Cuentas / Métodos de pago) */}
       {!isCompact && (
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1.5 px-0.5 pr-6 mb-3 select-none">
-          {/* Píldoras compactas de Tipo */}
-          <button
-            type="button"
-            onClick={() => setTypeFilter('all')}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-              typeFilter === 'all'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm font-bold'
-                : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
-            }`}
-          >
-            Todos
-          </button>
-          <button
-            type="button"
-            onClick={() => setTypeFilter('income')}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-              typeFilter === 'income'
-                ? 'bg-emerald-600 text-white shadow-sm font-bold'
-                : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-emerald-500/10 hover:text-emerald-600'
-            }`}
-          >
-            Ingresos
-          </button>
-          <button
-            type="button"
-            onClick={() => setTypeFilter('expense')}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-              typeFilter === 'expense'
-                ? 'bg-rose-600 text-white shadow-sm font-bold'
-                : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-rose-500/10 hover:text-rose-600'
-            }`}
-          >
-            Gastos
-          </button>
-
-          {/* Divisor vertical sutil */}
-          <div className="h-4 w-px bg-slate-200 dark:bg-zinc-700 mx-1 shrink-0" aria-hidden="true" />
-
           {/* Píldoras de Cuentas */}
           <button
             type="button"
@@ -383,9 +338,9 @@ export default function TransactionList({
                 : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
             }`}
           >
-            Todas
+            Todas las cuentas
           </button>
-          {accounts.map((acc) => {
+          {(accounts || []).map((acc) => {
             const isSelected = accountFilter === acc.id;
             return (
               <button
@@ -512,17 +467,17 @@ export default function TransactionList({
         />
       )}
 
-      {/* Modal / Bottom Sheet de Filtros Avanzados */}
+      {/* Modal de Filtros Avanzados (Centrado en pantalla con backdrop) */}
       {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div 
-            className="fixed inset-0 bg-slate-950/40 dark:bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsFilterModalOpen(false)}
           />
-          <div className="relative bg-white dark:bg-zinc-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-slate-200/80 dark:border-white/10 max-h-[85vh] overflow-y-auto z-10 space-y-5 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+          <div className="relative bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-200/80 dark:border-white/10 max-h-[85vh] overflow-y-auto z-10 space-y-5 animate-in zoom-in-95 duration-200">
             {/* Header del modal */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
                   <SlidersHorizontal className="w-4 h-4 text-[#007AFF]" />
                 </div>
@@ -535,101 +490,101 @@ export default function TransactionList({
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsFilterModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                aria-label="Cerrar filtros"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* 1. Tipo de movimiento */}
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block mb-2">
-                Tipo de movimiento
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: 'all', label: 'Todos' },
-                  { id: 'income', label: 'Ingresos' },
-                  { id: 'expense', label: 'Gastos' }
-                ].map((opt) => (
+              <div className="flex items-center gap-1">
+                {hasActiveFilters && (
                   <button
-                    key={opt.id}
                     type="button"
-                    onClick={() => setTypeFilter(opt.id)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      typeFilter === opt.id
-                        ? opt.id === 'income'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : opt.id === 'expense'
-                            ? 'bg-rose-600 text-white shadow-sm'
-                            : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
-                        : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
-                    }`}
+                    onClick={() => {
+                      setTypeFilter('all');
+                      setAccountFilter('all');
+                      setCategoryFilter('all');
+                      if (onSelectDay) onSelectDay(null);
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                    title="Limpiar todos los filtros"
                   >
-                    {opt.label}
+                    Restablecer
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. Período / Fecha */}
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block mb-2">
-                Período
-              </span>
-              <div className="space-y-2">
+                )}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (onSelectDay) onSelectDay(null);
-                  }}
-                  className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-between border transition-all cursor-pointer ${
-                    !selectedDay
-                      ? 'bg-[#007AFF]/10 border-[#007AFF]/40 text-[#007AFF] font-bold'
-                      : 'border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-zinc-800/50 text-slate-700 dark:text-zinc-300'
-                  }`}
+                  onClick={() => setIsFilterModalOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  aria-label="Cerrar filtros"
                 >
-                  <span className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>Mes completo ({currentMonthLabel || 'Mes actual'})</span>
-                  </span>
-                  {!selectedDay && <Check className="w-4 h-4 text-[#007AFF]" />}
+                  <X className="w-4 h-4" />
                 </button>
-
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-white/10 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                      Filtrar por día específico:
-                    </span>
-                    {selectedDay && onSelectDay && (
-                      <button
-                        type="button"
-                        onClick={() => onSelectDay(null)}
-                        className="text-[11px] text-rose-500 hover:underline font-semibold"
-                      >
-                        Quitar día
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="date"
-                    value={selectedDay || ''}
-                    onChange={(e) => {
-                      if (onSelectDay) {
-                        onSelectDay(e.target.value || null);
-                      }
-                    }}
-                    className="w-full text-xs bg-white dark:bg-zinc-900 text-slate-900 dark:text-white rounded-xl px-3 py-2 border border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                  />
-                </div>
               </div>
             </div>
 
-            {/* 3. Cuenta / Método de pago */}
+            {/* 1. Filtrar por día específico */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#007AFF]" />
+                  <span>Filtrar por día específico</span>
+                </span>
+                {selectedDay && onSelectDay && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectDay(null)}
+                    className="text-[11px] text-rose-500 hover:underline font-semibold cursor-pointer"
+                  >
+                    Quitar día
+                  </button>
+                )}
+              </div>
+              <input
+                type="date"
+                value={selectedDay || ''}
+                onChange={(e) => {
+                  if (onSelectDay) {
+                    onSelectDay(e.target.value || null);
+                  }
+                }}
+                className="w-full text-xs sm:text-sm bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-white rounded-xl px-3.5 py-2.5 border border-slate-200/80 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all cursor-pointer"
+              />
+            </div>
+
+            {/* 2. Selector de Categorías */}
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block mb-2">
+                Categoría
+              </span>
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto no-scrollbar py-1">
+                <button
+                  type="button"
+                  onClick={() => setCategoryFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    categoryFilter === 'all'
+                      ? 'bg-[#007AFF] text-white shadow-sm font-bold'
+                      : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  Todas las categorías
+                </button>
+                {(Array.isArray(categories) ? categories : []).map((cat) => {
+                  const isSelected = categoryFilter === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategoryFilter(cat.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#007AFF] text-white shadow-sm font-bold'
+                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      {cat.icon && <span className="text-xs">{cat.icon}</span>}
+                      <span>{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. Selector de Cuentas / Métodos de pago */}
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block mb-2">
                 Cuenta o método de pago
@@ -646,24 +601,27 @@ export default function TransactionList({
                 >
                   Todas las cuentas
                 </button>
-                {accounts.map((acc) => (
-                  <button
-                    key={acc.id}
-                    type="button"
-                    onClick={() => setAccountFilter(acc.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      accountFilter === acc.id
-                        ? 'bg-[#007AFF] text-white shadow-sm font-bold'
-                        : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
-                    }`}
-                  >
-                    <span 
-                      className="w-2 h-2 rounded-full shrink-0" 
-                      style={{ backgroundColor: acc.color || '#007AFF' }} 
-                    />
-                    <span>{acc.name}</span>
-                  </button>
-                ))}
+                {(Array.isArray(accounts) ? accounts : []).map((acc) => {
+                  const isSelected = accountFilter === acc.id;
+                  return (
+                    <button
+                      key={acc.id}
+                      type="button"
+                      onClick={() => setAccountFilter(acc.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#007AFF] text-white shadow-sm font-bold'
+                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      <span 
+                        className="w-2 h-2 rounded-full shrink-0" 
+                        style={{ backgroundColor: acc.color || '#007AFF' }} 
+                      />
+                      <span>{acc.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -675,6 +633,7 @@ export default function TransactionList({
                   onClick={() => {
                     setTypeFilter('all');
                     setAccountFilter('all');
+                    setCategoryFilter('all');
                     if (onSelectDay) onSelectDay(null);
                   }}
                   className="py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -686,7 +645,7 @@ export default function TransactionList({
               <button
                 type="button"
                 onClick={() => setIsFilterModalOpen(false)}
-                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#007AFF] hover:bg-[#0062cc] active:scale-98 transition-all shadow-md cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#007AFF] hover:bg-[#0062cc] active:scale-98 transition-all shadow-md cursor-pointer text-center"
               >
                 Ver resultados ({filteredTransactions.length})
               </button>
