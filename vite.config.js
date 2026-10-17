@@ -2,9 +2,42 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const BUILD_TIME = new Date().toISOString();
+
 export default defineConfig(({ mode }) => ({
+  define: {
+    __APP_BUILD_TIME__: JSON.stringify(BUILD_TIME),
+  },
   plugins: [
     react(),
+    {
+      name: 'generate-version-json',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'version.json',
+          source: JSON.stringify({
+            version: '1.0.0',
+            buildTime: BUILD_TIME,
+            buildId: BUILD_TIME
+          }, null, 2)
+        });
+      },
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url && req.url.startsWith('/version.json')) {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              version: '1.0.0',
+              buildTime: BUILD_TIME,
+              buildId: BUILD_TIME
+            }, null, 2));
+            return;
+          }
+          next();
+        });
+      }
+    },
     VitePWA({
       // En desarrollo: deshabilitar SW completamente para evitar
       // SecurityError: "unsupported MIME type (text/html)" y conflictos de HMR

@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
-import { Tag, ChevronRight, PieChart, ArrowRight } from 'lucide-react';
+import { PieChart, ChevronRight } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { safeNumber } from '../../utils/financeMath';
-import AllCategoriesModal from './modals/AllCategoriesModal';
-import CategoryDetailModal from './modals/CategoryDetailModal';
 
 const MODERN_PALETTE = [
-  '#8B5CF6', // Violeta
-  '#10B981', // Verde Esmeralda
-  '#F97316', // Naranja Vivo
-  '#0EA5E9', // Azul Eléctrico
-  '#EC4899', // Rosa Fucsia
-  '#F59E0B', // Ámbar
-  '#6366F1', // Índigo
-  '#14B8A6'  // Verde Azulado
+  '#10B981', // 1. Esmeralda principal (emerald-500)
+  '#14B8A6', // 2. Verde azulado / Teal (teal-500)
+  '#94A3B8', // 3. Pizarra secundaria (slate-400)
+  '#64748B', // 4. Pizarra oscura (slate-500)
+  '#059669', // 5. Esmeralda profundo (emerald-600)
+  '#475569', // 6. Pizarra profunda (slate-600)
+  '#34D399', // 7. Esmeralda suave (emerald-400)
+  '#0EA5E9'  // 8. Azul cielo sobrio (sky-500)
 ];
 
 const MONTH_NAMES = [
@@ -40,16 +38,17 @@ export default function ReportsAndCharts({
   onOpenCalendar,
   financeActions = null,
   onNavigateToTab = null,
-  setActiveTab = null
+  setActiveTab = null,
+  onViewAll = null
 }) {
   const { formatMoney } = usePrivacy();
   const [hoveredCategoryId, setHoveredCategoryId] = useState(null);
-  const [selectedCategoryModal, setSelectedCategoryModal] = useState(null);
-  const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false);
 
   const handleNav = (tab = 'transactions') => {
     const targetTab = (tab === 'movements' || tab === 'movimientos') ? 'transactions' : tab;
-    if (financeActions && typeof financeActions.setActiveTab === 'function') {
+    if (typeof onViewAll === 'function') {
+      onViewAll();
+    } else if (financeActions && typeof financeActions.setActiveTab === 'function') {
       financeActions.setActiveTab(targetTab);
     } else if (financeActions && typeof financeActions.handleTabChange === 'function') {
       financeActions.handleTabChange(targetTab);
@@ -120,7 +119,8 @@ export default function ReportsAndCharts({
       };
     });
 
-  const topCategories = categoryExpenses.slice(0, 3);
+  const topCategories = categoryExpenses.slice(0, 4);
+  const remainingCount = Math.max(0, categoryExpenses.length - 4);
   const hoveredCategory = categoryExpenses.find(c => c.id === hoveredCategoryId);
 
   // Period label for pill
@@ -128,43 +128,20 @@ export default function ReportsAndCharts({
     ? selectedDay.split('-').slice(1).join('/')
     : `${MONTH_NAMES[currentMonth]} ${currentYear}`;
 
-  // Data for the single category modal if open
-  const categoryTransactions = selectedCategoryModal 
-    ? monthExpenses.filter(t => t.categoryId === selectedCategoryModal.id)
-    : [];
-
-  const subcategoryBreakdown = {};
-  if (selectedCategoryModal) {
-    categoryTransactions.forEach(t => {
-      const subName = t.subcategoryName || 'General';
-      subcategoryBreakdown[subName] = (subcategoryBreakdown[subName] || 0) + Number(t.amount || 0);
-    });
-  }
-  const subcategoriesList = Object.entries(subcategoryBreakdown).map(([name, amount]) => ({
-    name,
-    amount
-  })).sort((a, b) => b.amount - a.amount);
-
   return (
     <div 
-      onClick={() => {
-        if (financeActions && typeof financeActions.setActiveTab === 'function') {
-          financeActions.setActiveTab('transactions');
-        } else {
-          handleNav('transactions');
-        }
-      }}
-      className="min-h-[120px] p-4 sm:p-5 rounded-3xl bg-white dark:bg-zinc-900/90 border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-all active:scale-[0.99] group relative overflow-hidden"
+      onClick={() => handleNav('transactions')}
+      className="h-full flex flex-col justify-between p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] shadow-sm hover:border-emerald-500/40 hover:shadow-sm transition-all cursor-pointer group select-none"
     >
       <div>
-        {/* Cabecera limpia interna sin pastilla de fecha ni texto Detalles > */}
-        <div className="flex items-center justify-between gap-2 mb-2">
+        {/* Cabecera limpia interna con total */}
+        <div className="flex items-center justify-between gap-2 mb-3.5">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <PieChart className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>Tus gastos</span>
           </span>
           {totalExpense > 0 && (
-            <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
+            <span className="text-xs font-black text-slate-900 dark:text-slate-50 tabular-nums tracking-tight">
               {formatMoney(totalExpense)}
             </span>
           )}
@@ -179,63 +156,54 @@ export default function ReportsAndCharts({
             hoveredCategoryId={hoveredCategoryId}
             setHoveredCategoryId={setHoveredCategoryId}
             formatMoney={formatMoney}
-            onSelectCategory={(cat) => setSelectedCategoryModal(cat)}
-            onCenterClick={() => {
-              if (financeActions && typeof financeActions.setActiveTab === 'function') {
-                financeActions.setActiveTab('transactions');
-              } else {
-                handleNav('transactions');
-              }
-            }}
             getCategoryEmoji={getCategoryEmoji}
           />
 
-          {/* Columna Derecha (Icono de planta si vacío, o Top 3 categorías) */}
+          {/* Columna Derecha (Icono si vacío, o Top 4 categorías) */}
           {categoryExpenses.length === 0 ? (
-            <div className="flex-1 flex flex-col justify-center items-center text-center pl-2 py-1">
-              <span className="text-2xl mb-0.5">🌱</span>
+            <div className="flex-1 flex flex-col justify-center items-center text-center pl-2 py-4">
+              <span className="text-2xl mb-1">🌱</span>
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sin gastos este mes</p>
-              <p className="text-[10px] text-slate-400">Tus finanzas están al día</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500">Tus finanzas están al día</p>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col justify-center gap-1.5 pl-2 min-w-0">
-              {topCategories.slice(0, 3).map((cat, index) => {
+            <div className="flex-1 flex flex-col justify-center gap-2 pl-1 min-w-0">
+              {topCategories.map((cat, index) => {
                 const displayEmoji = getCategoryEmoji(cat, cat.name);
                 const isHovered = hoveredCategoryId === cat.id;
 
                 return (
                   <div 
                     key={cat.id || cat.name || index} 
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedCategoryModal(cat);
-                    }}
                     onMouseEnter={() => setHoveredCategoryId(cat.id)}
                     onMouseLeave={() => setHoveredCategoryId(null)}
-                    className={`flex flex-col gap-0.5 cursor-pointer group rounded-lg p-0.5 transition-all ${
-                      isHovered ? 'bg-slate-100/80 dark:bg-white/5' : ''
+                    className={`flex flex-col gap-1 group/row rounded-lg p-1 transition-all ${
+                      isHovered ? 'bg-slate-100/80 dark:bg-white/[0.04]' : ''
                     }`}
-                    title={`Ver detalle de ${cat.name}: ${formatMoney(cat.amount)}`}
+                    title={`${cat.name}: ${formatMoney(cat.amount)}`}
                   >
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300 truncate">
+                    <div className="flex items-center justify-between text-[11px] leading-tight">
+                      <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300 truncate">
                         <span className="text-xs shrink-0 leading-none">{displayEmoji}</span>
-                        <span className="truncate group-hover:text-emerald-500 transition-colors">
+                        <span className="truncate group-hover/row:text-emerald-500 transition-colors">
                           {cat.name}
                         </span>
                       </span>
-                      <span className="font-bold text-slate-900 dark:text-white shrink-0 ml-1 tabular-nums">
-                        {cat.percentage}%
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
+                        <span className="font-semibold text-slate-400 dark:text-slate-500 text-[10px] tabular-nums">
+                          {cat.percentage}%
+                        </span>
+                        <span className="font-bold text-slate-900 dark:text-slate-50 tabular-nums">
+                          {formatMoney(cat.amount)}
+                        </span>
+                      </div>
                     </div>
-                    {/* Barra fina de progreso con su color */}
-                    <div className="w-full h-1 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                    {/* Barra compacta de progreso con su color */}
+                    <div className="w-full h-1.5 bg-slate-100 dark:bg-white/[0.04] rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ 
-                          width: `${Math.min(100, Math.max(3, cat.exactPercent))}%`, 
+                          width: `${Math.min(100, Math.max(4, cat.exactPercent))}%`, 
                           backgroundColor: cat.color 
                         }}
                       />
@@ -248,31 +216,13 @@ export default function ReportsAndCharts({
         </div>
       </div>
 
-      {/* Modales de Historial y Detalle de Categoría */}
-      <AllCategoriesModal
-        isOpen={showAllCategoriesModal}
-        onClose={() => setShowAllCategoriesModal(false)}
-        categoryExpenses={categoryExpenses}
-        onSelectCategory={(cat) => {
-          setShowAllCategoriesModal(false);
-          setSelectedCategoryModal(cat);
-        }}
-        formatMoney={formatMoney}
-        getCategoryEmoji={getCategoryEmoji}
-        periodLabel={periodLabel}
-        totalExpense={totalExpense}
-      />
-
-      <CategoryDetailModal
-        isOpen={Boolean(selectedCategoryModal)}
-        category={selectedCategoryModal}
-        onClose={() => setSelectedCategoryModal(null)}
-        formatMoney={formatMoney}
-        getCategoryEmoji={getCategoryEmoji}
-        selectedDay={selectedDay}
-        categoryTransactions={categoryTransactions}
-        subcategoriesList={subcategoriesList}
-      />
+      {/* Pie con enlace para ver todas las categorías */}
+      {categoryExpenses.length > 0 && (
+        <div className="pt-2.5 mt-3 border-t border-slate-100/80 dark:border-white/[0.07] flex items-center justify-between text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+          <span>Ver todas las categorías</span>
+          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        </div>
+      )}
     </div>
   );
 }

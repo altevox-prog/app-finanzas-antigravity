@@ -97,7 +97,7 @@ export default function AddDisbursementModal({
             </div>
             <div className="truncate">
               <h3 className="font-bold text-base leading-tight truncate" style={{ color: 'var(--text-main)' }}>
-                Añadir Desembolso / Prestar Más
+                Añadir desembolso / prestar más
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 Prestar más dinero a <strong className="text-slate-700 dark:text-slate-300">{debtorName}</strong>
@@ -239,7 +239,7 @@ export default function AddDisbursementModal({
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
             >
               <ArrowUpRight className="w-4 h-4" />
-              <span>Confirmar Desembolso</span>
+              <span>Confirmar desembolso</span>
             </button>
           </div>
         </form>

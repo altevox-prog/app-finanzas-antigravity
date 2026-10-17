@@ -173,7 +173,7 @@ export default function EditTransactionModal({
         {/* Header Fijo */}
         <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Editar Transacción</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Editar transacción</h3>
             <p className="text-xs text-slate-500 dark:text-zinc-400">Modifica los detalles y recalcula balances</p>
           </div>
           <button 
@@ -266,32 +266,13 @@ export default function EditTransactionModal({
 
                 {/* Lógica de Conversión y Tasa de Cambio (TRM en COP) en Edición */}
                 {originalCurrency !== 'COP' && (
-                  <div className="mt-2.5 p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-500/20 space-y-2 animate-fadeIn">
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>Tasa oficial de cambio</span>
-                        </label>
-                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                          1 {originalCurrency} = ${Number(exchangeRate || trm || 4050).toLocaleString('es-CO')} COP
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          readOnly
-                          value={`TRM: $${Number(exchangeRate || trm || 4050).toLocaleString('es-CO')} COP (Sincronizada automáticamente)`}
-                          className="w-full px-3.5 py-2 text-xs font-semibold rounded-xl border border-emerald-200/80 dark:border-emerald-500/30 bg-emerald-100/50 dark:bg-white/5 text-emerald-900 dark:text-emerald-200 focus:outline-none cursor-default select-none tabular-nums"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 pt-1 border-t border-emerald-200/40 dark:border-emerald-500/20">
-                      <span>Equivalente en balance:</span>
-                      <span className="font-bold tabular-nums text-emerald-800 dark:text-emerald-200 text-xs">
-                        $ {((parseFormattedAmount(amount) || 0) * (parseFloat(exchangeRate) || 0)).toLocaleString('es-CO', { minimumFractionDigits: enableDecimals ? 2 : 0, maximumFractionDigits: 2 })} COP
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 pt-1 mt-0.5">
+                    <span>
+                      TRM: 1 {originalCurrency} = ${Number(exchangeRate || trm || 4050).toLocaleString('es-CO')} COP
+                    </span>
+                    <span>
+                      ≈ ${(((parseFormattedAmount(amount) || 0) * (parseFloat(exchangeRate) || 0))).toLocaleString('es-CO', { minimumFractionDigits: enableDecimals ? 2 : 0, maximumFractionDigits: 2 })} COP
+                    </span>
                   </div>
                 )}
               </div>

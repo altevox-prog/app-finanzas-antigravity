@@ -1,6 +1,102 @@
 import React from 'react';
 import { Building2 } from 'lucide-react';
 
+const BRAND_ASSETS = {
+  // SVGs Vectoriales Oficiales
+  bancolombia: '/brands/bancolombia.svg',
+  binance: '/brands/binance.svg',
+  davivienda: '/brands/davivienda.svg',
+  daviplata: '/brands/davivienda.svg',
+  mastercard: '/brands/mastercard.svg',
+  'master card': '/brands/mastercard.svg',
+  nequi: '/brands/nequi.svg',
+  nu: '/brands/nu.svg',
+  nubank: '/brands/nu.svg',
+  paypal: '/brands/paypal.svg',
+  visa: '/brands/visa.svg',
+
+  // Formatos PNG / WEBP / JPEG existentes
+  addi: '/brands/addi.png',
+  arq: '/brands/arq.png',
+  bitcoin: '/brands/bitcoin.png',
+  btc: '/brands/bitcoin.png',
+  crypto: '/brands/bitcoin.png',
+  epm: '/brands/epm.png',
+  google: '/brands/google.webp',
+  movistar: '/brands/movistar.png',
+  xtb: '/brands/xtb.jpeg',
+
+  // Métodos Generales y Efectivo
+  efectivo: '/brands/pago_en_efectivo.png',
+  cash: '/brands/pago_en_efectivo.png',
+  'pago en efectivo': '/brands/pago_en_efectivo.png',
+  caja: '/brands/dinero.png',
+  ahorro: '/brands/ahorra_dinero.png',
+  ahorros: '/brands/ahorra_dinero.png',
+  alcancia: '/brands/ahorra_dinero.png',
+  bolsillo: '/brands/ahorra_dinero.png',
+  savings: '/brands/ahorra_dinero.png',
+  dinero: '/brands/dinero.png',
+  finanzas: '/brands/finanzas.png',
+  finanza: '/brands/finanzas.png',
+  transferencia: '/brands/transferencia-de-dinero-en-linea.png',
+  'transferencia bancaria': '/brands/transferencia-de-dinero-en-linea.png',
+  'transferencia en linea': '/brands/transferencia-de-dinero-en-linea.png',
+  cuenta: '/brands/transferencia-de-dinero-en-linea.png',
+  banco: '/brands/transferencia-de-dinero-en-linea.png',
+  bank: '/brands/transferencia-de-dinero-en-linea.png',
+  debito: '/brands/transferencia-de-dinero-en-linea.png',
+  credito: '/brands/mastercard.svg',
+  card: '/brands/mastercard.svg',
+  credit: '/brands/mastercard.svg',
+};
+
+const DEFAULT_FALLBACK = '/brands/pago_en_efectivo.png';
+
+const normalizeKey = (val) => {
+  if (!val) return '';
+  return val
+    .toString()
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
+const resolveBrandAsset = (name = '', type = '') => {
+  const normName = normalizeKey(name);
+  const normType = normalizeKey(type);
+
+  // 1. Coincidencia exacta por nombre
+  if (normName && BRAND_ASSETS[normName]) {
+    return BRAND_ASSETS[normName];
+  }
+
+  // 2. Coincidencia parcial por nombre
+  if (normName) {
+    for (const [key, asset] of Object.entries(BRAND_ASSETS)) {
+      if (normName.includes(key) || key.includes(normName)) {
+        return asset;
+      }
+    }
+  }
+
+  // 3. Coincidencia exacta o parcial por tipo
+  if (normType && BRAND_ASSETS[normType]) {
+    return BRAND_ASSETS[normType];
+  }
+
+  if (normType) {
+    for (const [key, asset] of Object.entries(BRAND_ASSETS)) {
+      if (normType.includes(key) || key.includes(normType)) {
+        return asset;
+      }
+    }
+  }
+
+  return null;
+};
+
 export default function BrandIcon({ 
   name = '', 
   type = '', 
@@ -9,59 +105,9 @@ export default function BrandIcon({
   wrapperClassName = '', 
   fallback = null 
 }) {
-  const q = (name || '').toLowerCase().trim();
-  const t = (type || '').toLowerCase().trim();
+  const brandSrc = resolveBrandAsset(name, type);
 
-  let brandSrc = null;
-
-  // 1. Mapeo directo y prioritario a las imágenes oficiales en public/brands/
-  if (q.includes('bancolombia')) {
-    brandSrc = '/brands/bancolombia.png';
-  } else if (q.includes('visa')) {
-    brandSrc = '/brands/Visa.png';
-  } else if (q.includes('mastercard') || q.includes('master card')) {
-    brandSrc = '/brands/Mastercard.png';
-  } else if (q.includes('nu') || q.includes('nubank')) {
-    brandSrc = '/brands/nu.png';
-  } else if (q.includes('movistar')) {
-    brandSrc = '/brands/Movistar.png';
-  } else if (q.includes('addi')) {
-    brandSrc = '/brands/Addi.png';
-  } else if (q.includes('xtb')) {
-    brandSrc = '/brands/xtb.jpeg';
-  } else if (q.includes('arq')) {
-    brandSrc = '/brands/ARQ.png';
-  } else if (q.includes('btc') || q.includes('bitcoin') || q.includes('crypto')) {
-    brandSrc = '/brands/bitcoin.png';
-  } else if (q.includes('ahorro') || q.includes('alcancia') || q.includes('alcancía') || q.includes('bolsillo')) {
-    brandSrc = '/brands/ahorra_dinero.png';
-  } else if (q.includes('efectivo') || q.includes('cash')) {
-    brandSrc = '/brands/pago_en_efectivo.png';
-  } else if (q.includes('transferencia') || q.includes('cuenta')) {
-    brandSrc = '/brands/transferencia-de-dinero-en-línea.png';
-  } else if (q.includes('dinero') || q.includes('caja')) {
-    brandSrc = '/brands/dinero.png';
-  } else if (q.includes('nequi')) {
-    brandSrc = '/brands/nequi.svg';
-  } else if (q.includes('davi') || q.includes('daviplata')) {
-    brandSrc = '/brands/davivienda.svg';
-  } else if (q.includes('epm')) {
-    brandSrc = '/brands/EPM.png';
-  } else if (q.includes('google')) {
-    brandSrc = '/brands/Google.webp';
-  } else if (q.includes('finanza')) {
-    brandSrc = '/brands/finanzas.png';
-  } else if (t.includes('cash') || t.includes('efectivo')) {
-    brandSrc = '/brands/pago_en_efectivo.png';
-  } else if (t.includes('card') || t.includes('credit') || t.includes('crédito')) {
-    brandSrc = '/brands/Mastercard.png';
-  } else if (t.includes('savings') || t.includes('ahorro')) {
-    brandSrc = '/brands/ahorra_dinero.png';
-  } else if (t.includes('bank') || t.includes('cuenta') || t.includes('débito') || t.includes('debito')) {
-    brandSrc = '/brands/transferencia-de-dinero-en-línea.png';
-  }
-
-  // Renderizado de la imagen nítida sin deformaciones
+  // Renderizado de la imagen nítida sin deformaciones con prevención de bucles en error
   if (brandSrc) {
     const imgEl = (
       <div 
@@ -70,13 +116,12 @@ export default function BrandIcon({
       >
         <img
           src={brandSrc}
-          alt={name}
-          className="w-full h-full object-contain select-none"
+          alt={name || 'Entidad financiera'}
+          className="w-full h-full object-contain select-none rounded-xl"
           loading="lazy"
           onError={(e) => {
-            if (brandSrc.includes('línea')) {
-              e.currentTarget.src = '/brands/transferencia-de-dinero-en-linea.png';
-            }
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = DEFAULT_FALLBACK;
           }}
         />
       </div>
@@ -96,7 +141,7 @@ export default function BrandIcon({
     return fallback;
   }
 
-  // Fallback sobrio si no coincide ningún nombre
+  // Fallback sobrio si no coincide ningún nombre ni tipo
   const fallbackEl = (
     <div 
       style={{ width: size, height: size }} 
@@ -113,38 +158,8 @@ export default function BrandIcon({
   return fallbackEl;
 }
 
-export function hasBrandIcon(name = '') {
-  if (!name || typeof name !== 'string') return false;
-  const q = name.toLowerCase().trim();
-  return (
-    q.includes('bancolombia') ||
-    q.includes('visa') ||
-    q.includes('mastercard') ||
-    q.includes('master card') ||
-    q.includes('nu') ||
-    q.includes('nubank') ||
-    q.includes('movistar') ||
-    q.includes('addi') ||
-    q.includes('xtb') ||
-    q.includes('btc') ||
-    q.includes('bitcoin') ||
-    q.includes('crypto') ||
-    q.includes('ahorro') ||
-    q.includes('alcancia') ||
-    q.includes('alcancía') ||
-    q.includes('bolsillo') ||
-    q.includes('efectivo') ||
-    q.includes('cash') ||
-    q.includes('transferencia') ||
-    q.includes('cuenta') ||
-    q.includes('dinero') ||
-    q.includes('caja') ||
-    q.includes('nequi') ||
-    q.includes('davi') ||
-    q.includes('daviplata') ||
-    q.includes('epm') ||
-    q.includes('google')
-  );
+export function hasBrandIcon(name = '', type = '') {
+  return !!resolveBrandAsset(name, type);
 }
 
 // Retrocompatibilidad
@@ -154,3 +169,4 @@ export const MastercardIcon = (props) => <BrandIcon name="mastercard" {...props}
 export const NequiIcon = (props) => <BrandIcon name="nequi" {...props} />;
 export const NuIcon = (props) => <BrandIcon name="nu" {...props} />;
 export const DaviviendaIcon = (props) => <BrandIcon name="davivienda" {...props} />;
+

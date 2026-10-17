@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Eye, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Eye, Clock } from 'lucide-react';
 import { MONTH_NAMES } from '../../data/initialData';
-import { usePrivacy } from '../../context/PrivacyContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import { safeNumber } from '../../utils/financeMath';
 
@@ -20,7 +19,6 @@ export default function CalendarDropdown({
   useBackHandler(isOpen, onClose);
 
   const dropdownRef = useRef(null);
-  const { formatMoney } = usePrivacy();
 
   const activeDate = selectedDate instanceof Date 
     ? selectedDate 
@@ -141,9 +139,6 @@ export default function CalendarDropdown({
     });
   }
 
-  // Calculate stats for currently selected day
-  const selectedDayStats = selectedDay ? dayStatsMap[selectedDay] : null;
-
   return (
     <div 
       className="fixed inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn"
@@ -171,11 +166,6 @@ export default function CalendarDropdown({
             <div className="flex items-center gap-1.5 font-extrabold text-sm capitalize truncate" style={{ color: 'var(--text-main)' }}>
               <CalendarIcon className="w-4 h-4 text-[#007AFF] shrink-0" />
               <span>{MONTH_NAMES[currentMonth]} {currentYear}</span>
-              {selectedDay && (
-                <span className="text-[10px] font-black bg-[#007AFF] text-white px-2 py-0.5 rounded-full ml-1 shrink-0">
-                  Día {parseInt(selectedDay.split('-')[2], 10)}
-                </span>
-              )}
             </div>
 
             <button
@@ -226,6 +216,7 @@ export default function CalendarDropdown({
                 type="button"
                 onClick={() => {
                   onSelectDay(cell.dateStr);
+                  setTimeout(() => onClose(), 150);
                 }}
                 style={{ color: cell.isSelected ? '#ffffff' : 'var(--text-main)' }}
                 className={`h-8 relative flex flex-col items-center justify-center rounded-xl text-xs font-semibold transition-all group active:scale-90 ${
@@ -254,87 +245,38 @@ export default function CalendarDropdown({
           })}
         </div>
 
-        {/* Panel Inferior: Estadísticas del día seleccionado o leyenda */}
-        <div className="pt-2.5 border-t space-y-2.5" style={{ borderColor: 'var(--border-color)' }}>
-          {selectedDay ? (
-            <div 
-              className="p-2.5 rounded-2xl flex items-center justify-between gap-2"
-              style={{ backgroundColor: 'var(--bg-card-sub)' }}
-            >
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider block opacity-60 truncate">
-                  {selectedDay.split('-')[2]} de {MONTH_NAMES[parseInt(selectedDay.split('-')[1]) - 1]}
-                </span>
-                <div className="flex items-center gap-2 mt-0.5 text-xs font-extrabold flex-wrap">
-                  {selectedDayStats ? (
-                    <>
-                      <span className="text-[#FF3B30]">Gastos: -{formatMoney(selectedDayStats.totalExp)}</span>
-                      {selectedDayStats.totalInc > 0 && (
-                        <span className="text-[#34C759]">Ingresos: +{formatMoney(selectedDayStats.totalInc)}</span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="opacity-60 font-medium text-[11px]">Sin movimientos registrados</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onSelectDay(null)}
-                  className="p-1.5 opacity-60 hover:opacity-100 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                  title="Quitar filtro de día"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onSelectDay) onSelectDay(selectedDay);
-                    onClose();
-                  }}
-                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-xl shadow-sm active:scale-95 flex items-center gap-1 cursor-pointer"
-                  title="Ver movimientos de este día"
-                >
-                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Ver este día</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between text-[11px] opacity-60 px-1 py-0.5">
-              <span>Toca un día para filtrar</span>
-              <span className="flex items-center gap-2">
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#FF3B30]" /> Gastos</span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#34C759]" /> Ingresos</span>
-              </span>
-            </div>
-          )}
-
-          {selectedDay && (
-            <button
-              type="button"
-              onClick={() => {
-                if (onSelectDay) onSelectDay(selectedDay);
-                onClose();
-              }}
-              className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all active:scale-98 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-            >
-              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Ver este día ({selectedDay.split('-')[2]} de {MONTH_NAMES[parseInt(selectedDay.split('-')[1]) - 1]})</span>
-            </button>
-          )}
-
-          {/* Botón Ver Todo el Mes */}
+        {/* Acciones Rápidas Inferiores: Hoy y Ver Todo el Mes */}
+        <div className="pt-2.5 border-t grid grid-cols-2 gap-2" style={{ borderColor: 'var(--border-color)' }}>
           <button
             type="button"
             onClick={() => {
-              onSelectDay(null);
-              onClose();
+              const now = new Date();
+              if (onChangeMonth) onChangeMonth(now);
+              if (onSelectDay) {
+                const fYear = now.getFullYear();
+                const fMonth = String(now.getMonth() + 1).padStart(2, '0');
+                const fDay = String(now.getDate()).padStart(2, '0');
+                onSelectDay(`${fYear}-${fMonth}-${fDay}`);
+              }
+              setTimeout(() => onClose(), 150);
             }}
-            className="w-full py-2 font-bold rounded-xl text-xs transition-all active:scale-98 flex items-center justify-center gap-1.5 border cursor-pointer"
+            className="w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all active:scale-95 cursor-pointer"
             style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+            title="Ir a la fecha de hoy"
+          >
+            <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Hoy</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onSelectDay) onSelectDay(null);
+              setTimeout(() => onClose(), 150);
+            }}
+            className="w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all active:scale-95 cursor-pointer"
+            style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+            title="Ver transacciones de todo el mes"
           >
             <Eye className="w-3.5 h-3.5 opacity-60" />
             <span>Ver todo el mes</span>

@@ -12,6 +12,7 @@ import {
   setupOnboardingProfileAndSecurity
 } from '../services/storage/backupRestorer';
 import { registerBiometrics } from '../services/storage/biometricAuth';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 /**
  * useDataManagement
@@ -108,6 +109,13 @@ export function useDataManagement({
     if (biometricsEnabled) await registerBiometrics(finalName);
 
     completeOnboarding?.(user?.id);
+    if (user?.id && isSupabaseConfigured && supabase) {
+      supabase
+        .from('profiles')
+        .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .catch(() => {});
+    }
     setIsLocked?.(false);
     localStorage.setItem(STORAGE_KEYS.APP_IS_LOCKED, 'false');
 

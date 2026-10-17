@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   CreditCard, 
   Plus, 
-  ArrowLeft
+  ArrowLeft,
+  Trash2
 } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
@@ -28,9 +29,15 @@ export default function AccountsAndCategories({
   onBack,
   fromSettings = false,
   previousView,
-  trm = 4050
+  trm = 4050,
+  mode,
+  isReadOnly
 }) {
-  const { formatMoney } = usePrivacy();
+  const { formatMoney, isPrivacyMode } = usePrivacy();
+
+  const readOnly = isReadOnly !== undefined 
+    ? Boolean(isReadOnly) 
+    : (mode !== undefined ? mode === 'view' : !fromSettings);
 
   // Sincronización del orden local de cuentas
   const [localAccounts, setLocalAccounts] = useState(accounts);
@@ -61,12 +68,16 @@ export default function AccountsAndCategories({
   // Modal de Edición de Cuenta
   const [editingAccount, setEditingAccount] = useState(null);
 
-  // Escuchar evento de TopAppBar para abrir modal de agregar cuenta
+  // Estado para Diálogo de Confirmación de Seguridad de Eliminación de Cuenta
+  const [accountPendingDelete, setAccountPendingDelete] = useState(null);
+
+  // Escuchar evento de TopAppBar para abrir modal de agregar cuenta (solo en modo gestión)
   useEffect(() => {
+    if (readOnly) return;
     const handleOpenAdd = () => setShowAddAccount(true);
     window.addEventListener('monety:open-add-account', handleOpenAdd);
     return () => window.removeEventListener('monety:open-add-account', handleOpenAdd);
-  }, []);
+  }, [readOnly]);
 
   // Live balance for accounts in their native currency and COP equivalent (defensivo)
   const accountsWithBalance = useMemo(() => {
@@ -150,31 +161,24 @@ export default function AccountsAndCategories({
     setEditingAccount(null);
   };
 
-  // Eliminar cuenta con confirmación enriquecida si tiene saldo o movimientos vinculados
-  const handleDeleteAccount = (accId) => {
-    const accToDelete = localAccounts.find(a => a.id === accId) || accounts.find(a => a.id === accId);
-    const accName = accToDelete ? accToDelete.name : 'esta cuenta';
-    
-    // Verificar si tiene saldo o movimientos vinculados
-    const accTxs = Array.isArray(transactions) 
-      ? transactions.filter(t => t?.accountId === accId || t?.account === accToDelete?.name)
-      : [];
-    const rawBalance = Number(accToDelete?.balance ?? (accToDelete?.currentBalance ?? 0));
-    const hasBalance = !isNaN(rawBalance) && rawBalance !== 0;
-
-    let confirmMessage = `¿Estás seguro de eliminar la cuenta "${accName}"?`;
-    if (hasBalance || accTxs.length > 0) {
-      const details = [];
-      if (hasBalance) details.push(`saldo actual (${formatMoney(rawBalance)})`);
-      if (accTxs.length > 0) details.push(`${accTxs.length} movimiento(s) vinculados`);
-      confirmMessage = `⚠️ Atención: La cuenta "${accName}" tiene ${details.join(' y ')}.\n\n¿Estás seguro de que deseas eliminarla de todas formas?`;
+  // Solicitar eliminación de cuenta abriendo diálogo de confirmación de seguridad
+  const handleRequestDelete = (acc) => {
+    const accObj = typeof acc === 'object' && acc !== null 
+      ? acc 
+      : (localAccounts.find(a => a.id === acc) || accounts.find(a => a.id === acc));
+    if (accObj) {
+      setAccountPendingDelete(accObj);
     }
+  };
 
-    if (window.confirm(confirmMessage)) {
-      if (onDeleteAccount) {
-        onDeleteAccount(accId);
-      }
+  // Confirmar eliminación definitiva de cuenta
+  const handleConfirmDelete = () => {
+    if (!accountPendingDelete) return;
+    const accId = accountPendingDelete.id;
+    if (onDeleteAccount) {
+      onDeleteAccount(accId);
     }
+    setAccountPendingDelete(null);
   };
 
   const handleCreateAccount = (newAcc) => {
@@ -379,120 +383,98 @@ export default function AccountsAndCategories({
     <div className="space-y-6">
       
       {/* CUENTAS BANCARIAS Y EFECTIVO */}
-      <section className="bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-sm">
-        {fromSettings && (
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div>
+        {/* Cabecera: Informativa para Sidebar / Administrativa para Configuración */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3 min-w-0">
+            {fromSettings && (
               <button
                 type="button"
                 onClick={handleGoBack}
-                className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-                aria-label="Volver"
-                title="Volver"
+                className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+                aria-label="Volver a Configuración"
+                title="Volver a Configuración"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-base sm:text-lg md:text-xl font-bold flex items-center gap-2 leading-tight min-w-0" style={{ color: 'var(--text-main)' }}>
-                  <CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" />
-                  <span className="leading-tight">Cuentas y Métodos de Pago</span>
-                </h2>
-                <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 truncate font-normal">
-                  Saldos sincronizados automáticamente
-                </p>
-              </div>
+            )}
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                Cuentas y Métodos de Pago
+              </h2>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
+              </p>
             </div>
+          </div>
 
+          {/* Botón + Nueva cuenta: EXCLUSIVO para Modo Administrativo (!readOnly) */}
+          {!readOnly && (
             <button
               type="button"
-              onClick={() => setShowAddAccount(!showAddAccount)}
-              className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
-              title={showAddAccount ? 'Cerrar' : 'Nueva Cuenta'}
+              onClick={() => setShowAddAccount(true)}
+              className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 shadow-sm transition-all flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
+              title="Nueva cuenta"
+              aria-label="Nueva cuenta"
             >
-              <Plus className={`w-4 h-4 transition-transform duration-200 ${showAddAccount ? 'rotate-45' : ''}`} />
+              <Plus className="w-5 h-5" />
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Modal / Sheet Formulario Nueva Cuenta */}
+        {/* Tarjetas de Cuenta Individuales en Grilla de 2 Columnas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch mt-6">
+          {accountsWithBalance.map((acc, index) => (
+            <div
+              key={acc?.id || `acc-${index}`}
+              className="w-full h-full flex"
+            >
+              <AccountCard
+                account={acc}
+                index={index}
+                showBalance={!isPrivacyMode}
+                transactions={transactions}
+                trm={trm}
+                isReadOnly={readOnly}
+                onEdit={!readOnly ? handleOpenEditAccount : undefined}
+                onDelete={!readOnly ? handleRequestDelete : undefined}
+                onSelectCard={!readOnly ? (card) => {
+                  if (onOpenCreditCardDetail) {
+                    onOpenCreditCardDetail(card);
+                  } else {
+                    setLocalSelectedCard(card);
+                  }
+                } : undefined}
+              />
+            </div>
+          ))}
+
+          {accounts.length === 0 && (
+            <div className="col-span-full text-center py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-slate-400">
+              <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm font-medium">No tienes cuentas registradas</p>
+              <p className="text-xs mt-0.5">
+                {readOnly
+                  ? 'Gestiona y agrega tus cuentas desde la sección de Configuración'
+                  : 'Crea tu primera cuenta haciendo clic en "Nueva cuenta" arriba'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal de Creación de Nueva Cuenta (Exclusivo modo administrativo) */}
+      {!readOnly && showAddAccount && (
         <AddAccountModal
           isOpen={showAddAccount}
           onClose={() => setShowAddAccount(false)}
           onCreateAccount={handleCreateAccount}
           trm={trm}
         />
-
-        {/* Tarjeta de Saldo Total (Estilo Fintech Bento) */}
-        <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 mb-4 flex items-center justify-between gap-3 shadow-sm">
-          <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 tracking-normal block">
-              Patrimonio en Cuentas
-            </span>
-            <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 mt-0.5 tabular-nums">
-              {formatMoney(totalAvailableWealth)}
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06] tracking-normal block tabular-nums">
-              {accounts.length} {accounts.length === 1 ? 'cuenta' : 'cuentas'}
-            </span>
-          </div>
-        </div>
-
-        {/* Tarjetas de Cuenta Individuales con Swipe to Action y Long-Press Drag & Drop */}
-        <div className="grid grid-cols-1 gap-3">
-          {accountsWithBalance.map((acc, index) => {
-            const isDragging = draggingIndex === index;
-            return (
-              <div
-                key={acc?.id || `acc-${index}`}
-                data-account-index={index}
-                draggable
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                onTouchStart={(e) => handleTouchStart(e, index)}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onTouchCancel={handleTouchCancel}
-                className={`transition-all duration-200 select-none ${
-                  isDragging
-                    ? 'scale-[1.02] shadow-2xl ring-2 ring-emerald-500/40 z-30 opacity-95 touch-none'
-                    : 'opacity-100 z-0'
-                }`}
-              >
-                <SwipeableRow
-                  onEdit={() => handleOpenEditAccount(acc)}
-                  onDelete={() => handleDeleteAccount(acc?.id)}
-                  disabled={isReordering || draggingIndex !== null}
-                  className="rounded-2xl"
-                >
-                  <AccountCard
-                    account={acc}
-                    index={index}
-                    onEdit={() => handleCardClick(acc)}
-                    onDelete={() => handleDeleteAccount(acc?.id)}
-                    onSelectCard={() => handleCardClick(acc)}
-                    transactions={transactions}
-                    trm={trm}
-                  />
-                </SwipeableRow>
-              </div>
-            );
-          })}
-
-          {accounts.length === 0 && (
-            <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-slate-400">
-              <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm font-medium">No tienes cuentas registradas</p>
-              <p className="text-xs mt-0.5">{fromSettings ? 'Usa el botón + arriba para agregar tu primera cuenta' : 'Gestiona y agrega tus cuentas desde la sección de Configuración'}</p>
-            </div>
-          )}
-        </div>
-      </section>
+      )}
 
       {/* Modal de Detalle de Tarjeta de Crédito (fallback local) */}
-      {localSelectedCard && (
+      {!readOnly && localSelectedCard && (
         <CreditCardDetailModal
           isOpen={!!localSelectedCard}
           onClose={() => setLocalSelectedCard(null)}
@@ -505,13 +487,79 @@ export default function AccountsAndCategories({
       )}
 
       {/* MODAL / SHEET iOS PARA EDITAR CUENTA O MÉTODO DE PAGO */}
-      <EditAccountModal
-        account={editingAccount}
-        onClose={() => setEditingAccount(null)}
-        onSave={handleSaveEditAccount}
-        onDelete={onDeleteAccount}
-        trm={trm}
-      />
+      {!readOnly && editingAccount && (
+        <EditAccountModal
+          account={editingAccount}
+          onClose={() => setEditingAccount(null)}
+          onSave={handleSaveEditAccount}
+          onDelete={onDeleteAccount}
+          trm={trm}
+        />
+      )}
+
+      {/* DIÁLOGO MODAL DE CONFIRMACIÓN DE SEGURIDAD PARA ELIMINACIÓN DE CUENTA */}
+      {accountPendingDelete && (
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+          onClick={() => setAccountPendingDelete(null)}
+        >
+          <div 
+            className="w-full max-w-sm rounded-3xl bg-white dark:bg-zinc-900 p-5 border border-slate-200/80 dark:border-white/10 shadow-2xl space-y-4 animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
+                  ¿Eliminar cuenta?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Esta acción no se puede deshacer
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-white/[0.06] text-xs space-y-2">
+              <p className="text-slate-700 dark:text-zinc-200 font-medium">
+                Vas a eliminar la cuenta <strong className="text-slate-900 dark:text-white font-bold">{accountPendingDelete.name}</strong>.
+              </p>
+              {(() => {
+                const accTxs = Array.isArray(transactions) 
+                  ? transactions.filter(t => t?.accountId === accountPendingDelete.id || t?.account === accountPendingDelete.name)
+                  : [];
+                const rawBal = Number(accountPendingDelete.balance ?? accountPendingDelete.currentBalance ?? 0);
+                if (accTxs.length > 0 || (!isNaN(rawBal) && rawBal !== 0)) {
+                  return (
+                    <p className="text-amber-600 dark:text-amber-400 font-medium text-[11px] pt-1.5 border-t border-slate-200/50 dark:border-white/[0.06] leading-relaxed">
+                      ⚠️ Atención: Esta cuenta tiene {accTxs.length > 0 ? `${accTxs.length} movimiento(s) vinculados` : ''} {accTxs.length > 0 && !isNaN(rawBal) && rawBal !== 0 ? 'y ' : ''}{!isNaN(rawBal) && rawBal !== 0 ? `saldo de ${formatMoney(rawBal)}` : ''}. Sus transacciones quedarán desvinculadas.
+                    </p>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setAccountPendingDelete(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 transition-colors cursor-pointer text-center"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer text-center shadow-sm"
+              >
+                Eliminar cuenta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

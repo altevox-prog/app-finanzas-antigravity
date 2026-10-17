@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
 import { fetchMarketPrice } from '../../../services/marketQuotesService';
-import { formatCurrencyInput } from '../../../utils/currencyFormatter';
+import { formatCurrencyInput, parseFormattedAmount } from '../../../utils/currencyFormatter';
+import AmountInput from '../../common/AmountInput';
 
 export default function MarketAssetFields({
   category,
@@ -63,8 +63,8 @@ export default function MarketAssetFields({
   const handleSharesChange = (val) => {
     setShares(val);
     const s = parseFloat(val);
-    const b = parseFloat(buyPrice);
-    const c = parseFloat(currentPrice);
+    const b = parseFormattedAmount(buyPrice);
+    const c = parseFormattedAmount(currentPrice);
     if (!isNaN(s) && s > 0) {
       if (!isNaN(b) && b > 0) setInvestedAmount(formatCurrencyInput(Math.round(s * b * 100) / 100, true));
       if (!isNaN(c) && c > 0) setCurrentAmount(formatCurrencyInput(Math.round(s * c * 100) / 100, true));
@@ -74,7 +74,7 @@ export default function MarketAssetFields({
 
   const handleBuyPriceChange = (val) => {
     setBuyPrice(val);
-    const b = parseFloat(val);
+    const b = parseFormattedAmount(val);
     const s = parseFloat(shares);
     if (!isNaN(b) && b > 0 && !isNaN(s) && s > 0) {
       setInvestedAmount(formatCurrencyInput(Math.round(s * b * 100) / 100, true));
@@ -83,7 +83,7 @@ export default function MarketAssetFields({
 
   const handleCurrentPriceChange = (val) => {
     setCurrentPrice(val);
-    const c = parseFloat(val);
+    const c = parseFormattedAmount(val);
     const s = parseFloat(shares);
     if (!isNaN(c) && c > 0 && !isNaN(s) && s > 0) {
       setCurrentAmount(formatCurrencyInput(Math.round(s * c * 100) / 100, true));
@@ -115,27 +115,16 @@ export default function MarketAssetFields({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="ej. BTC, ETH, VOO, SPY, QQQ, AAPL"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              className="w-full text-xs font-mono font-bold px-3 py-2 rounded-xl border border-transparent focus:outline-none uppercase"
-              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleFetchQuote()}
-            disabled={!ticker.trim() || isFetchingPrice}
-            className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm active:scale-95"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isFetchingPrice ? 'animate-spin' : ''}`} />
-            <span>{isFetchingPrice ? 'Buscando...' : 'Cotización'}</span>
-          </button>
+        <div>
+          <input
+            type="text"
+            placeholder="ej. BTC, ETH, VOO, SPY, QQQ, AAPL"
+            value={ticker}
+            onChange={(e) => setTicker(e.target.value.toUpperCase())}
+            onBlur={() => ticker && handleFetchQuote(ticker)}
+            className="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none uppercase"
+            style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
+          />
         </div>
 
         {/* Presets rápidos de tickers frecuentes */}
@@ -190,14 +179,12 @@ export default function MarketAssetFields({
           <label className="block text-[10px] font-bold opacity-70 mb-1">
             Precio Compra ({currency})
           </label>
-          <input
-            type="number"
-            step="any"
-            min="0"
-            placeholder="ej. 60000"
+          <AmountInput
             value={buyPrice}
+            allowDecimals={true}
+            placeholder="0"
             onFocus={(e) => e.target.select()}
-            onChange={(e) => handleBuyPriceChange(e.target.value)}
+            onChange={(cleanVal) => handleBuyPriceChange(cleanVal)}
             className="w-full text-xs font-bold px-2.5 py-2 rounded-xl border border-transparent focus:outline-none"
             style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
           />
@@ -207,14 +194,12 @@ export default function MarketAssetFields({
           <label className="block text-[10px] font-bold opacity-70 mb-1">
             Precio Actual ({currency})
           </label>
-          <input
-            type="number"
-            step="any"
-            min="0"
-            placeholder="ej. 64500"
+          <AmountInput
             value={currentPrice}
+            allowDecimals={true}
+            placeholder="0"
             onFocus={(e) => e.target.select()}
-            onChange={(e) => handleCurrentPriceChange(e.target.value)}
+            onChange={(cleanVal) => handleCurrentPriceChange(cleanVal)}
             className="w-full text-xs font-bold px-2.5 py-2 rounded-xl border border-transparent focus:outline-none text-emerald-500"
             style={{ backgroundColor: 'var(--bg-input)' }}
           />

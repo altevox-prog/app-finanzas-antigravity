@@ -205,21 +205,13 @@ export default function TopAppBar({
   return (
     <>
       <header 
-        className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between transition-all select-none shrink-0 relative overflow-hidden bg-slate-950/90 dark:bg-black/95 backdrop-blur-md border-b border-emerald-500/35 shadow-lg shadow-black/20"
+        className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between transition-all select-none shrink-0 relative overflow-hidden bg-white/80 dark:bg-[#0D0F17]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.06] shadow-xs"
         style={{ 
           paddingTop: 'max(env(safe-area-inset-top), 0px)'
         }}
       >
         {/* Línea base sutil con difuminado lateral */}
-        <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent pointer-events-none z-0" />
-       
-        {/* Haz de resplandor neón ascendente concentrado en el centro */}
-        <div 
-          className="absolute inset-x-0 bottom-0 h-6 pointer-events-none z-0"
-          style={{
-            background: 'radial-gradient(ellipse 60% 100% at 50% 100%, rgba(16, 185, 129, 0.28) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 100%)'
-          }}
-        />
+        <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent pointer-events-none z-0" />
 
         {/* ============================================================== */}
         {/* SECCIÓN IZQUIERDA: Logo (Dashboard) o Botón Retroceso (Vistas) */}
@@ -236,7 +228,7 @@ export default function TopAppBar({
             <button
               type="button"
               onClick={handleBack}
-              className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
+              className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
               aria-label="Volver al inicio"
               title="Volver al inicio"
             >
@@ -270,7 +262,7 @@ export default function TopAppBar({
               className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm ${
                 isPrivacyMode
                   ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 ring-1 ring-emerald-500/30'
-                  : 'bg-slate-900/80 border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                  : 'bg-slate-100 dark:bg-[#131620] border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
               }`}
               title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"}
               aria-label="Modo discreto"
@@ -282,15 +274,14 @@ export default function TopAppBar({
             <button
               type="button"
               onClick={() => setIsNotificationsOpen(true)}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all relative cursor-pointer shadow-sm"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] active:scale-95 transition-all relative cursor-pointer shadow-sm"
               title={hasNotifications ? `${activeAlerts.length} alertas pendientes` : "Sin notificaciones"}
               aria-label="Notificaciones"
             >
               <Bell className="w-4.5 h-4.5" />
               {hasNotifications && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-950" />
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-rose-500/90 text-white text-[9px] font-mono font-bold flex items-center justify-center leading-none shadow-sm ring-2 ring-[#0D0F17]">
+                  {activeAlerts.length > 9 ? '9+' : activeAlerts.length}
                 </span>
               )}
             </button>
@@ -333,10 +324,10 @@ export default function TopAppBar({
             <button
               type="button"
               onClick={handleToggleSearch}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
                 isSearchActive
                   ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                  : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                  : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
               }`}
               title="Buscar movimientos"
               aria-label="Buscar movimientos"
@@ -348,10 +339,10 @@ export default function TopAppBar({
             <button
               type="button"
               onClick={handleOpenFilterModal}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm relative ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm relative ${
                 hasActiveFilters
                   ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                  : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                  : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
               }`}
               title="Filtros avanzados"
               aria-label="Filtros avanzados"
@@ -373,7 +364,7 @@ export default function TopAppBar({
             <button
               type="button"
               onClick={handleRefreshQuotesClick}
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 active:rotate-180 transition-all cursor-pointer shadow-sm"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] active:scale-95 active:rotate-180 transition-all cursor-pointer shadow-sm"
               title="Actualizar cotizaciones en tiempo real"
               aria-label="Actualizar cotizaciones"
             >
@@ -384,7 +375,7 @@ export default function TopAppBar({
             <button
               type="button"
               onClick={handleAddInvestmentClick}
-              className="w-9 h-9 sm:w-auto sm:px-3 sm:py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="w-9 h-9 sm:w-auto sm:px-3 sm:py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
               title="Registrar nueva inversión"
               aria-label="Registrar nueva inversión"
             >
@@ -399,7 +390,7 @@ export default function TopAppBar({
           <button
             type="button"
             onClick={handleAddDebtClick}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-emerald-500 hover:dark:text-emerald-400 hover:dark:border-white/[0.15] flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm"
             title="Registrar nuevo préstamo o deuda"
             aria-label="Registrar nuevo préstamo o deuda"
           >
@@ -412,7 +403,7 @@ export default function TopAppBar({
           <button
             type="button"
             onClick={handleAddAccountClick}
-            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
             title="Añadir nueva cuenta"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -425,15 +416,14 @@ export default function TopAppBar({
           <button
             type="button"
             onClick={() => setIsNotificationsOpen(true)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 active:scale-95 transition-all relative cursor-pointer shadow-sm"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] active:scale-95 transition-all relative cursor-pointer shadow-sm"
             title={hasNotifications ? `${activeAlerts.length} alertas pendientes` : "Sin notificaciones"}
             aria-label="Notificaciones"
           >
             <Bell className="w-4.5 h-4.5" />
             {hasNotifications && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-950" />
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-rose-500/90 text-white text-[9px] font-mono font-bold flex items-center justify-center leading-none shadow-sm ring-2 ring-[#0D0F17]">
+                {activeAlerts.length > 9 ? '9+' : activeAlerts.length}
               </span>
             )}
           </button>

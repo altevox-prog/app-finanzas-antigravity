@@ -131,7 +131,7 @@ export default function CreditCardPaymentSection({
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-[#34C759]">
               <ArrowDownLeft className="w-4 h-4" />
-              Registrar Abono a {card.name}
+              Registrar abono a {card.name}
             </h4>
             <button
               type="button"
@@ -155,7 +155,7 @@ export default function CreditCardPaymentSection({
                   color: 'var(--text-main)'
                 }}
               >
-                Pago Total ({formatMoney(outstandingDebt)})
+                Pago total ({formatMoney(outstandingDebt)})
               </button>
               <button
                 type="button"
@@ -169,7 +169,7 @@ export default function CreditCardPaymentSection({
           )}
 
           <div>
-            <label className="block text-[11px] font-semibold opacity-70 mb-1">Monto a Pagar ($ COP) *</label>
+            <label className="block text-[11px] font-semibold opacity-70 mb-1">Monto a pagar ($ COP) *</label>
             <AmountInput
               required
               placeholder="0"
@@ -182,7 +182,7 @@ export default function CreditCardPaymentSection({
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold opacity-70 mb-1">Debitar de Cuenta de Origen</label>
+            <label className="block text-[11px] font-semibold opacity-70 mb-1">Debitar de cuenta de origen</label>
             <select
               value={sourceAccountId}
               onChange={(e) => setSourceAccountId(e.target.value)}
@@ -198,7 +198,7 @@ export default function CreditCardPaymentSection({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] font-semibold opacity-70 mb-1">Fecha de Pago</label>
+              <label className="block text-[11px] font-semibold opacity-70 mb-1">Fecha de pago</label>
               <input
                 type="date"
                 required
@@ -235,7 +235,7 @@ export default function CreditCardPaymentSection({
               className="px-4 py-1.5 text-xs font-bold bg-[#34C759] hover:bg-emerald-600 text-white rounded-xl shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Confirmar Pago</span>
+              <span>Confirmar pago</span>
             </button>
           </div>
         </form>

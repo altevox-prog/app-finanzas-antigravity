@@ -126,7 +126,7 @@ export default function DesktopSidebar({
 
   return (
     <aside 
-      className={`${className} w-64 xl:w-72 h-[calc(100vh-4rem)] sticky top-16 flex-col justify-between p-5 border-r border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-[#09090b]/90 backdrop-blur-xl z-30 select-none shrink-0 transition-all`}
+      className={`${className} w-64 xl:w-72 h-[calc(100vh-4rem)] sticky top-16 flex-col justify-between p-5 border-r border-slate-200/80 dark:border-white/[0.06] bg-white/70 dark:bg-[#0D0F17] backdrop-blur-xl z-30 select-none shrink-0 transition-all`}
     >
       {/* SECCIÓN SUPERIOR: Botón Acción + Navegación */}
       <div className="space-y-6">
@@ -135,7 +135,7 @@ export default function DesktopSidebar({
           id="desktop-btn-new-transaction"
           type="button"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 hover:shadow-md cursor-pointer select-none relative"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium shadow-md shadow-emerald-950/50 hover:shadow-emerald-900/40 border border-emerald-400/20 active:scale-[0.98] transition-all duration-150 ease-out cursor-pointer select-none relative"
         >
           <Plus className={`w-5 h-5 transition-transform duration-200 ${isMenuOpen ? 'rotate-45' : ''}`} />
           <span>Nuevo movimiento</span>
@@ -193,7 +193,7 @@ export default function DesktopSidebar({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-all duration-150 ease-out active:scale-[0.97] active:brightness-95 select-none"
               >
                 <CalendarSync className="w-4 h-4 text-purple-500" />
-                <span>Suscripción o recurrente</span>
+                <span>Pago recurrente</span>
               </button>
 
               {/* Opción Préstamo o Deuda */}
@@ -263,14 +263,14 @@ export default function DesktopSidebar({
                 key={item.id}
                 type="button"
                 onClick={() => handleTab(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition-all cursor-pointer group ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs transition-all cursor-pointer group ${
                   isActive
-                    ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-slate-100 dark:bg-white/[0.05] text-slate-900 dark:text-emerald-400 font-semibold border border-transparent dark:border-white/[0.04] shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 hover:dark:bg-white/[0.03] hover:text-slate-900 hover:dark:text-slate-200 transition-colors'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className={isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors'}>
+                  <span className={isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-400/80 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors'}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
@@ -288,12 +288,12 @@ export default function DesktopSidebar({
       </div>
 
       {/* SECCIÓN INFERIOR: Perfil y Ajustes */}
-      <div className="pt-4 border-t border-slate-200/80 dark:border-white/5">
+      <div className="pt-4 border-t border-slate-200/80 dark:border-white/[0.06]">
         {/* Tarjeta de Perfil y Acceso a Ajustes */}
         <button
           type="button"
           onClick={handleOpenSettings}
-          className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-left cursor-pointer group"
+          className="w-full flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-100 hover:dark:bg-white/[0.03] transition-colors text-left cursor-pointer group"
           title="Abrir configuración y perfil"
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">

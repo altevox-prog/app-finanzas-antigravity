@@ -265,17 +265,9 @@ export default function AppHeader({
 
       {/* Top Header Panorámico de Escritorio (visible en lg:) continuo full-width con acabado Dark Glass Neón */}
       {!mobileOnly && (
-        <header className={`${desktopOnlyClass} sticky top-0 z-40 w-full h-16 shrink-0 select-none relative overflow-hidden bg-slate-950/90 dark:bg-black/95 backdrop-blur-md border-b border-emerald-500/35 shadow-lg shadow-black/20 flex items-center`}>
+        <header className={`${desktopOnlyClass} sticky top-0 z-40 w-full h-16 shrink-0 select-none relative bg-white/80 dark:bg-[#0D0F17]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.06] shadow-xs flex items-center`}>
           {/* Línea base sutil con difuminado lateral */}
-          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent pointer-events-none z-0" />
-         
-          {/* Haz de resplandor neón ascendente */}
-          <div 
-            className="absolute inset-x-0 bottom-0 h-6 pointer-events-none z-0"
-            style={{
-              background: 'radial-gradient(ellipse 60% 100% at 50% 100%, rgba(16, 185, 129, 0.28) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 100%)'
-            }}
-          />
+          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent pointer-events-none z-0" />
 
           <div className="w-full px-6 flex items-center justify-between gap-3 relative z-10">
             {/* Extremo Izquierdo: Logotipo e isotipo 'Finanzas al día' con texto blanco */}
@@ -294,10 +286,10 @@ export default function AppHeader({
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new CustomEvent('monety:toggle-search'))}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
                       isSearchActive
                         ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                        : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                        : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
                     }`}
                     title="Buscar movimientos"
                     aria-label="Buscar movimientos"
@@ -307,10 +299,10 @@ export default function AppHeader({
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new CustomEvent('monety:open-filter-modal'))}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer relative active:scale-95 shadow-sm ${
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer relative active:scale-95 shadow-sm ${
                       hasActiveFilters
                         ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                        : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                        : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
                     }`}
                     title="Filtros avanzados"
                     aria-label="Filtros avanzados"
@@ -327,10 +319,10 @@ export default function AppHeader({
 
               {/* TRM Oficial Automatizado (No editable) */}
               <div 
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-semibold text-slate-200 select-none shadow-sm"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-xs text-slate-700 dark:text-slate-300 font-medium select-none shadow-sm"
                 title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 <span>TRM Oficial: ${Number(trm).toLocaleString('es-CO')} COP</span>
               </div>
 
@@ -338,10 +330,10 @@ export default function AppHeader({
               <button
                 type="button"
                 onClick={togglePrivacyMode}
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
                   isPrivacyMode
                     ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                    : 'bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40'
+                    : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
                 }`}
                 title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"}
                 aria-label="Modo discreto"
@@ -353,67 +345,37 @@ export default function AppHeader({
                 )}
               </button>
 
-              {/* Botón de Campana de Notificaciones en Escritorio */}
-              <button
-                type="button"
-                onClick={() => setIsNotificationCenterOpen(true)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-200 hover:text-emerald-400 hover:border-emerald-500/40 relative transition-colors cursor-pointer shadow-sm active:scale-95"
-                title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"}
-                aria-label="Centro de notificaciones"
-              >
-                <Bell className="w-4.5 h-4.5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
+              {/* Botón de Campana de Notificaciones en Escritorio con Popover Anclado */}
+              <div className="relative z-[60]">
+                <button
+                  type="button"
+                  onClick={() => setIsNotificationCenterOpen((prev) => !prev)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] relative transition-colors cursor-pointer shadow-sm active:scale-95"
+                  title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"}
+                  aria-label="Centro de notificaciones"
+                >
+                  <Bell className="w-4.5 h-4.5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500/90 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm ring-2 ring-[#0D0F17]">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
 
-              {/* Avatar de Usuario con anillo verde esmeralda */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (onOpenProfile) onOpenProfile();
-                  else if (onOpenSettings) onOpenSettings();
-                }}
-                className="flex items-center justify-center select-none cursor-pointer active:scale-95 transition-transform focus:outline-none ml-1"
-                title={`Perfil - ${userProfile?.name || 'Usuario'}`}
-                aria-label={`Perfil - ${userProfile?.name || 'Usuario'}`}
-              >
-                <div className="relative inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10">
-                  {/* Anillo de pulso neón adherido al perímetro exacto */}
-                  <span className="absolute inset-0 rounded-full border-2 border-emerald-400 dark:border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.85)] animate-pulse pointer-events-none z-0" />
-                  
-                  {/* Círculo interior del avatar/iniciales encajado al 100% */}
-                  <div className="relative z-10 w-full h-full rounded-full overflow-hidden flex items-center justify-center">
-                    <Avatar 
-                      src={syncUser?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
-                      name={syncUser?.user_metadata?.full_name || userProfile?.name} 
-                      email={syncUser?.email || userProfile?.email}
-                      size="sm" 
-                      className="!w-full !h-full"
-                      showStatus={false} 
-                    />
-                  </div>
-                </div>
-              </button>
+                <NotificationCenter
+                  isOpen={isNotificationCenterOpen}
+                  onClose={() => setIsNotificationCenterOpen(false)}
+                  notifications={alerts}
+                  activeNotifications={activeAlerts}
+                  onDismiss={dismissAlert}
+                  onMarkAllAsRead={markAllAsRead}
+                  onApproveRecurring={handleApproveRecurring}
+                  onSkipRecurring={handleSkipRecurring}
+                />
+              </div>
             </div>
           </div>
         </header>
-      )}
-
-      {/* Modal / Drawer Centro de Notificaciones (Escritorio) */}
-      {!mobileOnly && (
-        <NotificationCenter
-          isOpen={isNotificationCenterOpen}
-          onClose={() => setIsNotificationCenterOpen(false)}
-          notifications={alerts}
-          activeNotifications={activeAlerts}
-          onDismiss={dismissAlert}
-          onMarkAllAsRead={markAllAsRead}
-          onApproveRecurring={handleApproveRecurring}
-          onSkipRecurring={handleSkipRecurring}
-        />
       )}
     </>
   );

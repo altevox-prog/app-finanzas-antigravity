@@ -30,7 +30,6 @@ import BalanceCardsWidget, {
 import WeeklyExpensesChart from './WeeklyExpensesChart';
 import RecentMovementsSection from './RecentMovementsSection';
 import BalanceWidget from './widgets/BalanceWidget';
-import BudgetWidget from './widgets/BudgetWidget';
 import ReportsAndCharts from '../reports/ReportsAndCharts';
 import BentoMetricsGrid from '../common/BentoMetricsGrid';
 import MetricCardsGrid from './widgets/MetricCardsGrid';
@@ -243,8 +242,6 @@ export function createWidgetRegistry({
         txCount={scopedTransactions.length}
       />
     ),
-
-    budget: <BudgetWidget monthlyStats={monthlyStats} />,
 
     bento_metrics: (
       <BentoMetricsGrid

@@ -15,7 +15,7 @@ import TwoFactorVerifyStep from './TwoFactorVerifyStep';
 import AuthForm from './components/AuthForm';
 import CustomSupabaseConfig from './components/CustomSupabaseConfig';
 
-export default function AuthModal({ isOpen, onClose, isRequired = false, onContinueLocal }) {
+export default function AuthModal({ isOpen, onClose, isRequired = false }) {
   useBackHandler(isOpen && !isRequired, onClose);
 
   const { 
@@ -206,7 +206,7 @@ export default function AuthModal({ isOpen, onClose, isRequired = false, onConti
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-white dark:bg-[#27272a] rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-white/[0.08] animate-slide-up relative overflow-hidden"
+        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200/80 dark:border-white/10 animate-slide-up relative overflow-hidden"
       >
         {/* Halo decorativo de fondo */}
         <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -265,7 +265,7 @@ export default function AuthModal({ isOpen, onClose, isRequired = false, onConti
                 }}
                 className="w-full py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors cursor-pointer"
               >
-                Cerrar Sesión en este dispositivo
+                Cerrar sesión en este dispositivo
               </button>
             </div>
           </>
@@ -315,15 +315,20 @@ export default function AuthModal({ isOpen, onClose, isRequired = false, onConti
               </div>
             )}
 
-            {/* Identidad Visual Oficial: AppLogo centralizado */}
+            {/* Identidad Visual Oficial: Logo limpio y centralizado */}
             <div className="flex flex-col items-center justify-center text-center mb-6">
-              <div className="mb-3 flex items-center justify-center">
-                <AppLogo size="xl" showText={false} iconClassName="shadow-lg shadow-emerald-600/25 ring-2 ring-emerald-500/20" />
+              <div className="mx-auto w-16 h-16 rounded-2xl overflow-hidden shadow-md shadow-emerald-500/10 mb-3">
+                <img
+                  src="/icon-192x192.png"
+                  alt="Monety"
+                  className="w-full h-full object-cover block"
+                  onError={(e) => { e.currentTarget.src = '/logo.png'; }}
+                />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Monety
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-normal mt-1">
                 Gestión Financiera & Patrimonio Inteligente
               </p>
             </div>
@@ -358,7 +363,7 @@ export default function AuthModal({ isOpen, onClose, isRequired = false, onConti
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
-                  className="w-full py-2.5 px-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-98 shadow-sm"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800/50 py-2.5 px-4 rounded-xl flex items-center justify-center gap-3 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm transition-all cursor-pointer active:scale-[0.99]"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                     <path
@@ -383,26 +388,16 @@ export default function AuthModal({ isOpen, onClose, isRequired = false, onConti
               )}
 
               {isConfigured && mode !== 'forgot' && (
-                <div className="relative flex items-center justify-center my-2">
-                  <div className="border-t border-slate-200 dark:border-white/10 w-full" />
-                  <span className="bg-white dark:bg-[#121622] px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider relative">
+                <div className="relative my-4 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                  </div>
+                  <span className="relative bg-white dark:bg-slate-900 px-3 text-xs font-medium uppercase tracking-wider text-slate-400">
                     o con correo
                   </span>
                 </div>
               )}
             </AuthForm>
-
-            {Boolean(onContinueLocal) && (
-              <div className="pt-3 border-t border-slate-100 dark:border-white/5 text-center">
-                <button
-                  type="button"
-                  onClick={onContinueLocal}
-                  className="text-xs text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 font-medium hover:underline cursor-pointer transition-colors"
-                >
-                  Continuar en modo local (sin cuenta en la nube)
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>

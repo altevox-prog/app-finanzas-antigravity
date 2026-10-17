@@ -58,7 +58,7 @@ export async function fetchRemoteData(userId) {
     return [];
   }
   return Promise.allSettled([
-    supabase.from('accounts').select('*').eq('user_id', userId),
+    supabase.from('accounts').select('*').eq('user_id', userId).order('order_index', { ascending: true, nullsFirst: false }),
     supabase.from('transactions').select('*').eq('user_id', userId),
     supabase.from('debts').select('*').eq('user_id', userId),
     supabase.from('investments').select('*').eq('user_id', userId),
@@ -67,6 +67,21 @@ export async function fetchRemoteData(userId) {
     supabase.from('categories').select('*').eq('user_id', userId),
     supabase.from('savings_goals').select('*').eq('user_id', userId)
   ]);
+}
+
+export async function fetchAccounts(userId = null) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: [], error: new Error('Supabase no configurado') };
+  }
+  let query = supabase
+    .from('accounts')
+    .select('*')
+    .order('order_index', { ascending: true, nullsFirst: false });
+
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+  return await query;
 }
 
 export async function fetchUserSettings(userId) {
@@ -273,6 +288,7 @@ export const syncApiService = {
   signOutCloud,
   fetchRemoteProfile,
   fetchRemoteData,
+  fetchAccounts,
   fetchUserSettings,
   upsertWithFallback,
   syncUserProfile,

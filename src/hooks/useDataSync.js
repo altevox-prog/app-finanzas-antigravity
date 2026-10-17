@@ -6,6 +6,7 @@ import {
   normalizeRemoteTransaction,
   normalizeRemoteDebt,
   normalizeRemoteInvestment,
+  normalizeRemoteRecurring,
   resolveRemoteBudgets
 } from '../services/sync/syncNormalizers';
 import {
@@ -166,7 +167,16 @@ export function useDataSync({
       ] = await syncApiService.fetchRemoteData(userId);
 
       const safeCloudProfile = cloudProfile || null;
-      const hasCompletedOnboarding = safeCloudProfile?.has_completed_onboarding ?? true;
+      const hasCompletedOnboarding = safeCloudProfile?.onboarding_completed === true || safeCloudProfile?.has_completed_onboarding === true;
+
+      if (hasCompletedOnboarding) {
+        try {
+          localStorage.setItem(`has_completed_onboarding_${userId}`, 'true');
+          localStorage.setItem('has_completed_onboarding', 'true');
+          localStorage.setItem('hasCompletedOnboarding', 'true');
+          localStorage.setItem('app_onboarding_completed', 'true');
+        } catch {}
+      }
 
       if (safeCloudProfile && typeof setUserProfile === 'function') {
         setUserProfile(prev => normalizeRemoteProfile(safeCloudProfile, prev));
@@ -178,6 +188,12 @@ export function useDataSync({
           if (typeof setAccounts === 'function') {
             setAccounts(accountsRes.value.data.map(normalizeRemoteAccount));
           }
+          try {
+            localStorage.setItem(`has_completed_onboarding_${userId}`, 'true');
+            localStorage.setItem('has_completed_onboarding', 'true');
+            localStorage.setItem('hasCompletedOnboarding', 'true');
+            localStorage.setItem('app_onboarding_completed', 'true');
+          } catch {}
         } else if ((latestDataRef.current.accounts || []).length > 0) {
           // Si la nube está vacía pero localmente hay cuentas (ej. Onboarding), sincronizar hacia la nube
           setTimeout(() => {
@@ -216,8 +232,18 @@ export function useDataSync({
       // Pagos recurrentes
       if (recurringRes.status === 'fulfilled' && !recurringRes.value.error && Array.isArray(recurringRes.value.data)) {
         if (recurringRes.value.data.length > 0) {
+          const normalizedRecurring = recurringRes.value.data.map(normalizeRemoteRecurring);
           if (typeof setRecurringPayments === 'function') {
-            setRecurringPayments(recurringRes.value.data);
+            setRecurringPayments(normalizedRecurring);
+          }
+          try {
+            const serialized = JSON.stringify(normalizedRecurring);
+            localStorage.setItem('recurring_payments', serialized);
+            localStorage.setItem('app_recurring', serialized);
+            localStorage.setItem('presu_subscriptions_v1', serialized);
+            localStorage.setItem('subscriptions', serialized);
+          } catch (e) {
+            console.error('[useDataSync] Error guardando pagos recurrentes normalizados en localStorage:', e);
           }
         }
       }

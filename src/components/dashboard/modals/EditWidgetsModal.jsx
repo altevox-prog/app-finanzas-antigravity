@@ -129,15 +129,30 @@ export default function EditWidgetsModal({
 
   const handleToggleVisible = (id, forceVisible = null) => {
     const norm = normalizeWidgetId(id);
-    setCurrentWidgets((prev) =>
-      prev.map((w) => {
+    setCurrentWidgets((prev) => {
+      let updated = [];
+      let toggledWidget = null;
+      let targetVisible = forceVisible;
+
+      prev.forEach((w) => {
         if (w.id === id || normalizeWidgetId(w.id) === norm || normalizeWidgetId(w.id) === id) {
-          const nextVal = forceVisible !== null ? forceVisible : !w.visible;
-          return { ...w, visible: nextVal, hidden: !nextVal };
+          const nextVal = targetVisible !== null ? targetVisible : !w.visible;
+          if (nextVal) {
+            toggledWidget = { ...w, visible: true, hidden: false };
+          } else {
+            updated.push({ ...w, visible: false, hidden: true });
+          }
+        } else {
+          updated.push(w);
         }
-        return w;
-      })
-    );
+      });
+
+      if (toggledWidget) {
+        updated.push(toggledWidget);
+      }
+
+      return updated;
+    });
   };
 
   const handleSave = async () => {
@@ -200,7 +215,7 @@ export default function EditWidgetsModal({
               <SlidersHorizontal className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold tracking-tight">Personalizar Widgets</h3>
+              <h3 className="text-base font-bold tracking-tight">Personalizar widgets</h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
                 {visibleCount} de {currentWidgets.length} activos en la pestaña Inicio
               </p>

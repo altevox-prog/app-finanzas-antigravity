@@ -29,7 +29,7 @@ export default function DebtsWidget({
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <HandCoins className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span>Préstamos y Deudas</span>
+            <span>Préstamos y deudas</span>
           </span>
           <span className="text-[10px] text-slate-400 font-semibold">
             {totalActivos} activos

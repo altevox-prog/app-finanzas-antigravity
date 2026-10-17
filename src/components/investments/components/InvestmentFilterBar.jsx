@@ -20,9 +20,9 @@ export default function InvestmentFilterBar({
   const showViewControls = (investments && investments.length > 0) || totalFilteredCount > 0 || totalGroupedCount > 0;
 
   return (
-    <>
+    <div className="space-y-2.5">
       {/* 1. BARRA DE FILTROS POR CATEGORÍA */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full">
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full">
         <button
           type="button"
           onClick={() => onSelectCategory && onSelectCategory('all')}
@@ -63,41 +63,41 @@ export default function InvestmentFilterBar({
 
       {/* 2. SELECTOR DE VISTA (POR BANCO VS TODOS) Y CONTADOR */}
       {showViewControls && (
-        <div className="flex items-center justify-between gap-2 pt-1 pb-0.5">
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-xs">
+        <div className="flex items-center justify-between gap-2">
+          <div className="bg-slate-100 dark:bg-slate-800/70 p-1 rounded-xl flex gap-1 border border-slate-200/50 dark:border-white/5">
             <button
               type="button"
               onClick={() => onChangeViewGrouping && onChangeViewGrouping('flat')}
-              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`py-1.5 sm:py-2 px-3 rounded-lg flex items-center justify-center text-xs font-semibold whitespace-nowrap transition-all cursor-pointer active:scale-98 ${
                 viewGrouping === 'flat'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <List className="w-3.5 h-3.5" />
-              <span>Todas las Inversiones</span>
+              <List className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+              <span className="whitespace-nowrap">Todas las Inversiones</span>
             </button>
             <button
               type="button"
               onClick={() => onChangeViewGrouping && onChangeViewGrouping('by_institution')}
-              className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`py-1.5 sm:py-2 px-3 rounded-lg flex items-center justify-center text-xs font-semibold whitespace-nowrap transition-all cursor-pointer active:scale-98 ${
                 viewGrouping === 'by_institution'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Por Entidad / Banco</span>
+              <Building2 className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+              <span className="whitespace-nowrap">Por Entidad / Banco</span>
             </button>
           </div>
 
-          <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+          <span className="text-[11px] text-slate-400 font-medium hidden sm:inline whitespace-nowrap">
             {viewGrouping === 'flat' 
               ? `${totalFilteredCount} activos listados` 
               : `${totalGroupedCount} entidades consolidadas`}
           </span>
         </div>
       )}
-    </>
+    </div>
   );
 }

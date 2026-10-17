@@ -4,6 +4,7 @@ import {
   getAccountNativeBalance, 
   formatNativeCurrency 
 } from '../../../utils/currencyUtils';
+import { usePrivacy } from '../../../context/PrivacyContext';
 
 /**
  * TopAccountsWidget
@@ -13,12 +14,24 @@ export default function TopAccountsWidget({
   accounts = [],
   transactions = [],
   trm = 4000,
-  formatMoney = (val) => `$${val}`,
+  formatMoney: propFormatMoney,
   onAccountClick,
   onNavigateToTab,
   onOpenAccounts,
-  isReordering = false
+  isReordering = false,
+  showBalance,
+  showBalances,
+  isMasked
 }) {
+  const { isPrivacyMode, formatMoney: privacyFormatMoney } = usePrivacy();
+  const formatMoney = propFormatMoney || privacyFormatMoney;
+  const isVisible = showBalance !== undefined
+    ? Boolean(showBalance)
+    : showBalances !== undefined
+    ? Boolean(showBalances)
+    : isMasked !== undefined
+    ? !isMasked
+    : !isPrivacyMode;
   const topAccounts = Array.isArray(accounts) ? accounts.slice(0, 4) : [];
   const handleNavigate = () => {
     if (isReordering) return;
@@ -64,28 +77,29 @@ export default function TopAccountsWidget({
             <div
               key={acc.id}
               onClick={handleNavigate}
-              className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:border-slate-300 dark:hover:border-white/20 shadow-sm transition-all flex items-center justify-between cursor-pointer group"
+              className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] hover:border-emerald-500/40 hover:dark:bg-[#151924] shadow-sm transition-all flex items-center justify-between cursor-pointer group"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
-                  <BrandIcon name={acc.name} type={acc.type} color={acc.color} size={20} />
+                <div className="flex items-center justify-center shrink-0">
+                  <BrandIcon 
+                    name={acc.name} 
+                    type={acc.type} 
+                    color={acc.color} 
+                    size={38} 
+                    className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-xl select-none shrink-0" 
+                  />
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate group-hover:text-emerald-500 transition-colors">
-                      {acc.name}
-                    </h4>
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 border border-slate-200/60 dark:border-white/[0.06]">
-                      {acc.currency || 'COP'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                    <span className="text-xs font-medium px-1.5 py-0.2 rounded bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-400">
+                  <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-500 transition-colors">
+                    {acc.name}
+                  </h4>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <span className="font-medium text-slate-500 dark:text-slate-400">
                       {acc.type === 'bank' ? 'Bancaria' : acc.type === 'wallet' ? 'Billetera' : isCard ? 'Tarjeta' : isInvestment ? 'Inversión' : 'Efectivo'}
                     </span>
                     {isInvestment && shares > 0 && (
                       <span className="text-emerald-600 dark:text-emerald-400 font-semibold truncate">
-                        • {shares} acc{unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)}` : ''}
+                        • {shares} acc{!isVisible ? '' : unitPrice > 0 ? ` @ ${formatNativeCurrency(unitPrice, currency)}` : ''}
                       </span>
                     )}
                   </div>
@@ -93,7 +107,11 @@ export default function TopAccountsWidget({
               </div>
 
               <div className="text-right shrink-0">
-                {isForeign && !isCard ? (
+                {!isVisible ? (
+                  <span className="text-xs sm:text-sm font-bold font-mono tracking-tight tabular-nums block text-slate-900 dark:text-slate-50">
+                    ••••••
+                  </span>
+                ) : isForeign && !isCard ? (
                   <>
                     <span className="text-xs sm:text-sm font-bold font-mono tracking-tight tabular-nums block text-slate-900 dark:text-zinc-100">
                       {formatNativeCurrency(currentBal, currency)}

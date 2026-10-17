@@ -209,7 +209,7 @@ export default function EditAccountModal({
         {/* Cabecera FIJA */}
         <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
           <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
-            Editar Cuenta
+            Editar cuenta
           </h3>
           <button
             type="button"
@@ -517,7 +517,7 @@ export default function EditAccountModal({
                 className={`flex-1 sm:flex-initial px-6 py-2.5 h-11 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>{isSubmitting ? 'Guardando...' : 'Guardar Cuenta'}</span>
+                <span>{isSubmitting ? 'Guardando...' : 'Guardar cuenta'}</span>
               </button>
             </div>
           </div>

@@ -183,8 +183,8 @@ export default function CreditCardDetailModal({
 
             {/* Desglose de cálculo transparente */}
             <div className="pt-2 border-t flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400" style={{ borderColor: 'var(--border-color)' }}>
-              <span>Total Consumos: {formatMoney(totalCharges)}</span>
-              <span>Total Abonos: {formatMoney(totalPaid)}</span>
+              <span>Total consumos: {formatMoney(totalCharges)}</span>
+              <span>Total abonos: {formatMoney(totalPaid)}</span>
             </div>
           </div>
 
@@ -196,7 +196,7 @@ export default function CreditCardDetailModal({
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
-                  Cupo Disponible
+                  Cupo disponible
                 </span>
                 <span className="text-[20px] font-bold font-mono text-[#34C759] tracking-tight tabular-nums">
                   {formatMoney(availableCredit)}
@@ -204,7 +204,7 @@ export default function CreditCardDetailModal({
               </div>
               <div className="text-right">
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
-                  Cupo Total
+                  Cupo total
                 </span>
                 <span className="text-[14px] font-bold font-mono tabular-nums" style={{ color: 'var(--text-main)' }}>
                   {formatMoney(creditLimit)}
@@ -240,7 +240,7 @@ export default function CreditCardDetailModal({
               </div>
               <div className="min-w-0">
                 <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                  Próxima Fecha de Pago
+                  Próxima fecha de pago
                 </span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs sm:text-sm font-bold text-[#007AFF]">

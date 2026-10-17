@@ -175,7 +175,7 @@ export default function InvestmentsView({
   };
 
   return (
-    <div className="space-y-4 pb-36 animate-fadeIn">
+    <div className="space-y-2.5 pb-36 animate-fadeIn">
       {/* ============================================================== */}
       {/* 1. RESUMEN TOTAL DEL PORTAFOLIO DE INVERSIONES (HERO CARD 3 EN 1) */}
       {/* ============================================================== */}
@@ -199,7 +199,10 @@ export default function InvestmentsView({
         investments={investments}
       />
 
-      <div className="space-y-3">
+      {/* ============================================================== */}
+      {/* 3. LISTADO DE ACTIVOS CON ALINEACIÓN SIMÉTRICA CONSTANTE      */}
+      {/* ============================================================== */}
+      <div className="flex flex-col gap-2.5">
         {filteredInvestments.length === 0 ? (
           <div 
             className="text-center py-6 px-4 border border-dashed rounded-2xl flex flex-col items-center justify-center"

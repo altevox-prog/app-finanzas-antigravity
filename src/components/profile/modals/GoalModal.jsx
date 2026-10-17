@@ -191,7 +191,7 @@ export default function GoalModal({
             </div>
             <div className="truncate">
               <h3 className="font-semibold text-sm sm:text-base text-slate-900 dark:text-zinc-100 leading-tight truncate">
-                {activeGoal ? 'Editar Meta de Ahorro' : 'Nueva Meta de Ahorro'}
+                {activeGoal ? 'Editar meta de ahorro' : 'Nueva meta de ahorro'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
                 Planifica tu objetivo, cuotas y recordatorios automáticos
@@ -423,7 +423,7 @@ export default function GoalModal({
               type="submit"
               className="h-11 px-5 text-xs sm:text-sm font-bold text-white rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center"
             >
-              {activeGoal ? 'Guardar Cambios' : 'Guardar Meta'}
+              {activeGoal ? 'Guardar cambios' : 'Guardar meta'}
             </button>
           </div>
         </form>

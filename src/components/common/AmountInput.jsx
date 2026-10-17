@@ -53,10 +53,10 @@ export default function AmountInput({
     const raw = input.value;
     const cursor = input.selectionStart || 0;
 
-    // Conteo de dígitos y comas antes del cursor para reposicionamiento preciso
+    // Conteo de dígitos y delimitadores antes del cursor para reposicionamiento preciso
     const rawBeforeCursor = raw.slice(0, cursor);
     const digitsBeforeCursor = rawBeforeCursor.replace(/\D/g, '').length;
-    const hasCommaBeforeCursor = rawBeforeCursor.includes(',') || rawBeforeCursor.includes('.');
+    const hasDecimalBeforeCursor = rawBeforeCursor.includes(',') || rawBeforeCursor.endsWith('.') || rawBeforeCursor.includes('.');
 
     // Formatear valor visual
     const formatted = formatCurrencyInput(raw, decimalsAllowed);
@@ -67,7 +67,7 @@ export default function AmountInput({
       if (formatted.includes(',')) {
         const [intPart, decPart] = formatted.split(',');
         const cleanInt = intPart.replace(/\D/g, '') || '0';
-        cleanNumeric = decPart !== undefined ? `${cleanInt}.${decPart}` : `${cleanInt}.`;
+        cleanNumeric = decPart !== undefined && decPart !== '' ? `${cleanInt}.${decPart}` : `${cleanInt}.`;
       } else {
         cleanNumeric = formatted.replace(/\D/g, '');
       }
@@ -85,7 +85,8 @@ export default function AmountInput({
     let digitsCounted = 0;
 
     if (digitsBeforeCursor === 0) {
-      newCursor = 0;
+      // Si el usuario escribió coma o punto al inicio (ej. "," o "." -> "0,")
+      newCursor = (hasDecimalBeforeCursor && formatted.includes(',')) ? formatted.indexOf(',') + 1 : 0;
     } else {
       for (let i = 0; i < formatted.length; i++) {
         if (/\d/.test(formatted[i])) {
@@ -94,7 +95,7 @@ export default function AmountInput({
         if (digitsCounted === digitsBeforeCursor) {
           newCursor = i + 1;
           // Si el usuario escribió una coma inmediatamente después del dígito
-          if (hasCommaBeforeCursor && formatted[i + 1] === ',') {
+          if (hasDecimalBeforeCursor && formatted[i + 1] === ',') {
             newCursor = i + 2;
           }
           break;
@@ -129,7 +130,9 @@ export default function AmountInput({
           if (nextFormatted) {
             if (nextFormatted.includes(',')) {
               const [intP, decP] = nextFormatted.split(',');
-              nextClean = `${intP.replace(/\D/g, '') || '0'}.${decP || ''}`;
+              nextClean = decP !== undefined && decP !== '' 
+                ? `${intP.replace(/\D/g, '') || '0'}.${decP}` 
+                : `${intP.replace(/\D/g, '') || '0'}.`;
             } else {
               nextClean = nextFormatted.replace(/\D/g, '');
             }
@@ -167,9 +170,26 @@ export default function AmountInput({
 
   const handleBlur = (e) => {
     isFocusedRef.current = false;
-    // Normalizar formato al salir
-    const formatted = formatCurrencyInput(displayValue, decimalsAllowed);
+    // Normalizar formato al salir: si quedó en estado transitorio "75.000,", limpiar coma final
+    let formatted = formatCurrencyInput(displayValue, decimalsAllowed);
+    if (formatted.endsWith(',')) {
+      formatted = formatted.slice(0, -1);
+    }
+    let clean = '';
+    if (formatted) {
+      if (formatted.includes(',')) {
+        const [intP, decP] = formatted.split(',');
+        clean = decP !== undefined && decP !== '' 
+          ? `${intP.replace(/\D/g, '') || '0'}.${decP}` 
+          : intP.replace(/\D/g, '');
+      } else {
+        clean = formatted.replace(/\D/g, '');
+      }
+    }
     setDisplayValue(formatted);
+    if (typeof onChange === 'function') {
+      onChange(clean, formatted, e);
+    }
     onBlur?.(e);
   };
 

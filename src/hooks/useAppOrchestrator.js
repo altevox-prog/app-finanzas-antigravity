@@ -113,8 +113,8 @@ export function useAppOrchestrator() {
   // Cuentas state & actions
   const {
     accounts, setAccounts, handleAddAccount, handleSaveAccount, handleUpdateAccount,
-    handleDeleteAccount, deleteAccount, handleReorderAccounts, handleArchiveAccount,
-    handleAdjustAccountBalance, resetAccounts
+    handleDeleteAccount, deleteAccount, handleReorderAccounts, updateAccountsOrder,
+    fetchAccounts, handleArchiveAccount, handleAdjustAccountBalance, resetAccounts
   } = useAccounts({ isResettingRef, transactionsRef, setTransactionsRef, trm });
 
   // Transacciones state & actions
@@ -157,7 +157,7 @@ export function useAppOrchestrator() {
   const { widgets, setWidgets, isEditWidgetsModalOpen, setIsEditWidgetsModalOpen } = useDashboardWidgets({ userId: user?.id, isResettingRef });
 
   // Control de estado de onboarding y tutorial
-  const { isOnboardingActive, setIsOnboardingActive, showTutorial, setShowTutorial, completeOnboarding } = useOnboarding();
+  const { isOnboardingActive, setIsOnboardingActive, isOnboardingLoading, showTutorial, setShowTutorial, completeOnboarding } = useOnboarding({ user });
 
   // Security settings (PIN and Biometrics) y estado de bloqueo de app
   const {
@@ -365,7 +365,8 @@ export function useAppOrchestrator() {
     baseAddPayment, baseDeletePayment, baseAddDisbursement, baseAddInvestment, baseSaveInvestment, baseUpdateInvestment,
     baseDeleteInvestment, baseAddDebtOrLoan, baseSaveLoan, baseDeleteDebtOrLoan, handleAddCategory, handleUpdateCategory,
     handleDeleteCategory, handleAddSubcategory, handleUpdateSubcategory, handleDeleteSubcategory, handleAddAccount,
-    handleUpdateAccount, handleDeleteAccount, handleReorderAccounts, handleUpdateDebtOrLoan, handleAddRecurring,
+    handleUpdateAccount, handleDeleteAccount, handleReorderAccounts, updateAccountsOrder, fetchAccounts,
+    handleUpdateDebtOrLoan, handleAddRecurring,
     handleUpdateRecurring, handleDeleteRecurring, handleToggleActiveRecurring, handleAddGoal, handleUpdateGoal,
     handleDeleteGoal, handleUpdateProfile, handleRestoreBackup, handleResetData, pushLocalToCloud, pullCloudToLocal,
     handleGlobalLogout, syncStatus, syncUser, isCloudEnabled, selectedDate, setSelectedDate, selectedMonth, selectedYear,
@@ -377,7 +378,7 @@ export function useAppOrchestrator() {
   });
 
   return {
-    user, setUser, authLoading, isOnboardingActive, handleOnboardingComplete, handleRestoreBackup, viewMode, isForcedMobile,
+    user, setUser, authLoading, isOnboardingActive, isOnboardingLoading, handleOnboardingComplete, handleRestoreBackup, viewMode, isForcedMobile,
     isForcedDesktop, desktopOnlyClass, desktopBlockClass, mobileOnlyClass, activeTab, setActiveTab, tabResetKeys,
     handleTabChange, handleResetTab, mainContentRef, fromSettings, setFromSettings, handleGoBackFromSubView, debtsInitialTab, theme,
     setTheme, handleToggleTheme, securitySettings, setSecuritySettings, isLocked, setIsLocked, handleUnlock,
@@ -394,7 +395,7 @@ export function useAppOrchestrator() {
     setIsEditWidgetsModalOpen, showTutorial, setShowTutorial, monthlyTransactions, scopedTransactions, monthlyStats,
     netWorth, taxMetrics, tomorrowDebtAlerts, handleDismissAlert, handleReviewDebtAlert, hasPwaUpdate, setHasPwaUpdate,
     handleFullReset, handleFactoryReset, handleResetData, handleImportBackup, formatMoney, financeData, financeActions,
-    financialOps
+    financialOps, handleReorderAccounts, updateAccountsOrder, fetchAccounts
   };
 }
 

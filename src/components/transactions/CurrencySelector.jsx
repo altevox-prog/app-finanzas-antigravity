@@ -16,7 +16,11 @@ export default function CurrencySelector({
   amount = '',
   enableDecimals = false
 }) {
-  const handleSelectCurrency = (code) => {
+  const handleSelectCurrency = (e, code) => {
+    if (e) {
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    }
     let rate = '1';
     if (code === 'USD') {
       rate = String(trm || 4000);
@@ -43,7 +47,7 @@ export default function CurrencySelector({
             <button
               key={c.code}
               type="button"
-              onClick={() => handleSelectCurrency(c.code)}
+              onClick={(e) => handleSelectCurrency(e, c.code)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-emerald-600 text-white shadow-sm font-bold scale-[1.02]'

@@ -1,5 +1,8 @@
-// Soporte para notificaciones nativas en segundo plano y clics de la PWA
+// Soporte para actualización inmediata de Service Worker y notificaciones
 self.addEventListener('message', (event) => {
+  if (event.data && (event.data.type === 'SKIP_WAITING' || event.data === 'skipWaiting')) {
+    self.skipWaiting();
+  }
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, options } = event.data;
     if (self.registration && self.registration.showNotification) {

@@ -36,7 +36,7 @@ export default function Dashboard({
   onSelectCreditCardDetail = () => {}, currentMonthLabel = '', trm = 4050,
   widgetsConfig = null, widgets: widgetsProp = null, onCustomizeWidgets = null,
   onSaveWidgets = null, allowedWidgetIds = null, className = null,
-  financeData = {}, financeActions = {}, isForcedMobile = false, isForcedDesktop = false, isScrolled = false,
+  financeData = {}, financeActions = {}, isForcedMobile = false, isForcedDesktop = false,
   userProfile = null
 }) {
   const effectiveUser = userProfile || financeData?.userProfile;
@@ -131,10 +131,10 @@ export default function Dashboard({
 
       {/* Saludo y contexto de bienvenida en Escritorio / Tablet */}
       <div className={`${isForcedDesktop ? 'block' : 'hidden lg:block'} pt-1`}>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">
           Hola, {userName}
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
           Resumen financiero y actividad
         </p>
       </div>
@@ -144,6 +144,8 @@ export default function Dashboard({
         netBalance={metrics.netBalance}
         totalIncome={metrics.totalIncome}
         totalExpense={metrics.totalExpense}
+        transactions={transactions}
+        monthlyTransactions={monthlyTransactions || metrics.scopedTransactions}
         selectedDate={selectedDate}
         selectedDay={selectedDay}
         currentMonthLabel={currentMonthLabel}
@@ -167,19 +169,6 @@ export default function Dashboard({
 
       {/* Reorganización de widgets: 2 columnas en Desktop (lg:grid lg:grid-cols-12 lg:gap-6), columna única en móvil */}
       {(() => {
-        const isLeftWidget = (id) => {
-          const norm = normalizeWidgetId(id);
-          return (
-            norm === 'weekly_cashflow' ||
-            norm === 'weekly_cashflow_classic' ||
-            norm === 'pill_bar_chart' ||
-            norm === 'recent_movements' ||
-            norm === 'recent_transactions' ||
-            norm === 'bento_metrics' ||
-            norm === 'balance_cards'
-          );
-        };
-
         const renderWidgetItem = (w, index) => {
           const norm = normalizeWidgetId(w.id);
           // Omitir widgets ya consolidados en la cabecera estática superior
@@ -188,46 +177,19 @@ export default function Dashboard({
             norm === 'available_balance' || 
             norm === 'balance_summary' || 
             norm === 'my_accounts' || 
-            norm === 'accounts'
+            norm === 'accounts' ||
+            norm === 'budget' ||
+            norm === 'presupuesto_metas' ||
+            norm === 'meta' ||
+            w.id === 'budget'
           ) {
             return null;
           }
           const isInvestments = norm === 'investments' || w.id === 'investments';
-          const isPresupuestoMensual = 
-            norm === 'recurring_payments' || 
-            norm === 'recurring' || 
-            norm === 'budget' || 
-            w.id === 'recurring_payments' || 
-            w.id === 'recurring' || 
-            w.id === 'budget';
           const widgetComponent = getWidget(w.id);
           if (!widgetComponent) return null;
 
-          const content = isPresupuestoMensual && !isReordering ? (
-            <div 
-              className={`transition-all duration-300 ease-out ${
-                isForcedMobile
-                  ? (isScrolled 
-                      ? 'opacity-100 pointer-events-auto translate-y-0' 
-                      : 'opacity-0 pointer-events-none translate-y-2')
-                  : (isScrolled 
-                      ? 'opacity-100 pointer-events-auto translate-y-0' 
-                      : 'opacity-0 pointer-events-none translate-y-2 lg:opacity-100 lg:pointer-events-auto lg:translate-y-0')
-              }`}
-            >
-              {widgetComponent}
-            </div>
-          ) : (
-            widgetComponent
-          );
-
-          // Asignación de orden secuencial fluido para móvil
-          const mobileOrderClass = 
-            (norm === 'expenses_category' || norm === 'charts') ? 'order-1 lg:order-none' :
-            (norm === 'weekly_cashflow' || norm === 'pill_bar_chart') ? 'order-2 lg:order-none' :
-            isPresupuestoMensual ? 'order-3 lg:order-none' :
-            (norm === 'recent_movements' || norm === 'recent_transactions') ? 'order-4 lg:order-none' :
-            'order-5 lg:order-none';
+          const content = widgetComponent;
 
           return (
             <DashboardWidgetWrapper
@@ -236,7 +198,7 @@ export default function Dashboard({
               index={index} 
               isReordering={isReordering} 
               draggedIndex={draggedIndex}
-              className={`${mobileOrderClass} ${isInvestments ? (isForcedMobile ? 'hidden' : 'hidden md:block') : ''}`}
+              className={`${isInvestments ? (isForcedMobile ? 'hidden' : 'hidden md:block') : ''}`}
               onPressStart={handlePressStart} 
               onPressEnd={handlePressEnd}
               onTouchStart={handleTouchStart} 
@@ -253,31 +215,13 @@ export default function Dashboard({
           );
         };
 
-        if (isReordering) {
-          return (
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3.5 lg:gap-4 w-full items-start touch-pan-y select-none [&_*]:!transition-none ${className || ''}`}>
-              {visibleWidgets.map((w, index) => renderWidgetItem(w, index))}
-            </div>
-          );
-        }
+        const reorderStyles = isReordering 
+          ? 'select-none [&_*]:!transition-none' 
+          : (draggedIndex !== null ? 'cursor-grabbing' : '');
 
         return (
-          <div className={`flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 gap-3.5 sm:gap-4 w-full items-start touch-pan-y ${draggedIndex !== null ? 'cursor-grabbing' : ''} ${className || ''}`}>
-            {/* Columna Izquierda (lg:col-span-7 o 60% del ancho): Actividad de Gastos + Movimientos Recientes */}
-            <div className="contents lg:flex lg:flex-col lg:col-span-7 lg:gap-6 w-full">
-              {visibleWidgets
-                .map((w, index) => ({ w, index }))
-                .filter(({ w }) => isLeftWidget(w.id))
-                .map(({ w, index }) => renderWidgetItem(w, index))}
-            </div>
-
-            {/* Columna Derecha (lg:col-span-5 o 40% del ancho): Tus Gastos + Presupuesto Mensual */}
-            <div className="contents lg:flex lg:flex-col lg:col-span-5 lg:gap-6 w-full">
-              {visibleWidgets
-                .map((w, index) => ({ w, index }))
-                .filter(({ w }) => !isLeftWidget(w.id))
-                .map(({ w, index }) => renderWidgetItem(w, index))}
-            </div>
+          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch mt-1 mb-6 w-full touch-pan-y ${reorderStyles} ${className || ''}`}>
+            {visibleWidgets.map((w, index) => renderWidgetItem(w, index))}
           </div>
         );
       })()}

@@ -32,7 +32,7 @@ export default function ProfileSystemTab({
         <div className="flex items-center gap-2 px-1">
           {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Apariencia y Tema
+            Apariencia y tema
           </h3>
         </div>
 
@@ -46,7 +46,7 @@ export default function ProfileSystemTab({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">
-                  Modo {theme === 'dark' ? 'Oscuro' : 'Claro'}
+                  Modo {theme === 'dark' ? 'oscuro' : 'claro'}
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   {theme === 'dark' ? 'Interfaz nocturna optimizada de bajo brillo.' : 'Interfaz clara de alto contraste.'}
@@ -90,7 +90,7 @@ export default function ProfileSystemTab({
         <div className="flex items-center gap-2 px-1">
           <Coins className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Preferencias de Moneda
+            Preferencias de moneda
           </h3>
         </div>
 
@@ -133,7 +133,7 @@ export default function ProfileSystemTab({
         <div className="flex items-center gap-2 px-1">
           <RefreshCw className="w-4 h-4 text-emerald-500" />
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Versión del Sistema
+            Versión del sistema
           </h3>
         </div>
 

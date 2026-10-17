@@ -19,13 +19,6 @@ export default function CategoryDonutChart({
   return (
     <div 
       className="relative w-24 h-24 sm:w-26 sm:h-26 shrink-0 flex items-center justify-center cursor-pointer group"
-      onClick={(e) => {
-        if (onCenterClick) {
-          e.preventDefault();
-          e.stopPropagation();
-          onCenterClick(e);
-        }
-      }}
       title={`Total de gastos: ${formatMoney(totalExpenses)}`}
     >
       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
@@ -36,7 +29,7 @@ export default function CategoryDonutChart({
           r="38"
           fill="none"
           strokeWidth="9"
-          className="stroke-slate-100 dark:stroke-white/5"
+          className="stroke-slate-100 dark:stroke-white/[0.04]"
         />
 
         {/* Segmentos de categorías */}
@@ -72,10 +65,6 @@ export default function CategoryDonutChart({
                 }}
                 onMouseEnter={() => setHoveredCategoryId(cat.id)}
                 onMouseLeave={() => setHoveredCategoryId(null)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectCategory(cat);
-                }}
               />
             );
           });
@@ -92,16 +81,16 @@ export default function CategoryDonutChart({
             <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300 truncate max-w-[65px]">
               {hoveredCategory.name}
             </span>
-            <span className="text-xs font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5">
+            <span className="text-xs font-extrabold text-slate-900 dark:text-slate-50 tabular-nums tracking-tight mt-0.5">
               {hoveredCategory.percent}%
             </span>
           </div>
         ) : (
           <div className="animate-fadeIn flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 uppercase font-semibold leading-none">
+            <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-semibold leading-none">
               Total
             </span>
-            <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white tabular-nums tracking-tight mt-0.5 truncate max-w-[75px]">
+            <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-50 tabular-nums tracking-tight mt-0.5 truncate max-w-[75px]">
               {totalExpenses > 0 ? formatAbbreviatedMoney(totalExpenses, formatMoney) : '$0'}
             </span>
           </div>

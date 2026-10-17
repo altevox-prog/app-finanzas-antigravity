@@ -42,53 +42,89 @@ export default function TransactionForm({
   const { enableDecimals: privacyDecimals } = usePrivacy();
   const enableDecimals = privacyDecimals ?? getEnableDecimals();
   const editingMovement = transactionToEdit || initialData || movement;
+  const [currentEditing, setCurrentEditing] = useState(editingMovement);
 
-  const [type, setType] = useState(editingMovement?.type || defaultType || 'expense');
-  const [currency, setCurrency] = useState(editingMovement?.originalCurrency || 'COP');
-  const [exchangeRate, setExchangeRate] = useState(editingMovement?.exchangeRate ? String(editingMovement.exchangeRate) : String(trm || 4050));
+  useEffect(() => {
+    setCurrentEditing(transactionToEdit || initialData || movement || null);
+  }, [transactionToEdit, initialData, movement]);
+
+  const [type, setType] = useState(currentEditing?.type || defaultType || 'expense');
+  const [currency, setCurrency] = useState(currentEditing?.originalCurrency || 'COP');
+  const [exchangeRate, setExchangeRate] = useState(currentEditing?.exchangeRate ? String(currentEditing.exchangeRate) : String(trm || 4050));
   const [amount, setAmount] = useState(() => {
-    const init = editingMovement?.amount !== undefined ? (editingMovement.originalAmount ?? editingMovement.amount) : defaultAmount;
+    const init = currentEditing?.amount !== undefined ? (currentEditing.originalAmount ?? currentEditing.amount) : defaultAmount;
     return init !== undefined ? formatCurrencyInput(init, enableDecimals) : '';
   });
-  const [categoryId, setCategoryId] = useState(editingMovement?.categoryId || categories[0]?.id || '');
-  const [subcategoryId, setSubcategoryId] = useState(editingMovement?.subcategoryId || '');
-  const [accountId, setAccountId] = useState(editingMovement?.accountId || editingMovement?.fromAccountId || accounts[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(currentEditing?.categoryId || categories[0]?.id || '');
+  const [subcategoryId, setSubcategoryId] = useState(currentEditing?.subcategoryId || '');
+  const [accountId, setAccountId] = useState(currentEditing?.accountId || currentEditing?.fromAccountId || accounts[0]?.id || '');
   const [toAccountId, setToAccountId] = useState(() => {
-    if (editingMovement?.toAccountId) return editingMovement.toAccountId;
-    const initialFrom = editingMovement?.accountId || accounts[0]?.id;
+    if (currentEditing?.toAccountId) return currentEditing.toAccountId;
+    const initialFrom = currentEditing?.accountId || accounts[0]?.id;
     const other = accounts.find(a => a?.id !== initialFrom);
     return other ? other.id : (accounts[1]?.id || accounts[0]?.id || '');
   });
-  const [date, setDate] = useState(editingMovement?.date || defaultDate || new Date().toISOString().split('T')[0]);
-  const [note, setNote] = useState(editingMovement?.note || '');
-  const [receiptImage, setReceiptImage] = useState(editingMovement?.receiptImage || null);
+  const getTodayLocalDate = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const [date, setDate] = useState(() => {
+    if (currentEditing?.date) return currentEditing.date;
+    if (defaultDate) return defaultDate;
+    return getTodayLocalDate();
+  });
+  const [note, setNote] = useState(currentEditing?.note || '');
+  const [receiptImage, setReceiptImage] = useState(currentEditing?.receiptImage || null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const isCurrencyManuallySetRef = useRef(Boolean(currentEditing?.originalCurrency));
+  const prevAccountIdRef = useRef(accountId);
+
+  const handleCurrencyChange = (newCurrency, newRate) => {
+    isCurrencyManuallySetRef.current = true;
+    setCurrency(newCurrency);
+    if (newRate) {
+      setExchangeRate(newRate);
+    } else {
+      if (newCurrency === 'USD') setExchangeRate(String(trm || 4050));
+      else if (newCurrency === 'EUR') setExchangeRate(String(Math.round((Number(trm) || 4050) * 1.08)));
+      else setExchangeRate('1');
+    }
+  };
 
   useEffect(() => {
-    if (defaultType && !editingMovement) setType(defaultType);
-  }, [defaultType, editingMovement]);
+    if (defaultType && !currentEditing) setType(defaultType);
+  }, [defaultType, currentEditing]);
 
   useEffect(() => {
-    if (!editingMovement) return;
-    if (editingMovement.type) setType(editingMovement.type);
-    if (editingMovement.amount !== undefined) setAmount(formatCurrencyInput(editingMovement.originalAmount ?? editingMovement.amount, enableDecimals));
-    if (editingMovement.originalCurrency) setCurrency(editingMovement.originalCurrency);
-    if (editingMovement.exchangeRate) setExchangeRate(String(editingMovement.exchangeRate));
-    if (editingMovement.date) setDate(editingMovement.date);
-    if (editingMovement.categoryId) setCategoryId(editingMovement.categoryId);
-    if (editingMovement.subcategoryId) setSubcategoryId(editingMovement.subcategoryId);
-    if (editingMovement.accountId) setAccountId(editingMovement.accountId);
-    if (editingMovement.fromAccountId) setAccountId(editingMovement.fromAccountId);
-    if (editingMovement.toAccountId) setToAccountId(editingMovement.toAccountId);
-    if (editingMovement.note) setNote(editingMovement.note);
-    if (editingMovement.receiptImage) setReceiptImage(editingMovement.receiptImage);
-  }, [editingMovement, enableDecimals]);
+    if (!currentEditing) return;
+    if (currentEditing.type) setType(currentEditing.type);
+    if (currentEditing.amount !== undefined) setAmount(formatCurrencyInput(currentEditing.originalAmount ?? currentEditing.amount, enableDecimals));
+    if (currentEditing.originalCurrency) setCurrency(currentEditing.originalCurrency);
+    if (currentEditing.exchangeRate) setExchangeRate(String(currentEditing.exchangeRate));
+    if (currentEditing.date) setDate(currentEditing.date);
+    if (currentEditing.categoryId) setCategoryId(currentEditing.categoryId);
+    if (currentEditing.subcategoryId) setSubcategoryId(currentEditing.subcategoryId);
+    if (currentEditing.accountId) setAccountId(currentEditing.accountId);
+    if (currentEditing.fromAccountId) setAccountId(currentEditing.fromAccountId);
+    if (currentEditing.toAccountId) setToAccountId(currentEditing.toAccountId);
+    if (currentEditing.note) setNote(currentEditing.note);
+    if (currentEditing.receiptImage) setReceiptImage(currentEditing.receiptImage);
+  }, [currentEditing, enableDecimals]);
 
   useEffect(() => {
-    const acc = accounts.find(a => a?.id === accountId);
-    if (acc?.currency) setCurrency(acc.currency);
+    if (prevAccountIdRef.current !== accountId) {
+      prevAccountIdRef.current = accountId;
+      if (!isCurrencyManuallySetRef.current) {
+        const acc = accounts.find(a => a?.id === accountId);
+        if (acc?.currency) setCurrency(acc.currency);
+      }
+    }
   }, [accountId, accounts]);
 
   useEffect(() => {
@@ -190,7 +226,7 @@ export default function TransactionForm({
 
           const outTx = {
             id: outId,
-            date: date || new Date().toISOString().split('T')[0],
+            date: date || getTodayLocalDate(),
             type: 'expense',
             amount: copAmount,
             originalAmount: numAmount,
@@ -212,7 +248,7 @@ export default function TransactionForm({
 
           const inTx = {
             id: inId,
-            date: date || new Date().toISOString().split('T')[0],
+            date: date || getTodayLocalDate(),
             type: 'income',
             amount: copAmount,
             originalAmount: destAmount,
@@ -233,8 +269,8 @@ export default function TransactionForm({
           };
 
           if (typeof onAddTransaction === 'function') {
-            onAddTransaction(outTx);
-            onAddTransaction(inTx);
+            await onAddTransaction(outTx);
+            await onAddTransaction(inTx);
           }
           if (typeof onSuccess === 'function') {
             onSuccess(outTx);
@@ -244,9 +280,11 @@ export default function TransactionForm({
           saveTransactionRecord({ txPayload: inTx, account: toAcc, isEditing: false }).catch(() => {});
         }
 
+        setCurrentEditing(null);
         setAmount('');
         setNote('');
         setReceiptImage(null);
+        setDate(getTodayLocalDate());
 
         if (typeof onClose === 'function') {
           onClose();
@@ -258,19 +296,27 @@ export default function TransactionForm({
       }
 
       // 2. Caso Gasto o Ingreso Ordinario
+      const isEditingTx = Boolean(currentEditing?.id);
       const { newTx, selectedAccount } = buildTransactionPayload({
         numAmount, currency, exchangeRate, enableDecimals, type, date, note, receiptImage,
-        categoryId, subcategoryId, accountId, categories, accounts, editingMovement
+        categoryId, subcategoryId, accountId, categories, accounts, editingMovement: currentEditing
       });
 
-      if (typeof onAddTransaction === 'function') onAddTransaction(newTx);
-      if (typeof onSuccess === 'function') onSuccess(newTx);
+      if (typeof onAddTransaction === 'function') {
+        await onAddTransaction(newTx);
+      }
+      if (typeof onSuccess === 'function') {
+        onSuccess(newTx);
+      }
 
+      setCurrentEditing(null);
       setAmount('');
       setCurrency('COP');
-      setExchangeRate(String(trm || 4000));
+      isCurrencyManuallySetRef.current = false;
+      setExchangeRate(String(trm || 4050));
       setNote('');
       setReceiptImage(null);
+      setDate(getTodayLocalDate());
 
       if (typeof onClose === 'function') {
         onClose();
@@ -279,7 +325,7 @@ export default function TransactionForm({
         setTimeout(() => setShowSuccess(false), 1500);
       }
 
-      saveTransactionRecord({ txPayload: newTx, account: selectedAccount, isEditing: Boolean(editingMovement) })
+      saveTransactionRecord({ txPayload: newTx, account: selectedAccount, isEditing: isEditingTx })
         .catch(err => {
           console.warn('[Offline/Sync] No se pudo sincronizar de inmediato con Supabase. Queda guardado localmente:', err);
         });
@@ -314,7 +360,7 @@ export default function TransactionForm({
         <CurrencySelector
           currency={currency} exchangeRate={exchangeRate} setExchangeRate={setExchangeRate}
           trm={trm} amount={amount} enableDecimals={enableDecimals}
-          onCurrencyChange={(c, r) => { setCurrency(c); if (r) setExchangeRate(r); }}
+          onCurrencyChange={handleCurrencyChange}
         />
       </div>
 
@@ -324,7 +370,7 @@ export default function TransactionForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center relative">
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
-                Cuenta Origen (sale dinero) *
+                Cuenta de origen (sale dinero) *
               </label>
               <AccountCombobox
                 accounts={accounts}
@@ -343,7 +389,7 @@ export default function TransactionForm({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 select-none">
-                  Cuenta Destino (entra dinero) *
+                  Cuenta de destino (entra dinero) *
                 </label>
                 {accounts.length > 1 && (
                   <button
@@ -397,7 +443,7 @@ export default function TransactionForm({
     return (
       <TransactionFormModalLayout
         isModal={isModal} isSubmitting={isSubmitting} showSuccess={showSuccess}
-        editingMovement={editingMovement} handleSubmit={handleSubmit} onClose={onClose}
+        editingMovement={editingMovement} onSubmit={handleSubmit} handleSubmit={handleSubmit} onClose={onClose}
         type={type}
       >
         {formFields}

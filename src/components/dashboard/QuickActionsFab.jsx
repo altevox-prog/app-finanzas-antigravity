@@ -181,7 +181,7 @@ export default function QuickActionsFab({
               </div>
               <div className="min-w-0 flex-1">
                 <span className="font-bold text-xs text-slate-900 dark:text-zinc-100 block truncate">
-                  Pago Recurrente
+                  Pago recurrente
                 </span>
                 <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate">
                   Suscripción o cuota fija
@@ -203,7 +203,7 @@ export default function QuickActionsFab({
               </div>
               <div className="min-w-0 flex-1">
                 <span className="font-bold text-xs text-slate-900 dark:text-zinc-100 block truncate">
-                  Préstamo o Deuda
+                  Préstamo o deuda
                 </span>
                 <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate">
                   Debo o me deben dinero
@@ -223,7 +223,7 @@ export default function QuickActionsFab({
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="font-bold text-xs text-slate-900 dark:text-zinc-100 block truncate">
-                    Nueva Inversión
+                    Nueva inversión
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate">
                     Registrar activo o inversión

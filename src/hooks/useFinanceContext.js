@@ -70,6 +70,8 @@ export function useFinanceContext({
   handleUpdateAccount,
   handleDeleteAccount,
   handleReorderAccounts,
+  updateAccountsOrder,
+  fetchAccounts,
 
   // Deudas y recurrentes handlers
   handleUpdateDebtOrLoan,
@@ -274,6 +276,8 @@ export function useFinanceContext({
     handleUpdateAccount,
     handleDeleteAccount,
     handleReorderAccounts,
+    updateAccountsOrder,
+    fetchAccounts,
     handleUpdateDebtOrLoan,
     handleUpdateInvestment: baseUpdateInvestment,
     handleAddRecurring,
@@ -329,6 +333,8 @@ export function useFinanceContext({
     handleUpdateAccount,
     handleDeleteAccount,
     handleReorderAccounts,
+    updateAccountsOrder,
+    fetchAccounts,
     handleUpdateDebtOrLoan,
     baseUpdateInvestment,
     handleAddRecurring,

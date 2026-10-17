@@ -20,10 +20,12 @@ export default {
         modal: '20px',      // Modales: rounded-2xl (16px a 20px)
       },
       colors: {
+        canvas: '#0A0C10',
         surface: {
-          base: '#09090b',       // Lienzo / Fondo base (page) zinc-950
-          level1: '#18181b',     // Superficie nivel 1 (tarjetas / contenedores) zinc-900
-          level2: '#27272a',     // Superficie nivel 2 (menús desplegables / modales / drawers) zinc-800
+          DEFAULT: '#12151E',
+          base: '#0A0C10',       // Lienzo / Fondo base (page) 60%
+          level1: '#12151E',     // Superficie nivel 1 (tarjetas / contenedores) 30%
+          level2: '#181C27',     // Superficie nivel 2 (menús desplegables / modales / hover)
         },
         brand: {
           primary: 'var(--brand-primary)',
@@ -41,27 +43,29 @@ export default {
             text: '#122315',
             muted: '#49634D'
           },
-          // Dark Mode Palette
+          // Dark Mode Palette (60-30-10 & Monety Emerald)
           dark: {
-            bg: '#09090b',         // zinc-950 (Lienzo / Fondo base)
-            card: '#18181b',       // zinc-900 (Superficie nivel 1: tarjetas)
-            elevated: '#27272a',   // zinc-800 (Superficie nivel 2: modales, menús)
-            border: 'rgba(255, 255, 255, 0.08)',
-            primary: '#29D691',
-            accent: '#29D691',
-            contrast: '#09090b',
-            text: '#f4f4f5',       // text-zinc-100 (87% luminosidad)
-            muted: '#a1a1aa',      // text-zinc-400 (60% luminosidad)
-            tertiary: '#52525b'    // text-zinc-600 (38% luminosidad)
+            bg: '#0A0C10',         // 60% Canvas dominante
+            card: '#12151E',       // 30% Superficie
+            elevated: '#181C27',   // Superficie secundaria / hover
+            border: 'rgba(255, 255, 255, 0.07)',
+            primary: '#10B981',    // 10% Acento esmeralda Monety
+            accent: '#10B981',
+            contrast: '#0A0C10',
+            text: '#F8FAFC',       // text.primary
+            muted: '#94A3B8',      // text.secondary
+            tertiary: '#64748B'    // text.muted
           },
-          50: '#F3FEE8',
-          100: '#DBEED8',
-          200: '#B1EB71',
-          500: '#29D691',
-          600: '#10B981',
-          700: '#123C15',
-          800: '#122315',
-          900: '#080E0C',
+          50: '#ECFDF5',
+          100: '#D1FAE5',
+          200: '#A7F3D0',
+          300: '#6EE7B7',
+          400: '#34D399',
+          500: '#10B981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065F46',
+          900: '#064E3B',
         }
       }
     },

@@ -218,7 +218,7 @@ export default function ModalContainer({
             onUpdateSubcategory={handleUpdateSubcategory}
             onDeleteSubcategory={handleDeleteSubcategory}
             onAddAccount={handleAddAccount}
-            defaultDate={selectedDay || new Date().toISOString().split('T')[0]}
+            defaultDate={selectedDay || new Date().toLocaleDateString('en-CA')}
             defaultType={effectiveTxDefaultType}
             trm={trm}
             {...merged}

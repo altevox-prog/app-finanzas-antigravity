@@ -37,7 +37,11 @@ export function buildTransactionPayload({
   const transactionType = type; // 'expense' | 'income'
   const transactionDate = date ? (date.includes('T') ? date : `${date}T12:00:00.000Z`) : new Date().toISOString();
 
-  const newTxId = editingMovement?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now()));
+  const newTxId = (editingMovement && editingMovement.id)
+    ? editingMovement.id
+    : (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : ('tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9)));
 
   const newTx = {
     id: newTxId,
@@ -89,31 +93,89 @@ export async function saveTransactionRecord({ txPayload, account, isEditing = fa
       ? (txPayload.date.includes('T') ? txPayload.date : `${txPayload.date}T12:00:00.000Z`)
       : new Date().toISOString();
 
-    const insertPayload = {
-      id: txPayload.id,
-      user_id: user.id,
-      account_id: selectedAccountId,
-      amount: finalAmount,
-      type: transactionType,
-      category: categoryName,
-      notes: (txPayload.note || '').trim() || '',
-      date: transactionDate
-    };
+    let data = null;
+    let error = null;
 
-    let { data, error } = await supabase
-      .from('transactions')
-      .insert([insertPayload]);
-
-    // Fallback si el esquema de Supabase usa category_id en vez de category
-    if (error && error.message && error.message.includes('category')) {
-      const fallbackPayload = {
-        ...insertPayload,
-        category_id: txPayload.categoryId || null
+    if (isEditing && txPayload?.id) {
+      // 1. EDICIÓN: Actualizar registro existente filtrando por id y user_id
+      const updatePayload = {
+        account_id: selectedAccountId,
+        amount: finalAmount,
+        type: transactionType,
+        category: categoryName,
+        notes: (txPayload.note || '').trim() || '',
+        date: transactionDate,
+        updated_at: new Date().toISOString()
       };
-      delete fallbackPayload.category;
-      const res = await supabase.from('transactions').insert([fallbackPayload]);
+
+      const res = await supabase
+        .from('transactions')
+        .update(updatePayload)
+        .eq('id', txPayload.id)
+        .eq('user_id', user.id);
+
       data = res.data;
       error = res.error;
+
+      // Fallback si el esquema de Supabase usa category_id en vez de category
+      if (error && error.message && error.message.includes('category')) {
+        const fallbackPayload = {
+          ...updatePayload,
+          category_id: txPayload.categoryId || null
+        };
+        delete fallbackPayload.category;
+        const resFallback = await supabase
+          .from('transactions')
+          .update(fallbackPayload)
+          .eq('id', txPayload.id)
+          .eq('user_id', user.id);
+        data = resFallback.data;
+        error = resFallback.error;
+      }
+    } else {
+      // 2. CREACIÓN: Para nuevas transacciones, garantizar UUID v4 fresco y único
+      const freshId = (txPayload?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(txPayload.id))
+        ? txPayload.id
+        : (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : undefined);
+
+      const insertPayload = {
+        user_id: user.id,
+        account_id: selectedAccountId,
+        amount: finalAmount,
+        type: transactionType,
+        category: categoryName,
+        notes: (txPayload.note || '').trim() || '',
+        date: transactionDate,
+        updated_at: new Date().toISOString()
+      };
+
+      if (freshId) {
+        insertPayload.id = freshId;
+      }
+
+      // Usar upsert con onConflict: 'id' para evitar 409 Conflict ante cualquier condición de carrera
+      const res = await supabase
+        .from('transactions')
+        .upsert([insertPayload], { onConflict: 'id' });
+
+      data = res.data;
+      error = res.error;
+
+      // Fallback si el esquema de Supabase usa category_id en vez de category
+      if (error && error.message && error.message.includes('category')) {
+        const fallbackPayload = {
+          ...insertPayload,
+          category_id: txPayload.categoryId || null
+        };
+        delete fallbackPayload.category;
+        const resFallback = await supabase
+          .from('transactions')
+          .upsert([fallbackPayload], { onConflict: 'id' });
+        data = resFallback.data;
+        error = resFallback.error;
+      }
     }
 
     if (error) {

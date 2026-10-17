@@ -8,12 +8,16 @@ import {
   ChevronDown,
   Check,
   Calendar,
-  RotateCcw
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { MONTH_NAMES } from '../../data/initialData';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { getEnableDecimals } from '../../utils/currencyFormatter';
-import TransactionItem from './components/TransactionItem';
+import TransactionItem, { formatTxDateClean } from './components/TransactionItem';
+import BrandIcon from '../ui/BrandIcon';
+import CategoryIcon from '../categories/components/CategoryIcon';
 import EditTransactionModal from './modals/EditTransactionModal';
 import ReceiptModal from './modals/ReceiptModal';
 import TransactionDetailModal from './modals/TransactionDetailModal';
@@ -222,7 +226,23 @@ export default function TransactionList({
     return matchesSearch && matchesType && matchesAccount && matchesCategory;
   });
 
+  // Control de paginación (15 items por página)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  // Resetear a página 1 cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, typeFilter, accountFilter, categoryFilter, selectedDay, selectedDate]);
+
+  const totalItems = filteredTransactions.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTransactions = filteredTransactions.slice(startIndex, endIndex);
+
   const displayTransactions = limit ? filteredTransactions.slice(0, limit) : filteredTransactions;
+  const itemsToRender = isCompact ? displayTransactions : paginatedTransactions;
 
   const handleOpenEdit = (tx) => {
     setEditingTx(tx);
@@ -353,7 +373,7 @@ export default function TransactionList({
       )}
 
       {/* Transaction List Items */}
-      {displayTransactions.length === 0 ? (
+      {totalItems === 0 ? (
         <div 
           className="text-center py-8 px-4 border border-dashed border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 rounded-2xl"
         >
@@ -376,19 +396,132 @@ export default function TransactionList({
           )}
         </div>
       ) : (
-        <div className={`rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06] ${isCompact ? '' : 'lg:max-h-[640px] lg:overflow-y-auto'}`}>
-          {displayTransactions.map((tx) => (
-            <TransactionItem
-              key={tx.id}
-              transaction={tx}
-              category={categories.find(c => c.id === tx.categoryId)}
-              account={accounts.find(a => a.id === tx.accountId)}
-              onSelect={setSelectedDetailTx}
-              onEdit={handleOpenEdit}
-              onDelete={onDeleteTransaction}
-              onViewReceipt={setViewingReceiptTx}
-            />
-          ))}
+        <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06]">
+          {/* Cabecera de columnas para Escritorio */}
+          {!isCompact && itemsToRender.length > 0 && (
+            <div className="hidden md:grid md:grid-cols-12 items-center py-2.5 px-4 border-b border-slate-100 dark:border-white/[0.06] text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider bg-slate-50/60 dark:bg-zinc-800/20 select-none">
+              <div className="col-span-5">Categoría</div>
+              <div className="col-span-3">Cuenta</div>
+              <div className="col-span-2 text-center">Fecha</div>
+              <div className="col-span-2 text-right">Monto</div>
+            </div>
+          )}
+
+          {itemsToRender.map((tx) => {
+            const category = (categories || []).find(c => c.id === tx.categoryId);
+            const account = (accounts || []).find(a => a.id === tx.accountId);
+            const type = String(tx?.type || '').toLowerCase();
+            const amt = Number(tx?.amount) || 0;
+            const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer);
+            const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
+            const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
+
+            return (
+              <React.Fragment key={tx.id}>
+                {/* Vista Móvil: Formato adaptable con gestos swipe */}
+                <div className="md:hidden">
+                  <TransactionItem
+                    transaction={tx}
+                    category={category}
+                    account={account}
+                    onSelect={setSelectedDetailTx}
+                    onEdit={handleOpenEdit}
+                    onDelete={onDeleteTransaction}
+                    onViewReceipt={setViewingReceiptTx}
+                  />
+                </div>
+
+                {/* Vista Escritorio: Fila compacta de alta densidad */}
+                <div
+                  onClick={() => setSelectedDetailTx(tx)}
+                  className="hidden md:grid md:grid-cols-12 items-center py-2.5 px-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer select-none"
+                >
+                  {/* Columna 1 (Categoría): Icono compacto (w-8 h-8 rounded-xl) + Nombre de categoría */}
+                  <div className="col-span-5 flex items-center gap-2.5 min-w-0 pr-3">
+                    <div className="w-8 h-8 rounded-xl shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/10 shadow-xs">
+                      <BrandIcon
+                        name={tx.note || tx.categoryName || ''}
+                        size={16}
+                        fallback={
+                          <CategoryIcon
+                            category={category || tx.categoryName}
+                            status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
+                            size={14}
+                            withBadge={false}
+                          />
+                        }
+                      />
+                    </div>
+                    <div className="min-w-0 truncate">
+                      <span className="font-medium text-sm text-slate-800 dark:text-slate-100 truncate block">
+                        {tx.note || tx.categoryName}
+                      </span>
+                      {tx.note && tx.categoryName && (
+                        <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal truncate block">
+                          {tx.categoryName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Columna 2 (Cuenta): Identificador de la cuenta */}
+                  <div className="col-span-3 min-w-0 pr-3">
+                    <span className="text-xs text-slate-400 dark:text-zinc-400 font-medium truncate block">
+                      {tx.accountName || account?.name || 'Principal'}
+                    </span>
+                  </div>
+
+                  {/* Columna 3 (Fecha): Fecha de la transacción */}
+                  <div className="col-span-2 text-center">
+                    <span className="text-xs text-slate-400 dark:text-zinc-400 font-mono">
+                      {formatTxDateClean(tx)}
+                    </span>
+                  </div>
+
+                  {/* Columna 4 (Monto): Valor en fuente mono/semibold */}
+                  <div className="col-span-2 text-right">
+                    <span className={`text-sm font-semibold font-mono tracking-tight tabular-nums whitespace-nowrap ${
+                      isExpense 
+                        ? 'text-rose-500 dark:text-rose-400' 
+                        : isIncome 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-slate-600 dark:text-zinc-300'
+                    }`}>
+                      {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
+                    </span>
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
+
+          {/* Control de Paginación al Pie (Evitar Scroll Infinito) */}
+          {!isCompact && totalItems > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+              <span>Mostrando {totalItems === 0 ? 0 : startIndex + 1} - {Math.min(endIndex, totalItems)} de {totalItems} movimientos</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="Página anterior"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="px-2 font-medium">Página {currentPage} de {totalPages}</span>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title="Página siguiente"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -21,7 +21,7 @@ export default function ProfileLogoutModal({
         <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-3 text-rose-500">
           <LogOut className="w-6 h-6" />
         </div>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">¿Cerrar Sesión?</h3>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">¿Cerrar sesión?</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 mb-4 leading-relaxed">
           Se desconectará la cuenta de Google activa manteniendo tus datos locales protegidos en este dispositivo.
         </p>
@@ -39,7 +39,7 @@ export default function ProfileLogoutModal({
             disabled={isLoggingOut}
             className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 active:scale-95"
           >
-            {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}
+            {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
           </button>
         </div>
       </div>

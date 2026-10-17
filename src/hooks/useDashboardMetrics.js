@@ -76,17 +76,43 @@ export function useDashboardMetrics({
   }, [netWorthMetrics]);
 
   // 4. FILTRADO DE TRANSACCIONES PARA BALANCE Y LISTA RECIENTE
-  const currentYear = selectedDate.getFullYear();
-  const currentMonth = selectedDate.getMonth();
+  const currentYear = useMemo(() => {
+    if (selectedDate instanceof Date) return selectedDate.getFullYear();
+    if (typeof selectedDate === 'string' && selectedDate.includes('-')) {
+      return parseInt(selectedDate.split('-')[0], 10) || new Date().getFullYear();
+    }
+    return new Date().getFullYear();
+  }, [selectedDate]);
+
+  const currentMonth = useMemo(() => {
+    if (selectedDate instanceof Date) return selectedDate.getMonth();
+    if (typeof selectedDate === 'string' && selectedDate.includes('-')) {
+      return (parseInt(selectedDate.split('-')[1], 10) - 1) || new Date().getMonth();
+    }
+    return new Date().getMonth();
+  }, [selectedDate]);
+
   const scopedTransactions = useMemo(() => {
-    return transactions.filter(t => {
-      if (!t.date) return false;
-      const d = new Date(t.date + 'T00:00:00');
-      if (d.getFullYear() !== currentYear || d.getMonth() !== currentMonth) return false;
-      if (selectedDay && String(t.date).split('T')[0] !== String(selectedDay).split('T')[0]) return false;
+    if (monthlyTransactions && monthlyTransactions.length > 0 && !selectedDay) {
+      return monthlyTransactions;
+    }
+    const sourceList = (transactions && transactions.length > 0) ? transactions : (monthlyTransactions || []);
+    return sourceList.filter(t => {
+      if (!t) return false;
+      const rawDate = t.date ? String(t.date).split('T')[0] : (t.created_at ? String(t.created_at).split('T')[0] : '');
+      if (!rawDate) return false;
+      const parts = rawDate.split('-');
+      if (parts.length >= 2) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        if (!isNaN(y) && !isNaN(m)) {
+          if (y !== currentYear || m !== currentMonth) return false;
+        }
+      }
+      if (selectedDay && rawDate !== String(selectedDay).split('T')[0]) return false;
       return true;
     });
-  }, [transactions, currentYear, currentMonth, selectedDay]);
+  }, [transactions, monthlyTransactions, currentYear, currentMonth, selectedDay]);
 
   const displayTransactions = useMemo(() => {
     if (selectedDay) {
@@ -116,8 +142,14 @@ export function useDashboardMetrics({
         .filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t))
         .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
     }
-    return toSafeNumber(monthlyStats.totalIncome);
-  }, [selectedDay, scopedTransactions, monthlyStats.totalIncome]);
+    const listIncome = scopedTransactions
+      .filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t))
+      .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
+    if (listIncome > 0) return listIncome;
+    const fromStats = toSafeNumber(monthlyStats?.totalIncome);
+    if (fromStats > 0) return fromStats;
+    return 0;
+  }, [selectedDay, scopedTransactions, monthlyStats?.totalIncome]);
 
   const totalExpense = useMemo(() => {
     if (selectedDay) {
@@ -125,19 +157,25 @@ export function useDashboardMetrics({
         .filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t))
         .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
     }
-    return toSafeNumber(monthlyStats.totalExpense);
-  }, [selectedDay, scopedTransactions, monthlyStats.totalExpense]);
+    const listExpense = scopedTransactions
+      .filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t))
+      .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
+    if (listExpense > 0) return listExpense;
+    const fromStats = toSafeNumber(monthlyStats?.totalExpense);
+    if (fromStats > 0) return fromStats;
+    return 0;
+  }, [selectedDay, scopedTransactions, monthlyStats?.totalExpense]);
 
-  const netBalance = selectedDay 
+  const netBalance = (totalIncome > 0 || totalExpense > 0)
     ? calculateNetFlow(totalIncome, totalExpense)
-    : (monthlyStats.netBalance !== undefined ? toSafeNumber(monthlyStats.netBalance) : calculateNetFlow(totalIncome, totalExpense));
+    : (monthlyStats?.netBalance !== undefined ? toSafeNumber(monthlyStats.netBalance) : calculateNetFlow(totalIncome, totalExpense));
   const availableLiquidBalance = toSafeNumber(monthlyStats.availableLiquidBalance);
   const savingsRate = calculateSavingsRate(totalIncome, totalExpense);
   const freeCash = Math.max(0, netBalance);
 
   const bentoPeriodLabel = selectedDay
-    ? `Día ${parseInt(selectedDay.split('-')[2], 10)} · ${(MONTH_NAMES?.[selectedDate.getMonth()] || '').slice(0, 3)}`
-    : (currentMonthLabel || (MONTH_NAMES?.[selectedDate.getMonth()] ? `${MONTH_NAMES[selectedDate.getMonth()]} ${selectedDate.getFullYear()}` : 'Mes en curso'));
+    ? `Día ${parseInt(selectedDay.split('-')[2], 10)} · ${(MONTH_NAMES?.[currentMonth] || '').slice(0, 3)}`
+    : (currentMonthLabel || (MONTH_NAMES?.[currentMonth] ? `${MONTH_NAMES[currentMonth]} ${currentYear}` : 'Mes en curso'));
 
   // 6. FLUJO SEMANAL Y GESTIÓN DE PERÍODOS
   const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);

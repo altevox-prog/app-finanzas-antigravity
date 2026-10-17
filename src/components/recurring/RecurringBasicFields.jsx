@@ -3,13 +3,12 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import SegmentedControl from '../common/SegmentedControl';
 import AmountInput from '../common/AmountInput';
 import RecurringPopularPills from './RecurringPopularPills';
-import RecurringCurrencyFields from './RecurringCurrencyFields';
 
 /**
  * RecurringBasicFields
  * Subcomponente para los campos principales del pago recurrente:
  * Selector de tipo (gasto vs ingreso), nombre/concepto con sugerencias rápidas,
- * e input de monto con selector de divisas y TRM.
+ * e input de monto en COP.
  *
  * @param {Object} props
  * @param {string} props.type Tipo de flujo ('expense' | 'income')
@@ -19,11 +18,6 @@ import RecurringCurrencyFields from './RecurringCurrencyFields';
  * @param {string} props.amount Monto como texto formateado
  * @param {Function} props.setAmount Setter para el monto
  * @param {Function} [props.formatCurrencyInput] Función de formateo de moneda en tiempo real
- * @param {string} [props.currency] Divisa ('COP' | 'USD' | 'EUR')
- * @param {Function} [props.setCurrency] Setter para la divisa
- * @param {string} [props.exchangeRate] Tasa de cambio de la divisa
- * @param {Function} [props.setExchangeRate] Setter para la tasa de cambio
- * @param {number|string} [props.trm] TRM del contexto
  * @param {boolean} [props.enableDecimals] Permitir centavos/decimales
  */
 export default function RecurringBasicFields({
@@ -34,11 +28,6 @@ export default function RecurringBasicFields({
   amount = '',
   setAmount,
   formatCurrencyInput,
-  currency = 'COP',
-  setCurrency,
-  exchangeRate = '1',
-  setExchangeRate,
-  trm = 4000,
   enableDecimals = false
 }) {
   const handleAmountChange = (e) => {
@@ -49,8 +38,6 @@ export default function RecurringBasicFields({
       setAmount(rawVal);
     }
   };
-
-  const currencySymbol = currency === 'EUR' ? '€' : '$';
 
   return (
     <>
@@ -88,10 +75,10 @@ export default function RecurringBasicFields({
         />
       </div>
 
-      {/* 3. Monto, Selector Multidivisa y TRM */}
+      {/* 3. Monto en Pesos Colombianos (COP) */}
       <div>
         <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-          Monto ({currency === 'COP' ? '$ COP' : currency}) *
+          Monto ($ COP) *
         </label>
         <AmountInput
           value={amount}
@@ -101,21 +88,10 @@ export default function RecurringBasicFields({
           onFocus={(e) => e.target.select()}
           prefix={
             <span className="opacity-40 font-black text-lg text-slate-900 dark:text-zinc-100">
-              {currencySymbol}
+              $
             </span>
           }
           className="w-full pl-8 pr-3.5 h-12 rounded-xl text-xl font-bold font-mono tracking-tight border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100"
-        />
-
-        {/* Selector horizontal de moneda y campo dinámico de TRM */}
-        <RecurringCurrencyFields
-          currency={currency}
-          setCurrency={setCurrency}
-          exchangeRate={exchangeRate}
-          setExchangeRate={setExchangeRate}
-          trm={trm}
-          amount={amount}
-          enableDecimals={enableDecimals}
         />
       </div>
     </>

@@ -41,7 +41,7 @@ export default function ProfileFinancesTab({
         <div className="flex items-center gap-2 px-1">
           <Target className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Planificación Financiera
+            Planificación financiera
           </h3>
         </div>
 
@@ -70,7 +70,7 @@ export default function ProfileFinancesTab({
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
           </button>
 
-          {/* Metas de Ahorro */}
+          {/* Metas de ahorro */}
           <button
             type="button"
             onClick={() => setCurrentView('savings_goals')}
@@ -82,7 +82,7 @@ export default function ProfileFinancesTab({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                  Metas de Ahorro
+                  Metas de ahorro
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   {savingsGoals.length} metas ({formatMoney(totalSavedAcrossGoals)} de {formatMoney(totalTargetAcrossGoals)})
@@ -92,7 +92,7 @@ export default function ProfileFinancesTab({
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
           </button>
 
-          {/* Patrimonio Neto & Balance */}
+          {/* Patrimonio neto & balance */}
           <button
             type="button"
             onClick={() => {
@@ -113,7 +113,7 @@ export default function ProfileFinancesTab({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                  Patrimonio Neto & Balance
+                  Patrimonio neto & balance
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Balance general, activos, pasivos y solvencia
@@ -123,7 +123,7 @@ export default function ProfileFinancesTab({
             <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
           </button>
 
-          {/* Impuestos y Declaración de Renta */}
+          {/* Impuestos y declaración de renta */}
           <button
             type="button"
             onClick={() => {
@@ -142,7 +142,7 @@ export default function ProfileFinancesTab({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                  Impuestos y Declaración de Renta
+                  Impuestos y declaración de renta
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Topes DIAN, estimación de renta y retenciones
@@ -159,7 +159,7 @@ export default function ProfileFinancesTab({
         <div className="flex items-center gap-2 px-1">
           <CreditCard className="w-4 h-4 text-[#007AFF]" />
           <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Cuentas y Métodos
+            Cuentas y métodos
           </h3>
         </div>
 
@@ -179,7 +179,7 @@ export default function ProfileFinancesTab({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-[#007AFF] transition-colors">
-                  Mis Cuentas
+                  Mis cuentas
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   {accountsCount} cuentas bancarias, billeteras y efectivo
@@ -201,7 +201,7 @@ export default function ProfileFinancesTab({
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-800 dark:text-zinc-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                  Mis Categorías
+                  Mis categorías
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   {categoriesCount} rubros de ingresos y gastos personalizados

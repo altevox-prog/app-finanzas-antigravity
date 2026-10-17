@@ -107,7 +107,7 @@ export default function Header({
               if (onOpenProfile) onOpenProfile();
               else if (onOpenSettings) onOpenSettings();
             }}
-            className="flex items-center justify-center select-none cursor-pointer active:scale-95 transition-transform p-0.5 rounded-full focus:outline-none"
+            className="flex md:hidden items-center justify-center select-none cursor-pointer active:scale-95 transition-transform p-0.5 rounded-full focus:outline-none"
             title={`Perfil - ${userProfile?.name || 'Usuario'}`}
             aria-label={`Perfil - ${userProfile?.name || 'Usuario'}`}
           >

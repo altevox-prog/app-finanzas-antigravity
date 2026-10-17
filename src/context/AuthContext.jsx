@@ -13,6 +13,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
       setLoading(false);
+      setUser(null);
+      setSession(null);
       return;
     }
 
@@ -24,29 +26,35 @@ export function AuthProvider({ children }) {
       if (error) {
         console.warn('[AuthContext] Error obteniendo sesión:', error);
       }
-      setSession(initialSession || null);
-      setUser(initialSession?.user || null);
+      if (initialSession?.user) {
+        setSession(initialSession);
+        setUser(initialSession.user);
+      } else {
+        setSession(null);
+        setUser(null);
+      }
       setLoading(false);
     }).catch((err) => {
-      if (isMounted) {
-        console.warn('[AuthContext] Fallo al verificar sesión:', err);
-        setLoading(false);
-      }
+      if (!isMounted) return;
+      console.warn('[AuthContext] Fallo al verificar sesión:', err);
+      setSession(null);
+      setUser(null);
+      setLoading(false);
     });
 
     // 2. Suscripción a cambios de autenticación en tiempo real
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' || !currentSession) {
         clearSessionFinancialStorage();
         setSession(null);
         setUser(null);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('monety:signout'));
         }
-      } else {
-        setSession(currentSession || null);
-        setUser(currentSession?.user || null);
+      } else if (currentSession?.user) {
+        setSession(currentSession);
+        setUser(currentSession.user);
       }
       setLoading(false);
     });

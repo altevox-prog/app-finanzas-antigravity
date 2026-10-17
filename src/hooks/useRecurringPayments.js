@@ -10,7 +10,16 @@ function getInitialRecurringPayments() {
                      localStorage.getItem('app_recurring');
     if (savedRec) {
       const parsed = JSON.parse(savedRec);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => ({
+          ...item,
+          billingDay: item.billingDay ?? item.billing_day ?? 1,
+          isActive: item.isActive !== false && item.active !== false && item.is_active !== false,
+          nextPaymentDate: item.nextPaymentDate || item.next_payment_date || item.nextDate || item.next_date || null,
+          accountId: item.accountId || item.account_id || '',
+          userId: item.userId || item.user_id || null
+        }));
+      }
     }
     const savedSubs = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTIONS) ||
                       localStorage.getItem('subscriptions');
@@ -27,12 +36,12 @@ function getInitialRecurringPayments() {
           type: 'expense',
           mode: s.mode || 'auto',
           frequency: s.frequency || 'monthly',
-          billingDay: s.billingDay || 1,
-          accountId: s.accountId || '',
+          billingDay: s.billingDay ?? s.billing_day ?? 1,
+          accountId: s.accountId || s.account_id || '',
           accountName: s.accountName || '',
-          categoryId: s.categoryId || '',
+          categoryId: s.categoryId || s.category_id || '',
           categoryName: s.categoryName || 'Suscripciones',
-          isActive: s.active !== undefined ? s.active : true,
+          isActive: s.isActive !== false && s.active !== false && s.is_active !== false,
           createdAt: s.createdAt || new Date().toISOString()
         }));
       }
@@ -76,6 +85,39 @@ export function useRecurringPayments(isResettingRef) {
       saveRecurringToStorage(updated);
       return updated;
     });
+
+    // Persistencia directa concurrente en Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.id) {
+          const payload = {
+            id: ensureUUID(newItem.id),
+            user_id: user.id,
+            name: newItem.name || 'Suscripción',
+            amount: Number(newItem.amount || 0),
+            type: newItem.type || 'expense',
+            category: newItem.category || newItem.categoryName || 'General',
+            frequency: newItem.frequency || 'monthly',
+            billing_day: Number(newItem.billingDay || 1),
+            is_active: newItem.isActive !== false && newItem.active !== false,
+            account_id: newItem.accountId ? ensureUUID(newItem.accountId) : null,
+            next_payment_date: newItem.nextPaymentDate || newItem.nextDate || newItem.next_date || null,
+            raw_data: newItem,
+            updated_at: new Date().toISOString()
+          };
+          supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' })
+            .then(({ error }) => {
+              if (error && (error.code === '42P10' || error.message?.includes('ON CONFLICT'))) {
+                return supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+              }
+            })
+            .catch((e) => {
+              console.warn('[useRecurringPayments] Advertencia upsert Supabase:', e);
+            });
+        }
+      }).catch(() => {});
+    }
+
     toast.success('✓ Pago recurrente guardado con éxito');
     return newItem;
   }, []);
@@ -89,6 +131,39 @@ export function useRecurringPayments(isResettingRef) {
       saveRecurringToStorage(updated);
       return updated;
     });
+
+    // Persistencia directa concurrente en Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user?.id) {
+          const payload = {
+            id: ensureUUID(updatedItem.id),
+            user_id: user.id,
+            name: updatedItem.name || 'Suscripción',
+            amount: Number(updatedItem.amount || 0),
+            type: updatedItem.type || 'expense',
+            category: updatedItem.category || updatedItem.categoryName || 'General',
+            frequency: updatedItem.frequency || 'monthly',
+            billing_day: Number(updatedItem.billingDay || 1),
+            is_active: updatedItem.isActive !== false && updatedItem.active !== false,
+            account_id: updatedItem.accountId ? ensureUUID(updatedItem.accountId) : null,
+            next_payment_date: updatedItem.nextPaymentDate || updatedItem.nextDate || updatedItem.next_date || null,
+            raw_data: updatedItem,
+            updated_at: new Date().toISOString()
+          };
+          supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' })
+            .then(({ error }) => {
+              if (error && (error.code === '42P10' || error.message?.includes('ON CONFLICT'))) {
+                return supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+              }
+            })
+            .catch((e) => {
+              console.warn('[useRecurringPayments] Advertencia update Supabase:', e);
+            });
+        }
+      }).catch(() => {});
+    }
+
     toast.success('✓ Pago recurrente actualizado con éxito');
     return updatedItem;
   }, []);
@@ -102,7 +177,11 @@ export function useRecurringPayments(isResettingRef) {
     });
 
     if (isSupabaseConfigured && supabase) {
-      supabase.from('recurring_payments').delete().eq('id', ensureUUID(id)).catch(() => {});
+      const canonicalId = ensureUUID(id);
+      supabase.from('recurring_payments').delete().eq('id', id).catch(() => {});
+      if (canonicalId !== id) {
+        supabase.from('recurring_payments').delete().eq('id', canonicalId).catch(() => {});
+      }
     }
 
     toast.info('Elemento eliminado');

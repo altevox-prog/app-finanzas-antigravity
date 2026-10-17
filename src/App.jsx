@@ -13,12 +13,11 @@ import { useAppOrchestrator } from './hooks/useAppOrchestrator';
 export default function App() {
   const state = useAppOrchestrator();
 
-  if (state.authLoading) {
+  if (state.authLoading || (state.user && state.isOnboardingLoading)) {
     return <SplashScreen message="Verificando tu espacio..." />;
   }
 
   // 1. Condición de autenticación: Si no existe un usuario activo (!user),
-  // no renderizar la aplicación con datos cargados. Renderizar inmediatamente login / bienvenida.
   if (!state.user) {
     return (
       <div className="min-h-[100dvh] bg-slate-100 dark:bg-zinc-950 text-slate-900 dark:text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden transition-colors font-sans antialiased">
@@ -27,16 +26,13 @@ export default function App() {
           isOpen={true}
           onClose={() => {}}
           isRequired={true}
-          onContinueLocal={() => {
-            state.setUser({ id: 'local-user', email: 'Modo Local' });
-          }}
         />
         <Toaster position="top-right" />
       </div>
     );
   }
 
-  if (state.isOnboardingActive && state.user.id === 'local-user') {
+  if (state.isOnboardingActive) {
     return (
       <OnboardingWizard 
         onComplete={state.handleOnboardingComplete} 
@@ -48,7 +44,7 @@ export default function App() {
   const { isForcedMobile, isForcedDesktop, modalControls } = state;
 
   return (
-    <div className="h-dvh max-h-dvh bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors font-sans antialiased w-full overflow-hidden">
+    <div className="min-h-[100dvh] h-[100dvh] max-h-[100dvh] bg-slate-50 dark:bg-[#090A0F] text-slate-800 dark:text-slate-100 flex flex-col transition-colors font-sans antialiased w-full overflow-hidden">
       {/* 1. BARRA SUPERIOR CONTINUA FULL-WIDTH EN ESCRITORIO (>= lg) */}
       <AppHeader
         desktopOnly
@@ -157,7 +153,7 @@ export default function App() {
               : isForcedDesktop 
               ? 'max-w-none h-full rounded-none shadow-none border-0' 
               : 'sm:max-w-[440px] lg:max-w-none h-full max-h-dvh sm:rounded-[40px] lg:rounded-none sm:shadow-[0_25px_70px_rgba(0,0,0,0.25)] dark:sm:shadow-[0_25px_70px_rgba(0,0,0,0.7)] lg:shadow-none sm:border-[8px] lg:border-0 sm:border-slate-300 dark:sm:border-slate-800'
-          } flex flex-col overflow-hidden relative transition-colors bg-slate-50 dark:bg-zinc-950 text-slate-800 dark:text-slate-100 antialiased flex-1`}
+          } flex flex-col overflow-hidden relative transition-colors bg-slate-50 dark:bg-[#090A0F] text-slate-800 dark:text-slate-100 antialiased flex-1`}
           style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
         >
           {/* Cabecera Móvil (< lg) */}
@@ -210,10 +206,10 @@ export default function App() {
           ref={state.mainContentRef}
           className={`flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 ${
             isForcedMobile
-              ? 'pb-28 sm:pb-32'
+              ? 'pb-32 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]'
               : isForcedDesktop
               ? 'pb-12'
-              : 'pb-28 sm:pb-32 lg:pb-12'
+              : 'pb-32 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-12'
           } relative overflow-y-auto overscroll-y-contain space-y-3.5 sm:space-y-4 lg:space-y-0`}
         >
           <div className="w-full lg:max-w-[1550px] lg:mx-auto lg:px-6 lg:py-6">

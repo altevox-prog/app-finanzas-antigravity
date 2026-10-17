@@ -200,7 +200,7 @@ export default function AddAccountModal({
         {/* Cabecera FIJA */}
         <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
           <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
-            Nueva Cuenta
+            Nueva cuenta
           </h3>
           <button
             type="button"
@@ -497,7 +497,7 @@ export default function AddAccountModal({
               disabled={isSubmitting}
               className={`flex-1 sm:flex-initial px-6 py-2.5 h-11 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm active:scale-95 transition-all flex items-center justify-center cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              {isSubmitting ? 'Guardando...' : 'Guardar Cuenta'}
+              {isSubmitting ? 'Guardando...' : 'Guardar cuenta'}
             </button>
           </div>
         </form>

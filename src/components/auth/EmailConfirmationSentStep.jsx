@@ -86,7 +86,7 @@ export default function EmailConfirmationSentStep({
           onClick={onBackToLogin}
           className="w-full py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-emerald-600/20"
         >
-          <span>Ya lo confirmé, Iniciar Sesión</span>
+          <span>Ya lo confirmé, iniciar sesión</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>

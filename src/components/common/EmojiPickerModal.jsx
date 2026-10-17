@@ -35,7 +35,7 @@ export default function EmojiPickerModal({ isOpen, onClose, selectedEmoji = '�
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-xl shadow-sm">{selectedEmoji || '🏷️'}</div>
             <div>
-              <h3 className="text-base font-bold">Seleccionar Icono</h3>
+              <h3 className="text-base font-bold">Seleccionar icono</h3>
               <p className="text-[11px] opacity-60">Emojis nativos estilo WhatsApp a todo color</p>
             </div>
           </div>

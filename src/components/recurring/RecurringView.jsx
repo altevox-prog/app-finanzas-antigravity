@@ -291,7 +291,6 @@ export default function RecurringView({
     const isExpense = item.type !== 'income';
     const categoryObj = categories.find(c => c.id === item.categoryId);
     const accountObj = accounts.find(a => a.id === item.accountId);
-    const isActive = item.isActive !== false && item.active !== false;
     const nextDate = getItemNextDate(item);
     const isOverdue = isPending && Boolean(nextDate && nextDate < todayStr);
 
@@ -308,17 +307,15 @@ export default function RecurringView({
         contentClassName="rounded-2xl"
       >
         <div
-          className={`p-4 rounded-2xl bg-white dark:bg-zinc-900/90 border transition-all shadow-sm flex flex-col justify-between gap-3 ${
+          className={`p-4 rounded-2xl bg-white dark:bg-zinc-900/90 border transition-all shadow-sm flex flex-col justify-between gap-3 group relative ${
             isPending
               ? (isOverdue 
                   ? 'border-rose-300 dark:border-rose-500/30 bg-rose-500/[0.02]' 
                   : 'border-amber-300 dark:border-amber-500/30 bg-amber-500/[0.02]')
-              : isActive 
-                ? 'border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15' 
-                : 'border-slate-200/40 dark:border-white/[0.08] opacity-60 bg-slate-50/50 dark:bg-white/[0.01]'
+              : 'border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15'
           }`}
         >
-          {/* Fila Principal: Icono + Detalles + Monto / Toggle */}
+          {/* Fila Principal: Icono + Detalles + Monto / Acciones */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Columna Izquierda: Icono + Detalles */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -349,11 +346,6 @@ export default function RecurringView({
                     }`}>
                       {isOverdue ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                       {isOverdue ? 'Vencido' : 'Pendiente hoy'}
-                    </span>
-                  )}
-                  {!isActive && (
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-400">
-                      Pausado
                     </span>
                   )}
                 </div>
@@ -389,7 +381,7 @@ export default function RecurringView({
               </div>
             </div>
 
-            {/* Columna Derecha: Monto + Toggle */}
+            {/* Columna Derecha: Monto + Microbotones en Hover (Escritorio) */}
             <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
               {/* Monto */}
               <div className="text-right">
@@ -405,19 +397,35 @@ export default function RecurringView({
                 )}
               </div>
 
-              {/* Switch Toggle Activo/Pausado */}
-              <label 
-                className="relative inline-flex items-center cursor-pointer select-none"
-                title={isActive ? 'Pausar recurrencia' : 'Activar recurrencia'}
-              >
-                <input
-                  type="checkbox"
-                  checked={isActive}
-                  onChange={() => onToggleActiveRecurring(item.id)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 transition-colors shadow-inner" />
-              </label>
+              {/* Slot reservado de microbotones en hover para PC */}
+              <div className="hidden md:flex items-center justify-end w-14 shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenEdit(item);
+                  }}
+                  className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-emerald-600 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Editar"
+                  aria-label="Editar"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`¿Eliminar pago recurrente "${item.name}"?`)) {
+                      onDeleteRecurring(item.id);
+                    }
+                  }}
+                  className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Eliminar"
+                  aria-label="Eliminar"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           </div>
 

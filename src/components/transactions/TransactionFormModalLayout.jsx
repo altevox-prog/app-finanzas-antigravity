@@ -5,11 +5,25 @@ import { SubmitBtn, SuccessAlert } from './TransactionFeedback';
 export default function TransactionFormModalLayout({
   onClose,
   onSubmit,
+  handleSubmit,
   isSubmitting,
   showSuccess,
   type,
   children
 }) {
+  const handleFormSubmit = (e) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    const handler = onSubmit || handleSubmit;
+    if (typeof handler === 'function') {
+      handler(e);
+    }
+  };
+
   return (
     <div
       className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-slide-up pointer-events-auto"
@@ -17,7 +31,7 @@ export default function TransactionFormModalLayout({
     >
       <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Nuevo Movimiento</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Nuevo movimiento</h3>
           <p className="text-xs text-slate-500 dark:text-zinc-400">Ingresa tus finanzas al instante</p>
         </div>
         {onClose && (
@@ -31,7 +45,7 @@ export default function TransactionFormModalLayout({
           </button>
         )}
       </div>
-      <form onSubmit={onSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
           {children}
           <SuccessAlert show={showSuccess} />

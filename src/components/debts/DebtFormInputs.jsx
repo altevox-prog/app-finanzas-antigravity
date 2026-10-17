@@ -30,8 +30,6 @@ export default function DebtFormInputs({
   setInterestRate,
   insuranceFee,
   setInsuranceFee,
-  notes,
-  setNotes,
   monthsElapsed,
   monthlyRate,
   accruedInterest,
@@ -82,7 +80,14 @@ export default function DebtFormInputs({
             placeholder="1"
             value={installments}
             onFocus={(e) => e.target.select()}
-            onChange={(e) => setInstallments(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setInstallments(val);
+              const n = parseInt(val, 10);
+              if (!isNaN(n) && n > 1 && frequency === 'Único') {
+                setFrequency('Mensual');
+              }
+            }}
             className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
           />
         </div>
@@ -102,6 +107,7 @@ export default function DebtFormInputs({
         startDate={startDate}
         formattedPreviewDate={formattedPreviewDate}
         setError={setError}
+        installments={installments}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -145,39 +151,23 @@ export default function DebtFormInputs({
         principalAmount={principalAmount}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[11px] font-semibold opacity-70 mb-1">
-            Cargos de Seguro / Trámite ($)
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              step="any"
-              min="0"
-              placeholder="0"
-              value={insuranceFee}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setInsuranceFee(e.target.value)}
-              className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF]"
-              style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-            />
-            <ShieldCheck className="w-3.5 h-3.5 opacity-40 absolute right-3 top-1/2 -translate-y-1/2" />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-[11px] font-semibold opacity-70 mb-1">
-            Notas o Comentarios (Opcional)
-          </label>
+      <div>
+        <label className="block text-[11px] font-semibold opacity-70 mb-1">
+          Cargos de Seguro / Trámite ($)
+        </label>
+        <div className="relative">
           <input
-            type="text"
-            placeholder="Detalles sobre el préstamo o cuotas..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            type="number"
+            step="any"
+            min="0"
+            placeholder="0"
+            value={insuranceFee}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => setInsuranceFee(e.target.value)}
             className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF]"
             style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
           />
+          <ShieldCheck className="w-3.5 h-3.5 opacity-40 absolute right-3 top-1/2 -translate-y-1/2" />
         </div>
       </div>
     </div>

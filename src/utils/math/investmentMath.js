@@ -274,12 +274,7 @@ export const runFinanceMathAudit = () => {
     const allPassed = assertions.every(Boolean);
 
     if (allPassed) {
-      if (typeof console !== 'undefined' && console.log) {
-        console.log(
-          '%c[Finance Math] Todas las fórmulas matemáticas verificadas con éxito',
-          'color: #10b981; font-weight: bold; font-size: 12px; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 6px;'
-        );
-      }
+      // Log silenciado para mantener la consola limpia
       return true;
     } else {
       console.warn('[Finance Math] Fallaron una o más aserciones matemáticas:', assertions);

@@ -15,7 +15,7 @@ const SLIDES = [
     description: 'Registra tu efectivo, cuentas de ahorros y tarjetas de crédito con fechas de corte y cupos en tiempo real.',
     icon: CreditCard,
     iconGradient: 'from-blue-600 to-indigo-500 shadow-blue-500/25',
-    tags: ['Bancos y Billeteras', 'Tarjetas de Crédito', 'Saldos en Vivo']
+    tags: []
   },
   {
     id: 'transactions',
@@ -23,7 +23,7 @@ const SLIDES = [
     description: 'Usa el botón central para registrar compras, ingresos o transferencias al instante con categorías claras.',
     icon: Zap,
     iconGradient: 'from-emerald-500 to-teal-400 shadow-emerald-500/25',
-    tags: ['Botón Central +', 'Auto-categorías', 'Control Diario']
+    tags: []
   },
   {
     id: 'subscriptions',
@@ -31,7 +31,7 @@ const SLIDES = [
     description: 'Recibe avisos antes de que venzan tus tarjetas o suscripciones recurrentes para no pagar intereses.',
     icon: Bell,
     iconGradient: 'from-amber-500 to-rose-500 shadow-amber-500/25',
-    tags: ['Alertas Preventivas', 'Suscripciones Fijas', 'Límites Mensuales']
+    tags: []
   }
 ];
 
@@ -89,27 +89,15 @@ export default function StepTutorial({
             <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               {current.title}
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed mb-6 sm:mb-8">
               {current.description}
             </p>
-          </div>
-
-          {/* Píldoras / Tags de características */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-            {current.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-[11px] font-semibold text-slate-600 dark:text-slate-300"
-              >
-                {tag}
-              </span>
-            ))}
           </div>
         </div>
       </div>
 
       {/* Navegación y Acciones del Tutorial en flujo natural */}
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         {/* Indicadores de Puntos (Dots) */}
         <div className="flex items-center justify-center gap-2 mb-2">
           {SLIDES.map((s, idx) => (
@@ -132,21 +120,19 @@ export default function StepTutorial({
           <button
             type="button"
             onClick={() => setActiveSlide((prev) => Math.min(SLIDES.length - 1, prev + 1))}
-            className="w-full py-3.5 px-4 bg-[#007AFF] hover:bg-blue-600 active:scale-95 text-white font-semibold rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 px-6 rounded-2xl bg-[#007AFF] hover:bg-blue-600 text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98] cursor-pointer"
           >
             <span>Siguiente</span>
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 shrink-0" />
           </button>
         ) : (
           <button
             type="button"
             onClick={onFinish}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 active:scale-95 text-white font-semibold rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98] cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>
-              Finalizar tutorial
-            </span>
+            <Sparkles className="shrink-0" size={18} />
+            <span>Finalizar tutorial</span>
           </button>
         )}
       </div>

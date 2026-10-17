@@ -10,7 +10,7 @@ import { ensureUUID } from '../syncEngine';
  * 1. CUENTAS
  */
 export function buildAccountsPayload(accounts = [], userId, nowIso = new Date().toISOString()) {
-  return (accounts || []).map(a => {
+  return (accounts || []).map((a, index) => {
     const bal = Number(a.balance ?? a.currentBalance ?? a.initialBalance ?? a.initial_balance ?? 0);
     const initBal = Number(a.initial_balance ?? a.initialBalance ?? a.balance ?? a.currentBalance ?? 0);
     return {
@@ -23,6 +23,7 @@ export function buildAccountsPayload(accounts = [], userId, nowIso = new Date().
       currency: a.currency || 'COP',
       icon: a.icon || null,
       color: a.color || null,
+      order_index: typeof a.order_index === 'number' ? a.order_index : index,
       updated_at: nowIso
     };
   });
@@ -144,10 +145,19 @@ export function buildStrictlyRequiredTransactions(txsPayload = [], errMsg = '') 
 export function buildDebtsPayload(debtsAndLoans = [], userId, nowIso = new Date().toISOString()) {
   return (debtsAndLoans || []).map(d => {
     const resolvedPerson = d.person || d.person_name || d.name || 'Sin nombre';
-    const resolvedRemaining = d.remaining_amount !== undefined 
-      ? d.remaining_amount 
-      : (d.remainingAmount !== undefined ? d.remainingAmount : (d.total_amount || d.amount || 0));
     const paymentsList = Array.isArray(d.payments) ? d.payments : [];
+    const disbursementsList = Array.isArray(d.disbursements) ? d.disbursements : [];
+    const totalDisbursed = disbursementsList.reduce((sum, disb) => sum + Number(disb?.amount || 0), 0);
+    const initialAmount = Number(d.initialAmount ?? d.initial_amount ?? (Number(d.amount || d.totalAmount || 0) - totalDisbursed)) || Number(d.amount || d.totalAmount || 0);
+    const totalAmount = initialAmount + totalDisbursed;
+    const totalCapPaid = paymentsList.reduce((sum, p) => sum + (p.capitalAmount !== undefined ? Number(p.capitalAmount) : (p.mode === 'interest' ? 0 : Number(p.amount) || 0)), 0);
+    const resolvedRemaining = Math.max(0, totalAmount - totalCapPaid);
+
+    const rawDataPayload = {
+      payments: paymentsList,
+      disbursements: disbursementsList,
+      initialAmount
+    };
 
     return {
       id: ensureUUID(d.id),
@@ -155,15 +165,17 @@ export function buildDebtsPayload(debtsAndLoans = [], userId, nowIso = new Date(
       person: resolvedPerson,
       person_name: resolvedPerson,
       name: resolvedPerson,
-      amount: Number(d.amount || d.totalAmount || d.principalAmount || 0),
-      total_amount: Number(d.amount || d.totalAmount || d.principalAmount || 0),
-      remaining_amount: Number(resolvedRemaining) || 0,
+      amount: totalAmount,
+      total_amount: totalAmount,
+      remaining_amount: resolvedRemaining,
       type: d.type || 'payable',
-      status: d.status || (d.isPaid ? 'paid' : 'active'),
+      status: d.status || (resolvedRemaining <= 1 ? 'paid' : 'active'),
       due_date: d.dueDate || d.endDate || null,
       interest_rate: Number(d.interestRate || 0),
-      notes: paymentsList.length > 0 ? `PAYMENTS_JSON:${JSON.stringify(paymentsList)}` : (d.notes || ''),
-      raw_data: { payments: paymentsList },
+      notes: (paymentsList.length > 0 || disbursementsList.length > 0)
+        ? `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`
+        : (d.notes || ''),
+      raw_data: rawDataPayload,
       created_at: d.createdAt || d.startDate || nowIso,
       updated_at: nowIso
     };
@@ -177,6 +189,7 @@ export function sanitizeDebtsOnSchemaError(debtsPayload = [], errMsg = '', errDe
   const hasPersonNameColIssue = msg.includes("'person_name'") || msg.includes('column "person_name"');
   const hasPersonColIssue = msg.includes("'person'") || msg.includes('column "person"');
   const hasRemainingColIssue = msg.includes("'remaining_amount'") || msg.includes('remaining_amount');
+  const hasCurrentBalanceColIssue = msg.includes("'current_balance'") || msg.includes('column "current_balance"');
   const hasInterestIssue = msg.includes("'interest_rate'") || msg.includes('interest_rate');
   const hasUpdatedColIssue = msg.includes("'updated_at'") || msg.includes('updated_at');
   const hasStatusColIssue = msg.includes("'status'") || msg.includes('status');
@@ -209,7 +222,7 @@ export function sanitizeDebtsOnSchemaError(debtsPayload = [], errMsg = '', errDe
       item.person_name = resolvedPerson;
     }
 
-    // Persistencia segura de abonos (solo si no falló por estas columnas)
+    // Persistencia segura de abonos y desembolsos (solo si no falló por estas columnas)
     if (!hasRawDataColIssue && d.raw_data && Object.keys(d.raw_data).length > 0) {
       item.raw_data = d.raw_data;
     }

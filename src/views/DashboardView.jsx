@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import DebtAlertBanner from '../components/debts/DebtAlertBanner';
 import Dashboard from '../components/dashboard/Dashboard';
 
@@ -8,26 +8,6 @@ import Dashboard from '../components/dashboard/Dashboard';
  * de deudas y los widgets configurables de balance, presupuesto, métricas y accesos directos.
  */
 export default function DashboardView(props) {
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = (e) => {
-      const target = e?.target === document || !e?.target ? window : e.target;
-      const currentScroll = target.scrollY !== undefined ? target.scrollY : (target.scrollTop || 0);
-      setIsScrolled(currentScroll > 15);
-    };
-
-    // Escuchar en el contenedor con scroll o en window
-    const scrollContainer = document.querySelector('main') || window;
-    handleScroll({ target: scrollContainer });
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
   const {
     modalControls = {},
     onOpenAddDebt = () => {},
@@ -82,7 +62,7 @@ export default function DashboardView(props) {
   const userProfile = props.userProfile || restProps.userProfile || financeData?.userProfile;
 
   return (
-    <div className="w-full flex flex-col gap-3.5 sm:gap-4 pb-4 sm:pb-6 lg:pb-12">
+    <div className="w-full min-h-[100dvh] flex flex-col gap-3.5 sm:gap-4 pb-32 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-12">
       {/* Banner preventivo de recordatorios y alertas para mañana */}
       {alerts && alerts.length > 0 && (
         <DebtAlertBanner
@@ -95,7 +75,6 @@ export default function DashboardView(props) {
 
       {/* Widgets Financieros Modulares y Dinámicos */}
       <Dashboard
-        isScrolled={isScrolled}
         isForcedMobile={isForcedMobile}
         isForcedDesktop={isForcedDesktop}
         userProfile={userProfile}

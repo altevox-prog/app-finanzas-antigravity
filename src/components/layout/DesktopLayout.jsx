@@ -81,9 +81,9 @@ export default function DesktopLayout({
       />
 
       {/* 2. Área Principal Panorámica */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#07090E]">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#090A0F]">
         {/* Barra Superior Panorámica */}
-        <header className="border-b border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-slate-900/80 dark:bg-[#0B0E14]/80 backdrop-blur-md sticky top-0 z-40 shrink-0 select-none shadow-xs">
+        <header className="border-b border-slate-200/80 dark:border-white/[0.06] bg-white/80 dark:bg-[#0D0F17]/80 backdrop-blur-md sticky top-0 z-40 shrink-0 select-none shadow-xs">
           <div className="max-w-[1550px] w-full mx-auto px-6 py-4.5 flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -106,7 +106,7 @@ export default function DesktopLayout({
               <button
                 type="button"
                 onClick={() => setShowMonthPicker(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border border-slate-200/80 dark:border-white/10 shadow-sm group"
+                className="px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] hover:bg-slate-200/80 hover:dark:bg-[#181C28] text-slate-700 dark:text-slate-300 text-xs font-medium transition-all flex items-center gap-2 cursor-pointer border border-slate-200/80 dark:border-white/[0.08] shadow-sm group"
                 title="Abrir selector de mes y año"
               >
                 <Calendar className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
@@ -116,10 +116,10 @@ export default function DesktopLayout({
 
               {/* 4. Chip de TRM Oficial Automatizado (No editable) */}
               <div 
-                className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 select-none shadow-sm"
+                className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-xs font-medium text-slate-700 dark:text-slate-300 select-none shadow-sm"
                 title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 <span>TRM Oficial: ${Number(trm || 4050).toLocaleString('es-CO')} COP</span>
               </div>
             </div>

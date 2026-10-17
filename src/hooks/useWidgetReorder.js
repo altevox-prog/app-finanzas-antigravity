@@ -390,15 +390,28 @@ const SWAP_THROTTLE_MS = 100;
     const normTarget = normalizeWidgetId(widgetId);
     let found = false;
 
-    let updated = currentList.map((w) => {
+    let updated = [];
+    let toggledWidget = null;
+
+    currentList.forEach((w) => {
       if (w.id === widgetId || normalizeWidgetId(w.id) === normTarget) {
         found = true;
-        return { ...w, visible: newVisible, hidden: !newVisible };
+        if (newVisible) {
+          // Si se hace visible, se aparta para anexarlo al final
+          toggledWidget = { ...w, visible: true, hidden: false };
+        } else {
+          // Si se oculta, se mantiene su registro con visible=false
+          updated.push({ ...w, visible: false, hidden: true });
+        }
+      } else {
+        updated.push(w);
       }
-      return w;
     });
 
-    if (!found && newVisible) {
+    if (toggledWidget) {
+      // Inserción estricta al final de la lista
+      updated.push(toggledWidget);
+    } else if (!found && newVisible) {
       const defWidget = DEFAULT_WIDGETS_CONFIG.find(dw => dw.id === widgetId || normalizeWidgetId(dw.id) === normTarget);
       if (defWidget) {
         updated.push({ ...defWidget, visible: true, hidden: false });

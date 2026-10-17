@@ -1,12 +1,13 @@
 import React from 'react';
-import { Camera, Check, ArrowLeft, X } from 'lucide-react';
+import { Check, ArrowLeft, X, RefreshCw, LogOut } from 'lucide-react';
 import Avatar from '../../ui/Avatar';
 
 /**
  * ProfileHeader
  * Encabezado visual del modal de perfil.
  * Incluye Avatar con badge de cámara, edición de nombre, correo de sesión,
- * estado de conectividad (en línea/offline), botón atrás en subvistas y botón cerrar.
+ * estado de conectividad (en línea/offline), acciones rápidas de sincronización y sesión,
+ * botón atrás en subvistas y botón cerrar.
  */
 export default function ProfileHeader({
   currentView = 'main',
@@ -23,6 +24,9 @@ export default function ProfileHeader({
   fileInputRef,
   isOnline,
   onClose,
+  handleSync,
+  isSyncing = false,
+  handleSignOut,
   children,
 }) {
   return (
@@ -32,25 +36,20 @@ export default function ProfileHeader({
           <div className="flex items-start justify-between gap-3">
             {/* Foto/Avatar editable con badge de cámara + nombre y correo */}
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
-              <div className="relative group shrink-0">
+              <div className="relative w-16 h-16 shrink-0">
+                {/* Resplandor pulsante exterior (solo el halo respira) */}
+                <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-md animate-pulse pointer-events-none" />
+
+                {/* Avatar estático con anillo verde ceñido al borde exacto */}
                 <Avatar 
                   src={user?.user_metadata?.avatar_url || userProfile?.avatar_url || userProfile?.photo} 
                   name={user?.user_metadata?.full_name || userProfile?.name} 
                   email={user?.email}
                   size="xl" 
-                  showStatus={true} 
-                  isOnline={Boolean(user?.id && user?.id !== 'local-user')} 
+                  showStatus={false}
+                  className="relative ring-2 ring-emerald-500 shadow-sm" 
                 />
 
-                {/* Badge de cámara */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef?.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white flex items-center justify-center shadow-md ring-2 ring-white dark:ring-slate-900 active:scale-90 transition-all cursor-pointer"
-                  title="Cambiar foto de perfil"
-                >
-                  <Camera className="w-3 h-3" />
-                </button>
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -60,7 +59,7 @@ export default function ProfileHeader({
                 />
               </div>
 
-              {/* Nombre dinámico y Correo de sesión + Estado de conexión */}
+              {/* Nombre dinámico y Correo de sesión */}
               <div className="min-w-0 flex-1">
                 {isEditingName ? (
                   <div className="flex items-center gap-1.5 max-w-xs">
@@ -101,27 +100,46 @@ export default function ProfileHeader({
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
                   {user?.email || 'Modo local (sin cuenta vinculada)'}
                 </p>
-
-                {/* Indicador de estado de conexión */}
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                  <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                    {isOnline ? (user?.id ? 'En línea / Sincronizado' : 'En línea (Modo local)') : 'Modo sin conexión'}
-                  </span>
-                </div>
               </div>
             </div>
 
-            {/* Botón de cierre (X) arriba a la derecha */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer shrink-0"
-              title="Cerrar Centro de Control"
-              aria-label="Cerrar Centro de Control"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {/* Acciones Rápidas de Cuenta + Botón de Cierre */}
+            <div className="flex items-center gap-1 shrink-0">
+              {handleSync && (
+                <button
+                  type="button"
+                  onClick={handleSync}
+                  disabled={isSyncing}
+                  title="Sincronizar ahora"
+                  aria-label="Sincronizar ahora"
+                  className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600 dark:text-emerald-400' : ''}`} />
+                </button>
+              )}
+
+              {handleSignOut && (
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  title="Cerrar sesión"
+                  aria-label="Cerrar sesión"
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer shrink-0 ml-0.5"
+                title="Cerrar Centro de Control"
+                aria-label="Cerrar Centro de Control"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {children}
@@ -139,12 +157,12 @@ export default function ProfileHeader({
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h2 className="text-[17px] sm:text-[18px] font-bold tracking-tight">
-              {currentView === 'subscriptions' && 'Suscripciones Recurrentes'}
-              {currentView === 'pin_setup' && 'Configurar PIN de Seguridad'}
-              {currentView === 'budgets' && 'Presupuesto Mensual'}
-              {currentView === 'savings_goals' && 'Metas de Ahorro'}
-              {currentView === 'categories' && 'Mis Categorías'}
-              {currentView === 'tax' && 'Impuestos y Declaración de Renta'}
+              {currentView === 'subscriptions' && 'Suscripciones recurrentes'}
+              {currentView === 'pin_setup' && 'Configurar PIN de seguridad'}
+              {currentView === 'budgets' && 'Presupuesto mensual'}
+              {currentView === 'savings_goals' && 'Metas de ahorro'}
+              {currentView === 'categories' && 'Mis categorías'}
+              {currentView === 'tax' && 'Impuestos y declaración de renta'}
             </h2>
           </div>
 

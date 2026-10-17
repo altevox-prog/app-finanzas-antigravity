@@ -31,10 +31,10 @@ export default function ProfileFooter({
         type="button"
         onClick={onLogoutClick}
         className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer shadow-sm ml-auto"
-        title="Cerrar Sesión"
+        title="Cerrar sesión"
       >
         <LogOut className="w-4 h-4 shrink-0" />
-        <span>Cerrar Sesión</span>
+        <span>Cerrar sesión</span>
       </button>
     </div>
   );

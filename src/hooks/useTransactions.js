@@ -165,6 +165,32 @@ export function useTransactions({
       }
     }
 
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          const rawAccId = sanitizedTx.accountId ? ensureUUID(sanitizedTx.accountId) : null;
+          const { error } = await supabase.from('transactions').upsert({
+            id: ensureUUID(sanitizedTx.id),
+            user_id: user.id,
+            account_id: rawAccId,
+            amount: sanitizedTx.amount,
+            type: sanitizedTx.type || 'expense',
+            date: sanitizedTx.date || new Date().toISOString().split('T')[0],
+            description: sanitizedTx.description || sanitizedTx.notes || sanitizedTx.note || 'Movimiento',
+            category: sanitizedTx.category || sanitizedTx.categoryName || 'General',
+            category_id: sanitizedTx.categoryId || null,
+            notes: sanitizedTx.notes || sanitizedTx.note || '',
+            is_transfer: Boolean(sanitizedTx.isTransfer || sanitizedTx.is_transfer),
+            updated_at: sanitizedTx.updated_at || new Date().toISOString()
+          }, { onConflict: 'id' });
+          if (error) console.warn('[useTransactions] Advertencia upsert Supabase:', error);
+        }
+      } catch (e) {
+        console.warn('[useTransactions] Advertencia upsert Supabase:', e);
+      }
+    }
+
     toast.success('Movimiento registrado con éxito');
     return sanitizedTx;
   }, [transactions, accounts, setAccounts, trm]);
@@ -212,6 +238,32 @@ export function useTransactions({
       saveAccountsToStorage(nextAccounts);
     }
 
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          const rawAccId = sanitizedTx.accountId ? ensureUUID(sanitizedTx.accountId) : null;
+          const { error } = await supabase.from('transactions').upsert({
+            id: ensureUUID(sanitizedTx.id),
+            user_id: user.id,
+            account_id: rawAccId,
+            amount: sanitizedTx.amount,
+            type: sanitizedTx.type || 'expense',
+            date: sanitizedTx.date || new Date().toISOString().split('T')[0],
+            description: sanitizedTx.description || sanitizedTx.notes || sanitizedTx.note || 'Movimiento',
+            category: sanitizedTx.category || sanitizedTx.categoryName || 'General',
+            category_id: sanitizedTx.categoryId || null,
+            notes: sanitizedTx.notes || sanitizedTx.note || '',
+            is_transfer: Boolean(sanitizedTx.isTransfer || sanitizedTx.is_transfer),
+            updated_at: sanitizedTx.updated_at || new Date().toISOString()
+          }, { onConflict: 'id' });
+          if (error) console.warn('[useTransactions] Advertencia update Supabase:', error);
+        }
+      } catch (e) {
+        console.warn('[useTransactions] Advertencia update Supabase:', e);
+      }
+    }
+
     toast.success('Movimiento actualizado con éxito');
     return sanitizedTx;
   }, [transactions, accounts, setAccounts, trm]);
@@ -251,7 +303,21 @@ export function useTransactions({
     }
 
     if (isSupabaseConfigured && supabase) {
-      supabase.from('transactions').delete().eq('id', ensureUUID(txId)).catch(() => {});
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        let query = supabase
+          .from('transactions')
+          .delete()
+          .eq('id', ensureUUID(txId));
+        if (user?.id) query = query.eq('user_id', user.id);
+        const { error } = await query;
+
+        if (error) {
+          console.error('Error al eliminar transacción en Supabase:', error);
+        }
+      } catch (err) {
+        console.error('Fallo en operación de transacción:', err);
+      }
     }
 
     toast.info('Elemento eliminado');
@@ -375,6 +441,46 @@ export function useTransactions({
       console.error('Fallo real en localStorage:', localErr);
       toast.error('Error al guardar localmente');
       return null;
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          await supabase.from('transactions').upsert([
+            {
+              id: ensureUUID(outTx.id),
+              user_id: user.id,
+              account_id: ensureUUID(outTx.accountId),
+              amount: outTx.amount,
+              type: outTx.type,
+              date: outTx.date,
+              description: outTx.note,
+              category: outTx.categoryName || 'Transferencias',
+              category_id: outTx.categoryId,
+              notes: outTx.note,
+              is_transfer: true,
+              updated_at: outTx.updated_at
+            },
+            {
+              id: ensureUUID(inTx.id),
+              user_id: user.id,
+              account_id: ensureUUID(inTx.accountId),
+              amount: inTx.amount,
+              type: inTx.type,
+              date: inTx.date,
+              description: inTx.note,
+              category: inTx.categoryName || 'Transferencias',
+              category_id: inTx.categoryId,
+              notes: inTx.note,
+              is_transfer: true,
+              updated_at: inTx.updated_at
+            }
+          ], { onConflict: 'id' });
+        }
+      } catch (e) {
+        console.warn('[useTransactions] Advertencia transferencia Supabase:', e);
+      }
     }
 
     toast.success('Movimiento registrado con éxito');

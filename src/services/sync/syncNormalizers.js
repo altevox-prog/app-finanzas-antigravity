@@ -39,6 +39,7 @@ export function normalizeRemoteAccount(a) {
   const initBal = Number(a.initial_balance ?? a.initialBalance ?? a.balance ?? a.current_balance ?? 0);
   return {
     ...a,
+    order_index: a.order_index !== undefined && a.order_index !== null ? Number(a.order_index) : 0,
     initial_balance: initBal,
     initialBalance: initBal,
     balance: balanceVal,
@@ -110,33 +111,93 @@ export function normalizeRemoteDebt(d) {
     ? Number(d.remaining_amount)
     : (d.remainingAmount !== null && d.remainingAmount !== undefined && Number(d.remainingAmount) > 0 ? Number(d.remainingAmount) : parsedTotal);
 
-  // Recuperar abonos de d.payments, raw_data.payments, o metadata.payments
+  // Recuperar abonos y desembolsos de d.payments/disbursements, raw_data, metadata o PAYMENTS_JSON en d.notes
   let parsedPayments = [];
+  let parsedDisbursements = [];
+  let parsedInitialAmount = null;
+
   if (Array.isArray(d.payments)) {
     parsedPayments = d.payments;
   } else if (Array.isArray(rawData.payments)) {
     parsedPayments = rawData.payments;
   } else if (Array.isArray(metadataObj.payments)) {
     parsedPayments = metadataObj.payments;
-  } else if (typeof d.notes === 'string' && d.notes.startsWith('PAYMENTS_JSON:')) {
+  }
+
+  if (Array.isArray(d.disbursements)) {
+    parsedDisbursements = d.disbursements;
+  } else if (Array.isArray(rawData.disbursements)) {
+    parsedDisbursements = rawData.disbursements;
+  } else if (Array.isArray(metadataObj.disbursements)) {
+    parsedDisbursements = metadataObj.disbursements;
+  }
+
+  if (typeof d.notes === 'string' && d.notes.startsWith('PAYMENTS_JSON:')) {
     try {
-      parsedPayments = JSON.parse(d.notes.replace('PAYMENTS_JSON:', ''));
+      const parsed = JSON.parse(d.notes.replace('PAYMENTS_JSON:', ''));
+      if (Array.isArray(parsed)) {
+        if (parsedPayments.length === 0) parsedPayments = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.payments) && parsedPayments.length === 0) {
+          parsedPayments = parsed.payments;
+        }
+        if (Array.isArray(parsed.disbursements) && parsedDisbursements.length === 0) {
+          parsedDisbursements = parsed.disbursements;
+        }
+        if (parsed.initialAmount) {
+          parsedInitialAmount = Number(parsed.initialAmount);
+        }
+      }
     } catch {}
   }
+
+  const totalDisbursed = parsedDisbursements.reduce((sum, disb) => sum + Number(disb?.amount || 0), 0);
+  const totalCapPaid = parsedPayments.reduce(
+    (sum, p) => sum + (p.capitalAmount !== undefined ? Number(p.capitalAmount) : (p.mode === 'interest' ? 0 : Number(p.amount) || 0)), 
+    0
+  );
+
+  let initialAmount = parsedInitialAmount || Number(d.initialAmount ?? d.initial_amount);
+  let totalAmount = parsedTotal;
+
+  if (initialAmount > 0) {
+    totalAmount = initialAmount + totalDisbursed;
+  } else if (totalDisbursed > 0) {
+    if (parsedTotal > totalDisbursed) {
+      initialAmount = parsedTotal - totalDisbursed;
+      totalAmount = parsedTotal;
+    } else {
+      initialAmount = parsedTotal;
+      totalAmount = initialAmount + totalDisbursed;
+    }
+  } else {
+    initialAmount = parsedTotal;
+    totalAmount = parsedTotal;
+  }
+
+  // Fórmula reactiva: Saldo Pendiente = Monto Inicial + Total Prestado Adicional - Total Abonado
+  const calculatedRemaining = Math.max(0, totalAmount - totalCapPaid);
+  const finalRemaining = (parsedPayments.length > 0 || totalDisbursed > 0)
+    ? calculatedRemaining
+    : (parsedRemaining || calculatedRemaining);
 
   return {
     ...d,
     person: personName,
     personName: personName,
     name: personName,
-    total_amount: parsedTotal,
-    totalAmount: parsedTotal,
-    principalAmount: parsedTotal,
-    amount: parsedTotal,
-    remaining_amount: parsedRemaining,
-    remainingAmount: parsedRemaining,
-    remainingCapital: parsedRemaining,
-    payments: Array.isArray(parsedPayments) ? parsedPayments : []
+    initialAmount,
+    initial_amount: initialAmount,
+    total_amount: totalAmount,
+    totalAmount: totalAmount,
+    principalAmount: totalAmount,
+    amount: totalAmount,
+    remaining_amount: finalRemaining,
+    remainingAmount: finalRemaining,
+    remainingCapital: finalRemaining,
+    current_balance: finalRemaining,
+    payments: Array.isArray(parsedPayments) ? parsedPayments : [],
+    disbursements: Array.isArray(parsedDisbursements) ? parsedDisbursements : []
   };
 }
 
@@ -160,6 +221,62 @@ export function normalizeRemoteInvestment(inv) {
     current_value: currVal,
     type: inv.subtype || inv.type || 'stock',
     subtype: inv.subtype || inv.type || 'stock'
+  };
+}
+
+/**
+ * Normaliza un pago recurrente/suscripción descargado de Supabase:
+ * - Mapea propiedades de Supabase a camelCase:
+ *   billing_day -> billingDay
+ *   is_active -> isActive (default true)
+ *   next_payment_date -> nextPaymentDate
+ *   account_id -> accountId
+ *   user_id -> userId
+ * - Mantiene id, name, amount, category, frequency, type y updated_at.
+ * - Si raw_data contiene datos adicionales, los combina asegurando que no se pierda ninguna propiedad.
+ *
+ * @param {Object} r - Registro de pago recurrente de Supabase
+ * @returns {Object} Pago recurrente normalizado
+ */
+export function normalizeRemoteRecurring(r) {
+  if (!r || typeof r !== 'object') return r;
+  const rawData = (r.raw_data && typeof r.raw_data === 'object') ? r.raw_data : {};
+
+  const billingDayVal = Number(r.billing_day ?? r.billingDay ?? rawData.billing_day ?? rawData.billingDay ?? 1);
+  const isActiveVal = r.is_active !== undefined ? Boolean(r.is_active) : (r.isActive !== undefined ? Boolean(r.isActive) : (rawData.is_active !== undefined ? Boolean(rawData.is_active) : (rawData.isActive !== undefined ? Boolean(rawData.isActive) : true)));
+  const nextDateVal = r.next_payment_date || r.nextPaymentDate || r.next_date || r.nextDate || rawData.next_payment_date || rawData.nextPaymentDate || rawData.next_date || rawData.nextDate || null;
+  const accountIdVal = r.account_id || r.accountId || rawData.account_id || rawData.accountId || null;
+  const userIdVal = r.user_id || r.userId || rawData.user_id || rawData.userId || null;
+  const categoryVal = r.category || r.category_name || r.categoryName || rawData.category || rawData.categoryName || 'General';
+  const typeVal = r.type || rawData.type || 'expense';
+  const frequencyVal = r.frequency || rawData.frequency || 'monthly';
+  const amountVal = Number(r.amount ?? rawData.amount ?? 0);
+
+  return {
+    ...rawData,
+    ...r,
+    id: r.id || rawData.id,
+    userId: userIdVal,
+    user_id: userIdVal,
+    name: r.name || rawData.name || 'Suscripción',
+    amount: amountVal,
+    category: categoryVal,
+    categoryName: categoryVal,
+    type: typeVal,
+    frequency: frequencyVal,
+    billingDay: billingDayVal,
+    billing_day: billingDayVal,
+    isActive: isActiveVal,
+    is_active: isActiveVal,
+    active: isActiveVal,
+    accountId: accountIdVal,
+    account_id: accountIdVal,
+    nextPaymentDate: nextDateVal,
+    next_payment_date: nextDateVal,
+    nextDate: nextDateVal,
+    next_date: nextDateVal,
+    updatedAt: r.updated_at || r.updatedAt || rawData.updated_at || rawData.updatedAt || new Date().toISOString(),
+    updated_at: r.updated_at || r.updatedAt || rawData.updated_at || rawData.updatedAt || new Date().toISOString()
   };
 }
 

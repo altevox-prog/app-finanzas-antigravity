@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import InvestmentCard from './InvestmentCard';
 import { usePrivacy } from '../../../context/PrivacyContext';
@@ -8,20 +8,21 @@ import { formatCurrency, formatUSD } from '../../../data/initialData';
 /**
  * InvestmentBankGroup
  * Renderiza la lista consolidada de inversiones agrupadas por entidad financiera / banco,
- * con tarjeta de resumen, cifras consolidadas y acordeón expandible de productos individuales.
+ * iniciando colapsado por defecto con cabecera compacta y métricas consolidadas interiores al expandir.
  */
 export default function InvestmentBankGroup({
   groupedInvestments = {},
   viewCurrency = 'COP',
   livePrices = {},
   trm = 4050,
-  expandedBanks = {},
+  expandedBanks: externalExpandedBanks,
   onToggleBank,
   onEditInvestment,
   onDeleteInvestment,
   onQuickUpdate,
   onOpenLiquidation,
 }) {
+  const [localExpandedBanks, setLocalExpandedBanks] = useState({});
   const { isPrivacyMode, enableDecimals } = usePrivacy();
   const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
 
@@ -32,13 +33,21 @@ export default function InvestmentBankGroup({
     return formatCurrency(amount, isPrivacyMode, showDecimals);
   };
 
+  const handleToggleBank = (bankName) => {
+    setLocalExpandedBanks(prev => ({
+      ...prev,
+      [bankName]: !prev[bankName]
+    }));
+    if (onToggleBank) onToggleBank(bankName);
+  };
+
   const entries = Object.entries(groupedInvestments);
   if (entries.length === 0) return null;
 
   return (
-    <>
+    <div className="flex flex-col gap-2.5">
       {entries.map(([bankName, bankData]) => {
-        const isExpanded = expandedBanks[bankName] !== false;
+        const isExpanded = Boolean(localExpandedBanks[bankName]);
         const totalInvested = viewCurrency === 'USD' ? bankData.totalInvestedUSD : bankData.totalInvestedCOP;
         const currentValue = viewCurrency === 'USD' ? bankData.currentValueUSD : bankData.currentValueCOP;
         const netGain = currentValue - totalInvested;
@@ -55,114 +64,91 @@ export default function InvestmentBankGroup({
         return (
           <div 
             key={bankName}
-            className="rounded-3xl border shadow-sm overflow-hidden transition-all"
+            className="rounded-2xl border shadow-sm overflow-hidden transition-all"
             style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
           >
-            {/* Cabecera Consolidada del Banco (Clickeable para desplegar/contraer) */}
+            {/* ============================================================== */}
+            {/* CABECERA COMPACTA DE ENTIDAD (VISTA COLAPSADA POR DEFECTO)     */}
+            {/* ============================================================== */}
             <div 
-              onClick={() => onToggleBank && onToggleBank(bankName)}
-              className="p-4 sm:p-5 flex flex-col gap-3 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors"
+              onClick={() => handleToggleBank(bankName)}
+              className="p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors hover:bg-slate-50/60 dark:hover:bg-white/[0.02]"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Logo de la Entidad */}
-                  <div className="w-11 h-11 rounded-2xl overflow-hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 shrink-0">
-                    <BrandIcon name={bankName} type="bank" size={32} />
-                  </div>
-
-                  <div className="truncate">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
-                        {bankName}
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
-                        {productsSummary}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      Consolidado de inversiones
-                    </p>
-                  </div>
+              {/* Lado Izquierdo: Logo, Nombre de entidad, Badge de cantidad y subtítulo */}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 shrink-0">
+                  <BrandIcon name={bankName} type="bank" size={28} />
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  {/* Badge de Rendimiento Acumulado */}
-                  <div className={`px-2.5 py-1 rounded-xl text-xs font-black tabular-nums border text-right hidden sm:block ${
-                    isGainPositive 
-                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                      : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                  }`}>
-                    {isGainPositive ? '+' : ''}{gainPercent.toFixed(2)}%
+                <div className="min-w-0 flex-1 truncate">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-black text-sm sm:text-base text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                      {bankName}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/10 shrink-0">
+                      {productsSummary}
+                    </span>
                   </div>
-
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400">
-                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5 truncate">
+                    Portafolio en custodia
+                  </p>
                 </div>
               </div>
 
-              {/* Cifras Consolidadas: Saldo Actual, Invertido y Ganancia */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 text-xs">
-                <div>
-                  <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                    Saldo Actual Consolidado
-                  </span>
-                  <span className="text-sm sm:text-base font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums block mt-0.5">
+              {/* Lado Derecho: Saldo consolidado, badge de rendimiento y chevron animado */}
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0 text-right">
+                <div className="flex flex-col items-end justify-center">
+                  <span className="text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100 leading-tight">
                     {formatInvestMoney(currentValue, viewCurrency)}
                   </span>
-                </div>
-
-                <div>
-                  <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                    Total Invertido
-                  </span>
-                  <span className="text-sm sm:text-base font-bold font-mono tracking-tight text-slate-700 dark:text-slate-300 tabular-nums block mt-0.5">
-                    {formatInvestMoney(totalInvested, viewCurrency)}
-                  </span>
-                </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                    Ganancia Total Acumulada
-                  </span>
-                  <span className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums block mt-0.5 ${
-                    isGainPositive ? 'text-emerald-500' : 'text-rose-500'
-                  }`}>
-                    {isGainPositive ? '+' : ''}{formatInvestMoney(netGain, viewCurrency)}
-                    <span className="text-xs font-bold font-mono tracking-tight ml-1 sm:hidden">
-                      ({isGainPositive ? '+' : ''}{gainPercent.toFixed(1)}%)
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-tight tabular-nums border ${
+                      isGainPositive 
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                        : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                    }`}>
+                      {isGainPositive ? '+' : ''}{gainPercent.toFixed(2)}%
                     </span>
-                  </span>
+                  </div>
+                </div>
+
+                <div className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-180 text-emerald-500' : 'rotate-0'}`} />
                 </div>
               </div>
             </div>
 
-            {/* Acordeón Desplegable: Productos Individuales */}
-            {isExpanded && (
-              <div className="p-4 sm:p-5 pt-0 space-y-3 border-t border-slate-100 dark:border-white/5 bg-slate-50/40 dark:bg-white/[0.01]">
-                <div className="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider pt-3 pb-0.5">
-                  <span>Detalle individual ({bankData.items.length})</span>
-                  <span className="text-[11px] font-normal normal-case opacity-70">Toca un activo para editar o actualizar</span>
+            {/* ============================================================== */}
+            {/* VISTA EXPANDIDA (DESPLIEGUE DIRECTO DE TARJETAS HIJAS)        */}
+            {/* ============================================================== */}
+            <div 
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                isExpanded ? 'max-h-[5000px] opacity-100 border-t border-slate-100 dark:border-white/5' : 'max-h-0 opacity-0 pointer-events-none'
+              }`}
+            >
+              <div className="p-3 sm:p-3.5 bg-slate-50/40 dark:bg-white/[0.01]">
+                {/* Listado Directo de Tarjetas Hijas Individuales con Espaciado Armónico */}
+                <div className="flex flex-col gap-2.5">
+                  {bankData.items.map(item => (
+                    <InvestmentCard
+                      key={item.id}
+                      investment={item}
+                      metrics={item.metrics}
+                      viewCurrency={viewCurrency}
+                      livePrices={livePrices}
+                      trm={trm}
+                      onEdit={onEditInvestment}
+                      onDelete={onDeleteInvestment}
+                      onQuickUpdate={onQuickUpdate}
+                      onOpenLiquidation={onOpenLiquidation}
+                    />
+                  ))}
                 </div>
-                {bankData.items.map(item => (
-                  <InvestmentCard
-                    key={item.id}
-                    investment={item}
-                    metrics={item.metrics}
-                    viewCurrency={viewCurrency}
-                    livePrices={livePrices}
-                    trm={trm}
-                    onEdit={onEditInvestment}
-                    onDelete={onDeleteInvestment}
-                    onQuickUpdate={onQuickUpdate}
-                    onOpenLiquidation={onOpenLiquidation}
-                  />
-                ))}
               </div>
-            )}
+            </div>
           </div>
         );
       })}
-    </>
+    </div>
   );
 }

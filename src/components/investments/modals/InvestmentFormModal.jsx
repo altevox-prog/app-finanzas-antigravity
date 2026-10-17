@@ -3,13 +3,12 @@ import { createPortal } from 'react-dom';
 import { 
   TrendingUp, 
   Coins, 
-  Trash2, 
-  RefreshCw,
-  Sparkles
+  X
 } from 'lucide-react';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '../../../utils/currencyFormatter';
+import AmountInput from '../../common/AmountInput';
 import SegmentedControl from '../../common/SegmentedControl';
 import FixedIncomeFields from './FixedIncomeFields';
 import InvestmentCategoryHeader from '../InvestmentCategoryHeader';
@@ -88,7 +87,6 @@ export default function InvestmentFormModal({
   const submittingRef = useRef(false);
   const [investedAmount, setInvestedAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
-  const [notes, setNotes] = useState('');
 
   // Conditional CDT fields
   const [interestRate, setInterestRate] = useState('');
@@ -127,7 +125,6 @@ export default function InvestmentFormModal({
           ? formatCurrencyInput(rawCurr, true)
           : ''
       );
-      setNotes(currentInitial.notes || '');
       setInterestRate(currentInitial.interestRate !== undefined ? String(currentInitial.interestRate) : '');
       setStartDate(currentInitial.startDate || '');
       setDueDate(currentInitial.dueDate || '');
@@ -144,7 +141,6 @@ export default function InvestmentFormModal({
       setCurrentPrice('');
       setInvestedAmount('');
       setCurrentAmount('');
-      setNotes('');
       setInterestRate('');
       setSubType('cdt');
       const todayStr = new Date().toISOString().split('T')[0];
@@ -166,24 +162,7 @@ export default function InvestmentFormModal({
 
   const isMarketAsset = category === 'crypto' || category === 'variable';
 
-  // Cálculos reactivos para activos de mercado
-  const numShares = parseFloat(shares) || 0;
-  const numBuyPrice = parseFloat(buyPrice) || 0;
-  const numCurrentPrice = parseFloat(currentPrice) || numBuyPrice;
 
-  const calcInvested = numShares * numBuyPrice;
-  const calcCurrent = numShares * numCurrentPrice;
-  const pnl = calcCurrent - calcInvested;
-  const pnlPercent = calcInvested > 0 ? (pnl / calcInvested) * 100 : 0;
-  const isPnlPositive = pnl >= 0;
-
-  const formatInvestNumber = (val) => {
-    const n = Number(val) || 0;
-    if (currency === 'USD') {
-      return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    return `$${Math.round(n).toLocaleString('es-CO')}`;
-  };
 
   // Consulta de cotización en vivo según ticker
   const handleFetchQuote = async (symbolToFetch, explicitAssetType) => {
@@ -285,8 +264,8 @@ export default function InvestmentFormModal({
 
     try {
       const sNum = isMarketAsset ? (parseFloat(shares) || 0) : undefined;
-      const bNum = isMarketAsset ? (parseFloat(buyPrice) || 0) : undefined;
-      const cNum = isMarketAsset ? (parseFloat(currentPrice) || bNum || 0) : undefined;
+      const bNum = isMarketAsset ? (parseFormattedAmount(buyPrice) || 0) : undefined;
+      const cNum = isMarketAsset ? (parseFormattedAmount(currentPrice) || bNum || 0) : undefined;
 
       let invNum = 0;
       let currNum = 0;
@@ -320,7 +299,7 @@ export default function InvestmentFormModal({
         currentAmount: currNum,
         currentValue: currNum,
         current_value: currNum,
-        notes: notes.trim(),
+        notes: currentInitial?.notes || '',
         interestRate: interestRate ? parseFloat(interestRate) : undefined,
         startDate: category === 'fixed' ? startDate : undefined,
         dueDate: category === 'fixed' ? dueDate : undefined,
@@ -344,38 +323,26 @@ export default function InvestmentFormModal({
     }
   };
 
-  const handleDelete = () => {
-    if (!currentInitial) return;
-    if (confirm(`¿Eliminar la inversión "${currentInitial.name}"?`)) {
-      if (onDelete) onDelete(currentInitial.id);
-      onClose();
-    }
-  };
-
   const activePresets = category === 'crypto' ? CRYPTO_PRESETS : VARIABLE_PRESETS;
 
   const modalContent = (
     <div 
-      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-fadeIn"
+      className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-fadeIn"
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-lg bg-white dark:bg-[#121622] rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp border border-slate-200 dark:border-white/10"
-        style={{ backgroundColor: 'var(--modal-bg, #121622)', borderColor: 'var(--border-color)', color: 'var(--text-main, #ffffff)' }}
+        className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[85vh] overflow-hidden animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle superior para móvil */}
-        <div className="w-10 h-1 bg-slate-400/30 rounded-full mx-auto sm:hidden mt-2 shrink-0" />
-
         {/* Cabecera Fija */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 dark:border-white/10 shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                {isEditing ? 'Editar Inversión' : 'Nueva Inversión'}
+                {isEditing ? 'Editar inversión' : 'Nueva inversión'}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Gestiona tus activos y calcula rendimientos</p>
             </div>
@@ -384,15 +351,16 @@ export default function InvestmentFormModal({
           <button 
             type="button" 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            title="Cerrar"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Formulario con Scroll Vertical y Pie Fijo */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 pb-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
 
             {/* A. BLOQUE SUPERIOR (Siempre visible): Selector de Categoría y Entidad/Broker */}
             <InvestmentCategoryHeader
@@ -421,25 +389,16 @@ export default function InvestmentFormModal({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div>
                     <input
                       type="text"
                       placeholder={category === 'crypto' ? 'ej. BTC, ETH, SOL' : 'ej. VOO, SPY, AAPL'}
                       value={ticker}
                       onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                      className="flex-1 text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none uppercase"
+                      onBlur={() => ticker && handleFetchQuote(ticker)}
+                      className="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none uppercase"
                       style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
                     />
-
-                    <button
-                      type="button"
-                      onClick={() => handleFetchQuote()}
-                      disabled={!ticker.trim() || isFetchingPrice}
-                      className="px-3.5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm active:scale-95"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isFetchingPrice ? 'animate-spin' : ''}`} />
-                      <span>{isFetchingPrice ? 'Buscando...' : 'Cotización'}</span>
-                    </button>
                   </div>
 
                   {/* Chips sugeridos según la categoría */}
@@ -518,15 +477,13 @@ export default function InvestmentFormModal({
                     <label className="block text-[10px] font-bold opacity-70 mb-1">
                       Precio de Compra ({currency}) *
                     </label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      required
-                      placeholder="ej. 60000"
+                    <AmountInput
                       value={buyPrice}
+                      onChange={(cleanVal) => setBuyPrice(cleanVal)}
+                      allowDecimals={true}
+                      required
+                      placeholder="0"
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setBuyPrice(e.target.value)}
                       className="w-full text-xs font-bold px-3 py-2.5 rounded-xl border border-transparent focus:outline-none"
                       style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
                     />
@@ -536,78 +493,17 @@ export default function InvestmentFormModal({
                     <label className="block text-[10px] font-bold opacity-70 mb-1">
                       Precio Actual ({currency}) *
                     </label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      required
-                      placeholder="ej. 64500"
+                    <AmountInput
                       value={currentPrice}
+                      onChange={(cleanVal) => setCurrentPrice(cleanVal)}
+                      allowDecimals={true}
+                      required
+                      placeholder="0"
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setCurrentPrice(e.target.value)}
                       className="w-full text-xs font-bold px-3 py-2.5 rounded-xl border border-transparent focus:outline-none text-emerald-500 font-mono"
                       style={{ backgroundColor: 'var(--bg-input)' }}
                     />
                   </div>
-                </div>
-
-                {/* Tarjeta Resumen Visual Automatizada (Read-Only) */}
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.08] space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-emerald-500" />
-                      <span>Cálculo Automático</span>
-                    </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium font-mono">
-                      {currency}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-0.5">
-                    <div>
-                      <span className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
-                        Monto Invertido
-                      </span>
-                      <span className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white tabular-nums block">
-                        {formatInvestNumber(calcInvested)}
-                      </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono block mt-0.5 truncate">
-                        {numShares} × {formatInvestNumber(numBuyPrice)}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
-                        Valor Actual
-                      </span>
-                      <span className="text-sm sm:text-base font-bold font-mono text-slate-900 dark:text-white tabular-nums block">
-                        {formatInvestNumber(calcCurrent)}
-                      </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono block mt-0.5 truncate">
-                        {numShares} × {formatInvestNumber(numCurrentPrice)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {calcInvested > 0 && (
-                    <div className="pt-2.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs">
-                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                        Rendimiento no realizado
-                      </span>
-                      <div className="flex items-center gap-1.5 font-mono font-bold text-xs tabular-nums">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] border ${
-                          isPnlPositive 
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-                            : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20'
-                        }`}>
-                          {isPnlPositive ? '+' : ''}{pnlPercent.toFixed(2)}%
-                        </span>
-                        <span className={isPnlPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
-                          {isPnlPositive ? '+' : '-'}{formatInvestNumber(Math.abs(pnl))}
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -637,15 +533,13 @@ export default function InvestmentFormModal({
                     <label className="block text-[11px] font-bold opacity-70 mb-1">
                       Monto Invertido (COP) *
                     </label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
+                    <AmountInput
+                      value={investedAmount}
+                      allowDecimals={true}
                       required
                       placeholder="0"
-                      value={investedAmount}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const formatted = formatCurrencyInput(e.target.value, true);
+                      onChange={(cleanVal, formatted) => {
                         setInvestedAmount(formatted);
                         if (!currentAmount || currentAmount === investedAmount) {
                           setCurrentAmount(formatted);
@@ -672,14 +566,13 @@ export default function InvestmentFormModal({
                         </button>
                       )}
                     </div>
-                    <input
-                      type="text"
-                      inputMode="decimal"
+                    <AmountInput
+                      value={currentAmount}
+                      allowDecimals={true}
                       required
                       placeholder="0"
-                      value={currentAmount}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setCurrentAmount(formatCurrencyInput(e.target.value, true))}
+                      onChange={(cleanVal, formatted) => setCurrentAmount(formatted)}
                       className="w-full text-xs font-black px-3 py-2.5 rounded-xl border border-transparent focus:outline-none"
                       style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
                     />
@@ -737,51 +630,18 @@ export default function InvestmentFormModal({
               </div>
             )}
 
-            {/* C. BLOQUE INFERIOR (Cierre): Notas */}
-            <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-white/5">
-              {/* Notas únicas (Opcional) */}
-              <div>
-                <label className="block text-[11px] font-bold opacity-70 mb-1">
-                  Notas (Opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Apuntes personales, condiciones o recordatorios..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none"
-                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-                />
-              </div>
-            </div>
-
           </div>
 
-          {/* Pie de Acciones Fijo Abajo (Sticky Footer) */}
-          <div className="p-4 bg-slate-50/80 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 pb-safe sm:pb-4">
-            {isEditing && onDelete && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-4 py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/30 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-xs sm:text-sm font-semibold mr-auto cursor-pointer flex items-center gap-1.5 active:scale-95"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Eliminar</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 text-xs sm:text-sm font-medium cursor-pointer"
-            >
-              Cancelar
-            </button>
+          {/* Pie de Acciones Fijo/Seguro */}
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 rounded-b-3xl">
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-blue-600/30 cursor-pointer active:scale-98 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
+              className={`w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer active:scale-98 flex items-center justify-center text-xs sm:text-sm ${
+                isSubmitting ? 'opacity-50 pointer-events-none' : ''
+              }`}
             >
-              {isSubmitting ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : 'Añadir Inversión')}
+              {isSubmitting ? 'Guardando...' : (isEditing ? 'Guardar cambios' : 'Añadir inversión')}
             </button>
           </div>
         </form>

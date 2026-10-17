@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, Pencil, Trash2 } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import CategoryIcon from '../../categories/components/CategoryIcon';
 import SwipeableRow from '../../common/SwipeableRow';
@@ -72,95 +72,112 @@ export default function TransactionItem({
     >
       <div 
         onClick={() => onSelect && onSelect(tx)}
-        className="min-h-[52px] p-3 sm:p-4 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex flex-col justify-center gap-1 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05]"
+        className="p-2.5 sm:p-3 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex items-center justify-between gap-3 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05]"
       >
-        {/* Línea 1 (Superior): Concepto/Descripción a la izq y Monto a la der */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Izquierda: Icono de categoría + Concepto/Descripción */}
-          <div className="flex items-center gap-2 min-w-0 max-w-[60%]">
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60 dark:border-white/[0.06] shadow-sm">
-              <BrandIcon
-                name={tx.note || tx.categoryName || ''}
-                size={14}
-                fallback={
-                  <CategoryIcon
-                    category={category || tx.categoryName}
-                    status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
-                    size={14}
-                    withBadge={false}
-                  />
-                }
-              />
-            </div>
-            <span className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
-              {tx.note || tx.categoryName}
-            </span>
+        {/* Izquierda: Avatar / Icono + Información (Concepto y Cuenta/Categoría) */}
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/10 shadow-xs">
+            <BrandIcon
+              name={tx.note || tx.categoryName || ''}
+              size={18}
+              fallback={
+                <CategoryIcon
+                  category={category || tx.categoryName}
+                  status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
+                  size={16}
+                  withBadge={false}
+                />
+              }
+            />
           </div>
 
-          {/* Derecha: Monto monetario */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className={`text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums whitespace-nowrap ${
-              isExpense 
-                ? 'text-rose-500 dark:text-rose-400' 
-                : isIncome 
-                  ? 'text-emerald-500 dark:text-emerald-400' 
-                  : 'text-slate-600 dark:text-zinc-300'
-            }`}>
-              {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                {tx.note || tx.categoryName}
+              </span>
+              {tx.receiptImage && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onViewReceipt) onViewReceipt(tx);
+                  }}
+                  className="inline-flex items-center text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition-colors shrink-0 cursor-pointer"
+                  title="Ver recibo adjunto"
+                >
+                  <Camera className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <div className="text-xs text-slate-400 dark:text-zinc-500 font-medium truncate flex items-center gap-1.5 mt-0.5">
+              {tx.categoryName && tx.note && (
+                <span>{tx.categoryName} · </span>
+              )}
+              <span className="truncate">{tx.accountName || 'Principal'}</span>
+              {tx.subcategoryName && (
+                <span className="truncate">· {tx.subcategoryName}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Derecha: Monto monetario y Fecha */}
+        <div className="flex flex-col items-end shrink-0 pl-2">
+          <span className={`text-sm font-black font-mono tracking-tight tabular-nums whitespace-nowrap ${
+            isExpense 
+              ? 'text-rose-500 dark:text-rose-400' 
+              : isIncome 
+                ? 'text-emerald-500 dark:text-emerald-400' 
+                : 'text-slate-600 dark:text-zinc-300'
+          }`}>
+            {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
+          </span>
+
+          <div className="flex items-center gap-1 mt-0.5">
+            {tx.originalCurrency && tx.originalCurrency !== 'COP' && (
+              <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono tabular-nums hidden sm:inline">
+                ({Number(tx.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {tx.originalCurrency})
+              </span>
+            )}
+            <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
+              {formatTxDateClean(tx)}
             </span>
           </div>
         </div>
 
-      {/* Línea 2 (Inferior): Badge compacto de cuenta a la izq y Fecha/hora a la der */}
-      <div className="flex items-center justify-between gap-2">
-        {/* Izquierda: Badge de cuenta + subcategoría / recibo */}
-        <div className="flex items-center gap-1.5 min-w-0 max-w-[60%]">
-          <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 truncate inline-flex items-center gap-1.5">
-            <BrandIcon 
-              name={tx.accountName} 
-              type={account?.type} 
-              size={11} 
-              className="shrink-0"
-              fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: account?.color || '#10B981' }} />}
-            />
-            <span className="truncate">{tx.accountName}</span>
-          </span>
-
-          {tx.subcategoryName && (
-            <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono truncate hidden xs:inline">
-              • {tx.subcategoryName}
-            </span>
-          )}
-
-          {tx.receiptImage && (
+        {/* Slot flex final reservado en escritorio para microbotones en hover (SIN tapar valores) */}
+        <div className="hidden md:flex items-center justify-end w-14 shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          {onEdit && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                if (onViewReceipt) onViewReceipt(tx);
+                onEdit(tx);
               }}
-              className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md hover:bg-emerald-500/20 transition-colors shrink-0 cursor-pointer"
-              title="Ver recibo adjunto"
+              className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-emerald-600 flex items-center justify-center transition-colors cursor-pointer"
+              title="Editar"
+              aria-label="Editar"
             >
-              <Camera className="w-3 h-3" />
-              <span className="hidden sm:inline">Recibo</span>
+              <Pencil className="w-3 h-3" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
+              className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+              title="Eliminar"
+              aria-label="Eliminar"
+            >
+              <Trash2 className="w-3 h-3" />
             </button>
           )}
         </div>
-
-        {/* Derecha: Moneda original + Fecha/hora */}
-        <div className="flex items-center gap-2 shrink-0">
-          {tx.originalCurrency && tx.originalCurrency !== 'COP' && (
-            <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono tabular-nums hidden sm:inline">
-              ({Number(tx.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {tx.originalCurrency})
-            </span>
-          )}
-          <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono shrink-0">
-            {formatTxDateClean(tx)}
-          </span>
-        </div>
       </div>
-    </div>
-  </SwipeableRow>
+    </SwipeableRow>
   );
 }

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { formatCurrencyInput, parseFormattedAmount, setEnableDecimals } from '../../utils/currencyFormatter';
 import { setHasCompletedOnboarding } from '../../utils/userProfileHelper';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import AuthModal from '../auth/AuthModal';
 import WizardStepPreferences from './wizard/WizardStepPreferences';
 import WizardStepAccounts from './wizard/WizardStepAccounts';
 
 export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  // Paso actual del Wizard (1: Preferencias y Seguridad, 2: Cuentas Iniciales)
+  // Paso actual del Wizard (1: Preferencias Iniciales, 2: Cuentas Iniciales)
   const [step, setStep] = useState(1);
 
   // Nombre de usuario
@@ -147,44 +149,45 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
     }
   };
 
-  // Finalizar Onboarding y Guardar Todo en localStorage
-  const handleFinishWizard = () => {
+  // Finalizar Onboarding y Guardar Todo en localStorage y Supabase
+  const handleFinishWizard = async (firstAccountData = null) => {
     const rawFullName = displayName.trim() || 'Usuario';
     const cleanName = String(rawFullName).trim();
     const finalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
     // 1. Cuentas iniciales normalizadas
     let initialAccounts = [];
-    if (!startFromScratch) {
-      const parsedCash = Math.max(0, parseFormattedAmount(cashAmount));
-      const parsedBank = Math.max(0, parseFormattedAmount(bankAmount));
+    if (firstAccountData && firstAccountData.accountName && firstAccountData.accountName.trim()) {
+      const parsedBalance = Math.max(0, parseFormattedAmount(firstAccountData.accountBalance || '0'));
       const genUUID = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : (`${Date.now()}-${Math.random().toString(36).slice(2)}`));
-      if (parsedCash > 0) {
-        initialAccounts.push({
-          id: genUUID(),
-          name: 'Efectivo',
-          type: 'cash',
-          currency: selectedCurrency,
-          initialBalance: parsedCash,
-          balance: parsedCash,
-          currentBalance: parsedCash,
-          color: '#34C759',
-          icon: 'Wallet'
-        });
+      
+      const type = firstAccountData.accountType || 'bank';
+      let icon = 'Building2';
+      let color = '#007AFF';
+      if (type === 'cash') {
+        icon = 'Wallet';
+        color = '#10B981';
+      } else if (type === 'wallet') {
+        icon = 'Smartphone';
+        color = '#8B5CF6';
       }
-      if (parsedBank > 0) {
-        initialAccounts.push({
-          id: genUUID(),
-          name: 'Cuenta Bancaria',
-          type: 'bank',
-          currency: selectedCurrency,
-          initialBalance: parsedBank,
-          balance: parsedBank,
-          currentBalance: parsedBank,
-          color: '#007AFF',
-          icon: 'Building2'
-        });
-      }
+
+      const createdAcc = {
+        id: genUUID(),
+        name: firstAccountData.accountName.trim(),
+        type,
+        currency: selectedCurrency,
+        initialBalance: parsedBalance,
+        initial_balance: parsedBalance,
+        balance: parsedBalance,
+        currentBalance: parsedBalance,
+        current_balance: parsedBalance,
+        color,
+        icon,
+        order_index: 0,
+        updated_at: new Date().toISOString()
+      };
+      initialAccounts.push(createdAcc);
     }
 
     // 2. Perfil de usuario
@@ -210,7 +213,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
       biometricsEnabled: Boolean(enableBiometrics)
     };
 
-    // 4. Guardar preferencias numéricas, de moneda y tutorial
+    // 4. Guardar preferencias numéricas, de moneda y flags en storage
     setEnableDecimals(allowDecimals);
     try {
       localStorage.setItem('app_default_currency', selectedCurrency);
@@ -227,13 +230,64 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
       localStorage.setItem('presu_tutorial_completed', 'true');
       localStorage.setItem('has_completed_tutorial', 'true');
       localStorage.setItem('tutorial_completed', 'true');
+      localStorage.setItem('has_completed_onboarding', 'true');
+      localStorage.setItem('hasCompletedOnboarding', 'true');
+      localStorage.setItem('app_onboarding_completed', 'true');
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
     } catch {}
 
-    // 5. Marcar explícitamente como completado en storage
-    localStorage.setItem('has_completed_onboarding', 'true');
-    localStorage.setItem('hasCompletedOnboarding', 'true');
-    localStorage.setItem('app_onboarding_completed', 'true');
     setHasCompletedOnboarding(null, true);
+
+    // 5. Crear cuenta y actualizar onboarding_completed en Supabase
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          localStorage.setItem(`has_completed_onboarding_${user.id}`, 'true');
+          localStorage.setItem(`hasCompletedOnboarding_${user.id}`, 'true');
+          setHasCompletedOnboarding(user.id, true);
+
+          if (initialAccounts.length > 0) {
+            await supabase.from('accounts').upsert(initialAccounts.map(acc => ({
+              id: acc.id,
+              user_id: user.id,
+              name: acc.name,
+              type: acc.type,
+              currency: acc.currency,
+              balance: acc.balance,
+              initial_balance: acc.initial_balance,
+              icon: acc.icon,
+              color: acc.color,
+              order_index: 0,
+              updated_at: acc.updated_at
+            })), { onConflict: 'id' });
+          }
+
+          // Actualización canónica en Supabase sobre el perfil del usuario autenticado
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              onboarding_completed: true,
+              display_name: finalName,
+              currency: selectedCurrency,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+
+          if (updateError) {
+            await supabase.from('profiles').upsert({
+              id: user.id,
+              onboarding_completed: true,
+              display_name: finalName,
+              currency: selectedCurrency,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' }).catch(() => {});
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error sincronizando cuenta y perfil con Supabase:', err);
+    }
 
     // 6. Notificar a App.jsx para cargar Dashboard
     onComplete({
@@ -286,7 +340,7 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
               Paso {step} de 2
             </span>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              {step === 1 ? 'Preferencias y Seguridad' : 'Cuentas Iniciales'}
+              {step === 1 ? 'Preferencias Iniciales' : 'Cuentas Iniciales'}
             </span>
           </div>
 
@@ -352,14 +406,6 @@ export default function OnboardingWizard({ onComplete, onRestoreBackup }) {
           <WizardStepAccounts
             selectedCurrency={selectedCurrency}
             allowDecimals={allowDecimals}
-            startFromScratch={startFromScratch}
-            setStartFromScratch={setStartFromScratch}
-            cashAmount={cashAmount}
-            setCashAmount={setCashAmount}
-            bankAmount={bankAmount}
-            setBankAmount={setBankAmount}
-            onSetDefaultBalances={handleSetDefaultBalances}
-            onStartFromScratch={handleStartFromScratch}
             onPrevStep={() => setStep(1)}
             onFinishWizard={handleFinishWizard}
           />

@@ -43,7 +43,7 @@ export default function BottomNav({
 
   return (
     <div 
-      className={`fixed bottom-4 inset-x-0 z-40 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom,0px)] ${mobileOnlyClass || className}`}
+      className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-40 flex justify-center px-4 pointer-events-none ${mobileOnlyClass || className}`}
     >
       <nav 
         aria-label="Navegación principal móvil"

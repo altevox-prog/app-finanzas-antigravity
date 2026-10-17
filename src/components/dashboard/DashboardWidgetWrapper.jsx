@@ -10,9 +10,7 @@ export const isWideWidget = (id) => {
   const norm = normalizeWidgetId(id);
   const wideIds = [
     'my_accounts', 'mis_cuentas', 'accounts',
-    'weekly_cashflow', 'pill_bar_chart', 'weekly_cashflow_classic',
     'recent_movements', 'movimientos_recientes', 'recent_transactions',
-    'expenses_category', 'gastos_categoria', 'charts',
     'bento_metrics', 'bento',
     'balance_cards'
   ];
@@ -74,7 +72,7 @@ export default function DashboardWidgetWrapper({
         onDragOver={(e) => onDragOver?.(e, index)}
         onDrop={onDrop}
         className={`relative ${
-          wide ? 'col-span-1 md:col-span-2 lg:col-span-3' : 'col-span-1'
+          wide ? 'col-span-1 lg:col-span-2' : 'col-span-1'
         } w-full select-none touch-none ${transitionClass} ${animationClass} ${
           isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : (isDragging ? '' : 'hover:scale-[1.01]')
         } ${className}`}
@@ -146,7 +144,9 @@ export default function DashboardWidgetWrapper({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
-      className={`w-full touch-pan-y ${className}`}
+      className={`relative ${
+        wide ? 'col-span-1 lg:col-span-2' : 'col-span-1'
+      } w-full h-full flex flex-col touch-pan-y ${className}`}
       style={{
         transform: 'translate3d(0, 0, 0)',
       }}

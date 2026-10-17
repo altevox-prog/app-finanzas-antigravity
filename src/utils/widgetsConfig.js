@@ -22,14 +22,6 @@ export const DEFAULT_WIDGETS_CONFIG = [
     visible: true 
   },
   { 
-    id: 'budget', 
-    label: 'Meta y Presupuesto', 
-    name: 'Meta y Presupuesto', 
-    description: 'Consumo mensual de ingresos y estado del presupuesto', 
-    icon: 'Target', 
-    visible: true 
-  },
-  { 
     id: 'recent_movements', 
     label: 'Últimos movimientos', 
     name: 'Últimos movimientos', 
@@ -109,7 +101,12 @@ export const getStoredWidgetsConfig = () => {
         const rawId = typeof item === 'string' ? item : item.id;
         const normalizedId = normalizeWidgetId(rawId);
         // Descartar widgets ahora anclados estáticamente o depurados
-        if (normalizedId === 'liquid_balance' || normalizedId === 'my_accounts') return null;
+        if (
+          normalizedId === 'liquid_balance' || 
+          normalizedId === 'my_accounts' || 
+          normalizedId === 'budget' || 
+          normalizedId === 'presupuesto_metas'
+        ) return null;
         const def = DEFAULT_WIDGETS_CONFIG.find((d) => d.id === normalizedId);
         if (!def) return null;
 
@@ -146,7 +143,26 @@ export const getStoredWidgetsConfig = () => {
       (def) => !seen.has(def.id)
     );
 
-    return [...dedupedSaved, ...missing];
+    const fullConfig = [...dedupedSaved, ...missing];
+
+    // Garantizar que el bloque analítico de 2 columnas preceda a Movimientos Recientes
+    const expIdx = fullConfig.findIndex(w => w.id === 'expenses_category');
+    const cashIdx = fullConfig.findIndex(w => w.id === 'weekly_cashflow');
+    const recIdx = fullConfig.findIndex(w => w.id === 'recent_movements');
+    if (recIdx !== -1 && (recIdx < expIdx || recIdx < cashIdx)) {
+      const [recItem] = fullConfig.splice(recIdx, 1);
+      const targetIdx = Math.max(
+        fullConfig.findIndex(w => w.id === 'weekly_cashflow'),
+        fullConfig.findIndex(w => w.id === 'expenses_category')
+      );
+      if (targetIdx !== -1) {
+        fullConfig.splice(targetIdx + 1, 0, recItem);
+      } else {
+        fullConfig.push(recItem);
+      }
+    }
+
+    return fullConfig;
   } catch (err) {
     console.error('[Monety] Error leyendo monety_widgets_config:', err);
     return DEFAULT_WIDGETS_CONFIG;

@@ -39,7 +39,7 @@ export default function EditCategoryModal({
               withBadge={true} 
             />
             <div>
-              <h3 className="text-base font-bold">Editar Categoría</h3>
+              <h3 className="text-base font-bold">Editar categoría</h3>
               <p className="text-[11px] opacity-60">Modifica nombre, icono o color</p>
             </div>
           </div>
@@ -142,7 +142,7 @@ export default function EditCategoryModal({
                 className="px-5 py-2 text-xs font-bold bg-[#34C759] hover:bg-emerald-600 text-white rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>Guardar Cambios</span>
+                <span>Guardar cambios</span>
               </button>
             </div>
           </div>

@@ -135,15 +135,15 @@ export default function WeeklyExpensesChart({
 
   return (
     <div
-      className={`bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] p-5 select-none relative ${className}`}
+      className={`h-full flex flex-col justify-between p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] shadow-sm hover:border-emerald-500/40 hover:shadow-sm transition-all select-none relative ${className}`}
     >
       {/* Encabezado del Widget */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3.5">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-50 tracking-tight">
             Actividad de Gastos
           </h3>
-          <p className="text-[11px] font-medium text-slate-500 dark:text-zinc-400">
+          <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
             Egresos por semana · {periodLabel}
           </p>
         </div>
@@ -151,20 +151,19 @@ export default function WeeklyExpensesChart({
         {/* Indicador de valor al interactuar */}
         {hoveredIndex !== null && weeksData[hoveredIndex] && (
           <div className="text-right animate-fadeIn">
-            <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-zinc-500 block">
+            <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block">
               {weeksData[hoveredIndex].label}
             </span>
-            <span className="text-xs font-bold font-mono tabular-nums text-rose-500 dark:text-rose-400">
+            <span className="text-xs font-bold font-mono tabular-nums text-rose-400">
               {formatMoney(weeksData[hoveredIndex].value)}
             </span>
           </div>
         )}
       </div>
 
-      {/* Área del gráfico de barras cilíndricas: Compacto y centrado */}
+      {/* Área del gráfico de barras cilíndricas: Proporcionado armónicamente */}
       <div
-        className="flex items-end justify-center gap-3 sm:gap-4 md:gap-5 max-w-sm sm:max-w-md mx-auto pt-6 sm:pt-8 relative w-full"
-        style={{ height: `${height}px` }}
+        className="flex-1 flex items-end justify-between px-4 py-4 gap-2 sm:gap-3 max-w-sm sm:max-w-md mx-auto relative w-full"
       >
         {weeksData.map((item, idx) => {
           const rawValue = item.value;
@@ -178,42 +177,47 @@ export default function WeeklyExpensesChart({
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={() => setHoveredIndex(idx)}
             >
-              {/* Tooltip flotante individual */}
+              {/* Monto de la semana activa sobre la barra o Tooltip al interactuar */}
               <AnimatePresence>
-                {isHovered && (
+                {isHovered ? (
                   <motion.div
                     initial={{ opacity: 0, y: 4, scale: 0.95 }}
                     animate={{ opacity: 1, y: -10, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute -top-7 z-50 px-2.5 py-1 rounded-lg bg-slate-900/95 dark:bg-zinc-800/95 text-white text-[11px] font-mono tabular-nums whitespace-nowrap shadow-xl border border-white/10 pointer-events-none"
+                    className="absolute -top-7 z-50 px-2.5 py-1 rounded-lg bg-[#1A1E2B] text-rose-300 border border-rose-500/30 text-xs font-semibold font-mono tabular-nums whitespace-nowrap shadow-xl pointer-events-none"
                   >
                     {formatMoney(rawValue)}
                   </motion.div>
-                )}
+                ) : item.active && rawValue > 0 ? (
+                  <div className="absolute -top-7 z-10 px-2.5 py-1 rounded-lg bg-[#1A1E2B] text-rose-300 border border-rose-500/30 text-xs font-semibold font-mono tabular-nums whitespace-nowrap shadow-sm pointer-events-none">
+                    {formatMoney(rawValue)}
+                  </div>
+                ) : null}
               </AnimatePresence>
 
               {/* Cápsula de la barra */}
               <div
                 className={`w-full max-w-[28px] sm:max-w-[32px] h-full flex items-end justify-center rounded-full p-1 transition-all duration-200 ${
                   isHovered
-                    ? 'bg-rose-500/20 ring-2 ring-rose-500/50'
-                    : 'bg-slate-100/90 dark:bg-white/5'
+                    ? 'bg-rose-500/20 ring-2 ring-rose-500/40'
+                    : 'bg-slate-100/90 dark:bg-white/[0.04]'
                 }`}
               >
                 <motion.div
-                  className="w-full rounded-full"
+                  className={`w-full rounded-full transition-colors ${
+                    item.active
+                      ? 'bg-rose-500/80 hover:bg-rose-500'
+                      : isHovered
+                      ? 'bg-rose-500'
+                      : rawValue > 0
+                      ? 'bg-rose-500/35'
+                      : 'bg-transparent'
+                  }`}
                   style={{
                     height: `${item.percentage}%`,
                     transformOrigin: 'bottom',
-                    backgroundColor: isHovered
-                      ? '#F43F5E'
-                      : item.active
-                      ? '#FB7185'
-                      : rawValue > 0
-                      ? '#F43F5E'
-                      : 'transparent',
-                    boxShadow: isHovered && rawValue > 0 ? '0 0 14px rgba(244, 63, 94, 0.5)' : 'none'
+                    boxShadow: (isHovered || item.active) && rawValue > 0 ? 'inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 0 8px rgba(244, 63, 94, 0.25)' : 'none'
                   }}
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
@@ -229,9 +233,11 @@ export default function WeeklyExpensesChart({
               {/* Etiqueta inferior de la semana */}
               <span
                 className={`text-[10px] font-mono mt-2 transition-colors duration-150 ${
-                  isHovered || item.active
-                    ? 'text-rose-500 dark:text-rose-400 font-bold'
-                    : 'text-slate-400 dark:text-zinc-500'
+                  item.active
+                    ? 'text-rose-400 font-bold'
+                    : isHovered
+                    ? 'text-rose-300 font-bold'
+                    : 'text-slate-400 dark:text-slate-500'
                 }`}
               >
                 {item.label}
@@ -239,6 +245,14 @@ export default function WeeklyExpensesChart({
             </div>
           );
         })}
+      </div>
+
+      {/* Pie sutil del widget para simetría de altura con widget vecino */}
+      <div className="pt-2.5 mt-3 border-t border-slate-100/80 dark:border-white/[0.07] flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        <span>Semana en curso ({weeksData.find(w => w.active)?.label || 'Sem 3'})</span>
+        <span className="font-mono tabular-nums text-rose-400 font-semibold">
+          {formatMoney(weeksData.find(w => w.active)?.value || 0)}
+        </span>
       </div>
     </div>
   );

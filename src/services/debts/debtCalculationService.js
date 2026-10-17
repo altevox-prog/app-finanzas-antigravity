@@ -13,7 +13,10 @@ export function calculateItemStats(item, options = {}) {
   const toSafeNum = options.toSafeNumber || defaultToSafeNumber;
   const calcDebtStats = options.calculateDebtStats || defaultCalculateDebtStats;
 
-  const base = toSafeNum(
+  const disbursements = Array.isArray(item.disbursements) ? item.disbursements : [];
+  const totalDisbursed = disbursements.reduce((sum, d) => sum + toSafeNum(d.amount), 0);
+
+  const rawTotal = toSafeNum(
     item.total_amount ?? 
     item.totalAmount ?? 
     item.amount ?? 
@@ -21,6 +24,26 @@ export function calculateItemStats(item, options = {}) {
     item.remaining_amount ?? 
     item.remainingAmount ?? 0
   );
+
+  let initialAmount = toSafeNum(item.initialAmount ?? item.initial_amount);
+  let totalPrincipal = rawTotal;
+
+  if (initialAmount > 0) {
+    totalPrincipal = initialAmount + totalDisbursed;
+  } else if (totalDisbursed > 0) {
+    if (rawTotal > totalDisbursed) {
+      initialAmount = rawTotal - totalDisbursed;
+      totalPrincipal = rawTotal;
+    } else {
+      initialAmount = rawTotal;
+      totalPrincipal = initialAmount + totalDisbursed;
+    }
+  } else {
+    initialAmount = rawTotal;
+    totalPrincipal = rawTotal;
+  }
+
+  const base = totalPrincipal;
   const rate = toSafeNum(item.interestRate);
   const insurance = toSafeNum(item.insuranceFee);
 
@@ -46,19 +69,24 @@ export function calculateItemStats(item, options = {}) {
   const remainingCapital = stats.remainingCapital;
   const remainingInterest = stats.remainingInterest;
   const totalRemaining = remainingCapital + remainingInterest;
-  const outstandingBalance = stats.outstandingBalance;
+  
+  // Saldo Pendiente = Monto Inicial + Total Prestado Adicional - Total Abonado
+  // (incluye intereses acumulados pendientes si aplica)
+  const outstandingBalance = (accruedInterest > 0) ? (remainingCapital + remainingInterest) : remainingCapital;
   const isPaid = stats.isPaid;
 
   const totalInstallments = Math.max(1, toSafeNum(item.installments) || 1);
   const suggestedInstallment = totalToPay / totalInstallments;
-  const progressPercent = (base + accruedInterest) > 0 
-    ? Math.min(100, Math.max(0, Math.round((totalPaid / (base + accruedInterest)) * 100))) 
-    : (base > 0 ? Math.min(100, Math.max(0, Math.round((totalCapitalPaid / base) * 100))) : 100);
+  const progressPercent = totalPrincipal > 0 
+    ? Math.min(100, Math.max(0, Math.round((totalCapitalPaid / totalPrincipal) * 100))) 
+    : (isPaid ? 100 : 0);
 
   return {
     base,
-    principalAmount: base,
-    totalPrincipal: base,
+    initialAmount,
+    totalDisbursed,
+    principalAmount: totalPrincipal,
+    totalPrincipal,
     paidPrincipal: totalCapitalPaid,
     paidInterest: totalInterestPaid,
     totalAccruedInterest: accruedInterest,

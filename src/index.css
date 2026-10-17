@@ -37,40 +37,40 @@ body[data-theme="light"] {
 
 html.dark,
 body[data-theme="dark"] {
-  /* Jerarquía de Superficies Elevadas (Dark Mode) */
-  --surface-base: #09090b;       /* Lienzo / Fondo base (page) zinc-950 */
-  --surface-level1: #18181b;     /* Superficie nivel 1: tarjetas / contenedores zinc-900 */
-  --surface-level2: #27272a;     /* Superficie nivel 2: menús desplegables / modales / drawers zinc-800 */
+  /* Jerarquía de Superficies Elevadas (Dark Mode) - Regla 60-30-10 */
+  --surface-base: #0A0C10;       /* Capa 0 (60%): Lienzo / Fondo base carbón mate */
+  --surface-level1: #12151E;     /* Capa 1 (30%): Superficie nivel 1: paneles, tarjetas */
+  --surface-level2: #181C27;     /* Capa 2: menús desplegables / modales / drawers / hover */
 
-  --bg-app: #09090b;
-  --bg-card: #18181b;
-  --bg-card-sub: #27272a;
-  --bg-input: #27272a;
+  --bg-app: #0A0C10;
+  --bg-card: #12151E;
+  --bg-card-sub: #181C27;
+  --bg-input: #181C27;
   --bg-segmented: rgba(255, 255, 255, 0.05);
-  --bg-segmented-btn-active: #27272a;
+  --bg-segmented-btn-active: #181C27;
 
-  /* Jerarquía de textos en dark mode */
-  --text-main: #f4f4f5;          /* text-zinc-100 (87% de luminosidad) */
-  --text-muted: #a1a1aa;         /* text-zinc-400 (60% de luminosidad) */
-  --text-tertiary: #52525b;      /* text-zinc-600 (38% de luminosidad) */
+  /* Jerarquía de textos en dark mode (Ratio > 4.5:1) */
+  --text-main: #F8FAFC;          /* text.primary (slate-50 / blanco puro) */
+  --text-muted: #94A3B8;         /* text.secondary (slate-400) */
+  --text-tertiary: #64748B;      /* text.muted (slate-500) */
 
   /* Bordes Alpha en lugar de sombras opacas */
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-alpha: rgba(255, 255, 255, 0.08);
-  --header-bg: rgba(9, 9, 11, 0.88);
-  --dock-bg: rgba(24, 24, 27, 0.92);
-  --modal-bg: #27272a;           /* Nivel 2: modales / menús desplegables */
-  --pill-bg: #27272a;
-  --accent-color: #29D691;
-  --brand-primary: #29D691;
-  --brand-primary-text: #09090b;
-  --brand-accent: #29D691;
-  --brand-accent-bg: rgba(41, 214, 145, 0.12);
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-alpha: rgba(255, 255, 255, 0.07);
+  --header-bg: rgba(10, 12, 16, 0.85);
+  --dock-bg: rgba(10, 12, 16, 0.92);
+  --modal-bg: #12151E;           /* Nivel 1/2: modales */
+  --pill-bg: #181C27;
+  --accent-color: #10B981;
+  --brand-primary: #10B981;
+  --brand-primary-text: #0A0C10;
+  --brand-accent: #10B981;
+  --brand-accent-bg: rgba(16, 185, 129, 0.12);
   --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-  --balance-card-bg: linear-gradient(145deg, #18181b 0%, #09090b 100%);
-  --balance-card-border: rgba(255, 255, 255, 0.08);
-  --balance-card-sub-bg: rgba(39, 39, 42, 0.75);
-  --balance-card-text: #f4f4f5;
+  --balance-card-bg: #12151E;
+  --balance-card-border: rgba(255, 255, 255, 0.07);
+  --balance-card-sub-bg: #181C27;
+  --balance-card-text: #F8FAFC;
 }
 
 @layer base {

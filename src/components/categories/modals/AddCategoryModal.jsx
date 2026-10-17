@@ -37,7 +37,7 @@ export default function AddCategoryModal({
               withBadge={true} 
             />
             <div>
-              <h3 className="text-base font-bold">Crear Categoría</h3>
+              <h3 className="text-base font-bold">Crear categoría</h3>
               <p className="text-[11px] opacity-60">Personaliza nombre, icono y color</p>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function AddCategoryModal({
 
           <div>
             <label className="block text-[11px] font-semibold opacity-70 mb-1">
-              Subcategorías Iniciales (separadas por comas, opcional)
+              Subcategorías iniciales (separadas por comas, opcional)
             </label>
             <input
               type="text"
@@ -135,7 +135,7 @@ export default function AddCategoryModal({
               className="px-5 py-2 text-xs font-bold bg-[#34C759] hover:bg-emerald-600 text-white rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>Crear Categoría</span>
+              <span>Crear categoría</span>
             </button>
           </div>
         </form>

@@ -35,8 +35,8 @@ export default function AddRecurringModal({
 
   const [type, setType] = useState('expense'); // 'expense' | 'income'
   const [name, setName] = useState('');
-  const [currency, setCurrency] = useState('COP'); // 'COP' | 'USD' | 'EUR'
-  const [exchangeRate, setExchangeRate] = useState(String(trm || 4000));
+  const currency = 'COP';
+  const exchangeRate = '1';
   const [amount, setAmount] = useState('');
   const [mode, setMode] = useState('auto'); // 'auto' | 'manual'
   const [frequency, setFrequency] = useState('monthly');
@@ -46,7 +46,6 @@ export default function AddRecurringModal({
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [accountId, setAccountId] = useState('');
-  const [note, setNote] = useState('');
 
   // Sincronización, almacenamiento y gestión de categorías mediante custom hook
   const {
@@ -77,8 +76,6 @@ export default function AddRecurringModal({
 
     setType(initialData.type);
     setName(initialData.name);
-    setCurrency(initialData.currency);
-    setExchangeRate(initialData.exchangeRate);
     setAmount(initialData.amount);
     setMode(initialData.mode);
     setFrequency(initialData.frequency);
@@ -88,7 +85,6 @@ export default function AddRecurringModal({
     setCategoryId(initialData.categoryId);
     setSubcategoryId(initialData.subcategoryId);
     setAccountId(initialData.accountId);
-    setNote(initialData.note);
   }, [activeEditing, isOpen, accounts, trm, enableDecimals]);
 
   if (!isOpen) {
@@ -112,8 +108,7 @@ export default function AddRecurringModal({
         billingDayOfWeek,
         categoryId,
         subcategoryId,
-        accountId,
-        note
+        accountId
       },
       {
         activeEditing,
@@ -149,7 +144,7 @@ export default function AddRecurringModal({
             </div>
             <div>
               <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
-                {editingItem ? 'Editar Pago Recurrente' : 'Nuevo Pago Recurrente'}
+                {editingItem ? 'Editar pago recurrente' : 'Nuevo pago recurrente'}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Automatiza o programa avisos de cobro
@@ -171,7 +166,7 @@ export default function AddRecurringModal({
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto scroll-touch p-5 sm:p-6 space-y-4 overscroll-contain">
             
-            {/* 1, 2 y 3. Campos básicos: Tipo, Concepto y Monto con TRM */}
+            {/* 1, 2 y 3. Campos básicos: Tipo, Concepto y Monto en COP */}
             <RecurringBasicFields
               type={type}
               setType={setType}
@@ -180,11 +175,7 @@ export default function AddRecurringModal({
               amount={amount}
               setAmount={setAmount}
               formatCurrencyInput={formatCurrencyInput}
-              currency={currency}
-              setCurrency={setCurrency}
-              exchangeRate={exchangeRate}
-              setExchangeRate={setExchangeRate}
-              trm={trm}
+              currency="COP"
               enableDecimals={enableDecimals}
             />
 
@@ -223,20 +214,6 @@ export default function AddRecurringModal({
               accounts={accounts}
             />
 
-            {/* 8. Nota Opcional */}
-            <div>
-              <label className="block text-[11px] font-semibold opacity-60 mb-1">
-                Nota / Observación (Opcional)
-              </label>
-              <input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Detalle o referencia del pago..."
-                className="w-full px-3.5 py-2.5 rounded-2xl text-xs border border-slate-200/80 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
-              />
-            </div>
-
           </div>
 
           {/* Footer Fijo */}
@@ -252,7 +229,7 @@ export default function AddRecurringModal({
               type="submit"
               className="px-6 py-2.5 rounded-2xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
             >
-              {activeEditing ? 'Guardar Cambios' : 'Crear Pago Recurrente'}
+              {activeEditing ? 'Guardar cambios' : 'Crear pago recurrente'}
             </button>
           </div>
         </form>
