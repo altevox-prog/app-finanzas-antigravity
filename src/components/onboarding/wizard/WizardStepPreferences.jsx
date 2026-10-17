@@ -32,7 +32,7 @@ export default function WizardStepPreferences({
       <div className="flex flex-col items-center justify-center text-center">
         <div className="mx-auto w-16 h-16 rounded-2xl overflow-hidden shadow-md shadow-emerald-500/10 mb-3">
           <img
-            src="/icon-192x192.png"
+            src="/android-chrome-192x192.png"
             alt="Monety"
             className="w-full h-full object-cover block"
             onError={(e) => { e.currentTarget.src = '/logo.png'; }}

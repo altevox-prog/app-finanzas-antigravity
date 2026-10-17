@@ -101,8 +101,8 @@ export function useDebtAlerts({ debtsAndLoans = [], accounts = [], onNavigateToD
                       title: alert.title || 'Recordatorio',
                       options: {
                         body: alert.message || '',
-                        icon: '/icon-192x192.png',
-                        badge: '/icon-192x192.png',
+                        icon: '/android-chrome-192x192.png',
+                        badge: '/android-chrome-192x192.png',
                         tag: alert.id
                       }
                     });
@@ -116,7 +116,7 @@ export function useDebtAlerts({ debtsAndLoans = [], accounts = [], onNavigateToD
                   try {
                     new Notification(alert.title || 'Recordatorio', {
                       body: alert.message || '',
-                      icon: '/icon-192x192.png'
+                      icon: '/android-chrome-192x192.png'
                     });
                   } catch (directErr) {
                     console.warn('Constructor Notification no disponible directamente:', directErr);

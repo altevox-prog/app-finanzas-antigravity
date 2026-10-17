@@ -32,7 +32,7 @@ export default function AppLogo({
     >
       <div className={`${currentSize.box} shrink-0 overflow-hidden shadow-sm flex items-center justify-center transition-transform hover:scale-105 ${iconClassName}`}>
         <img
-          src="/icon-192x192.png"
+          src="/android-chrome-192x192.png"
           alt="Monety"
           className={`${currentSize.img} object-cover block`}
           onError={(e) => {
