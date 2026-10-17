@@ -1,10 +1,10 @@
 import React from 'react';
 import { 
   Activity, 
-  ArrowUpRight, 
-  ArrowDownRight,
+  ArrowUpRight,
   Inbox
 } from 'lucide-react';
+import CategoryIcon from '../categories/components/CategoryIcon';
 
 /**
  * RecentMovementsSection
@@ -107,22 +107,14 @@ export default function RecentMovementsSection({
                     className="flex items-center justify-between py-2.5 px-3 border-b border-slate-100 dark:border-white/[0.04] last:border-b-0 hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors rounded-xl group/item"
                   >
                     <div className="flex items-center gap-3 min-w-0 pr-2">
-                      <div
-                        className={`w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center shrink-0 ${
-                          isExpense
-                            ? 'text-rose-500 dark:text-rose-400'
-                            : isIncome
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-slate-500 dark:text-slate-400'
-                        }`}
-                      >
-                        {isExpense ? (
-                          <ArrowUpRight className="w-4 h-4" />
-                        ) : isIncome ? (
-                          <ArrowDownRight className="w-4 h-4" />
-                        ) : (
-                          <Activity className="w-4 h-4" />
-                        )}
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-white/10 shadow-xs">
+                        <CategoryIcon
+                          category={tx?.categoryName || tx?.category || tx?.category_id}
+                          icon={tx?.category?.icon || tx?.icon}
+                          status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
+                          size={16}
+                          withBadge={false}
+                        />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate group-hover/item:text-emerald-500 transition-colors">
