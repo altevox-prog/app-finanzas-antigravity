@@ -432,16 +432,16 @@ export default function TopAppBar({
     </header>
 
       {/* ============================================================== */}
-      {/* DRAWER / MODAL DE NOTIFICACIONES                               */}
+      {/* TARJETA FLOTANTE / MODAL DE NOTIFICACIONES                     */}
       {/* ============================================================== */}
       {isNotificationsOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-start sm:items-center justify-center sm:justify-end sm:p-6 z-50 animate-fadeIn"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 z-50 animate-fadeIn"
           onClick={() => setIsNotificationsOpen(false)}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="w-full sm:w-[420px] rounded-b-3xl sm:rounded-3xl shadow-2xl border flex flex-col max-h-[85vh] overflow-hidden animate-slide-up bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white"
+            className="w-full max-w-sm sm:max-w-[420px] rounded-3xl shadow-2xl border flex flex-col max-h-[85vh] overflow-hidden animate-slide-up bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white"
           >
             {/* Header del Modal */}
             <div className="p-4 sm:p-5 border-b border-slate-200/60 dark:border-white/10 flex items-center justify-between shrink-0">

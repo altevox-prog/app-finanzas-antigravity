@@ -85,8 +85,8 @@ export default function WeeklyExpensesChart({
       }
     });
 
-    const maxExp = Math.max(...weeks.map((w) => w.expense), 0);
-    const hasExpense = maxExp > 0;
+    const maxWeeklyExpense = Math.max(...weeks.map((w) => w.expense || 0), 1);
+    const hasExpense = weeks.some((w) => (w.expense || 0) > 0);
 
     const now = new Date();
     const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth();
@@ -96,14 +96,13 @@ export default function WeeklyExpensesChart({
 
     const formatted = weeks.map((w) => {
       const isActive = isCurrentMonth && currentDayNum >= w.start && currentDayNum <= w.end;
-      const rawValue = w.expense;
+      const rawValue = w.expense || 0;
 
-      // CORRECCIÓN DE BUG:
-      // Si no hay transacciones o el valor es 0, la altura es estrictamente 0%.
-      // No se inyectan alturas mock ni se divide por cero.
       let percentage = 0;
       if (hasExpense && rawValue > 0) {
-        percentage = Math.max(Math.round((rawValue / maxExp) * 100), 8);
+        percentage = Math.max(Math.round((rawValue / maxWeeklyExpense) * 100), 12);
+      } else if (hasExpense && rawValue === 0) {
+        percentage = 0;
       }
 
       return {
@@ -117,7 +116,7 @@ export default function WeeklyExpensesChart({
 
     return {
       weeksData: formatted,
-      maxExpense: maxExp,
+      maxExpense: maxWeeklyExpense,
       hasAnyExpense: hasExpense
     };
   }, [monthTransactions, targetYear, targetMonth, selectedDay]);
@@ -161,9 +160,9 @@ export default function WeeklyExpensesChart({
         )}
       </div>
 
-      {/* Área del gráfico de barras cilíndricas: Proporcionado armónicamente */}
+      {/* Área del gráfico de barras cilíndricas: Altura explícita y armónica */}
       <div
-        className="flex-1 flex items-end justify-between px-4 py-4 gap-2 sm:gap-3 max-w-sm sm:max-w-md mx-auto relative w-full"
+        className="h-36 sm:h-40 flex items-end justify-between gap-2 sm:gap-3 px-2 sm:px-4 py-2 max-w-sm sm:max-w-md mx-auto relative w-full"
       >
         {weeksData.map((item, idx) => {
           const rawValue = item.value;

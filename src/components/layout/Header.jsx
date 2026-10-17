@@ -122,15 +122,15 @@ export default function Header({
         </div>
       </div>
 
-      {/* Modal / Drawer Limpio de Notificaciones */}
+      {/* Modal / Tarjeta Flotante Centrada de Notificaciones */}
       {isNotificationsOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-start sm:items-center justify-center sm:justify-end sm:p-6 z-50 animate-fadeIn"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 z-50 animate-fadeIn"
           onClick={() => setIsNotificationsOpen(false)}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="w-full sm:w-[420px] rounded-b-3xl sm:rounded-3xl shadow-2xl border flex flex-col max-h-[85vh] overflow-hidden animate-slide-up"
+            className="w-full max-w-sm sm:max-w-[420px] rounded-3xl shadow-2xl border flex flex-col max-h-[85vh] overflow-hidden animate-slide-up"
             style={{ 
               backgroundColor: 'var(--modal-bg, #0f172a)', 
               borderColor: 'var(--border-color, rgba(255,255,255,0.1))',
