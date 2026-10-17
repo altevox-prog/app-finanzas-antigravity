@@ -54,6 +54,8 @@ export default defineConfig(({ mode }) => ({
       },
       // Solo incluir el manifest en producción
       manifest: mode === 'production' ? {
+        id: '/?v=3',
+        start_url: '/?v=3',
         name: 'Monety - Finanzas Personales',
         short_name: 'Monety',
         description: 'Finanzas personales inteligentes',
@@ -61,9 +63,18 @@ export default defineConfig(({ mode }) => ({
         background_color: '#080E0C',
         display: 'standalone',
         icons: [
-          { src: '/monetyapp 192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/monetyapp 512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/monetyapp 512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          {
+            src: '/monetyapp 192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/monetyapp 512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
         ]
       } : false
     })

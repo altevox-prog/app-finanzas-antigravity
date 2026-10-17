@@ -1,4 +1,5 @@
 {
+  "id": "/?v=3",
   "short_name": "Monety",
   "name": "Monety - Finanzas Personales",
   "icons": [
@@ -6,25 +7,20 @@
       "src": "/monetyapp 192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/monetyapp 512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/monetyapp 512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": "/?v=3",
   "background_color": "#000000",
   "theme_color": "#000000",
   "display": "standalone",
   "orientation": "portrait",
   "scope": "/"
 }
+
