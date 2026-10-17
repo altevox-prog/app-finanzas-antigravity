@@ -138,12 +138,6 @@ export default function ProfileSystemTab({
         </div>
 
         <UpdateAppButton />
-
-        <div className="px-1 text-center">
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium tabular-nums">
-            Monety v1.0.0 (Producción PWA)
-          </span>
-        </div>
       </div>
 
       {/* 4. Zona de peligro: restablecer datos */}
