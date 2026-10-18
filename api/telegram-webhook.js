@@ -45,11 +45,13 @@ async function sendTelegramMessage(chatId, text) {
       body: JSON.stringify({
         chat_id: chatId,
         text,
+        parse_mode: 'Markdown'
       })
     });
+    const resData = await res.json().catch(() => null);
+    console.log('[DEBUG-6] Respuesta API Telegram status:', res.status, 'body:', JSON.stringify(resData));
     if (!res.ok) {
-      const errText = await res.text();
-      console.error('[telegram-webhook] Error de API Telegram:', res.status, errText);
+      console.error('[telegram-webhook] Error de API Telegram:', res.status, JSON.stringify(resData));
     }
   } catch (err) {
     console.error('[telegram-webhook] Fallo al invocar Telegram API:', err);
@@ -226,16 +228,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
+  console.log('[DEBUG-1] Webhook recibido:', JSON.stringify(req.body));
+
   try {
     const body = req.body || {};
     const message = body.message || body.channel_post || body.edited_message;
 
     // Si no hay payload de mensaje válido, responder 200 OK para evitar reintentos de Telegram
     if (!message || !message.chat) {
+      console.log('[DEBUG-1.1] No hay payload de mensaje válido en el body recibido.');
       return res.status(200).json({ ok: true, reason: 'no_message_payload' });
     }
 
     const chatId = message.chat.id;
+    console.log('[DEBUG-2] ChatId procesado:', chatId);
+
     const rawText = (message.text || message.caption || '').trim();
 
     // Filtro de Seguridad: validar ID de Chat autorizado si está configurado
@@ -253,12 +260,14 @@ export default async function handler(req, res) {
     }
 
     if (!rawText) {
+      console.log('[DEBUG-2.1] Mensaje con texto vacío recibido.');
       return res.status(200).json({ ok: true, reason: 'empty_text' });
     }
 
     // Extraer monto
     const { amount, matchedStr } = extractAmount(rawText);
     if (!amount || amount <= 0) {
+      console.log('[DEBUG-2.2] No se pudo identificar el monto en el texto:', rawText);
       const helpMsg = `⚠️ No pude identificar el monto en tu mensaje: "${rawText}".\n\nPor favor incluye el valor numérico, por ejemplo:\n*Almuerzo 25000 efectivo*`;
       await sendTelegramMessage(chatId, helpMsg);
       return res.status(200).json({ ok: true, reason: 'amount_not_found' });
@@ -274,6 +283,8 @@ export default async function handler(req, res) {
       await sendTelegramMessage(chatId, `❌ Error de configuración en el servidor: no se encontró el ID de usuario asociado.`);
       return res.status(200).json({ ok: true, error: 'missing_user_id' });
     }
+
+    console.log('[DEBUG-3] Intentando consultar Supabase con userId:', userId);
 
     // Consultar cuentas disponibles del usuario en Supabase
     const { data: accounts, error: accError } = await supabase
@@ -317,6 +328,8 @@ export default async function handler(req, res) {
       .from('transactions')
       .insert([transactionPayload]);
 
+    console.log('[DEBUG-4] Resultado insert Supabase. Error:', insertError ? insertError.message : 'Ninguno');
+
     if (insertError) {
       console.error('[telegram-webhook] Error al insertar en transactions:', insertError);
       await sendTelegramMessage(chatId, `❌ No se pudo guardar la transacción en tu base de datos: ${insertError.message}`);
@@ -327,6 +340,8 @@ export default async function handler(req, res) {
     const formattedAmount = Number(amount).toLocaleString('es-CO');
     const tipoLabel = movementType === 'income' ? 'Ingreso' : 'Gasto';
     const confirmMessage = `✅ *${tipoLabel} registrado exitosamente*\n\n💰 *Monto:* $${formattedAmount}\n🏷️ *Categoría:* ${category}\n🏦 *Cuenta:* ${accountName}\n📝 *Concepto:* ${description}`;
+
+    console.log('[DEBUG-5] Llamando a sendTelegramMessage con texto:', confirmMessage);
 
     await sendTelegramMessage(chatId, confirmMessage);
 
