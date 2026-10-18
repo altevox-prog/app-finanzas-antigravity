@@ -313,40 +313,39 @@ export default async function handler(req, res) {
     const movementType = extractType(rawText);
     const category = extractCategory(rawText, movementType);
 
-    // Limpieza quirúrgica de la descripción
-    let cleanConceptText = (concept || rawText || '').trim();
+    // Limpieza por tokenización directa
+    let baseText = (concept || rawText || '').trim();
 
-    // 1. Quitar el monto capturado si aún está
+    // 1. Quitar el monto si sigue presente
     if (typeof matchedRaw !== 'undefined' && matchedRaw) {
-      cleanConceptText = cleanConceptText.replace(matchedRaw, '');
+      baseText = baseText.replace(matchedRaw, '');
     }
 
-    // 2. Lista de palabras a remover
-    const wordsToRemove = [
+    // 2. Set de palabras prohibidas en minúsculas
+    const stopWords = new Set([
       'efectivo', 'cash', 'plata',
       'nequi', 'daviplata', 'davi',
       'bancolombia', 'banco',
-      'tarjeta', 'debito', 'débito', 'credito', 'crédito'
-    ];
+      'tarjeta', 'debito', 'crédito', 'credito',
+      'en', 'con', 'por', 'del', 'de'
+    ]);
 
     if (accountName && accountName.toLowerCase() !== 'sin cuenta asignada') {
-      wordsToRemove.push(accountName.toLowerCase().trim());
+      accountName.toLowerCase().split(/\s+/).forEach(w => stopWords.add(w.trim()));
     }
 
-    // 3. Remover conectores y nombres de cuenta
-    for (const term of wordsToRemove) {
-      if (!term) continue;
-      // Quita "en efectivo", "por nequi", "con tarjeta" o solo el término "efectivo"
-      const looseRegex = new RegExp('(?:^|\\s+)(?:en|con|por|de|a|del)?\\s*' + term + '(?=$|\\s+)', 'gi');
-      cleanConceptText = cleanConceptText.replace(looseRegex, ' ');
-    }
+    // 3. Separar por palabras, filtrar y reconstruir
+    const cleanTokens = baseText
+      .split(/\s+/)
+      .filter(word => {
+        const cleanWord = word.toLowerCase().replace(/[^a-záéíóúüñ]/gi, '');
+        return !stopWords.has(cleanWord);
+      });
 
-    // 4. Limpiar espacios extra
-    cleanConceptText = cleanConceptText.replace(/\s+/g, ' ').trim();
+    const finalConcept = cleanTokens.join(' ').trim();
 
-    // 5. Fallback y formato
-    const description = cleanConceptText.length > 0
-      ? cleanConceptText.charAt(0).toUpperCase() + cleanConceptText.slice(1)
+    const description = finalConcept.length > 0
+      ? finalConcept.charAt(0).toUpperCase() + finalConcept.slice(1)
       : 'Gasto general';
 
     const nowIso = new Date().toISOString();
