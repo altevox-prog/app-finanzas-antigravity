@@ -98,7 +98,7 @@ const CATEGORY_KEYWORDS = [
 function parseAmountAndConcept(rawText) {
   let text = (rawText || '').trim();
 
-  // Detecta montos como: $25.000, 25.000, 25000, 25,000, 25k, $25k
+  // Detectar montos: $25.000, 25.000, 25000, 25,000, 25k, $25k
   const amountRegex = /(?:\$?\s*)(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?|\d+(?:[.,]\d{1,2})?|\d+\s*[kK])(?!\w)/;
   const match = text.match(amountRegex);
 
@@ -113,12 +113,10 @@ function parseAmountAndConcept(rawText) {
       cleanNum = cleanNum.replace('k', '');
       amount = parseFloat(cleanNum.replace(',', '.')) * 1000;
     } else if (cleanNum.includes('.') && cleanNum.includes(',')) {
-      // Formato tipo 1.500,50
       cleanNum = cleanNum.replace(/\./g, '').replace(',', '.');
       amount = parseFloat(cleanNum);
     } else if (cleanNum.includes('.')) {
       const parts = cleanNum.split('.');
-      // Si tiene exactamente 3 dígitos tras el punto, es separador de miles (ej. 25.000)
       if (parts[parts.length - 1].length === 3) {
         cleanNum = cleanNum.replace(/\./g, '');
       }
@@ -136,10 +134,13 @@ function parseAmountAndConcept(rawText) {
     }
   }
 
-  // Limpiar concepto: remover el bloque del monto completo y caracteres de cuenta/palabras clave
-  let concept = text.replace(matchedRaw, '').trim();
+  // 1. Quitar el monto del texto
+  let concept = text;
+  if (matchedRaw) {
+    concept = concept.replace(matchedRaw, '');
+  }
 
-  // Lista de cuentas y alias a remover del texto del concepto
+  // 2. Quitar métodos de pago y preposiciones ("en efectivo", "por nequi", "con tarjeta", "efectivo")
   const paymentWords = [
     'efectivo', 'cash', 'plata',
     'nequi', 'daviplata', 'davi',
@@ -148,20 +149,20 @@ function parseAmountAndConcept(rawText) {
   ];
 
   for (const word of paymentWords) {
-    // Remueve la palabra precedida opcionalmente de preposiciones (ej: "en efectivo", "por nequi", "con tarjeta")
-    const pattern = new RegExp(`\\b(en|con|por|de|a|del)?\\s*${word}\\b`, 'gi');
-    concept = concept.replace(pattern, '');
+    const reg = new RegExp(`\\b(?:en|con|por|de|a|del)?\\s*${word}\\b`, 'gi');
+    concept = concept.replace(reg, '');
   }
 
-  // Limpiar espacios en blanco dobles y extremos
+  // 3. Limpiar espacios redundantes
   concept = concept.replace(/\s+/g, ' ').trim();
 
-  // Si el concepto quedó vacío, asignar valor por defecto
   if (!concept) {
     concept = 'Gasto general';
+  } else {
+    concept = concept.charAt(0).toUpperCase() + concept.slice(1);
   }
 
-  return { amount: isNaN(amount) ? 0 : amount, concept, matchedRaw };
+  return { amount: isNaN(amount) ? 0 : amount, concept };
 }
 
 // Extractor de tipo (income vs expense)
