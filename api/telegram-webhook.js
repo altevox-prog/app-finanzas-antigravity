@@ -2,25 +2,18 @@ import { createClient } from '@supabase/supabase-js';
 
 // Inicializar cliente administrativo de Supabase con Service Role Key
 function getSupabaseClient() {
-  const rawUrl =
+  const supabaseUrl = (
     process.env.SUPABASE_URL ||
     process.env.VITE_SUPABASE_URL ||
-    'https://lhgzfheamjrkvavpdgns.supabase.co';
+    'https://lhgzfheamjrkvavpdgns.supabase.co'
+  ).replace(/[\[\]\(\)"';\s]/g, '').trim();
 
-  const supabaseUrl = String(rawUrl)
-    .replace(/[\[\]\(\)'"]/g, '')
-    .trim()
-    .replace(/\/+$/, '');
-
-  const rawKey =
+  const supabaseKey = (
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY ||
-    '';
-
-  const supabaseServiceKey = String(rawKey)
-    .replace(/[\[\]\(\)'"]/g, '')
-    .trim();
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoZ3pmaGVhbWpya3ZhdnBkZ25zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0NDA0OTMsImV4cCI6MjEwNjAxNjQ5M30.BrtrKMQ_mUkKSU1mDj8ZDWGlX_Qp1wLUMxQJuX871h4'
+  ).replace(/[\[\]\(\)"';\s]/g, '').trim();
 
   if (!supabaseUrl.startsWith('http://') && !supabaseUrl.startsWith('https://')) {
     throw new Error(`supabaseUrl mal formada: ${supabaseUrl}`);
@@ -28,7 +21,7 @@ function getSupabaseClient() {
 
   console.log('[telegram-webhook] Usando supabaseUrl:', supabaseUrl);
 
-  return createClient(supabaseUrl, supabaseServiceKey, {
+  return createClient(supabaseUrl, supabaseKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -176,12 +169,11 @@ function extractCategory(text, type) {
 // Resolución de cuenta según cuentas activas del usuario
 function resolveAccount(text, accounts = []) {
   if (!accounts || accounts.length === 0) {
-    return { accountId: null, accountName: 'Sin cuenta asignada' };
+    return { accountId: null, accountName: 'Efectivo' };
   }
 
   const lower = text.toLowerCase();
 
-  // Buscar coincidencia exacta o por subcadena del nombre de la cuenta
   for (const acc of accounts) {
     const accName = (acc.name || '').trim().toLowerCase();
     if (accName && lower.includes(accName)) {
@@ -189,13 +181,12 @@ function resolveAccount(text, accounts = []) {
     }
   }
 
-  // Comprobar alias comunes (ej. Bancolombia, Nequi, Daviplata, Efectivo)
   const commonAliases = [
     { alias: 'nequi', match: ['nequi'] },
     { alias: 'daviplata', match: ['daviplata', 'davi'] },
     { alias: 'bancolombia', match: ['bancolombia', 'banco'] },
     { alias: 'efectivo', match: ['efectivo', 'cash', 'plata'] },
-    { alias: 'tarjeta', match: ['tarjeta', 'credito', 'crédito', 'debito', 'débito'] }
+    { alias: 'tarjeta', match: ['tarjeta', 'credito', 'debito'] }
   ];
 
   for (const item of commonAliases) {
@@ -207,9 +198,12 @@ function resolveAccount(text, accounts = []) {
     }
   }
 
-  // Fallback: usar la primera cuenta disponible
   const defaultAcc = accounts[0];
-  return { accountId: defaultAcc.id, accountName: defaultAcc.name };
+  if (defaultAcc) {
+    return { accountId: defaultAcc.id, accountName: defaultAcc.name };
+  }
+
+  return { accountId: null, accountName: 'Efectivo' };
 }
 
 // Limpiador para generar un concepto/descripción limpio
