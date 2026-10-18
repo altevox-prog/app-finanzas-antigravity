@@ -94,53 +94,62 @@ const CATEGORY_KEYWORDS = [
   }
 ];
 
-// Extractor de monto numérico
-function extractAmount(text) {
-  // Coincide con números con posibles puntos/comas de miles o decimales precedidos o no por $
-  // Ejemplos: $25.000, 25000, 150,000, 50.50, $150000
-  const matches = text.match(/(?:\$\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?|\d+)/g);
-  if (!matches) return { amount: 0, matchedStr: '' };
+// Parser robusto de monto y concepto
+function parseAmountAndConcept(rawText) {
+  let text = (rawText || '').trim();
 
-  for (const match of matches) {
-    const rawNum = match.replace(/[^\d.,]/g, '');
-    if (!rawNum) continue;
+  // Detecta montos como: $25.000, 25.000, 25000, 25,000, 25k, $25k
+  const amountRegex = /(?:\$?\s*)(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?|\d+(?:[.,]\d{1,2})?|\d+\s*[kK])(?!\w)/;
+  const match = text.match(amountRegex);
 
-    let cleanNum = 0;
-    // Si tiene comas y puntos (ej. 1.250,50 o 1,250.50)
-    if (rawNum.includes('.') && rawNum.includes(',')) {
-      if (rawNum.lastIndexOf(',') > rawNum.lastIndexOf('.')) {
-        // Formato europeo/latino: 1.250,50
-        cleanNum = parseFloat(rawNum.replace(/\./g, '').replace(',', '.'));
-      } else {
-        // Formato estándar: 1,250.50
-        cleanNum = parseFloat(rawNum.replace(/,/g, ''));
-      }
-    } else if (rawNum.includes('.')) {
-      // Si tiene solo puntos: puede ser 25.000 (miles) o 25.50 (decimales)
-      const parts = rawNum.split('.');
+  let amount = 0;
+  let matchedRaw = '';
+
+  if (match) {
+    matchedRaw = match[0];
+    let cleanNum = match[1].toLowerCase().replace(/\s+/g, '');
+
+    if (cleanNum.endsWith('k')) {
+      cleanNum = cleanNum.replace('k', '');
+      amount = parseFloat(cleanNum.replace(',', '.')) * 1000;
+    } else if (cleanNum.includes('.') && cleanNum.includes(',')) {
+      // Formato tipo 1.500,50
+      cleanNum = cleanNum.replace(/\./g, '').replace(',', '.');
+      amount = parseFloat(cleanNum);
+    } else if (cleanNum.includes('.')) {
+      const parts = cleanNum.split('.');
+      // Si tiene exactamente 3 dígitos tras el punto, es separador de miles (ej. 25.000)
       if (parts[parts.length - 1].length === 3) {
-        cleanNum = parseFloat(rawNum.replace(/\./g, ''));
-      } else {
-        cleanNum = parseFloat(rawNum);
+        cleanNum = cleanNum.replace(/\./g, '');
       }
-    } else if (rawNum.includes(',')) {
-      // Si tiene solo comas: puede ser 25,000 (miles) o 25,50 (decimales)
-      const parts = rawNum.split(',');
+      amount = parseFloat(cleanNum);
+    } else if (cleanNum.includes(',')) {
+      const parts = cleanNum.split(',');
       if (parts[parts.length - 1].length === 3) {
-        cleanNum = parseFloat(rawNum.replace(/,/g, ''));
+        cleanNum = cleanNum.replace(/,/g, '');
       } else {
-        cleanNum = parseFloat(rawNum.replace(',', '.'));
+        cleanNum = cleanNum.replace(',', '.');
       }
+      amount = parseFloat(cleanNum);
     } else {
-      cleanNum = parseFloat(rawNum);
-    }
-
-    if (!isNaN(cleanNum) && cleanNum > 0) {
-      return { amount: cleanNum, matchedStr: match };
+      amount = parseFloat(cleanNum);
     }
   }
 
-  return { amount: 0, matchedStr: '' };
+  // Limpiar concepto: remover el bloque del monto completo y caracteres de cuenta/palabras clave
+  let concept = text.replace(matchedRaw, '').trim();
+
+  // Remover la palabra de la cuenta si está presente al final o inicio
+  const accountKeywords = ['efectivo', 'cash', 'nequi', 'daviplata', 'bancolombia', 'tarjeta'];
+  for (const kw of accountKeywords) {
+    const reg = new RegExp(`\\b${kw}\\b`, 'gi');
+    concept = concept.replace(reg, '');
+  }
+
+  concept = concept.replace(/\s+/g, ' ').trim();
+  if (!concept) concept = 'Gasto general';
+
+  return { amount: isNaN(amount) ? 0 : amount, concept, matchedRaw };
 }
 
 // Extractor de tipo (income vs expense)
@@ -208,16 +217,6 @@ function resolveAccount(text, accounts = []) {
   return { accountId: null, accountName: 'Efectivo' };
 }
 
-// Limpiador para generar un concepto/descripción limpio
-function cleanDescription(text, matchedAmountStr) {
-  let cleaned = text;
-  if (matchedAmountStr) {
-    cleaned = cleaned.replace(matchedAmountStr, '');
-  }
-  cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  return cleaned || 'Movimiento vía Telegram';
-}
-
 /**
  * Handler principal para Vercel Serverless
  */
@@ -264,11 +263,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, reason: 'empty_text' });
     }
 
-    // Extraer monto
-    const { amount, matchedStr } = extractAmount(rawText);
+    // Extraer monto y concepto de forma robusta
+    const { amount, concept } = parseAmountAndConcept(rawText);
     if (!amount || amount <= 0) {
       console.log('[DEBUG-2.2] No se pudo identificar el monto en el texto:', rawText);
-      const helpMsg = `⚠️ No pude identificar el monto en tu mensaje: "${rawText}".\n\nPor favor incluye el valor numérico, por ejemplo:\n*Almuerzo 25000 efectivo*`;
+      const helpMsg = `⚠️ No pude identificar el monto en tu mensaje: "${rawText}".\n\nPor favor incluye el valor numérico, por ejemplo:\n*Almuerzo 25.000 efectivo* o *Almuerzo 25k*`;
       await sendTelegramMessage(chatId, helpMsg);
       return res.status(200).json({ ok: true, reason: 'amount_not_found' });
     }
@@ -300,7 +299,7 @@ export default async function handler(req, res) {
     const { accountId, accountName } = resolveAccount(rawText, accounts || []);
     const movementType = extractType(rawText);
     const category = extractCategory(rawText, movementType);
-    const description = cleanDescription(rawText, matchedStr);
+    const description = concept || 'Movimiento vía Telegram';
     const nowIso = new Date().toISOString();
 
     // Generar UUID de la transacción
