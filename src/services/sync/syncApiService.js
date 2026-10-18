@@ -168,6 +168,32 @@ export async function upsertWithFallback(table, payload, options = {}) {
     }
   }
 
+  // Manejo defensivo de error de clave foránea (FK 23503 / 409: Key is not present in table "accounts")
+  const isForeignKeyError = res.error && (
+    res.error.code === '23503' ||
+    res.error.status === 409 ||
+    res.error.message?.includes('Key is not present in table') ||
+    res.error.details?.includes('Key is not present in table') ||
+    res.error.details?.includes('foreign key') ||
+    res.error.message?.includes('foreign key')
+  );
+
+  if (isForeignKeyError && Array.isArray(payload)) {
+    const hasAccountIdField = payload.some(item => item && ('account_id' in item || 'accountId' in item));
+    if (hasAccountIdField) {
+      console.warn(`[syncApiService] ${table} falló por clave foránea (23503/409). Reintentando con account_id: null...`);
+      const sanitizedFkPayload = payload.map(item => ({
+        ...item,
+        account_id: null
+      }));
+
+      res = await supabase.from(table).upsert(sanitizedFkPayload, { onConflict: primaryConflict });
+      if (res.error && (res.error.code === '42P10' || res.error.message?.includes('ON CONFLICT') || res.error.message?.includes('on_conflict'))) {
+        res = await supabase.from(table).upsert(sanitizedFkPayload, { onConflict: secondaryConflict });
+      }
+    }
+  }
+
   if (res.error) {
     console.error(`[syncApiService] Error en ${table} upsert:`, {
       message: res.error.message,

@@ -17,7 +17,16 @@ export function PrivacyProvider({ children }) {
 
   const [enableDecimals, setEnableDecimalsState] = useState(() => {
     try {
-      return localStorage.getItem('app_enable_decimals') === 'true';
+      if (localStorage.getItem('app_enable_decimals') !== null) {
+        return localStorage.getItem('app_enable_decimals') === 'true';
+      }
+      const userSettingsRaw = localStorage.getItem('user_settings');
+      if (userSettingsRaw) {
+        const parsed = JSON.parse(userSettingsRaw);
+        const val = parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals;
+        if (val !== undefined && val !== null) return Boolean(val);
+      }
+      return false;
     } catch {
       return false;
     }
@@ -84,6 +93,13 @@ export function PrivacyProvider({ children }) {
       const next = !prev;
       try {
         localStorage.setItem('app_enable_decimals', String(next));
+        const userSettingsRaw = localStorage.getItem('user_settings');
+        const current = userSettingsRaw ? JSON.parse(userSettingsRaw) : {};
+        current.enable_decimals = next;
+        current.enableDecimals = next;
+        current.showDecimals = next;
+        current.allowDecimals = next;
+        localStorage.setItem('user_settings', JSON.stringify(current));
       } catch {}
       window.dispatchEvent(new CustomEvent('app_decimals_changed', { detail: { enableDecimals: next } }));
       return next;
@@ -95,6 +111,13 @@ export function PrivacyProvider({ children }) {
     setEnableDecimalsState(next);
     try {
       localStorage.setItem('app_enable_decimals', String(next));
+      const userSettingsRaw = localStorage.getItem('user_settings');
+      const current = userSettingsRaw ? JSON.parse(userSettingsRaw) : {};
+      current.enable_decimals = next;
+      current.enableDecimals = next;
+      current.showDecimals = next;
+      current.allowDecimals = next;
+      localStorage.setItem('user_settings', JSON.stringify(current));
     } catch {}
     window.dispatchEvent(new CustomEvent('app_decimals_changed', { detail: { enableDecimals: next } }));
   };
@@ -129,6 +152,20 @@ export function PrivacyProvider({ children }) {
   };
 
   const formatMoney = (amount, currency = 'COP') => {
+    if (currency === 'EUR') {
+      if (isPrivacyMode) {
+        const num = Number(amount) || 0;
+        return num < 0 ? '-€ ••••••' : '€ ••••••';
+      }
+      const num = Number(amount) || 0;
+      const isNeg = num < 0;
+      const absNum = Math.abs(num);
+      if (!enableDecimals) {
+        const rounded = Math.round(absNum);
+        return `${isNeg ? '-' : ''}€ ${rounded.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+      }
+      return `${isNeg ? '-' : ''}€ ${absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
     if (currency === 'USD') {
       return baseFormatUSD(amount, isPrivacyMode, enableDecimals);
     }

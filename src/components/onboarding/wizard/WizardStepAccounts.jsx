@@ -17,7 +17,7 @@ const ACCOUNT_TYPES = [
 
 export default function WizardStepAccounts({
   selectedCurrency = 'COP',
-  allowDecimals = false,
+  allowDecimals = true,
   onPrevStep,
   onFinishWizard
 }) {
@@ -131,10 +131,10 @@ export default function WizardStepAccounts({
             </span>
             <input
               type="text"
-              inputMode="numeric"
+              inputMode="decimal"
               placeholder="$ 0"
               value={accountBalance}
-              onChange={(e) => setAccountBalance(formatCurrencyInput(e.target.value, allowDecimals))}
+              onChange={(e) => setAccountBalance(formatCurrencyInput(e.target.value, true))}
               className="w-full h-11 pl-8 pr-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-slate-400 font-mono"
             />
           </div>

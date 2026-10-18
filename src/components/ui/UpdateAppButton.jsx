@@ -47,47 +47,50 @@ export default function UpdateAppButton() {
   const isLoading = isChecking || isUpdating;
 
   return (
-    <div className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 my-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-col text-left min-w-0 flex-1">
-          <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">
-            Versión de la aplicación
+    <div className="w-full p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
+          <RefreshCw className="w-4.5 h-4.5" />
+        </div>
+        <div className="flex flex-col text-left min-w-0">
+          <span className="font-semibold text-sm text-slate-900 dark:text-zinc-100 whitespace-nowrap">
+            Monety
           </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-            {feedbackMsg || `Monety v${APP_VERSION} (Producción)`}
+          <span className="text-xs text-slate-500 dark:text-zinc-400 whitespace-nowrap mt-0.5">
+            {feedbackMsg || `v${APP_VERSION}`}
           </span>
         </div>
-
-        <button
-          type="button"
-          onClick={handleCheckOrUpdate}
-          disabled={isLoading}
-          className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm transition-all shrink-0 active:scale-95 text-white cursor-pointer ${
-            isUpToDate
-              ? 'bg-emerald-600'
-              : isUpdating
-              ? 'bg-indigo-600 animate-pulse'
-              : isChecking
-              ? 'bg-slate-700 opacity-90'
-              : 'bg-emerald-600 hover:bg-emerald-700'
-          } ${isLoading ? 'cursor-not-allowed opacity-90' : ''}`}
-        >
-          {isUpToDate ? (
-            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-          ) : (
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          )}
-          <span>
-            {isUpdating
-              ? 'Actualizando...'
-              : isChecking
-              ? 'Buscando versión...'
-              : isUpToDate
-              ? 'Al día'
-              : 'Buscar actualización'}
-          </span>
-        </button>
       </div>
+
+      <button
+        type="button"
+        onClick={handleCheckOrUpdate}
+        disabled={isLoading}
+        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap shadow-sm transition-all shrink-0 active:scale-95 text-white cursor-pointer ${
+          isUpToDate
+            ? 'bg-emerald-600'
+            : isUpdating
+            ? 'bg-indigo-600 animate-pulse'
+            : isChecking
+            ? 'bg-slate-700 opacity-90'
+            : 'bg-emerald-600 hover:bg-emerald-700'
+        } ${isLoading ? 'cursor-not-allowed opacity-90' : ''}`}
+      >
+        {isUpToDate ? (
+          <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+        ) : (
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+        )}
+        <span>
+          {isUpdating
+            ? 'Actualizando...'
+            : isChecking
+            ? 'Buscando...'
+            : isUpToDate
+            ? 'Al día'
+            : 'Actualizar'}
+        </span>
+      </button>
     </div>
   );
 }

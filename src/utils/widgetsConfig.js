@@ -144,24 +144,6 @@ export const getStoredWidgetsConfig = () => {
     );
 
     const fullConfig = [...dedupedSaved, ...missing];
-
-    // Garantizar que el bloque analítico de 2 columnas preceda a Movimientos Recientes
-    const expIdx = fullConfig.findIndex(w => w.id === 'expenses_category');
-    const cashIdx = fullConfig.findIndex(w => w.id === 'weekly_cashflow');
-    const recIdx = fullConfig.findIndex(w => w.id === 'recent_movements');
-    if (recIdx !== -1 && (recIdx < expIdx || recIdx < cashIdx)) {
-      const [recItem] = fullConfig.splice(recIdx, 1);
-      const targetIdx = Math.max(
-        fullConfig.findIndex(w => w.id === 'weekly_cashflow'),
-        fullConfig.findIndex(w => w.id === 'expenses_category')
-      );
-      if (targetIdx !== -1) {
-        fullConfig.splice(targetIdx + 1, 0, recItem);
-      } else {
-        fullConfig.push(recItem);
-      }
-    }
-
     return fullConfig;
   } catch (err) {
     console.error('[Monety] Error leyendo monety_widgets_config:', err);
@@ -186,6 +168,17 @@ export const saveStoredWidgetsConfig = async (config, userId = null) => {
     localStorage.setItem(WIDGETS_CONFIG_STORAGE_KEY, str);
     localStorage.setItem('presu_widget_order', str);
     localStorage.setItem('presu_dashboard_widgets_v1', str);
+
+    // Sincronizar dentro del objeto consolidado user_settings si existe
+    const userSettingsRaw = localStorage.getItem('user_settings');
+    if (userSettingsRaw) {
+      try {
+        const userSettings = JSON.parse(userSettingsRaw);
+        userSettings.dashboard_widgets = config;
+        userSettings.widgets_order = config.map(w => w.id);
+        localStorage.setItem('user_settings', JSON.stringify(userSettings));
+      } catch (_) {}
+    }
   } catch (err) {
     console.error('[Monety] Error guardando monety_widgets_config localmente:', err);
   }

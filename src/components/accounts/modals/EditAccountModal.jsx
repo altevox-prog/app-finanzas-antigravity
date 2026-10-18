@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Trash2, Check } from 'lucide-react';
+import { TrendingUp, Check } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import AmountInput from '../../common/AmountInput';
 import { 
@@ -130,10 +130,18 @@ export default function EditAccountModal({
     try {
       const isInvestment = type === 'investment';
       const isCreditEdit = normalizeAccountType(type) === 'credit';
-      const sharesNum = isInvestment && shares ? parseFloat(shares) : undefined;
-      const unitPriceNum = isInvestment && unitPrice ? parseFloat(unitPrice) : undefined;
-      let initBal = parseFloat(balance) || 0;
-      if (isInvestment && sharesNum && unitPriceNum && (!balance || parseFloat(balance) === 0)) {
+      const parseDecNum = (val) => {
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        if (!val) return 0;
+        const cleaned = String(val).replace(/,/g, '.');
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+      };
+
+      const sharesNum = isInvestment && shares ? parseDecNum(shares) : undefined;
+      const unitPriceNum = isInvestment && unitPrice ? parseDecNum(unitPrice) : undefined;
+      let initBal = parseDecNum(balance);
+      if (isInvestment && sharesNum && unitPriceNum && (!balance || parseDecNum(balance) === 0)) {
         initBal = sharesNum * unitPriceNum;
       }
       // Las tarjetas de crédito almacenan el saldo como deuda (negativo)
@@ -142,7 +150,7 @@ export default function EditAccountModal({
       }
 
       const normalizedType = normalizeAccountType(type);
-      const numericBalance = parseFloat(initBal) || 0;
+      const numericBalance = Number(initBal) || 0;
       const updated = {
         ...account,
         name: name.trim(),
@@ -183,17 +191,6 @@ export default function EditAccountModal({
     } finally {
       setIsSubmitting(false);
       submittingRef.current = false;
-    }
-  };
-
-  const handleDelete = () => {
-    if (window.confirm(`¿Estás seguro de eliminar la cuenta "${account.name}"?`)) {
-      if (onDelete) {
-        onDelete(account.id);
-      }
-      if (onClose) {
-        onClose();
-      }
     }
   };
 
@@ -361,7 +358,7 @@ export default function EditAccountModal({
                 <AmountInput
                   value={balance}
                   onChange={(cleanVal) => setBalance(cleanVal)}
-                  allowDecimals={currency !== 'COP'}
+                  allowDecimals={true}
                   placeholder="0"
                   required
                   onFocus={(e) => e.target.select()}
@@ -493,33 +490,22 @@ export default function EditAccountModal({
           </div>
 
           {/* Pie de página FIJO SIEMPRE VISIBLE */}
-          <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-[#181B26] border-t border-slate-200 dark:border-white/10 flex items-center justify-between gap-3">
+          <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-[#181B26] border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={handleDelete}
-              className="px-3.5 py-2.5 h-11 text-xs font-semibold text-[#FF3B30] hover:bg-[#FF3B30]/10 rounded-xl transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
+              onClick={onClose}
+              className="px-4 py-2.5 h-11 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline sm:inline">Eliminar</span>
+              Cancelar
             </button>
-
-            <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 h-11 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`flex-1 sm:flex-initial px-6 py-2.5 h-11 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>{isSubmitting ? 'Guardando...' : 'Guardar cuenta'}</span>
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 h-11 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>{isSubmitting ? 'Guardando...' : 'Guardar cuenta'}</span>
+            </button>
           </div>
         </form>
       </div>

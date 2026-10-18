@@ -9,7 +9,6 @@ import {
   Plus, 
   Check, 
   CheckCircle2, 
-  X, 
   CreditCard, 
   Receipt, 
   Target, 
@@ -46,9 +45,9 @@ const VIEW_TITLES = {
  * Barra superior dinámica y contextual por vista con acabado translúcido glass.
  * - Dashboard: Logo oficial Monety + Campana de notificaciones + Avatar de perfil
  * - Transacciones: Botón retorno + Título "Transacciones" + Lupa (toggle búsqueda) + Filtros avanzados
- * - Inversiones: Botón retorno + Título "Portafolio de Inversiones" + Modo discreto + Botón "+ Inversión"
- * - Préstamos y Deudas: Botón retorno + Título "Préstamos y Deudas" + Botón "+ Nuevo"
- * - Cuentas y Métodos: Botón retorno + Título "Cuentas y Métodos" + Botón "+ Cuenta"
+ * - Inversiones: Botón retorno + Título "Portafolio de Inversiones" + Refresco de cotizaciones
+ * - Préstamos y Deudas: Botón retorno + Título "Préstamos y Deudas"
+ * - Cuentas y Métodos: Botón retorno + Título "Cuentas y Métodos" + Botón "+ Cuenta" (desde configuración)
  * - Otras vistas: Botón retorno + Título correspondiente
  */
 export default function TopAppBar({
@@ -63,6 +62,7 @@ export default function TopAppBar({
   onOpenAddInvestment,
   onOpenAddDebt,
   onOpenAddAccount,
+  fromSettings = false,
   accounts = [],
   investments = [],
   subscriptions = [],
@@ -170,28 +170,12 @@ export default function TopAppBar({
     window.dispatchEvent(new CustomEvent('monety:open-filter-modal'));
   };
 
-  const handleAddInvestmentClick = () => {
-    if (typeof onOpenAddInvestment === 'function') {
-      onOpenAddInvestment();
-    } else {
-      window.dispatchEvent(new CustomEvent('monety:open-add-investment'));
-    }
-  };
-
   const handleRefreshQuotesClick = () => {
     setIsRefreshingQuotes(true);
     window.dispatchEvent(new CustomEvent('monety:refresh-investment-quotes'));
     setTimeout(() => {
       setIsRefreshingQuotes(false);
     }, 1500);
-  };
-
-  const handleAddDebtClick = () => {
-    if (typeof onOpenAddDebt === 'function') {
-      onOpenAddDebt();
-    } else {
-      window.dispatchEvent(new CustomEvent('monety:open-add-debt'));
-    }
   };
 
   const handleAddAccountClick = () => {
@@ -357,62 +341,34 @@ export default function TopAppBar({
           </>
         )}
 
-        {/* Caso 3: Inversiones -> Refrescar cotizaciones + Botón + Inversión Dark Glass */}
+        {/* Caso 3: Inversiones -> Refrescar cotizaciones en tiempo real */}
         {isInvestments && (
-          <>
-            {/* 1. Botón Icono Circular Refrescar Cotizaciones */}
-            <button
-              type="button"
-              onClick={handleRefreshQuotesClick}
-              className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] active:scale-95 active:rotate-180 transition-all cursor-pointer shadow-sm"
-              title="Actualizar cotizaciones en tiempo real"
-              aria-label="Actualizar cotizaciones"
-            >
-              <RotateCw className={`w-4 h-4 ${isRefreshingQuotes ? 'animate-spin text-emerald-400' : ''}`} />
-            </button>
-
-            {/* 2. Botón de Acción Rápida + para Registrar Nueva Inversión */}
-            <button
-              type="button"
-              onClick={handleAddInvestmentClick}
-              className="w-9 h-9 sm:w-auto sm:px-3 sm:py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
-              title="Registrar nueva inversión"
-              aria-label="Registrar nueva inversión"
-            >
-              <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
-              <span className="hidden sm:inline">Inversión</span>
-            </button>
-          </>
-        )}
-
-        {/* Caso 4: Préstamos y Deudas -> Botón Circular + Dark Glass */}
-        {isDebts && (
           <button
             type="button"
-            onClick={handleAddDebtClick}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-emerald-500 hover:dark:text-emerald-400 hover:dark:border-white/[0.15] flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm"
-            title="Registrar nuevo préstamo o deuda"
-            aria-label="Registrar nuevo préstamo o deuda"
+            onClick={handleRefreshQuotesClick}
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] active:scale-95 active:rotate-180 transition-all cursor-pointer shadow-sm"
+            title="Actualizar cotizaciones en tiempo real"
+            aria-label="Actualizar cotizaciones"
           >
-            <Plus className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
+            <RotateCw className={`w-4 h-4 ${isRefreshingQuotes ? 'animate-spin text-emerald-400' : ''}`} />
           </button>
         )}
 
-        {/* Caso 5: Cuentas y Métodos -> Botón + Cuenta Dark Glass */}
-        {isAccounts && (
+        {/* Caso 5: Cuentas y Métodos -> Botón Circular + Verde (Solo desde Perfil > Configuración) */}
+        {isAccounts && fromSettings && (
           <button
             type="button"
             onClick={handleAddAccountClick}
-            className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-500/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm"
             title="Añadir nueva cuenta"
+            aria-label="Agregar cuenta"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Cuenta</span>
+            <Plus className="w-5 h-5 stroke-[2.5]" />
           </button>
         )}
 
         {/* Caso 6: Otras vistas secundarias -> Campana Dark Glass */}
-        {!isDashboard && !isTransactions && !isInvestments && !isDebts && !isAccounts && (
+        {!isDashboard && !isTransactions && !isInvestments && !isDebts && (!isAccounts || !fromSettings) && (
           <button
             type="button"
             onClick={() => setIsNotificationsOpen(true)}
@@ -461,8 +417,8 @@ export default function TopAppBar({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {hasNotifications && (
+              {hasNotifications && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={markAllAsRead}
@@ -471,16 +427,8 @@ export default function TopAppBar({
                   >
                     Marcar todas
                   </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setIsNotificationsOpen(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Contenido / Lista de Alertas */}

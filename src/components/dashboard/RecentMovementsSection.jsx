@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Activity, 
-  ArrowUpRight,
   Inbox
 } from 'lucide-react';
 import CategoryIcon from '../categories/components/CategoryIcon';
@@ -56,23 +55,14 @@ export default function RecentMovementsSection({
               <Activity className="w-4 h-4 animate-pulse" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight truncate">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                 Movimientos Recientes
               </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
                 {count} {count === 1 ? 'registro' : 'registros'} este período
               </p>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={handleViewAll}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors py-1 px-2 rounded-lg hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30 cursor-pointer select-none"
-          >
-            <span>Ver todos</span>
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         {/* Listado de últimas transacciones o estado vacío */}

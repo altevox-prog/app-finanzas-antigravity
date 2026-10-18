@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Bell, 
-  X, 
   Check, 
   CreditCard, 
   Receipt, 
@@ -155,8 +154,8 @@ export default function Header({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {hasNotifications && (
+              {hasNotifications && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleMarkAllAsRead}
@@ -165,16 +164,8 @@ export default function Header({
                   >
                     Marcar todas como leídas
                   </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setIsNotificationsOpen(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Contenido / Lista de Alertas */}

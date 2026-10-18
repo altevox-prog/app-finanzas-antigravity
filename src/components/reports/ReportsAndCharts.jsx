@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PieChart, ChevronRight } from 'lucide-react';
+import { PieChart } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { safeNumber } from '../../utils/financeMath';
 
@@ -131,98 +131,88 @@ export default function ReportsAndCharts({
   return (
     <div 
       onClick={() => handleNav('transactions')}
-      className="h-full flex flex-col justify-between p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] shadow-sm hover:border-emerald-500/40 hover:shadow-sm transition-all cursor-pointer group select-none"
+      className="h-auto flex flex-col p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] shadow-sm hover:border-emerald-500/40 hover:shadow-sm transition-all cursor-pointer group select-none"
     >
-      <div>
-        {/* Cabecera limpia interna con total */}
-        <div className="flex items-center justify-between gap-2 mb-3.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <PieChart className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span>Tus gastos</span>
+      {/* Cabecera limpia interna con total */}
+      <div className="flex items-center justify-between gap-2 mb-3.5">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+          <PieChart className="w-4 h-4 text-emerald-500 shrink-0" />
+          <span>Tus gastos</span>
+        </span>
+        {totalExpense > 0 && (
+          <span className="text-xs font-black text-slate-900 dark:text-slate-50 tabular-nums tracking-tight">
+            {formatMoney(totalExpense)}
           </span>
-          {totalExpense > 0 && (
-            <span className="text-xs font-black text-slate-900 dark:text-slate-50 tabular-nums tracking-tight">
-              {formatMoney(totalExpense)}
-            </span>
-          )}
-        </div>
-
-        {/* Zona de visualización (Layout Horizontal 2 Columnas) */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Columna Izquierda (Mini-Dona estilizada) */}
-          <CategoryDonutChart
-            categories={categoryExpenses}
-            totalExpenses={totalExpense}
-            hoveredCategoryId={hoveredCategoryId}
-            setHoveredCategoryId={setHoveredCategoryId}
-            formatMoney={formatMoney}
-            getCategoryEmoji={getCategoryEmoji}
-          />
-
-          {/* Columna Derecha (Icono si vacío, o Top 4 categorías) */}
-          {categoryExpenses.length === 0 ? (
-            <div className="flex-1 flex flex-col justify-center items-center text-center pl-2 py-4">
-              <span className="text-2xl mb-1">🌱</span>
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sin gastos este mes</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500">Tus finanzas están al día</p>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-center gap-2 pl-1 min-w-0">
-              {topCategories.map((cat, index) => {
-                const displayEmoji = getCategoryEmoji(cat, cat.name);
-                const isHovered = hoveredCategoryId === cat.id;
-
-                return (
-                  <div 
-                    key={cat.id || cat.name || index} 
-                    onMouseEnter={() => setHoveredCategoryId(cat.id)}
-                    onMouseLeave={() => setHoveredCategoryId(null)}
-                    className={`flex flex-col gap-1 group/row rounded-lg p-1 transition-all ${
-                      isHovered ? 'bg-slate-100/80 dark:bg-white/[0.04]' : ''
-                    }`}
-                    title={`${cat.name}: ${formatMoney(cat.amount)}`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] leading-tight">
-                      <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300 truncate">
-                        <span className="text-xs shrink-0 leading-none">{displayEmoji}</span>
-                        <span className="truncate group-hover/row:text-emerald-500 transition-colors">
-                          {cat.name}
-                        </span>
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
-                        <span className="font-semibold text-slate-400 dark:text-slate-500 text-[10px] tabular-nums">
-                          {cat.percentage}%
-                        </span>
-                        <span className="font-bold text-slate-900 dark:text-slate-50 tabular-nums">
-                          {formatMoney(cat.amount)}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Barra compacta de progreso con su color */}
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-white/[0.04] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${Math.min(100, Math.max(4, cat.exactPercent))}%`, 
-                          backgroundColor: cat.color 
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Pie con enlace para ver todas las categorías */}
-      {categoryExpenses.length > 0 && (
-        <div className="pt-2.5 mt-3 border-t border-slate-100/80 dark:border-white/[0.07] flex items-center justify-between text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
-          <span>Ver todas las categorías</span>
-          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-        </div>
-      )}
+      {/* Zona de visualización (Layout Horizontal 2 Columnas) */}
+      <div className="flex items-center justify-between gap-3">
+        {/* Columna Izquierda (Mini-Dona estilizada) */}
+        <CategoryDonutChart
+          categories={categoryExpenses}
+          totalExpenses={totalExpense}
+          hoveredCategoryId={hoveredCategoryId}
+          setHoveredCategoryId={setHoveredCategoryId}
+          formatMoney={formatMoney}
+          getCategoryEmoji={getCategoryEmoji}
+        />
+
+        {/* Columna Derecha (Icono si vacío, o Top 4 categorías) */}
+        {categoryExpenses.length === 0 ? (
+          <div className="flex-1 flex flex-col justify-center items-center text-center pl-2 py-4">
+            <span className="text-2xl mb-1">🌱</span>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sin gastos este mes</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">Tus finanzas están al día</p>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col justify-center gap-2 pl-1 min-w-0">
+            {topCategories.map((cat, index) => {
+              const displayEmoji = getCategoryEmoji(cat, cat.name);
+              const isHovered = hoveredCategoryId === cat.id;
+
+              return (
+                <div 
+                  key={cat.id || cat.name || index} 
+                  onMouseEnter={() => setHoveredCategoryId(cat.id)}
+                  onMouseLeave={() => setHoveredCategoryId(null)}
+                  className={`flex flex-col gap-1 group/row rounded-lg p-1 transition-all ${
+                    isHovered ? 'bg-slate-100/80 dark:bg-white/[0.04]' : ''
+                  }`}
+                  title={`${cat.name}: ${formatMoney(cat.amount)}`}
+                >
+                  <div className="flex items-center justify-between text-[11px] leading-tight">
+                    <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300 truncate">
+                      <span className="text-xs shrink-0 leading-none">{displayEmoji}</span>
+                      <span className="truncate group-hover/row:text-emerald-500 transition-colors">
+                        {cat.name}
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
+                      <span className="font-semibold text-slate-400 dark:text-slate-500 text-[10px] tabular-nums">
+                        {cat.percentage}%
+                      </span>
+                      <span className="font-bold text-slate-900 dark:text-slate-50 tabular-nums">
+                        {formatMoney(cat.amount)}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Barra compacta de progreso con su color */}
+                  <div className="w-full h-1.5 bg-slate-100 dark:bg-white/[0.04] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${Math.min(100, Math.max(4, cat.exactPercent))}%`, 
+                        backgroundColor: cat.color 
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

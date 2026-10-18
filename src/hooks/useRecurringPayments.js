@@ -106,9 +106,16 @@ export function useRecurringPayments(isResettingRef) {
             updated_at: new Date().toISOString()
           };
           supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' })
-            .then(({ error }) => {
+            .then(async ({ error }) => {
               if (error && (error.code === '42P10' || error.message?.includes('ON CONFLICT'))) {
-                return supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+                const retryRes = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+                if (retryRes.error && (retryRes.error.code === '23503' || retryRes.error.status === 409 || retryRes.error.message?.includes('Key is not present in table'))) {
+                  return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id,user_id' });
+                }
+                return retryRes;
+              }
+              if (error && (error.code === '23503' || error.status === 409 || error.message?.includes('Key is not present in table'))) {
+                return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id' });
               }
             })
             .catch((e) => {
@@ -152,9 +159,16 @@ export function useRecurringPayments(isResettingRef) {
             updated_at: new Date().toISOString()
           };
           supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' })
-            .then(({ error }) => {
+            .then(async ({ error }) => {
               if (error && (error.code === '42P10' || error.message?.includes('ON CONFLICT'))) {
-                return supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+                const retryRes = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+                if (retryRes.error && (retryRes.error.code === '23503' || retryRes.error.status === 409 || retryRes.error.message?.includes('Key is not present in table'))) {
+                  return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id,user_id' });
+                }
+                return retryRes;
+              }
+              if (error && (error.code === '23503' || error.status === 409 || error.message?.includes('Key is not present in table'))) {
+                return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id' });
               }
             })
             .catch((e) => {

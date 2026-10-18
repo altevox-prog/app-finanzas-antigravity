@@ -362,22 +362,36 @@ export function buildStrictlyEssentialInvs(invsPayload = []) {
 /**
  * 5. PAGOS RECURRENTES
  */
-export function buildRecurringPayload(recurringPayments = [], userId, nowIso = new Date().toISOString()) {
-  return (recurringPayments || []).map(r => ({
-    id: ensureUUID(r.id),
-    user_id: userId,
-    name: r.name || 'Suscripción',
-    amount: Number(r.amount || 0),
-    category: r.category || r.categoryName || 'General',
-    frequency: r.frequency || 'monthly',
-    billing_day: Number(r.billingDay || 1),
-    is_active: r.isActive !== false,
-    account_id: r.accountId ? ensureUUID(r.accountId) : null,
-    next_payment_date: r.nextPaymentDate || r.next_payment_date || null,
-    type: r.type || 'expense',
-    updated_at: nowIso
-  }));
+export function buildRecurringPayload(
+  recurringPayments = [],
+  userId,
+  nowIso = new Date().toISOString(),
+  validAccountIds = null
+) {
+  return (recurringPayments || []).map(r => {
+    let resolvedAccountId = (r.accountId || r.account_id) ? ensureUUID(r.accountId || r.account_id) : null;
+    // Si se proporciona un conjunto de cuentas válidas, verificar integridad referencial
+    if (resolvedAccountId && validAccountIds instanceof Set && !validAccountIds.has(resolvedAccountId)) {
+      resolvedAccountId = null;
+    }
+
+    return {
+      id: ensureUUID(r.id),
+      user_id: userId,
+      name: r.name || 'Suscripción',
+      amount: Number(r.amount || 0),
+      category: r.category || r.categoryName || 'General',
+      frequency: r.frequency || 'monthly',
+      billing_day: Number(r.billingDay || r.billing_day || 1),
+      is_active: r.isActive !== false && r.active !== false && r.is_active !== false,
+      account_id: resolvedAccountId,
+      next_payment_date: r.nextPaymentDate || r.next_payment_date || null,
+      type: r.type || 'expense',
+      updated_at: nowIso
+    };
+  });
 }
+
 
 export function sanitizeRecurringOnSchemaError(recurringPayload = [], errMsg = '') {
   const msg = String(errMsg || '');

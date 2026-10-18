@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { Pencil, Trash2 } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
@@ -66,8 +67,24 @@ export default function AccountCard({
   const creditLimit = Number(account?.creditLimit) || 5000000;
   const cupoDisponible = Math.max(0, creditLimit - saldoRestante);
 
+  const x = useMotionValue(0);
+  const editOpacity = useTransform(x, [10, 60], [0, 1]);
+  const editScale = useTransform(x, [10, 60], [0.85, 1]);
+  const deleteOpacity = useTransform(x, [-10, -60], [0, 1]);
+  const deleteScale = useTransform(x, [-10, -60], [0.85, 1]);
+
   const handleCardClick = () => {
     if (isReadOnly) return;
+    // En móviles y tablets (touch o viewport < 1024px), el tap simple no abre la edición para requerir swipe
+    const isTouchOrMobile = typeof window !== 'undefined' && (
+      window.innerWidth < 1024 || 
+      'ontouchstart' in window || 
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
+    );
+    if (isTouchOrMobile) {
+      return;
+    }
+    // En escritorio con mouse:
     if (isCreditCard && onSelectCard) {
       onSelectCard(account);
     } else if (onEdit) {
@@ -76,12 +93,66 @@ export default function AccountCard({
   };
 
   return (
-    <div
-      onClick={!isReadOnly ? handleCardClick : undefined}
-      className={`group w-full h-full flex flex-col justify-between bg-white dark:bg-[#12151E] border border-slate-200/80 dark:border-white/[0.07] hover:border-emerald-500/40 hover:dark:bg-[#151924] rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all select-none ${
-        isReadOnly ? 'cursor-default' : 'cursor-pointer active:scale-[0.995]'
-      }`}
-    >
+    <div className="relative w-full h-full rounded-2xl overflow-hidden select-none">
+      {/* Fondo de acción Swipe a la derecha: EDITAR (tono esmeralda/azul) */}
+      {!isReadOnly && onEdit && (
+        <div className="absolute inset-y-0 left-0 w-full flex items-center justify-start pl-5 bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-transparent dark:from-emerald-500/25 dark:via-emerald-500/15 border border-emerald-500/30 rounded-2xl z-0 pointer-events-none">
+          <motion.div 
+            style={{ opacity: editOpacity, scale: editScale }}
+            className="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm"
+          >
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shadow-xs">
+              <Pencil className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <span>Editar</span>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Fondo de acción Swipe a la izquierda: ELIMINAR (tono rojo destructivo) */}
+      {!isReadOnly && onDelete && (
+        <div className="absolute inset-y-0 right-0 w-full flex items-center justify-end pr-5 bg-gradient-to-l from-rose-500/20 via-rose-500/10 to-transparent dark:from-rose-500/25 dark:via-rose-500/15 border border-rose-500/30 rounded-2xl z-0 pointer-events-none">
+          <motion.div 
+            style={{ opacity: deleteOpacity, scale: deleteScale }}
+            className="flex items-center gap-2.5 text-rose-600 dark:text-rose-400 font-bold text-xs sm:text-sm"
+          >
+            <span>Eliminar</span>
+            <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center shadow-xs">
+              <Trash2 className="w-5 h-5 stroke-[2.5]" />
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Tarjeta de Cuenta con arrastre horizontal suave */}
+      <motion.div
+        style={{ x }}
+        drag={!isReadOnly ? "x" : false}
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.4}
+        onDragEnd={(e, { offset, velocity }) => {
+          if (isReadOnly) return;
+          // Swipe hacia la derecha: Editar
+          if (offset.x > 65 || velocity.x > 300) {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate(25); } catch (_) {}
+            }
+            if (onEdit) onEdit(account);
+          } 
+          // Swipe hacia la izquierda: Eliminar
+          else if (offset.x < -65 || velocity.x < -300) {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate(35); } catch (_) {}
+            }
+            if (onDelete) onDelete(account.id || account);
+          }
+        }}
+        onClick={handleCardClick}
+        className={`group w-full h-full flex flex-col justify-between bg-white dark:bg-[#12151E] border border-slate-200/80 dark:border-white/[0.07] hover:border-emerald-500/40 hover:dark:bg-[#151924] rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-colors select-none relative z-10 touch-pan-y ${
+          isReadOnly ? 'cursor-default' : 'cursor-default lg:cursor-pointer'
+        }`}
+      >
       {/* Fila superior (Cabecera homogénea): Logo limpio y nítido, Nombre y Tipo en bloque vertical, y Acciones */}
       <div className="flex items-start justify-between gap-3 min-h-[44px]">
         {/* Izquierda: Logo limpio sin caja opaca + Bloque vertical (Nombre + Tipo) */}
@@ -110,9 +181,9 @@ export default function AccountCard({
           </div>
         </div>
 
-        {/* Derecha: Botones de administración en hover si no es readOnly */}
+        {/* Derecha: Botones de administración visibles en escritorio (>= md) si no es readOnly */}
         {!isReadOnly && (
-          <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="hidden md:flex items-center gap-1.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
             {onEdit && (
               <button
                 type="button"
@@ -120,11 +191,11 @@ export default function AccountCard({
                   e.stopPropagation();
                   onEdit(account);
                 }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
                 title="Editar cuenta"
                 aria-label="Editar cuenta"
               >
-                <Pencil className="w-3.5 h-3.5" />
+                <Pencil className="w-4 h-4" />
               </button>
             )}
             {onDelete && (
@@ -134,11 +205,11 @@ export default function AccountCard({
                   e.stopPropagation();
                   onDelete(account.id || account);
                 }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                 title="Eliminar cuenta"
                 aria-label="Eliminar cuenta"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -196,6 +267,7 @@ export default function AccountCard({
           </span>
         </div>
       )}
+      </motion.div>
     </div>
   );
 }

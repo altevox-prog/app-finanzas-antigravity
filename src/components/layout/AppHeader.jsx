@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronDown, Bell, Search, SlidersHorizontal, Eye, EyeOff } from 'lucide-react';
+import { Calendar, ChevronDown, Bell, Search, SlidersHorizontal, Eye, EyeOff, Plus } from 'lucide-react';
 import Header from './Header';
 import TopAppBar from './TopAppBar';
 import AppLogo from '../ui/AppLogo';
@@ -48,6 +48,7 @@ export default function AppHeader({
   onOpenAddInvestment,
   onOpenAddDebt,
   onOpenAddAccount,
+  fromSettings = false,
   userProfile = { name: 'Usuario' },
   currentMonthLabel = '',
   selectedDay = null,
@@ -242,6 +243,7 @@ export default function AppHeader({
             onOpenAddInvestment={onOpenAddInvestment}
             onOpenAddDebt={onOpenAddDebt}
             onOpenAddAccount={onOpenAddAccount}
+            fromSettings={fromSettings}
             monthlyStats={monthlyStats} 
             userProfile={userProfile}
             syncUser={syncUser}
@@ -315,6 +317,19 @@ export default function AppHeader({
                     )}
                   </button>
                 </div>
+              )}
+
+              {/* Acción contextual para Cuentas en Escritorio (solo desde flujo de configuración) */}
+              {(activeTab === 'accounts' && fromSettings) && (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('monety:open-add-account'))}
+                  className="w-9 h-9 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm mr-1"
+                  title="Añadir nueva cuenta"
+                  aria-label="Agregar cuenta"
+                >
+                  <Plus className="w-5 h-5 stroke-[2.5]" />
+                </button>
               )}
 
               {/* TRM Oficial Automatizado (No editable) */}

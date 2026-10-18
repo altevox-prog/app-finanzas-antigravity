@@ -222,17 +222,31 @@ export const formatCurrency = (amount, isCensored = false, showDecimalsParam = u
   const num = Number(amount) || 0;
   let enableDecimals = false;
   try {
-    enableDecimals = typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true';
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('app_enable_decimals') !== null) {
+        enableDecimals = localStorage.getItem('app_enable_decimals') === 'true';
+      } else {
+        const userSettingsRaw = localStorage.getItem('user_settings');
+        if (userSettingsRaw) {
+          const parsed = JSON.parse(userSettingsRaw);
+          enableDecimals = Boolean(parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals);
+        }
+      }
+    }
   } catch {}
 
   const finalShowDecimals = showDecimalsParam !== undefined ? Boolean(showDecimalsParam) : enableDecimals;
+  const isNeg = num < 0;
+  const absNum = Math.abs(num);
 
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: finalShowDecimals ? 2 : 0,
-    maximumFractionDigits: finalShowDecimals ? 2 : 0
-  }).format(num);
+  if (!finalShowDecimals) {
+    const rounded = Math.round(absNum);
+    const formatted = rounded.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return `${isNeg ? '-' : ''}$ ${formatted}`;
+  }
+
+  const formatted = absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${isNeg ? '-' : ''}$ ${formatted}`;
 };
 
 export const formatUSD = (amount, isCensored = false, showDecimalsParam = undefined) => {
@@ -244,17 +258,31 @@ export const formatUSD = (amount, isCensored = false, showDecimalsParam = undefi
   const num = Number(amount) || 0;
   let enableDecimals = false;
   try {
-    enableDecimals = typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true';
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('app_enable_decimals') !== null) {
+        enableDecimals = localStorage.getItem('app_enable_decimals') === 'true';
+      } else {
+        const userSettingsRaw = localStorage.getItem('user_settings');
+        if (userSettingsRaw) {
+          const parsed = JSON.parse(userSettingsRaw);
+          enableDecimals = Boolean(parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals);
+        }
+      }
+    }
   } catch {}
 
   const finalShowDecimals = showDecimalsParam !== undefined ? Boolean(showDecimalsParam) : enableDecimals;
+  const isNeg = num < 0;
+  const absNum = Math.abs(num);
 
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: finalShowDecimals ? 2 : 0,
-    maximumFractionDigits: finalShowDecimals ? 2 : 0
-  }).format(num);
+  if (!finalShowDecimals) {
+    const rounded = Math.round(absNum);
+    const formatted = rounded.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return `${isNeg ? '-' : ''}$ ${formatted}`;
+  }
+
+  const formatted = absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${isNeg ? '-' : ''}$ ${formatted}`;
 };
 
 export const INVESTMENT_CATEGORIES = [

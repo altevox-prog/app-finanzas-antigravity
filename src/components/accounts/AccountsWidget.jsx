@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ArrowRight, Wallet, Plus, CreditCard } from 'lucide-react';
+import { ArrowRight, Wallet, CreditCard } from 'lucide-react';
 import BrandIcon from '../ui/BrandIcon';
 import { getAccountNativeBalance, formatNativeCurrency, safeNumber } from '../../utils/currencyUtils';
 import { usePrivacy } from '../../context/PrivacyContext';
@@ -77,11 +77,7 @@ export default function AccountsWidget({
 
   const handleCardClick = (acc) => {
     if (isReordering) return;
-    if ((acc?.type === 'card' || acc?.type === 'credit') && typeof onSelectCreditCardDetail === 'function') {
-      onSelectCreditCardDetail(acc);
-    } else {
-      handleNavigateToAccounts();
-    }
+    handleNavigateToAccounts();
   };
 
   return (
@@ -111,15 +107,15 @@ export default function AccountsWidget({
           className="w-full min-h-[108px] p-4 rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 dark:border-white/[0.07] bg-white dark:bg-[#12151E] flex items-center justify-between gap-3.5 cursor-pointer hover:border-slate-400 dark:hover:border-emerald-500/40 transition-all group shrink-0"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/[0.04] dark:border dark:border-white/[0.06] text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <Plus className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/[0.04] dark:border dark:border-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                Sin cuentas registradas
+                Sin cuentas
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-400">
-                Toca aquí para vincular tu primera cuenta
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Saldo disponible: {!isVisible ? '••••••' : formatMoney(0)}
               </p>
             </div>
           </div>
@@ -156,7 +152,7 @@ export default function AccountsWidget({
                 <div 
                   key={acc?.id || `acc-car-${index}`}
                   onClick={() => handleCardClick(acc)}
-                  className={`w-full min-h-[108px] h-auto p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] flex flex-col justify-between shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] cursor-pointer active:scale-98 transition-all hover:border-emerald-500/40 hover:dark:bg-[#151924] group ${
+                  className={`w-full min-h-[116px] h-full p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] flex flex-col justify-between shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] cursor-pointer active:scale-98 transition-all hover:border-emerald-500/40 hover:dark:bg-[#151924] group ${
                     index >= 2 ? 'hidden md:flex' : 'flex'
                   }`}
                 >
@@ -178,7 +174,7 @@ export default function AccountsWidget({
                       {acc?.name || 'Sin nombre'}
                     </div>
 
-                    <div className={`text-xl font-bold font-mono tracking-tight leading-tight tabular-nums truncate ${
+                    <div className={`text-base sm:text-lg font-bold font-mono tracking-tight leading-tight tabular-nums whitespace-nowrap ${
                       !isVisible
                         ? 'text-slate-900 dark:text-slate-50'
                         : isCreditCard 
@@ -199,7 +195,7 @@ export default function AccountsWidget({
 
                     {(isForeign && !isCreditCard) ? (
                       <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-tight leading-none truncate tabular-nums mt-1">
-                        {!isVisible ? '••••••' : `≈ $ ${Math.round(copBal).toLocaleString('es-CO')} COP`}
+                        {!isVisible ? '••••••' : `≈ ${formatMoney(copBal)} COP`}
                       </div>
                     ) : (isInvestment && shares > 0) ? (
                       <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate leading-none mt-1">
@@ -211,19 +207,6 @@ export default function AccountsWidget({
               );
             })}
           </div>
-
-          {sortedAccounts.length > 0 && (
-            <div className="flex justify-end my-3 px-0.5">
-              <button
-                type="button"
-                onClick={handleNavigateToAccounts}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors py-1 px-1.5 rounded-lg hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30 cursor-pointer group select-none"
-              >
-                <span>Ver todas las cuentas ({sortedAccounts.length})</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

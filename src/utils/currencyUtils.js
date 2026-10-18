@@ -50,25 +50,67 @@ export function formatNativeCurrency(amount, currency = 'COP', showSuffix = true
   const num = toSafeNumber(amount);
   const curr = currency || 'COP';
 
-  if (curr === 'USD') {
-    const formatted = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return `$ ${formatted}${showSuffix ? ' USD' : ''}`;
+  let enableDecimals = false;
+  try {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('app_enable_decimals') !== null) {
+        enableDecimals = localStorage.getItem('app_enable_decimals') === 'true';
+      } else {
+        const userSettingsRaw = localStorage.getItem('user_settings');
+        if (userSettingsRaw) {
+          const parsed = JSON.parse(userSettingsRaw);
+          enableDecimals = Boolean(parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals);
+        }
+      }
+    }
+  } catch {}
+
+  const isNeg = num < 0;
+  const absNum = Math.abs(num);
+  const sym = curr === 'EUR' ? '€' : '$';
+  const suffix = showSuffix ? ` ${curr}` : '';
+
+  if (!enableDecimals) {
+    const rounded = Math.round(absNum);
+    const formatted = rounded.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return `${isNeg ? '-' : ''}${sym} ${formatted}${suffix}`;
   }
-  if (curr === 'EUR') {
-    const formatted = num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return `€ ${formatted}${showSuffix ? ' EUR' : ''}`;
-  }
-  // COP
-  const formatted = Math.round(num).toLocaleString('es-CO');
-  return `$ ${formatted}${showSuffix ? ' COP' : ''}`;
+
+  const formatted = absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${isNeg ? '-' : ''}${sym} ${formatted}${suffix}`;
 }
 
 /**
  * Formato COP estándar abreviado o redondeado
  */
 export function formatCOP(amount) {
-  const num = Math.round(toSafeNumber(amount));
-  return `$ ${num.toLocaleString('es-CO')}`;
+  const num = toSafeNumber(amount);
+  let enableDecimals = false;
+  try {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('app_enable_decimals') !== null) {
+        enableDecimals = localStorage.getItem('app_enable_decimals') === 'true';
+      } else {
+        const userSettingsRaw = localStorage.getItem('user_settings');
+        if (userSettingsRaw) {
+          const parsed = JSON.parse(userSettingsRaw);
+          enableDecimals = Boolean(parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals);
+        }
+      }
+    }
+  } catch {}
+
+  const isNeg = num < 0;
+  const absNum = Math.abs(num);
+
+  if (!enableDecimals) {
+    const rounded = Math.round(absNum);
+    const formatted = rounded.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return `${isNeg ? '-' : ''}$ ${formatted}`;
+  }
+
+  const formatted = absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${isNeg ? '-' : ''}$ ${formatted}`;
 }
 
 /**

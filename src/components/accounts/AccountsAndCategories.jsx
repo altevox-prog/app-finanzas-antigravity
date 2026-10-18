@@ -380,50 +380,19 @@ export default function AccountsAndCategories({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 pt-2">
       
       {/* CUENTAS BANCARIAS Y EFECTIVO */}
       <div>
-        {/* Cabecera: Informativa para Sidebar / Administrativa para Configuración */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-          <div className="flex items-center gap-3 min-w-0">
-            {fromSettings && (
-              <button
-                type="button"
-                onClick={handleGoBack}
-                className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-                aria-label="Volver a Configuración"
-                title="Volver a Configuración"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
-                Cuentas y Métodos de Pago
-              </h2>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
-              </p>
-            </div>
-          </div>
-
-          {/* Botón + Nueva cuenta: EXCLUSIVO para Modo Administrativo (!readOnly) */}
-          {!readOnly && (
-            <button
-              type="button"
-              onClick={() => setShowAddAccount(true)}
-              className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 shadow-sm transition-all flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
-              title="Nueva cuenta"
-              aria-label="Nueva cuenta"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          )}
+        {/* Métrica secundaria: Total disponible */}
+        <div className="mb-3">
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+            Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
+          </p>
         </div>
 
         {/* Tarjetas de Cuenta Individuales en Grilla de 2 Columnas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
           {accountsWithBalance.map((acc, index) => (
             <div
               key={acc?.id || `acc-${index}`}
@@ -450,13 +419,12 @@ export default function AccountsAndCategories({
           ))}
 
           {accounts.length === 0 && (
-            <div className="col-span-full text-center py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-slate-400">
-              <CreditCard className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm font-medium">No tienes cuentas registradas</p>
-              <p className="text-xs mt-0.5">
-                {readOnly
-                  ? 'Gestiona y agrega tus cuentas desde la sección de Configuración'
-                  : 'Crea tu primera cuenta haciendo clic en "Nueva cuenta" arriba'}
+            <div className="col-span-full text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 text-slate-400 bg-slate-50/50 dark:bg-white/[0.02]">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <CreditCard className="w-6 h-6 opacity-80" />
+              </div>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                No tienes cuentas registradas
               </p>
             </div>
           )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
-export default function Toaster({ position = 'top-right' }) {
+export default function Toaster({ position = 'top-center' }) {
   const [toasts, setToasts] = useState([]);
 
   useEffect(() => {
@@ -32,12 +32,12 @@ export default function Toaster({ position = 'top-right' }) {
       ? 'top-4 right-4 sm:top-5 sm:right-5 items-end' 
       : position === 'top-left'
       ? 'top-4 left-4 sm:top-5 sm:left-5 items-start'
-      : 'top-4 left-1/2 -translate-x-1/2 items-center';
+      : 'top-4 pt-[env(safe-area-inset-top,0px)] sm:top-5 left-1/2 -translate-x-1/2 items-center';
 
   return (
     <div 
       aria-live="polite"
-      className={`fixed ${positionClasses} z-[999999] pointer-events-none flex flex-col gap-2.5 max-w-sm sm:max-w-md w-full p-2 sm:p-0`}
+      className={`fixed ${positionClasses} z-[999999] pointer-events-none flex flex-col items-center justify-center w-auto max-w-[90vw] sm:max-w-md gap-2 px-3 sm:px-0`}
     >
       {toasts.map((t) => {
         const isError = t.type === 'error';
@@ -48,22 +48,22 @@ export default function Toaster({ position = 'top-right' }) {
           <div
             key={t.id}
             role="status"
-            className="pointer-events-auto w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-slate-200/80 dark:border-white/[0.08] rounded-xl shadow-xl px-4 py-3 min-w-[280px] max-w-md flex items-center gap-3 animate-slide-down transition-all duration-300"
+            className="pointer-events-auto w-auto max-w-[90vw] sm:max-w-md bg-zinc-900/95 dark:bg-zinc-900/95 backdrop-blur-md border border-white/10 dark:border-white/10 text-white rounded-2xl shadow-2xl px-4 py-3 min-w-[280px] flex items-center gap-3 animate-slide-down transition-all duration-300"
           >
             {/* Ícono Semántico */}
             <div className="shrink-0">
               {isError && (
-                <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                <div className="p-1.5 rounded-xl bg-rose-500/15 text-rose-400">
                   <AlertCircle className="w-4 h-4" />
                 </div>
               )}
               {isInfo && (
-                <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <div className="p-1.5 rounded-xl bg-blue-500/15 text-blue-400">
                   <Info className="w-4 h-4" />
                 </div>
               )}
               {isSuccess && (
-                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <div className="p-1.5 rounded-xl bg-emerald-500/15 text-emerald-400">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
               )}
@@ -71,16 +71,16 @@ export default function Toaster({ position = 'top-right' }) {
 
             {/* Texto de Mensaje y Descripción */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 dark:text-zinc-100 leading-snug break-words">
+              <p className="text-xs sm:text-sm font-semibold text-zinc-100 leading-snug break-words">
                 {t.title || t.message}
               </p>
               {t.title && t.message && t.title !== t.message && (
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 leading-normal break-words">
+                <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-normal break-words">
                   {t.message}
                 </p>
               )}
               {t.description && (
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 leading-normal break-words">
+                <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-normal break-words">
                   {t.description}
                 </p>
               )}
@@ -90,7 +90,7 @@ export default function Toaster({ position = 'top-right' }) {
             <button
               type="button"
               onClick={() => removeToast(t.id)}
-              className="text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 p-1 rounded-md transition-colors cursor-pointer shrink-0"
+              className="text-zinc-400 hover:text-zinc-200 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
               aria-label="Cerrar notificación"
             >
               <X className="w-4 h-4" />

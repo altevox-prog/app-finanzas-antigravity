@@ -65,6 +65,9 @@ const SWAP_THROTTLE_MS = 100;
   const widgetsRef = useRef(widgets);
   const isReorderingRef = useRef(isReordering);
   const touchStartPosRef = useRef({ x: 0, y: 0 });
+  const autoScrollRafRef = useRef(null);
+  const autoScrollSpeedRef = useRef(0);
+  const lastTouchPosRef = useRef(null);
 
   useEffect(() => {
     widgetsRef.current = widgets;
@@ -131,6 +134,10 @@ const SWAP_THROTTLE_MS = 100;
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
+      }
+      if (autoScrollRafRef.current) {
+        cancelAnimationFrame(autoScrollRafRef.current);
+        autoScrollRafRef.current = null;
       }
       window.removeEventListener('monety_widgets_order_v2_updated', handleSync);
       window.removeEventListener('monety_widgets_config_updated', handleSync);
@@ -217,6 +224,9 @@ const SWAP_THROTTLE_MS = 100;
       const [moved] = updated.splice(fromIndexInPrev, 1);
       updated.splice(toIndexInPrev, 0, moved);
       widgetsRef.current = updated;
+      try {
+        localStorage.setItem('monety_widgets_order_v2', JSON.stringify(updated));
+      } catch (_) {}
       return updated;
     });
 
@@ -225,6 +235,70 @@ const SWAP_THROTTLE_MS = 100;
     draggedIndexRef.current = targetIndex;
     setDraggedIndex(targetIndex);
   }, [allowedWidgetIds, getWidget, triggerHaptic]);
+
+  // Control de auto-scroll suave en bordes de viewport durante el arrastre
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRafRef.current) {
+      cancelAnimationFrame(autoScrollRafRef.current);
+      autoScrollRafRef.current = null;
+    }
+    autoScrollSpeedRef.current = 0;
+  }, []);
+
+  const updateAutoScroll = useCallback((clientY) => {
+    if (typeof window === 'undefined') return;
+    const threshold = 95;
+    const maxSpeed = 16;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+    let speed = 0;
+    if (clientY < threshold) {
+      // Cerca del borde superior: scroll hacia arriba
+      const factor = Math.max(0, (threshold - clientY) / threshold);
+      speed = -Math.max(3, Math.round(factor * maxSpeed));
+    } else if (clientY > viewportHeight - threshold) {
+      // Cerca del borde inferior: scroll hacia abajo
+      const factor = Math.max(0, (clientY - (viewportHeight - threshold)) / threshold);
+      speed = Math.max(3, Math.round(factor * maxSpeed));
+    }
+
+    autoScrollSpeedRef.current = speed;
+
+    if (speed !== 0 && !autoScrollRafRef.current) {
+      const step = () => {
+        if (autoScrollSpeedRef.current !== 0 && isReorderingRef.current && draggedIndexRef.current !== null) {
+          window.scrollBy({ top: autoScrollSpeedRef.current, behavior: 'auto' });
+
+          // Re-evaluar widget bajo el puntero mientras la pantalla se desplaza
+          if (lastTouchPosRef.current) {
+            const { x, y } = lastTouchPosRef.current;
+            const targetEl = document.elementFromPoint(x, y)?.closest('[data-widget-index]');
+            if (targetEl) {
+              const targetIndex = Number(targetEl.getAttribute('data-widget-index'));
+              const currIdx = draggedIndexRef.current;
+              if (!isNaN(targetIndex) && targetIndex !== currIdx) {
+                const targetRect = targetEl.getBoundingClientRect();
+                if (hasCrossedMidpoint(x, y, targetRect, currIdx, targetIndex)) {
+                  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                  if (now - lastSwapTimeRef.current >= SWAP_THROTTLE_MS) {
+                    lastSwapTimeRef.current = now;
+                    handleSwapWidgets(targetIndex);
+                  }
+                }
+              }
+            }
+          }
+
+          autoScrollRafRef.current = requestAnimationFrame(step);
+        } else {
+          autoScrollRafRef.current = null;
+        }
+      };
+      autoScrollRafRef.current = requestAnimationFrame(step);
+    } else if (speed === 0 && autoScrollRafRef.current) {
+      stopAutoScroll();
+    }
+  }, [handleSwapWidgets, stopAutoScroll]);
 
   // Drag & Drop nativo HTML5 para ratón (PC)
   const handleDragStart = useCallback((e, index) => {
@@ -246,6 +320,7 @@ const SWAP_THROTTLE_MS = 100;
       if (e.dataTransfer) {
         e.dataTransfer.dropEffect = 'move';
       }
+      updateAutoScroll(e.clientY);
     }
 
     const currentIndex = draggedIndexRef.current;
@@ -267,9 +342,10 @@ const SWAP_THROTTLE_MS = 100;
       lastSwapTimeRef.current = now;
       handleSwapWidgets(targetIndex);
     }
-  }, [handleSwapWidgets]);
+  }, [handleSwapWidgets, updateAutoScroll]);
 
   const handleDrop = useCallback((e) => {
+    stopAutoScroll();
     if (!isReorderingRef.current) return;
     if (e) e.preventDefault();
     draggedIndexRef.current = null;
@@ -280,9 +356,10 @@ const SWAP_THROTTLE_MS = 100;
     localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
     saveStoredWidgetsConfig(currentWidgets, null);
     if (onSaveWidgets) onSaveWidgets(currentWidgets);
-  }, [onSaveWidgets]);
+  }, [onSaveWidgets, stopAutoScroll]);
 
   const handleDragEnd = useCallback(() => {
+    stopAutoScroll();
     draggedIndexRef.current = null;
     setDraggedIndex(null);
     lastSwapTimeRef.current = 0;
@@ -291,7 +368,7 @@ const SWAP_THROTTLE_MS = 100;
     localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
     saveStoredWidgetsConfig(currentWidgets, null);
     if (onSaveWidgets) onSaveWidgets(currentWidgets);
-  }, [onSaveWidgets]);
+  }, [onSaveWidgets, stopAutoScroll]);
 
   // Manejadores Táctiles (Touch Events) para Móviles / Pantallas Táctiles
   const handleTouchStart = useCallback((e, index) => {
@@ -302,6 +379,7 @@ const SWAP_THROTTLE_MS = 100;
     }
     if (e.touches && e.touches[0]) {
       touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastTouchPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
     if (isReorderingRef.current) {
       draggedIndexRef.current = index;
@@ -333,6 +411,11 @@ const SWAP_THROTTLE_MS = 100;
     const touch = e.touches && e.touches[0];
     if (!touch) return;
 
+    lastTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    // Auto-scroll activo en márgenes de viewport
+    updateAutoScroll(touch.clientY);
+
     // Throttling: evitar procesar ráfagas de eventos táctiles
     const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     if (now - lastSwapTimeRef.current < SWAP_THROTTLE_MS) {
@@ -351,25 +434,27 @@ const SWAP_THROTTLE_MS = 100;
       lastSwapTimeRef.current = now;
       handleSwapWidgets(targetIndex);
     }
-  }, [handlePressEnd, handleSwapWidgets]);
+  }, [handlePressEnd, handleSwapWidgets, updateAutoScroll]);
 
   const handleTouchEnd = useCallback(() => {
+    stopAutoScroll();
+    lastTouchPosRef.current = null;
     handlePressEnd();
     if (isReorderingRef.current) {
-      if (draggedIndexRef.current !== null) {
-        draggedIndexRef.current = null;
-        setDraggedIndex(null);
-        lastSwapTimeRef.current = 0;
+      draggedIndexRef.current = null;
+      setDraggedIndex(null);
+      lastSwapTimeRef.current = 0;
 
-        const currentWidgets = widgetsRef.current;
-        localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
-        saveStoredWidgetsConfig(currentWidgets, null);
-        if (onSaveWidgets) onSaveWidgets(currentWidgets);
-      }
+      const currentWidgets = widgetsRef.current;
+      localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
+      saveStoredWidgetsConfig(currentWidgets, null);
+      if (onSaveWidgets) onSaveWidgets(currentWidgets);
     }
-  }, [handlePressEnd, onSaveWidgets]);
+  }, [handlePressEnd, onSaveWidgets, stopAutoScroll]);
 
   const handleFinishReordering = useCallback(() => {
+    stopAutoScroll();
+    lastTouchPosRef.current = null;
     setIsReordering(false);
     draggedIndexRef.current = null;
     setDraggedIndex(null);
@@ -380,7 +465,7 @@ const SWAP_THROTTLE_MS = 100;
     localStorage.setItem('monety_widgets_order_v2', JSON.stringify(currentWidgets));
     saveStoredWidgetsConfig(currentWidgets, null);
     if (onSaveWidgets) onSaveWidgets(currentWidgets);
-  }, [onSaveWidgets]);
+  }, [onSaveWidgets, stopAutoScroll]);
 
   // Control de visibilidad de widgets (ocultar / restaurar)
   const handleToggleVisibility = useCallback((e, widgetId, newVisible) => {

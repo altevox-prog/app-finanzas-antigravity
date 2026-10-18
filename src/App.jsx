@@ -27,7 +27,7 @@ export default function App() {
           onClose={() => {}}
           isRequired={true}
         />
-        <Toaster position="top-right" />
+        <Toaster position="top-center" />
       </div>
     );
   }
@@ -55,6 +55,7 @@ export default function App() {
         onOpenAddInvestment={() => modalControls.openAddInvestment()}
         onOpenAddDebt={() => modalControls.openAddLoan('payable')}
         onOpenAddLoan={() => modalControls.openAddLoan('receivable')}
+        fromSettings={state.fromSettings}
         userProfile={state.userProfile}
         currentMonthLabel={state.currentMonthLabel}
         selectedDate={state.selectedDate}
@@ -166,6 +167,7 @@ export default function App() {
             onOpenAddInvestment={() => modalControls.openAddInvestment()}
             onOpenAddDebt={() => modalControls.openAddLoan('payable')}
             onOpenAddLoan={() => modalControls.openAddLoan('receivable')}
+            fromSettings={state.fromSettings}
             userProfile={state.userProfile}
             currentMonthLabel={state.currentMonthLabel}
             selectedDate={state.selectedDate}
@@ -264,7 +266,7 @@ export default function App() {
         )}
 
         {/* Sistema Global de Notificaciones Toaster */}
-        <Toaster position="top-right" />
+        <Toaster position="top-center" />
       </div>
     </div>
   </div>

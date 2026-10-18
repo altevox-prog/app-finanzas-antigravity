@@ -121,7 +121,7 @@ export default function WeeklyExpensesChart({
     };
   }, [monthTransactions, targetYear, targetMonth, selectedDay]);
 
-  // 3. Etiqueta del período para el subtítulo
+  // 3. Etiqueta del período para el subtítulo y totales
   const periodLabel = useMemo(() => {
     if (selectedDay) {
       const dayNum = parseInt(String(selectedDay).split('T')[0].split('-')[2], 10);
@@ -132,8 +132,22 @@ export default function WeeklyExpensesChart({
     return `${MONTH_NAMES[targetMonth]} ${targetYear}`;
   }, [selectedDay, currentMonthLabel, targetMonth, targetYear]);
 
+  // 4. Totales y semana activa para sincronización visual
+  const totalMonthExpense = useMemo(() => {
+    return weeksData.reduce((acc, w) => acc + (w.value || 0), 0);
+  }, [weeksData]);
+
+  const activeWeekItem = useMemo(() => {
+    return weeksData.find((w) => w.active) || weeksData[0] || { label: 'Sem 1', range: '', value: 0 };
+  }, [weeksData]);
+
+  const displayedFooterItem = hoveredIndex !== null && weeksData[hoveredIndex]
+    ? weeksData[hoveredIndex]
+    : activeWeekItem;
+
   return (
     <div
+      onClick={() => setHoveredIndex(null)}
       className={`h-full flex flex-col justify-between p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] shadow-sm hover:border-emerald-500/40 hover:shadow-sm transition-all select-none relative ${className}`}
     >
       {/* Encabezado del Widget */}
@@ -147,17 +161,15 @@ export default function WeeklyExpensesChart({
           </p>
         </div>
 
-        {/* Indicador de valor al interactuar */}
-        {hoveredIndex !== null && weeksData[hoveredIndex] && (
-          <div className="text-right animate-fadeIn">
-            <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block">
-              {weeksData[hoveredIndex].label}
-            </span>
-            <span className="text-xs font-bold font-mono tabular-nums text-rose-400">
-              {formatMoney(weeksData[hoveredIndex].value)}
-            </span>
-          </div>
-        )}
+        {/* Indicador general neutro sin duplicar el monto de la semana activa */}
+        <div className="text-right">
+          <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">
+            Total mes
+          </span>
+          <span className="text-xs font-semibold font-mono tabular-nums text-slate-700 dark:text-slate-300">
+            {formatMoney(totalMonthExpense)}
+          </span>
+        </div>
       </div>
 
       {/* Área del gráfico de barras cilíndricas: Altura explícita y armónica */}
@@ -174,9 +186,16 @@ export default function WeeklyExpensesChart({
               className="relative flex-1 max-w-[52px] sm:max-w-[60px] flex flex-col items-center justify-end h-full pt-6 cursor-pointer group select-none"
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
-              onClick={() => setHoveredIndex(idx)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setHoveredIndex(prev => prev === idx ? null : idx);
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                setHoveredIndex(idx);
+              }}
             >
-              {/* Monto de la semana activa sobre la barra o Tooltip al interactuar */}
+              {/* Tooltip flotante: Solo visible al interactuar (hover / touch / click) */}
               <AnimatePresence>
                 {isHovered ? (
                   <motion.div
@@ -188,10 +207,6 @@ export default function WeeklyExpensesChart({
                   >
                     {formatMoney(rawValue)}
                   </motion.div>
-                ) : item.active && rawValue > 0 ? (
-                  <div className="absolute -top-7 z-10 px-2.5 py-1 rounded-lg bg-[#1A1E2B] text-rose-300 border border-rose-500/30 text-xs font-semibold font-mono tabular-nums whitespace-nowrap shadow-sm pointer-events-none">
-                    {formatMoney(rawValue)}
-                  </div>
                 ) : null}
               </AnimatePresence>
 
@@ -246,11 +261,15 @@ export default function WeeklyExpensesChart({
         })}
       </div>
 
-      {/* Pie sutil del widget para simetría de altura con widget vecino */}
+      {/* Pie sutil del widget sincronizado dinámicamente con la barra interactuada */}
       <div className="pt-2.5 mt-3 border-t border-slate-100/80 dark:border-white/[0.07] flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
-        <span>Semana en curso ({weeksData.find(w => w.active)?.label || 'Sem 3'})</span>
-        <span className="font-mono tabular-nums text-rose-400 font-semibold">
-          {formatMoney(weeksData.find(w => w.active)?.value || 0)}
+        <span className="transition-colors">
+          {hoveredIndex !== null && weeksData[hoveredIndex]
+            ? `${displayedFooterItem.label} · ${displayedFooterItem.range}`
+            : `Semana en curso (${displayedFooterItem.label})`}
+        </span>
+        <span className="font-mono tabular-nums text-rose-500 dark:text-rose-400 font-semibold transition-colors">
+          {formatMoney(displayedFooterItem.value || 0)}
         </span>
       </div>
     </div>

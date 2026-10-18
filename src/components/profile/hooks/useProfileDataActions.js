@@ -93,22 +93,51 @@ export function useProfileDataActions({
           const { data } = await supabase.auth.getUser();
           const userId = data?.user?.id || (user?.id !== 'local-user' ? user?.id : null);
           if (userId) {
+            // 1. Eliminar tablas secundarias/dependientes primero si existen
+            try {
+              await supabase.from('debt_payments').delete().eq('user_id', userId);
+            } catch (_) {}
+
+            try {
+              await supabase.from('transactions').delete().eq('user_id', userId);
+            } catch (_) {}
+
+            // 2. Purga explícita y secuencial de la tabla budgets filtrando por user_id
+            const { error: budgetError } = await supabase
+              .from('budgets')
+              .delete()
+              .eq('user_id', userId);
+
+            if (budgetError) {
+              console.error('Error al purgar la tabla budgets:', budgetError.message);
+              throw new Error(`Error en budgets: ${budgetError.message}`);
+            }
+
+            // 3. Purga explícita de pagos recurrentes antes de eliminar cuentas (para evitar violación de FK)
+            try {
+              await supabase.from('recurring_payments').delete().eq('user_id', userId);
+            } catch (recErr) {
+              console.warn('[useProfileDataActions] Error al eliminar recurring_payments:', recErr);
+            }
+
+            // 4. Purga del resto de tablas principales
             await Promise.allSettled([
-              supabase.from('transactions').delete().eq('user_id', userId),
               supabase.from('debts').delete().eq('user_id', userId),
               supabase.from('recurring_payments').delete().eq('user_id', userId),
               supabase.from('investments').delete().eq('user_id', userId),
               supabase.from('savings_goals').delete().eq('user_id', userId),
-              supabase.from('budgets').delete().eq('user_id', userId),
               supabase.from('categories').delete().eq('user_id', userId),
-              supabase.from('accounts').delete().eq('user_id', userId)
+              supabase.from('user_settings').update({ global_budget_limit: 0, updated_at: new Date().toISOString() }).eq('user_id', userId)
             ]);
+
+            // 5. Purga final de cuentas
             try {
               await supabase.from('accounts').delete().eq('user_id', userId);
             } catch {}
           }
         } catch (cloudErr) {
-          console.warn('Error al borrar datos en Supabase:', cloudErr);
+          console.error('Error al borrar datos en Supabase:', cloudErr);
+          throw cloudErr;
         }
       }
 
@@ -154,6 +183,15 @@ export function useProfileDataActions({
           }
         }
         keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+        // Purgar explícitamente cualquier clave residual de pagos recurrentes y suscripciones
+        [
+          'recurring_payments',
+          'app_recurring',
+          'presu_subscriptions_v1',
+          'subscriptions'
+        ].forEach((k) => localStorage.removeItem(k));
+
         Object.entries(preservedData).forEach(([k, v]) => {
           if (v !== null) localStorage.setItem(k, v);
         });

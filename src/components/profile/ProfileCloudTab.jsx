@@ -193,34 +193,27 @@ export default function ProfileCloudTab({
 
       {/* Bloque 2: Restaurar Copia de Seguridad */}
       <div>
-        <div className="flex items-center gap-1.5 px-1 mb-2">
-          <UploadCloud className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Restauración
-          </h3>
-        </div>
-
         <div 
           onClick={() => restoreInputRef?.current?.click()}
-          className="p-4 sm:p-4.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-emerald-500/40 hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-3.5 group shadow-sm"
+          className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-emerald-500/40 hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-3 group shadow-sm"
         >
-          <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0 group-hover:text-emerald-500 group-hover:bg-emerald-500/10 transition-colors">
               <UploadCloud className="w-4.5 h-4.5" />
             </div>
-            <div className="min-w-0">
-              <h4 className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
-                Restaurar copia de seguridad
+            <div className="min-w-0 flex-1">
+              <h4 className="font-semibold text-sm sm:text-base text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors whitespace-nowrap">
+                Restaurar copia
               </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                Selecciona un archivo de respaldo para recuperar tus datos
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 whitespace-nowrap">
+                Seleccionar archivo
               </p>
             </div>
           </div>
           <button
             type="button"
             disabled={isRestoring}
-            className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 group-hover:border-emerald-500/40 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0 shadow-sm cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:border-emerald-500/40 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0 shadow-sm cursor-pointer whitespace-nowrap"
           >
             {isRestoring ? 'Restaurando...' : 'Examinar'}
           </button>

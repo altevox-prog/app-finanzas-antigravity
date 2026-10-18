@@ -56,7 +56,7 @@ export default function AmountInput({
     // Conteo de dígitos y delimitadores antes del cursor para reposicionamiento preciso
     const rawBeforeCursor = raw.slice(0, cursor);
     const digitsBeforeCursor = rawBeforeCursor.replace(/\D/g, '').length;
-    const hasDecimalBeforeCursor = rawBeforeCursor.includes(',') || rawBeforeCursor.endsWith('.') || rawBeforeCursor.includes('.');
+    const hasDecimalBeforeCursor = rawBeforeCursor.includes('.') || rawBeforeCursor.endsWith(',') || rawBeforeCursor.includes(',');
 
     // Formatear valor visual
     const formatted = formatCurrencyInput(raw, decimalsAllowed);
@@ -64,8 +64,8 @@ export default function AmountInput({
     // Calcular valor numérico limpio para el estado padre (compatible con parseFloat / Supabase)
     let cleanNumeric = '';
     if (formatted) {
-      if (formatted.includes(',')) {
-        const [intPart, decPart] = formatted.split(',');
+      if (formatted.includes('.')) {
+        const [intPart, decPart] = formatted.split('.');
         const cleanInt = intPart.replace(/\D/g, '') || '0';
         cleanNumeric = decPart !== undefined && decPart !== '' ? `${cleanInt}.${decPart}` : `${cleanInt}.`;
       } else {
@@ -85,8 +85,8 @@ export default function AmountInput({
     let digitsCounted = 0;
 
     if (digitsBeforeCursor === 0) {
-      // Si el usuario escribió coma o punto al inicio (ej. "," o "." -> "0,")
-      newCursor = (hasDecimalBeforeCursor && formatted.includes(',')) ? formatted.indexOf(',') + 1 : 0;
+      // Si el usuario escribió punto o coma al inicio (ej. "." o "," -> "0.")
+      newCursor = (hasDecimalBeforeCursor && formatted.includes('.')) ? formatted.indexOf('.') + 1 : 0;
     } else {
       for (let i = 0; i < formatted.length; i++) {
         if (/\d/.test(formatted[i])) {
@@ -94,8 +94,8 @@ export default function AmountInput({
         }
         if (digitsCounted === digitsBeforeCursor) {
           newCursor = i + 1;
-          // Si el usuario escribió una coma inmediatamente después del dígito
-          if (hasDecimalBeforeCursor && formatted[i + 1] === ',') {
+          // Si el usuario escribió un punto inmediatamente después del dígito
+          if (hasDecimalBeforeCursor && formatted[i + 1] === '.') {
             newCursor = i + 2;
           }
           break;
@@ -117,10 +117,10 @@ export default function AmountInput({
       const { selectionStart, selectionEnd, value: currentVal } = input;
       // Cursor simple en posición mayor a cero
       if (selectionStart === selectionEnd && selectionStart > 0) {
-        // Si el caracter inmediatamente anterior es un punto separador de miles
-        if (currentVal[selectionStart - 1] === '.') {
+        // Si el caracter inmediatamente anterior es una coma separadora de miles
+        if (currentVal[selectionStart - 1] === ',') {
           e.preventDefault();
-          // Eliminar el dígito previo al punto en vez del punto mismo
+          // Eliminar el dígito previo a la coma en vez de la coma misma
           const before = currentVal.slice(0, selectionStart - 2);
           const after = currentVal.slice(selectionStart);
           const nextVal = before + after;
@@ -128,8 +128,8 @@ export default function AmountInput({
           const nextFormatted = formatCurrencyInput(nextVal, decimalsAllowed);
           let nextClean = '';
           if (nextFormatted) {
-            if (nextFormatted.includes(',')) {
-              const [intP, decP] = nextFormatted.split(',');
+            if (nextFormatted.includes('.')) {
+              const [intP, decP] = nextFormatted.split('.');
               nextClean = decP !== undefined && decP !== '' 
                 ? `${intP.replace(/\D/g, '') || '0'}.${decP}` 
                 : `${intP.replace(/\D/g, '') || '0'}.`;
@@ -170,15 +170,15 @@ export default function AmountInput({
 
   const handleBlur = (e) => {
     isFocusedRef.current = false;
-    // Normalizar formato al salir: si quedó en estado transitorio "75.000,", limpiar coma final
+    // Normalizar formato al salir: si quedó en estado transitorio "75,000.", limpiar punto final
     let formatted = formatCurrencyInput(displayValue, decimalsAllowed);
-    if (formatted.endsWith(',')) {
+    if (formatted.endsWith('.')) {
       formatted = formatted.slice(0, -1);
     }
     let clean = '';
     if (formatted) {
-      if (formatted.includes(',')) {
-        const [intP, decP] = formatted.split(',');
+      if (formatted.includes('.')) {
+        const [intP, decP] = formatted.split('.');
         clean = decP !== undefined && decP !== '' 
           ? `${intP.replace(/\D/g, '') || '0'}.${decP}` 
           : intP.replace(/\D/g, '');

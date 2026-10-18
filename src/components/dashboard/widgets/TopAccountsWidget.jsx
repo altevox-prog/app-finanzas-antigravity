@@ -117,7 +117,7 @@ export default function TopAccountsWidget({
                       {formatNativeCurrency(currentBal, currency)}
                     </span>
                     <span className="text-[10px] text-slate-500 dark:text-zinc-400 block tabular-nums">
-                      ≈ $ {Math.round(copBal).toLocaleString('es-CO')} COP
+                      ≈ {formatMoney(copBal)} COP
                     </span>
                   </>
                 ) : isCard ? (

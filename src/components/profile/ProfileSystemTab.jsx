@@ -3,7 +3,6 @@ import {
   Moon, 
   Sun, 
   Coins, 
-  RefreshCw,
   AlertTriangle 
 } from 'lucide-react';
 import UpdateAppButton from '../ui/UpdateAppButton';
@@ -26,62 +25,44 @@ export default function ProfileSystemTab({
   onResetData
 }) {
   return (
-    <div className="space-y-5 animate-fadeIn">
-      {/* 1. Alternador de Modo Claro / Modo Oscuro */}
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-2 px-1">
-          {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-          <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Apariencia y tema
-          </h3>
+    <div className="space-y-4 animate-fadeIn">
+      {/* 1. Tarjeta de Tema / Apariencia */}
+      <div className="p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+            {theme === 'dark' ? <Moon className="w-4.5 h-4.5 text-indigo-400" /> : <Sun className="w-4.5 h-4.5 text-amber-500" />}
+          </div>
+          <p className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
+            Tema
+          </p>
         </div>
 
-        <div 
-          className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 space-y-3"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
-                {theme === 'dark' ? <Moon className="w-4.5 h-4.5" /> : <Sun className="w-4.5 h-4.5" />}
-              </div>
-              <div>
-                <p className="text-[13px] font-semibold text-slate-900 dark:text-zinc-100">
-                  Modo {theme === 'dark' ? 'oscuro' : 'claro'}
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {theme === 'dark' ? 'Interfaz nocturna optimizada de bajo brillo.' : 'Interfaz clara de alto contraste.'}
-                </p>
-              </div>
-            </div>
-
-            {/* Selector de Tema */}
-            <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-200/60 dark:bg-white/5 border border-slate-300/40 dark:border-white/10 shrink-0">
-              <button
-                type="button"
-                onClick={() => onThemeChange?.('light')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  theme === 'light'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Sun className="w-3.5 h-3.5 text-amber-500" />
-                <span>Claro</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onThemeChange?.('dark')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  theme === 'dark'
-                    ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Moon className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Oscuro</span>
-              </button>
-            </div>
-          </div>
+        {/* Selector de Tema tipo Píldora */}
+        <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-zinc-950/80 border border-slate-200/80 dark:border-zinc-800/80 shrink-0 max-w-full overflow-hidden">
+          <button
+            type="button"
+            onClick={() => onThemeChange?.('light')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              theme === 'light'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Sun className="w-3.5 h-3.5 text-amber-500" />
+            <span>Claro</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onThemeChange?.('dark')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              theme === 'dark'
+                ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Moon className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Oscuro</span>
+          </button>
         </div>
       </div>
 
@@ -128,17 +109,8 @@ export default function ProfileSystemTab({
         </div>
       </div>
 
-      {/* 3. Bloque de Versión de la aplicación y Buscar actualización */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex items-center gap-2 px-1">
-          <RefreshCw className="w-4 h-4 text-emerald-500" />
-          <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Versión del sistema
-          </h3>
-        </div>
-
-        <UpdateAppButton />
-      </div>
+      {/* 3. Tarjeta de Versión del sistema y Actualización */}
+      <UpdateAppButton />
 
       {/* 4. Zona de peligro: restablecer datos */}
       <div className="pt-2">

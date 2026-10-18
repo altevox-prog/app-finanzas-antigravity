@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { 
-  Info, 
   Calendar, 
   ChevronDown, 
   ArrowDownRight, 
@@ -30,24 +29,6 @@ export default function MonthlyNetHeroCard({
 }) {
   const { formatMoney: privacyFormatMoney, isPrivacyMode } = usePrivacy();
   const formatMoney = propFormatMoney || privacyFormatMoney;
-  const [showTooltip, setShowTooltip] = useState(false);
-  const tooltipRef = useRef(null);
-
-  // Cierre del tooltip de información al hacer click afuera
-  useEffect(() => {
-    if (!showTooltip) return;
-    const handleClickOutside = (e) => {
-      if (tooltipRef.current && !tooltipRef.current.contains(e.target)) {
-        setShowTooltip(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [showTooltip]);
 
   // Construcción consistente del texto del selector de mes / periodo
   const monthLabel = useMemo(() => {
@@ -186,27 +167,11 @@ export default function MonthlyNetHeroCard({
       <div className="w-full bg-white dark:bg-[#12151E] rounded-3xl p-4 sm:p-5 border border-slate-200/60 dark:border-white/[0.07] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition-all">
         {/* 1. Cabecera */}
         <div className="flex items-center justify-between gap-3">
-          {/* Izquierda: Etiqueta con Icono Informativo */}
-          <div className="relative flex items-center gap-1.5" ref={tooltipRef}>
+          {/* Izquierda: Etiqueta */}
+          <div className="flex items-center gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {selectedDay ? 'Neto del día' : 'Neto del mes'}
             </span>
-            <button
-              type="button"
-              onClick={() => setShowTooltip(prev => !prev)}
-              className="p-0.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-              title="Neto = Ingresos - Gastos"
-              aria-label="Ver fórmula del neto"
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Tooltip flotante informativo */}
-            {showTooltip && (
-              <div className="absolute left-0 top-full mt-1.5 z-30 px-3 py-1.5 rounded-xl bg-slate-900 text-white dark:bg-[#181C27] dark:text-slate-100 text-xs shadow-xl border border-slate-700/60 dark:border-white/[0.07] whitespace-nowrap animate-fadeIn">
-                <span className="font-semibold">Fórmula:</span> Ingresos − Gastos
-              </div>
-            )}
           </div>
 
           {/* Derecha: Selector de Periodo */}

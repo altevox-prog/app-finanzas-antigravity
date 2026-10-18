@@ -73,11 +73,11 @@ export default function DashboardWidgetWrapper({
         onDrop={onDrop}
         className={`relative ${
           wide ? 'col-span-1 lg:col-span-2' : 'col-span-1'
-        } w-full select-none touch-none ${transitionClass} ${animationClass} ${
+        } w-full select-none touch-pan-y ${transitionClass} ${animationClass} ${
           isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : (isDragging ? '' : 'hover:scale-[1.01]')
         } ${className}`}
         style={{
-          touchAction: 'none',
+          touchAction: 'pan-y',
           willChange: isReordering ? 'transform' : 'auto',
           transform: 'translate3d(0, 0, 0)',
         }}
@@ -98,12 +98,12 @@ export default function DashboardWidgetWrapper({
           onDrop={onDrop}
           onDragEnd={onDragEnd}
           style={{ touchAction: 'none' }}
-          className="absolute -top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/95 dark:bg-zinc-800 text-white shadow-xl border border-white/20 cursor-grab active:cursor-grabbing touch-none select-none pointer-events-auto"
+          className="absolute -top-3 left-3 z-30 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/95 dark:bg-zinc-800 text-white shadow-xl border border-white/20 hover:border-emerald-500/50 cursor-grab active:cursor-grabbing active:scale-105 active:bg-emerald-600 transition-all touch-none select-none pointer-events-auto"
           title="Arrastra desde aquí para mover el widget"
           aria-label="Manija para mover widget"
         >
-          <GripVertical className="w-3.5 h-3.5 opacity-90 text-slate-300 pointer-events-none select-none" />
-          <span className="text-[11px] font-bold tracking-tight pointer-events-none select-none">Mover</span>
+          <GripVertical className="w-4 h-4 text-emerald-400 pointer-events-none select-none shrink-0" />
+          <span className="text-xs font-bold tracking-tight pointer-events-none select-none">Mover</span>
         </div>
 
         {/* Botón flotante para ocultar widget en modo reorganización */}

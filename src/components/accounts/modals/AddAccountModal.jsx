@@ -133,10 +133,18 @@ export default function AddAccountModal({
 
       const isInvestment = newAccType === 'investment';
       const isCreditNew = normalizeAccountType(newAccType) === 'credit';
-      const sharesNum = isInvestment && newAccShares ? parseFloat(newAccShares) : undefined;
-      const unitPriceNum = isInvestment && newAccUnitPrice ? parseFloat(newAccUnitPrice) : undefined;
-      let initBal = parseFloat(newAccBalance) || 0;
-      if (isInvestment && sharesNum && unitPriceNum && (!newAccBalance || parseFloat(newAccBalance) === 0)) {
+      const parseDecNum = (val) => {
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        if (!val) return 0;
+        const cleaned = String(val).replace(/,/g, '.');
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+      };
+
+      const sharesNum = isInvestment && newAccShares ? parseDecNum(newAccShares) : undefined;
+      const unitPriceNum = isInvestment && newAccUnitPrice ? parseDecNum(newAccUnitPrice) : undefined;
+      let initBal = parseDecNum(newAccBalance);
+      if (isInvestment && sharesNum && unitPriceNum && (!newAccBalance || parseDecNum(newAccBalance) === 0)) {
         initBal = sharesNum * unitPriceNum;
       }
       // Las tarjetas de crédito almacenan el saldo como deuda (negativo)
@@ -145,7 +153,7 @@ export default function AddAccountModal({
       }
 
       const normalizedType = normalizeAccountType(newAccType);
-      const numericNewBalance = parseFloat(initBal) || 0;
+      const numericNewBalance = Number(initBal) || 0;
       const newAcc = {
         id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('acc-' + Date.now()),
         name: newAccName.trim(),
@@ -353,7 +361,7 @@ export default function AddAccountModal({
                 <AmountInput
                   value={newAccBalance}
                   onChange={(cleanVal) => setNewAccBalance(cleanVal)}
-                  allowDecimals={newAccCurrency !== 'COP'}
+                  allowDecimals={true}
                   placeholder="0"
                   onFocus={(e) => e.target.select()}
                   className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold"

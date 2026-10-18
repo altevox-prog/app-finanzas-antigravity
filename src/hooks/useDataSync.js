@@ -384,7 +384,9 @@ export function useDataSync({
       }
 
       // 5. SINCRONIZAR PAGOS RECURRENTES
-      const recurringPayload = buildRecurringPayload(current.recurringPayments, userId, nowIso);
+      // Validar claves foráneas contra cuentas existentes para evitar errores 409 / 23503
+      const existingAccountIds = new Set((accountsPayload || []).map(a => a.id));
+      const recurringPayload = buildRecurringPayload(current.recurringPayments, userId, nowIso, existingAccountIds);
       if (recurringPayload.length > 0) {
         await syncApiService.upsertWithFallback('recurring_payments', recurringPayload, {
           onConflict: 'id',

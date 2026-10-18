@@ -64,9 +64,26 @@ export const toSafeNumber = (val) => {
 /**
  * Redondeo Financiero para COP (entero estándar, o 2 decimales si está habilitado)
  */
-export const roundCOP = (val, allowDecimals = false) => {
+export const roundCOP = (val, allowDecimals = undefined) => {
+  const isDecimalsAllowed = allowDecimals !== undefined ? Boolean(allowDecimals) : (() => {
+    try {
+      if (typeof window === 'undefined') return false;
+      const direct = localStorage.getItem('app_enable_decimals');
+      if (direct !== null) return direct === 'true';
+      const userSettingsRaw = localStorage.getItem('user_settings');
+      if (userSettingsRaw) {
+        const parsed = JSON.parse(userSettingsRaw);
+        const v = parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals;
+        if (v !== undefined && v !== null) return Boolean(v);
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  })();
+
   const num = toSafeNumber(val);
-  if (allowDecimals) {
+  if (isDecimalsAllowed) {
     return Number(Math.round(Number(num + 'e2')) + 'e-2');
   }
   return Math.round(num);
