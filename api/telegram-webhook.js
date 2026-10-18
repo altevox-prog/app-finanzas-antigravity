@@ -361,6 +361,15 @@ export default async function handler(req, res) {
       ? finalConcept.charAt(0).toUpperCase() + finalConcept.slice(1)
       : 'Gasto general';
 
+    console.log('[DEBUG-CONCEPTO-FINAL]', {
+      rawText,
+      concept,
+      forbiddenTerms,
+      preservedWords,
+      finalConcept,
+      description
+    });
+
     const nowIso = new Date().toISOString();
 
     // Generar UUID de la transacción
