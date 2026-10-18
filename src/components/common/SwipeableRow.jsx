@@ -3,13 +3,8 @@ import { Pencil, Trash2 } from 'lucide-react';
 
 /**
  * SwipeableRow
- * Componente reutilizable y ligero para acciones de deslizamiento horizontal (Swipe Actions).
- * 
- * - Eventos de puntero nativos (mouse + touch) sin librerías externas.
- * - Bloqueo inteligente de eje (no interfiere con el scroll vertical nativo).
- * - Deslizar a la derecha (->) revela Editar (azul con icono de lápiz).
- * - Deslizar a la izquierda (<-) revela Eliminar (rojo con icono de papelera).
- * - Soporte para escritorio: arrastre con mouse y acceso rápido en group-hover.
+ * Componente unificado y ligero para acciones de deslizamiento horizontal (Swipe Actions).
+ * Compatible con Mobile, Tablet (Touch/Stylus) y Desktop (Mouse/Trackpad).
  */
 export default function SwipeableRow({
   children,
@@ -18,9 +13,8 @@ export default function SwipeableRow({
   className = '',
   contentClassName = '',
   disabled = false,
-  threshold = 55,
-  actionWidth = 76,
-  showDesktopHover = true
+  threshold = 45,
+  actionWidth = 76
 }) {
   const [offset, setOffset] = useState(0);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -30,8 +24,9 @@ export default function SwipeableRow({
   const isDraggingRef = useRef(false);
   const axisLockRef = useRef(null); // 'x' | 'y' | null
   const hasDraggedRef = useRef(false);
+  const activePointerIdRef = useRef(null);
 
-  // Cerrar fila si se hace clic/pointerdown fuera mientras está abierta
+  // Cerrar fila si se hace pointerdown fuera mientras está abierta
   useEffect(() => {
     if (offset === 0) return;
 
@@ -45,27 +40,29 @@ export default function SwipeableRow({
     return () => window.removeEventListener('pointerdown', handleGlobalPointerDown);
   }, [offset]);
 
-  const handleTouchStart = (e) => {
-    if (disabled || !e.touches || e.touches.length !== 1) return;
-    const touch = e.touches[0];
+  const handlePointerDown = (e) => {
+    if (disabled) return;
+    // Solo clic principal (botón izquierdo) o toque táctil
+    if (e.button !== undefined && e.button !== 0) return;
 
     dragStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
+      x: e.clientX,
+      y: e.clientY,
       initialOffset: offset,
       time: Date.now()
     };
+    activePointerIdRef.current = e.pointerId;
     isDraggingRef.current = false;
     axisLockRef.current = null;
   };
 
-  const handleTouchMove = (e) => {
-    if (!dragStartRef.current || !e.touches || e.touches.length !== 1) return;
+  const handlePointerMove = (e) => {
+    if (!dragStartRef.current) return;
+    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
     if (axisLockRef.current === 'y') return;
 
-    const touch = e.touches[0];
-    const dx = touch.clientX - dragStartRef.current.x;
-    const dy = touch.clientY - dragStartRef.current.y;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
 
     if (axisLockRef.current === null) {
       if (Math.hypot(dx, dy) < 6) return;
@@ -78,6 +75,12 @@ export default function SwipeableRow({
         isDraggingRef.current = true;
         hasDraggedRef.current = true;
         setIsInteracting(true);
+        // Capturar puntero para no perder el gesto en pantallas de tablet
+        if (e.target && e.target.setPointerCapture) {
+          try {
+            e.target.setPointerCapture(e.pointerId);
+          } catch (_) {}
+        }
       }
     }
 
@@ -98,21 +101,27 @@ export default function SwipeableRow({
     }
   };
 
-  const handleTouchEnd = (e) => {
+  const handlePointerUp = (e) => {
     if (!dragStartRef.current) return;
 
     const wasDragging = isDraggingRef.current;
-    const touch = e.changedTouches ? e.changedTouches[0] : null;
-    const dx = touch ? touch.clientX - dragStartRef.current.x : (offset - dragStartRef.current.initialOffset);
+    const dx = e.clientX - dragStartRef.current.x;
     const dt = Date.now() - dragStartRef.current.time;
 
+    if (e.target && e.target.releasePointerCapture && activePointerIdRef.current !== null) {
+      try {
+        e.target.releasePointerCapture(activePointerIdRef.current);
+      } catch (_) {}
+    }
+
     dragStartRef.current = null;
+    activePointerIdRef.current = null;
     isDraggingRef.current = false;
     axisLockRef.current = null;
     setIsInteracting(false);
 
     if (wasDragging) {
-      const isQuickFlick = dt < 250 && Math.abs(dx) > 25;
+      const isQuickFlick = dt < 300 && Math.abs(dx) > 20;
 
       if ((offset > threshold || (isQuickFlick && dx > 0)) && onEdit) {
         setOffset(actionWidth);
@@ -125,7 +134,6 @@ export default function SwipeableRow({
   };
 
   const handleClickCapture = (e) => {
-    // Si hubo arrastre, interceptar el clic para no abrir modales o detalles
     if (hasDraggedRef.current) {
       e.stopPropagation();
       e.preventDefault();
@@ -133,7 +141,6 @@ export default function SwipeableRow({
       return;
     }
 
-    // Si la tarjeta estaba abierta y se toca el cuerpo, cerrarla en vez de activar el clic hijo
     if (offset !== 0) {
       e.stopPropagation();
       e.preventDefault();
@@ -165,7 +172,7 @@ export default function SwipeableRow({
       className={`relative overflow-hidden group select-none ${className}`}
       style={{ touchAction: 'pan-y' }}
     >
-      {/* Acción Izquierda Revelada: EDITAR (deslizar ->) */}
+      {/* Acción Izquierda: EDITAR (deslizar ->) */}
       {onEdit && (
         <div
           className="absolute inset-y-0 left-0 bg-blue-600 dark:bg-blue-500 text-white flex items-center justify-start z-0 transition-opacity"
@@ -182,13 +189,13 @@ export default function SwipeableRow({
             title="Editar"
             aria-label="Editar"
           >
-            <Pencil className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            <Pencil className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
             <span className="text-[10px] uppercase tracking-wider font-bold">Editar</span>
           </button>
         </div>
       )}
 
-      {/* Acción Derecha Revelada: ELIMINAR (deslizar <-) */}
+      {/* Acción Derecha: ELIMINAR (deslizar <-) */}
       {onDelete && (
         <div
           className="absolute inset-y-0 right-0 bg-rose-600 dark:bg-rose-500 text-white flex items-center justify-end z-0 transition-opacity"
@@ -205,24 +212,25 @@ export default function SwipeableRow({
             title="Eliminar"
             aria-label="Eliminar"
           >
-            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
             <span className="text-[10px] uppercase tracking-wider font-bold">Borrar</span>
           </button>
         </div>
       )}
 
-      {/* Contenido Deslizable */}
+      {/* Contenido Deslizable con Pointer Events unificados */}
       <div
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onClickCapture={handleClickCapture}
-        className={`relative z-10 w-full ${contentClassName}`}
+        className={`relative z-10 w-full touch-pan-y ${contentClassName}`}
         style={{
           transform: `translate3d(${offset}px, 0, 0)`,
           transition: isInteracting ? 'none' : 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)',
-          willChange: isInteracting ? 'transform' : 'auto'
+          willChange: isInteracting ? 'transform' : 'auto',
+          touchAction: 'pan-y'
         }}
       >
         {children}
