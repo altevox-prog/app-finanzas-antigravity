@@ -162,7 +162,7 @@ function parseAmountAndConcept(rawText) {
     concept = concept.charAt(0).toUpperCase() + concept.slice(1);
   }
 
-  return { amount: isNaN(amount) ? 0 : amount, concept };
+  return { amount: isNaN(amount) ? 0 : amount, concept, matchedRaw };
 }
 
 // Extractor de tipo (income vs expense)
@@ -277,7 +277,7 @@ export default async function handler(req, res) {
     }
 
     // Extraer monto y concepto de forma robusta
-    const { amount, concept } = parseAmountAndConcept(rawText);
+    const { amount, concept, matchedRaw } = parseAmountAndConcept(rawText);
     if (!amount || amount <= 0) {
       console.log('[DEBUG-2.2] No se pudo identificar el monto en el texto:', rawText);
       const helpMsg = `⚠️ No pude identificar el monto en tu mensaje: "${rawText}".\n\nPor favor incluye el valor numérico, por ejemplo:\n*Almuerzo 25.000 efectivo* o *Almuerzo 25k*`;
@@ -312,7 +312,43 @@ export default async function handler(req, res) {
     const { accountId, accountName } = resolveAccount(rawText, accounts || []);
     const movementType = extractType(rawText);
     const category = extractCategory(rawText, movementType);
-    const description = concept || 'Movimiento vía Telegram';
+
+    // Limpieza quirúrgica de la descripción
+    let cleanConceptText = (concept || rawText || '').trim();
+
+    // 1. Quitar el monto capturado si aún está
+    if (typeof matchedRaw !== 'undefined' && matchedRaw) {
+      cleanConceptText = cleanConceptText.replace(matchedRaw, '');
+    }
+
+    // 2. Lista de palabras a remover
+    const wordsToRemove = [
+      'efectivo', 'cash', 'plata',
+      'nequi', 'daviplata', 'davi',
+      'bancolombia', 'banco',
+      'tarjeta', 'debito', 'débito', 'credito', 'crédito'
+    ];
+
+    if (accountName && accountName.toLowerCase() !== 'sin cuenta asignada') {
+      wordsToRemove.push(accountName.toLowerCase().trim());
+    }
+
+    // 3. Remover conectores y nombres de cuenta
+    for (const term of wordsToRemove) {
+      if (!term) continue;
+      // Quita "en efectivo", "por nequi", "con tarjeta" o solo el término "efectivo"
+      const looseRegex = new RegExp('(?:^|\\s+)(?:en|con|por|de|a|del)?\\s*' + term + '(?=$|\\s+)', 'gi');
+      cleanConceptText = cleanConceptText.replace(looseRegex, ' ');
+    }
+
+    // 4. Limpiar espacios extra
+    cleanConceptText = cleanConceptText.replace(/\s+/g, ' ').trim();
+
+    // 5. Fallback y formato
+    const description = cleanConceptText.length > 0
+      ? cleanConceptText.charAt(0).toUpperCase() + cleanConceptText.slice(1)
+      : 'Gasto general';
+
     const nowIso = new Date().toISOString();
 
     // Generar UUID de la transacción
