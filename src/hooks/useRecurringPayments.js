@@ -1,200 +1,316 @@
-import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS } from '../constants/storageKeys';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from '../utils/toast';
 import { ensureUUID } from '../services/syncEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getSupabaseUser } from '../services/supabaseClient';
+import { normalizeRemoteRecurring } from '../services/sync/syncNormalizers';
+import { toSafeNumber } from '../utils/financeMath';
 
-function getInitialRecurringPayments() {
-  try {
-    const savedRec = localStorage.getItem(STORAGE_KEYS.RECURRING_PAYMENTS) ||
-                     localStorage.getItem('app_recurring');
-    if (savedRec) {
-      const parsed = JSON.parse(savedRec);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => ({
-          ...item,
-          billingDay: item.billingDay ?? item.billing_day ?? 1,
-          isActive: item.isActive !== false && item.active !== false && item.is_active !== false,
-          nextPaymentDate: item.nextPaymentDate || item.next_payment_date || item.nextDate || item.next_date || null,
-          accountId: item.accountId || item.account_id || '',
-          userId: item.userId || item.user_id || null
-        }));
-      }
-    }
-    const savedSubs = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTIONS) ||
-                      localStorage.getItem('subscriptions');
-    if (savedSubs) {
-      const parsedSubs = JSON.parse(savedSubs);
-      if (Array.isArray(parsedSubs) && parsedSubs.length > 0) {
-        return parsedSubs.map((s) => ({
-          id: s.id || 'rec-' + Date.now() + Math.random(),
-          name: s.name,
-          amount: Number(s.amount) || 0,
-          originalAmount: Number(s.amount) || 0,
-          originalCurrency: 'COP',
-          exchangeRate: 1,
-          type: 'expense',
-          mode: s.mode || 'auto',
-          frequency: s.frequency || 'monthly',
-          billingDay: s.billingDay ?? s.billing_day ?? 1,
-          accountId: s.accountId || s.account_id || '',
-          accountName: s.accountName || '',
-          categoryId: s.categoryId || s.category_id || '',
-          categoryName: s.categoryName || 'Suscripciones',
-          isActive: s.isActive !== false && s.active !== false && s.is_active !== false,
-          createdAt: s.createdAt || new Date().toISOString()
-        }));
-      }
-    }
-    return [];
-  } catch (e) {
-    console.error('Error parseando recurring_payments:', e);
-    return [];
-  }
+/**
+ * Normaliza y procesa un registro de pago recurrente/suscripción
+ */
+export function sanitizeRecurringItem(item) {
+  if (!item || typeof item !== 'object') return item;
+  const normalized = normalizeRemoteRecurring(item);
+  const rawData = item.raw_data && typeof item.raw_data === 'object' ? item.raw_data : {};
+
+  const cleanAmount = toSafeNumber(item.amount ?? rawData.amount ?? 0);
+  const billingDay = Number(item.billingDay ?? item.billing_day ?? rawData.billingDay ?? rawData.billing_day ?? 1);
+  const isActive = item.isActive !== false && item.active !== false && item.is_active !== false && rawData.isActive !== false;
+  const nextPaymentDate = item.nextPaymentDate || item.next_payment_date || item.nextDate || item.next_date || rawData.nextPaymentDate || null;
+  const accountId = item.accountId || item.account_id || rawData.accountId || rawData.account_id || '';
+  const categoryName = item.categoryName || item.category || rawData.categoryName || rawData.category || 'General';
+
+  return {
+    ...normalized,
+    ...rawData,
+    id: item.id || 'rec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+    name: item.name || rawData.name || 'Suscripción',
+    amount: cleanAmount,
+    originalAmount: cleanAmount,
+    originalCurrency: item.originalCurrency || rawData.originalCurrency || 'COP',
+    exchangeRate: toSafeNumber(item.exchangeRate || rawData.exchangeRate || 1),
+    type: item.type || rawData.type || 'expense',
+    mode: item.mode || rawData.mode || 'auto',
+    frequency: item.frequency || rawData.frequency || 'monthly',
+    billingDay,
+    billing_day: billingDay,
+    accountId,
+    account_id: accountId,
+    accountName: item.accountName || rawData.accountName || '',
+    categoryId: item.categoryId || item.category_id || rawData.categoryId || '',
+    category_id: item.categoryId || item.category_id || rawData.categoryId || '',
+    categoryName,
+    category: categoryName,
+    isActive,
+    is_active: isActive,
+    active: isActive,
+    nextPaymentDate,
+    next_payment_date: nextPaymentDate,
+    createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+    created_at: item.createdAt || item.created_at || new Date().toISOString(),
+    updatedAt: item.updatedAt || item.updated_at || new Date().toISOString(),
+    updated_at: item.updatedAt || item.updated_at || new Date().toISOString()
+  };
 }
 
-function saveRecurringToStorage(items) {
-  try {
-    const serialized = JSON.stringify(items);
-    localStorage.setItem(STORAGE_KEYS.RECURRING_PAYMENTS, serialized);
-    localStorage.setItem('app_recurring', serialized);
-    localStorage.setItem(STORAGE_KEYS.SUBSCRIPTIONS, serialized);
-    localStorage.setItem('subscriptions', serialized);
-  } catch (e) {
-    console.error('Error guardando pagos recurrentes:', e);
-  }
+/**
+ * Mapea un objeto de pago recurrente al payload para Supabase
+ */
+export function mapRecurringToSupabasePayload(item, userId) {
+  const cleanId = ensureUUID(item.id);
+  const nowIso = new Date().toISOString();
+  const cleanAmount = toSafeNumber(item.amount);
+  const rawAccountId = item.accountId || item.account_id;
+  const cleanAccountId = rawAccountId ? ensureUUID(rawAccountId) : null;
+
+  return {
+    id: cleanId,
+    user_id: userId,
+    name: item.name || 'Suscripción',
+    amount: cleanAmount,
+    type: item.type || 'expense',
+    category: item.category || item.categoryName || 'General',
+    frequency: item.frequency || 'monthly',
+    billing_day: Number(item.billingDay || item.billing_day || 1),
+    is_active: item.isActive !== false && item.active !== false && item.is_active !== false,
+    account_id: cleanAccountId,
+    next_payment_date: item.nextPaymentDate || item.next_payment_date || item.nextDate || item.next_date || null,
+    raw_data: {
+      ...item,
+      amount: cleanAmount,
+      updated_at: nowIso
+    },
+    updated_at: nowIso
+  };
 }
 
-export function useRecurringPayments(isResettingRef) {
-  const [recurringPayments, setRecurringPayments] = useState(getInitialRecurringPayments);
+/**
+ * useRecurringPayments
+ * Hook de pagos recurrentes y suscripciones conectado a Supabase Puro y sincronizado en tiempo real (Realtime).
+ */
+export function useRecurringPayments(isResettingRef, options = {}) {
+  const explicitUser = typeof isResettingRef === 'object' && isResettingRef?.user ? isResettingRef.user : options?.user;
+  const resetRef = typeof isResettingRef === 'object' && 'current' in isResettingRef ? isResettingRef : options?.isResettingRef;
 
-  // Persistencia reactiva en localStorage
+  // Estado limpio en memoria vacía
+  const [recurringPayments, setRecurringPayments] = useState([]);
+  const [activeUser, setActiveUser] = useState(explicitUser || null);
+  const activeUserRef = useRef(explicitUser || null);
+  activeUserRef.current = activeUser;
+
+  // 1. Detección y suscripción a la sesión del usuario de Supabase Auth
   useEffect(() => {
-    if (isResettingRef?.current) return;
-    saveRecurringToStorage(recurringPayments);
-  }, [recurringPayments, isResettingRef]);
+    if (explicitUser) {
+      setActiveUser(explicitUser);
+      return;
+    }
+
+    if (!isSupabaseConfigured || !supabase) return;
+
+    let isMounted = true;
+    getSupabaseUser().then((u) => {
+      if (isMounted && u?.id) {
+        setActiveUser(u);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) {
+        setActiveUser(session?.user || null);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, [explicitUser]);
+
+  // 2. Consulta y carga inicial reactiva desde Supabase
+  const fetchRecurringPayments = useCallback(async (userId = null) => {
+    if (!isSupabaseConfigured || !supabase) return [];
+    try {
+      let uid = userId || activeUserRef.current?.id;
+      if (!uid) {
+        const user = await getSupabaseUser();
+        uid = user?.id;
+      }
+      if (!uid) return [];
+
+      const { data, error } = await supabase
+        .from('recurring_payments')
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[useRecurringPayments] Error al consultar pagos recurrentes en Supabase:', error);
+        return [];
+      }
+
+      if (Array.isArray(data)) {
+        const mapped = data.map(sanitizeRecurringItem);
+        setRecurringPayments(mapped);
+        return mapped;
+      }
+      return [];
+    } catch (err) {
+      console.error('[useRecurringPayments] Fallo al consultar pagos recurrentes:', err);
+      return [];
+    }
+  }, []);
+
+  useEffect(() => {
+    if (resetRef?.current) return;
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
+
+    fetchRecurringPayments(activeUser.id);
+  }, [activeUser?.id, resetRef, fetchRecurringPayments]);
+
+  // 3. Suscripción en Tiempo Real (Realtime WebSockets)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
+
+    const channelName = `realtime:recurring_payments:${activeUser.id}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'recurring_payments',
+          filter: `user_id=eq.${activeUser.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newItem = sanitizeRecurringItem(payload.new);
+            setRecurringPayments((prev) => {
+              if (prev.some((r) => r.id === newItem.id || ensureUUID(r.id) === ensureUUID(newItem.id))) {
+                return prev.map((r) => (r.id === newItem.id || ensureUUID(r.id) === ensureUUID(newItem.id) ? { ...r, ...newItem } : r));
+              }
+              return [newItem, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedItem = sanitizeRecurringItem(payload.new);
+            setRecurringPayments((prev) =>
+              prev.map((r) => (r.id === updatedItem.id || ensureUUID(r.id) === ensureUUID(updatedItem.id) ? { ...r, ...updatedItem } : r))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setRecurringPayments((prev) => prev.filter((r) => r.id !== deletedId && ensureUUID(r.id) !== ensureUUID(deletedId)));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeUser?.id]);
+
+  // 4. Operaciones CRUD directas a Supabase
 
   // Agregar nuevo pago recurrente
   const handleAddRecurring = useCallback(async (item) => {
-    const newItem = {
-      ...item,
-      id: item.id || 'rec-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7)
-    };
-    setRecurringPayments((prev) => {
-      const updated = [newItem, ...prev.filter((r) => r.id !== newItem.id)];
-      saveRecurringToStorage(updated);
-      return updated;
-    });
+    const sanitizedItem = sanitizeRecurringItem(item);
 
-    // Persistencia directa concurrente en Supabase
+    // Actualización optimista en React
+    setRecurringPayments((prev) => [sanitizedItem, ...prev.filter((r) => r.id !== sanitizedItem.id)]);
+
     if (isSupabaseConfigured && supabase) {
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          const payload = {
-            id: ensureUUID(newItem.id),
-            user_id: user.id,
-            name: newItem.name || 'Suscripción',
-            amount: Number(newItem.amount || 0),
-            type: newItem.type || 'expense',
-            category: newItem.category || newItem.categoryName || 'General',
-            frequency: newItem.frequency || 'monthly',
-            billing_day: Number(newItem.billingDay || 1),
-            is_active: newItem.isActive !== false && newItem.active !== false,
-            account_id: newItem.accountId ? ensureUUID(newItem.accountId) : null,
-            next_payment_date: newItem.nextPaymentDate || newItem.nextDate || newItem.next_date || null,
-            raw_data: newItem,
-            updated_at: new Date().toISOString()
-          };
-          supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' })
-            .then(async ({ error }) => {
-              if (error && (error.code === '42P10' || error.message?.includes('ON CONFLICT'))) {
-                const retryRes = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
-                if (retryRes.error && (retryRes.error.code === '23503' || retryRes.error.status === 409 || retryRes.error.message?.includes('Key is not present in table'))) {
-                  return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id,user_id' });
-                }
-                return retryRes;
+          const payload = mapRecurringToSupabasePayload(sanitizedItem, user.id);
+          const { error } = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' });
+
+          if (error) {
+            // Reintentos defensivos si hay restricción de clave foránea en account_id
+            if (error.code === '23503' || error.status === 409 || error.message?.includes('Key is not present in table')) {
+              await supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id' });
+            } else if (error.code === '42P10' || error.message?.includes('ON CONFLICT')) {
+              const retryRes = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+              if (retryRes.error && (retryRes.error.code === '23503' || retryRes.error.message?.includes('Key is not present in table'))) {
+                await supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id,user_id' });
               }
-              if (error && (error.code === '23503' || error.status === 409 || error.message?.includes('Key is not present in table'))) {
-                return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id' });
-              }
-            })
-            .catch((e) => {
-              console.warn('[useRecurringPayments] Advertencia upsert Supabase:', e);
-            });
+            } else {
+              console.warn('[useRecurringPayments] Advertencia upsert Supabase:', error);
+            }
+          }
         }
-      }).catch(() => {});
+      } catch (e) {
+        console.error('[useRecurringPayments] Excepción al guardar en Supabase:', e);
+      }
     }
 
     toast.success('✓ Pago recurrente guardado con éxito');
-    return newItem;
+    return sanitizedItem;
   }, []);
 
   const handleSaveRecurring = handleAddRecurring;
 
   // Actualizar pago recurrente existente
   const handleUpdateRecurring = useCallback(async (updatedItem) => {
-    setRecurringPayments((prev) => {
-      const updated = prev.map((item) => (item.id === updatedItem.id ? updatedItem : item));
-      saveRecurringToStorage(updated);
-      return updated;
-    });
+    const sanitizedItem = sanitizeRecurringItem(updatedItem);
 
-    // Persistencia directa concurrente en Supabase
+    // Actualización optimista en React
+    setRecurringPayments((prev) =>
+      prev.map((item) => (item.id === sanitizedItem.id || ensureUUID(item.id) === ensureUUID(sanitizedItem.id) ? sanitizedItem : item))
+    );
+
     if (isSupabaseConfigured && supabase) {
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          const payload = {
-            id: ensureUUID(updatedItem.id),
-            user_id: user.id,
-            name: updatedItem.name || 'Suscripción',
-            amount: Number(updatedItem.amount || 0),
-            type: updatedItem.type || 'expense',
-            category: updatedItem.category || updatedItem.categoryName || 'General',
-            frequency: updatedItem.frequency || 'monthly',
-            billing_day: Number(updatedItem.billingDay || 1),
-            is_active: updatedItem.isActive !== false && updatedItem.active !== false,
-            account_id: updatedItem.accountId ? ensureUUID(updatedItem.accountId) : null,
-            next_payment_date: updatedItem.nextPaymentDate || updatedItem.nextDate || updatedItem.next_date || null,
-            raw_data: updatedItem,
-            updated_at: new Date().toISOString()
-          };
-          supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' })
-            .then(async ({ error }) => {
-              if (error && (error.code === '42P10' || error.message?.includes('ON CONFLICT'))) {
-                const retryRes = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
-                if (retryRes.error && (retryRes.error.code === '23503' || retryRes.error.status === 409 || retryRes.error.message?.includes('Key is not present in table'))) {
-                  return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id,user_id' });
-                }
-                return retryRes;
+          const payload = mapRecurringToSupabasePayload(sanitizedItem, user.id);
+          const { error } = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' });
+
+          if (error) {
+            if (error.code === '23503' || error.status === 409 || error.message?.includes('Key is not present in table')) {
+              await supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id' });
+            } else if (error.code === '42P10' || error.message?.includes('ON CONFLICT')) {
+              const retryRes = await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id,user_id' });
+              if (retryRes.error && (retryRes.error.code === '23503' || retryRes.error.message?.includes('Key is not present in table'))) {
+                await supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id,user_id' });
               }
-              if (error && (error.code === '23503' || error.status === 409 || error.message?.includes('Key is not present in table'))) {
-                return supabase.from('recurring_payments').upsert({ ...payload, account_id: null }, { onConflict: 'id' });
-              }
-            })
-            .catch((e) => {
-              console.warn('[useRecurringPayments] Advertencia update Supabase:', e);
-            });
+            } else {
+              console.warn('[useRecurringPayments] Advertencia update Supabase:', error);
+            }
+          }
         }
-      }).catch(() => {});
+      } catch (e) {
+        console.error('[useRecurringPayments] Excepción al actualizar en Supabase:', e);
+      }
     }
 
     toast.success('✓ Pago recurrente actualizado con éxito');
-    return updatedItem;
+    return sanitizedItem;
   }, []);
 
   // Eliminar pago recurrente
   const handleDeleteRecurring = useCallback(async (id) => {
-    setRecurringPayments((prev) => {
-      const updated = prev.filter((item) => item.id !== id);
-      saveRecurringToStorage(updated);
-      return updated;
-    });
+    if (!id) return;
+    const canonicalId = ensureUUID(id);
+
+    // Actualización optimista en React
+    setRecurringPayments((prev) =>
+      prev.filter((item) => item.id !== id && ensureUUID(item.id) !== canonicalId)
+    );
 
     if (isSupabaseConfigured && supabase) {
-      const canonicalId = ensureUUID(id);
-      supabase.from('recurring_payments').delete().eq('id', id).catch(() => {});
-      if (canonicalId !== id) {
-        supabase.from('recurring_payments').delete().eq('id', canonicalId).catch(() => {});
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        let query = supabase.from('recurring_payments').delete().eq('id', canonicalId);
+        if (user?.id) {
+          query = query.eq('user_id', user.id);
+        }
+        await query;
+      } catch (err) {
+        console.error('[useRecurringPayments] Error al eliminar en Supabase:', err);
       }
     }
 
@@ -203,21 +319,33 @@ export function useRecurringPayments(isResettingRef) {
 
   // Pausar / Activar pago recurrente
   const handleToggleActiveRecurring = useCallback(async (id) => {
+    let itemToUpdate = null;
+
     setRecurringPayments((prev) => {
-      const item = prev.find((r) => r.id === id);
+      const item = prev.find((r) => r.id === id || ensureUUID(r.id) === ensureUUID(id));
       if (!item) return prev;
       const isActive = item.isActive !== false;
-      const updatedItem = { ...item, isActive: !isActive };
-      const updated = prev.map((r) => (r.id === id ? updatedItem : r));
-      saveRecurringToStorage(updated);
-      return updated;
+      const updatedItem = { ...item, isActive: !isActive, is_active: !isActive, active: !isActive };
+      itemToUpdate = updatedItem;
+      return prev.map((r) => (r.id === id || ensureUUID(r.id) === ensureUUID(id) ? updatedItem : r));
     });
+
+    if (itemToUpdate && isSupabaseConfigured && supabase) {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        if (user?.id) {
+          const payload = mapRecurringToSupabasePayload(itemToUpdate, user.id);
+          await supabase.from('recurring_payments').upsert(payload, { onConflict: 'id' });
+        }
+      } catch (err) {
+        console.error('[useRecurringPayments] Error al alternar estado en Supabase:', err);
+      }
+    }
   }, []);
 
-  // Restaurar / resetear pagos recurrentes
+  // Restaurar / resetear pagos recurrentes en memoria
   const resetRecurringPayments = useCallback(() => {
     setRecurringPayments([]);
-    saveRecurringToStorage([]);
   }, []);
 
   return {
@@ -230,6 +358,7 @@ export function useRecurringPayments(isResettingRef) {
     handleUpdateRecurring,
     handleDeleteRecurring,
     handleToggleActiveRecurring,
+    fetchRecurringPayments,
     resetRecurringPayments
   };
 }

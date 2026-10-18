@@ -1,43 +1,94 @@
-import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS } from '../constants/storageKeys';
-import { INITIAL_ACCOUNTS } from '../data/initialData';
-import { saveAccountsToStorage, saveTransactionsToStorage } from '../services/storageService';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { normalizeAccountType, ensureUUID } from '../services/syncEngine';
 import { generateUUID } from '../utils/recordMerger';
 import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { toast } from '../utils/toast';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getSupabaseUser } from '../services/supabaseClient';
+import { normalizeRemoteAccount } from '../services/sync/syncNormalizers';
 
-function getInitialAccounts() {
-  try {
-    const saved = localStorage.getItem('presu_accounts') ||
-                  localStorage.getItem(STORAGE_KEYS.ACCOUNTS) ||
-                  localStorage.getItem('user_accounts') ||
-                  localStorage.getItem('accounts') ||
-                  localStorage.getItem('app_accounts');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        return [...parsed].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-      }
-    }
-    return INITIAL_ACCOUNTS;
-  } catch (e) {
-    console.error('Error parseando cuentas:', e);
-    return INITIAL_ACCOUNTS;
-  }
+/**
+ * Mapea una fila de Supabase a un objeto de cuenta normalizado para React
+ */
+export function mapSupabaseRowToAccount(row) {
+  if (!row || typeof row !== 'object') return row;
+  const normalized = normalizeRemoteAccount(row);
+  const rawData = row.raw_data && typeof row.raw_data === 'object' ? row.raw_data : {};
+  const parsedBalance = toSafeNumber(
+    row.balance ?? row.current_balance ?? row.initial_balance ?? rawData.balance ?? 0
+  );
+  const parsedInitial = toSafeNumber(
+    row.initial_balance ?? rawData.initial_balance ?? parsedBalance
+  );
+
+  return {
+    ...normalized,
+    id: row.id,
+    name: (row.name || rawData.name || 'Cuenta').trim(),
+    type: normalizeAccountType(row.type || rawData.type),
+    currency: (row.currency || rawData.currency || 'COP').toUpperCase(),
+    balance: parsedBalance,
+    currentBalance: parsedBalance,
+    current_balance: parsedBalance,
+    initialBalance: parsedInitial,
+    initial_balance: parsedInitial,
+    color: row.color || rawData.color || '#007AFF',
+    icon: row.icon || rawData.icon || 'Building2',
+    order_index: row.order_index !== undefined && row.order_index !== null
+      ? Number(row.order_index)
+      : (rawData.order_index !== undefined ? Number(rawData.order_index) : 0),
+    is_archived: Boolean(row.is_archived ?? rawData.is_archived ?? false),
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString()
+  };
 }
 
+/**
+ * useAccounts
+ * Hook de cuentas conectado a Supabase Puro y sincronizado en tiempo real (Realtime).
+ */
 export function useAccounts({
   isResettingRef,
   transactions = [],
   transactionsRef,
   trm = 4050,
   setTransactions,
-  setTransactionsRef
+  setTransactionsRef,
+  user: explicitUser = null
 } = {}) {
-  const [accounts, setAccounts] = useState(getInitialAccounts);
+  const [accounts, setAccounts] = useState([]);
+  const [activeUser, setActiveUser] = useState(explicitUser);
+  const activeUserRef = useRef(explicitUser);
+  activeUserRef.current = activeUser;
+
+  // 1. Obtener usuario activo de Supabase Auth
+  useEffect(() => {
+    if (explicitUser) {
+      setActiveUser(explicitUser);
+      return;
+    }
+
+    if (!isSupabaseConfigured || !supabase) return;
+
+    let isMounted = true;
+    getSupabaseUser().then((u) => {
+      if (isMounted && u?.id) {
+        setActiveUser(u);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) {
+        setActiveUser(session?.user || null);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, [explicitUser]);
 
   const getActiveTransactions = useCallback(() => {
     if (transactionsRef?.current) return transactionsRef.current;
@@ -49,18 +100,106 @@ export function useAccounts({
     return setTransactions;
   }, [setTransactions, setTransactionsRef]);
 
-  // Persistencia reactiva en localStorage
+  // 2. Consulta y carga inicial reactiva desde Supabase
+  const fetchAccounts = useCallback(async (userId = null) => {
+    if (!isSupabaseConfigured || !supabase) return [];
+    try {
+      let uid = userId || activeUserRef.current?.id;
+      if (!uid) {
+        const user = await getSupabaseUser();
+        uid = user?.id;
+      }
+      if (!uid) return [];
+
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', uid)
+        .order('order_index', { ascending: true, nullsFirst: false });
+
+      if (error) {
+        console.error('[useAccounts] Error al consultar cuentas desde Supabase:', error);
+        return [];
+      }
+
+      if (Array.isArray(data)) {
+        const mapped = data
+          .map(mapSupabaseRowToAccount)
+          .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+        setAccounts(mapped);
+        return mapped;
+      }
+      return [];
+    } catch (err) {
+      console.error('[useAccounts] Fallo al consultar cuentas:', err);
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
     if (isResettingRef?.current) return;
-    saveAccountsToStorage(accounts);
-  }, [accounts, isResettingRef]);
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
+
+    fetchAccounts(activeUser.id);
+  }, [activeUser?.id, isResettingRef, fetchAccounts]);
+
+  // 3. Suscripción en Tiempo Real (Realtime WebSockets)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
+
+    const channelName = `realtime:accounts:${activeUser.id}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'accounts',
+          filter: `user_id=eq.${activeUser.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newAcc = mapSupabaseRowToAccount(payload.new);
+            setAccounts((prev) => {
+              if (prev.some((a) => a.id === newAcc.id)) {
+                return prev.map((a) => (a.id === newAcc.id ? { ...a, ...newAcc } : a));
+              }
+              return [...prev, newAcc].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedAcc = mapSupabaseRowToAccount(payload.new);
+            setAccounts((prev) =>
+              prev
+                .map((a) => (a.id === updatedAcc.id ? { ...a, ...updatedAcc } : a))
+                .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setAccounts((prev) => prev.filter((a) => a.id !== deletedId));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeUser?.id]);
+
+  // 4. Operaciones CRUD directas a Supabase
 
   // Agregar cuenta nueva
   const handleAddAccount = useCallback(async (newAcc) => {
     const id = (newAcc.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newAcc.id))
       ? newAcc.id
       : generateUUID();
-    const parsedInitialBalance = toSafeNumber(newAcc.initialBalance ?? newAcc.initial_balance ?? newAcc.balance ?? newAcc.currentBalance ?? 0);
+    const parsedInitialBalance = toSafeNumber(
+      newAcc.initialBalance ?? newAcc.initial_balance ?? newAcc.balance ?? newAcc.currentBalance ?? 0
+    );
+
     const normalizedAcc = {
       ...newAcc,
       id,
@@ -78,50 +217,43 @@ export function useAccounts({
       updated_at: new Date().toISOString()
     };
 
-    // Generar nuevo arreglo eliminando duplicados por ID o por firma idéntica
-    const nextAccs = [
-      ...accounts.filter((a) => a.id !== id && `${(a.name || '').trim().toLowerCase()}___${(a.currency || 'COP').toUpperCase()}` !== `${normalizedAcc.name.toLowerCase()}___${normalizedAcc.currency}`),
+    // Actualización optimista inmediata en React
+    setAccounts((prev) => [
+      ...prev.filter((a) => a.id !== id && `${(a.name || '').trim().toLowerCase()}___${(a.currency || 'COP').toUpperCase()}` !== `${normalizedAcc.name.toLowerCase()}___${normalizedAcc.currency}`),
       normalizedAcc
-    ];
+    ].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)));
 
-    try {
-      localStorage.setItem('presu_accounts', JSON.stringify(nextAccs));
-      saveAccountsToStorage(nextAccs);
-      setAccounts(nextAccs);
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        if (user?.id) {
+          const { error } = await supabase.from('accounts').upsert({
+            id: ensureUUID(normalizedAcc.id),
+            user_id: user.id,
+            name: normalizedAcc.name,
+            type: normalizedAcc.type,
+            currency: normalizedAcc.currency,
+            balance: normalizedAcc.balance,
+            initial_balance: normalizedAcc.initial_balance,
+            icon: normalizedAcc.icon,
+            color: normalizedAcc.color,
+            order_index: normalizedAcc.order_index,
+            updated_at: normalizedAcc.updated_at
+          }, { onConflict: 'id' });
 
-      // Sincronización inmediata directa con Supabase si está autenticado
-      if (isSupabaseConfigured && supabase) {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user?.id) {
-            supabase.from('accounts').upsert({
-              id: ensureUUID(normalizedAcc.id),
-              user_id: user.id,
-              name: normalizedAcc.name,
-              type: normalizedAcc.type,
-              currency: normalizedAcc.currency,
-              balance: normalizedAcc.balance,
-              initial_balance: normalizedAcc.initial_balance,
-              icon: normalizedAcc.icon,
-              color: normalizedAcc.color,
-              order_index: normalizedAcc.order_index,
-              updated_at: normalizedAcc.updated_at
-            }, { onConflict: 'id' }).then(({ error }) => {
-              if (error) console.warn('[useAccounts] Advertencia upsert Supabase:', error);
-            }, (e) => {
-              console.warn('[useAccounts] Advertencia upsert Supabase:', e);
-            });
+          if (error) {
+            console.error('[useAccounts] Error en upsert Supabase:', error);
+            toast.error('Error al guardar en la nube');
           }
-        }).catch(() => {});
+        }
+      } catch (e) {
+        console.error('[useAccounts] Excepción al guardar cuenta en Supabase:', e);
       }
-
-      toast.success('Cuenta guardada correctamente');
-      return normalizedAcc;
-    } catch (localErr) {
-      console.error('Fallo real en localStorage:', localErr);
-      toast.error('Error al guardar localmente');
-      return null;
     }
-  }, [accounts]);
+
+    toast.success('Cuenta guardada correctamente');
+    return normalizedAcc;
+  }, [accounts.length]);
 
   const handleSaveAccount = handleAddAccount;
 
@@ -129,15 +261,19 @@ export function useAccounts({
   const handleUpdateAccount = useCallback(async (updatedAcc) => {
     const existing = accounts.find((a) => a.id === updatedAcc.id) || {};
     const parsedInitialBalance = toSafeNumber(
-      updatedAcc.initialBalance ?? 
-      updatedAcc.initial_balance ?? 
-      updatedAcc.balance ?? 
-      existing.initialBalance ?? 
-      existing.initial_balance ?? 
+      updatedAcc.initialBalance ??
+      updatedAcc.initial_balance ??
+      updatedAcc.balance ??
+      existing.initialBalance ??
+      existing.initial_balance ??
       existing.balance ?? 0
     );
     const activeTxs = getActiveTransactions();
-    const liveBalance = getAccountNativeBalance({ ...existing, ...updatedAcc, initialBalance: parsedInitialBalance }, activeTxs, trm);
+    const liveBalance = getAccountNativeBalance(
+      { ...existing, ...updatedAcc, initialBalance: parsedInitialBalance },
+      activeTxs,
+      trm
+    );
 
     const normalizedAcc = {
       ...existing,
@@ -157,87 +293,81 @@ export function useAccounts({
       updated_at: new Date().toISOString()
     };
 
-    const nextAccs = accounts.map((a) => (a.id === normalizedAcc.id ? normalizedAcc : a));
+    // Actualización optimista en React
+    setAccounts((prev) =>
+      prev
+        .map((a) => (a.id === normalizedAcc.id ? normalizedAcc : a))
+        .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+    );
 
-    try {
-      localStorage.setItem('presu_accounts', JSON.stringify(nextAccs));
-      saveAccountsToStorage(nextAccs);
-      setAccounts(nextAccs);
-      const activeSetTxs = getActiveSetTransactions();
-      if (activeSetTxs) {
-        activeSetTxs((prev) =>
-          prev.map((t) => (t.accountId === normalizedAcc.id ? { ...t, accountName: normalizedAcc.name } : t))
-        );
-      }
-
-      // Sincronización inmediata directa con Supabase si está autenticado
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user?.id) {
-            const { error } = await supabase.from('accounts').upsert({
-              id: ensureUUID(normalizedAcc.id),
-              user_id: user.id,
-              name: normalizedAcc.name,
-              type: normalizedAcc.type,
-              currency: normalizedAcc.currency,
-              balance: normalizedAcc.balance,
-              initial_balance: normalizedAcc.initial_balance,
-              icon: normalizedAcc.icon,
-              color: normalizedAcc.color,
-              order_index: normalizedAcc.order_index,
-              updated_at: normalizedAcc.updated_at
-            }, { onConflict: 'id' });
-            if (error) console.warn('[useAccounts] Advertencia upsert Supabase:', error);
-          }
-        } catch (e) {
-          console.warn('[useAccounts] Advertencia upsert Supabase:', e);
-        }
-      }
-
-      toast.success('Cuenta guardada correctamente');
-      return normalizedAcc;
-    } catch (localErr) {
-      console.error('Fallo real en localStorage:', localErr);
-      toast.error('Error al guardar localmente');
-      return null;
+    const activeSetTxs = getActiveSetTransactions();
+    if (activeSetTxs) {
+      activeSetTxs((prev) =>
+        prev.map((t) => (t.accountId === normalizedAcc.id ? { ...t, accountName: normalizedAcc.name } : t))
+      );
     }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        if (user?.id) {
+          const { error } = await supabase.from('accounts').upsert({
+            id: ensureUUID(normalizedAcc.id),
+            user_id: user.id,
+            name: normalizedAcc.name,
+            type: normalizedAcc.type,
+            currency: normalizedAcc.currency,
+            balance: normalizedAcc.balance,
+            initial_balance: normalizedAcc.initial_balance,
+            icon: normalizedAcc.icon,
+            color: normalizedAcc.color,
+            order_index: normalizedAcc.order_index,
+            updated_at: normalizedAcc.updated_at
+          }, { onConflict: 'id' });
+
+          if (error) {
+            console.error('[useAccounts] Error al actualizar cuenta en Supabase:', error);
+            toast.error('Error al actualizar en la nube');
+          }
+        }
+      } catch (e) {
+        console.error('[useAccounts] Excepción al actualizar cuenta en Supabase:', e);
+      }
+    }
+
+    toast.success('Cuenta guardada correctamente');
+    return normalizedAcc;
   }, [accounts, getActiveTransactions, trm, getActiveSetTransactions]);
 
-  // Eliminar cuenta
+  // Eliminar cuenta y transacciones vinculadas directamente en Supabase
   const handleDeleteAccount = useCallback(async (accountId) => {
+    if (!accountId) return;
     try {
       const canonicalId = ensureUUID(accountId);
-      const updated = accounts.filter((acc) => acc.id !== accountId && ensureUUID(acc.id) !== accountId);
-      setAccounts(updated);
-      localStorage.setItem('presu_accounts', JSON.stringify(updated));
-      saveAccountsToStorage(updated);
 
-      // Reconciliar transacciones locales vinculadas
+      // Actualización optimista en React
+      setAccounts((prev) => prev.filter((acc) => acc.id !== accountId && ensureUUID(acc.id) !== accountId));
+
       const activeSetTxs = getActiveSetTransactions();
       if (activeSetTxs) {
-        activeSetTxs((prev) => {
-          const nextTxs = prev.filter((t) => t.accountId !== accountId && t.accountId !== canonicalId);
-          localStorage.setItem('presu_transactions', JSON.stringify(nextTxs));
-          saveTransactionsToStorage(nextTxs);
-          return nextTxs;
-        });
+        activeSetTxs((prev) => prev.filter((t) => t.accountId !== accountId && t.accountId !== canonicalId));
       }
 
       if (isSupabaseConfigured && supabase) {
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const user = activeUserRef.current || (await getSupabaseUser());
+
           let accQuery = supabase.from('accounts').delete().eq('id', canonicalId);
           if (user?.id) accQuery = accQuery.eq('user_id', user.id);
           const { error: accError } = await accQuery;
-          if (accError) console.warn('[useAccounts] Error al eliminar cuenta en Supabase:', accError);
+          if (accError) console.error('[useAccounts] Error al eliminar cuenta en Supabase:', accError);
 
           let txQuery = supabase.from('transactions').delete().eq('account_id', canonicalId);
           if (user?.id) txQuery = txQuery.eq('user_id', user.id);
           const { error: txError } = await txQuery;
-          if (txError) console.warn('[useAccounts] Error al eliminar transacciones vinculadas en Supabase:', txError);
+          if (txError) console.error('[useAccounts] Error al eliminar transacciones vinculadas en Supabase:', txError);
         } catch (err) {
-          console.warn('[useAccounts] Error en delete Supabase:', err);
+          console.error('[useAccounts] Error en delete Supabase:', err);
         }
       }
 
@@ -246,21 +376,19 @@ export function useAccounts({
       console.error('Error al eliminar cuenta:', error);
       toast.error('No se pudo eliminar la cuenta');
     }
-  }, [accounts, getActiveSetTransactions]);
+  }, [getActiveSetTransactions]);
 
   const deleteAccount = handleDeleteAccount;
 
-  // Función de actualización y persistencia del orden hacia Supabase
+  // Persistir el orden reordenado directamente en Supabase
   const updateAccountsOrder = useCallback(async (reorderedAccounts) => {
     if (!isSupabaseConfigured || !supabase || !Array.isArray(reorderedAccounts)) return;
     try {
-      // Mapear cada cuenta con su nueva posición secuencial (0, 1, 2...)
       const updates = reorderedAccounts.map((account, index) => ({
         id: account.id,
         order_index: index,
       }));
 
-      // Ejecución concurrente en paralelo con Promise.all
       await Promise.all(
         updates.map(async (item) => {
           const { error } = await supabase
@@ -284,81 +412,69 @@ export function useAccounts({
       order_index: index
     }));
 
-    // Actualización inmediata optimista del estado de React y almacenamiento local
+    // Actualización inmediata del estado de React
     setAccounts(indexedAccounts);
-    saveAccountsToStorage(indexedAccounts);
-    try {
-      localStorage.setItem('presu_accounts', JSON.stringify(indexedAccounts));
-    } catch (_) {}
 
     // Persistencia asíncrona hacia Supabase
     updateAccountsOrder(indexedAccounts);
   }, [updateAccountsOrder]);
 
-  // Consulta inicial explícita de cuentas ordenadas por order_index
-  const fetchAccounts = useCallback(async (userId = null) => {
-    if (!isSupabaseConfigured || !supabase) return accounts;
-    try {
-      let uid = userId;
-      if (!uid) {
-        const { data: { user } } = await supabase.auth.getUser();
-        uid = user?.id;
-      }
-      let query = supabase
-        .from('accounts')
-        .select('*')
-        .order('order_index', { ascending: true, nullsFirst: false });
-
-      if (uid) {
-        query = query.eq('user_id', uid);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      if (Array.isArray(data) && data.length > 0) {
-        setAccounts(data);
-        saveAccountsToStorage(data);
-        try {
-          localStorage.setItem('presu_accounts', JSON.stringify(data));
-        } catch (_) {}
-        return data;
-      }
-      return accounts;
-    } catch (err) {
-      console.error('Error al consultar cuentas desde Supabase:', err);
-      return accounts;
-    }
-  }, [accounts]);
-
   // Archivar o desarchivar cuenta
   const handleArchiveAccount = useCallback(async (accountId, isArchived = true) => {
-    setAccounts((prev) => {
-      const nextAccs = prev.map((acc) =>
+    setAccounts((prev) =>
+      prev.map((acc) =>
         acc.id === accountId ? { ...acc, is_archived: isArchived, updated_at: new Date().toISOString() } : acc
-      );
-      saveAccountsToStorage(nextAccs);
-      return nextAccs;
-    });
+      )
+    );
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        let query = supabase
+          .from('accounts')
+          .update({ is_archived: isArchived, updated_at: new Date().toISOString() })
+          .eq('id', ensureUUID(accountId));
+        if (user?.id) query = query.eq('user_id', user.id);
+        await query;
+      } catch (err) {
+        console.error('[useAccounts] Error al archivar cuenta en Supabase:', err);
+      }
+    }
+
     toast.success(isArchived ? 'Cuenta archivada' : 'Cuenta desarchivada');
   }, []);
 
   // Ajuste manual directo de balance
   const handleAdjustAccountBalance = useCallback(async (accountId, newBalance) => {
     const parsedBalance = toSafeNumber(newBalance);
-    setAccounts((prev) => {
-      const nextAccs = prev.map((acc) =>
-        acc.id === accountId ? { ...acc, balance: parsedBalance, currentBalance: parsedBalance, updated_at: new Date().toISOString() } : acc
-      );
-      saveAccountsToStorage(nextAccs);
-      return nextAccs;
-    });
+    const nowIso = new Date().toISOString();
+
+    setAccounts((prev) =>
+      prev.map((acc) =>
+        acc.id === accountId ? { ...acc, balance: parsedBalance, currentBalance: parsedBalance, updated_at: nowIso } : acc
+      )
+    );
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        let query = supabase
+          .from('accounts')
+          .update({ balance: parsedBalance, updated_at: nowIso })
+          .eq('id', ensureUUID(accountId));
+        if (user?.id) query = query.eq('user_id', user.id);
+        await query;
+      } catch (err) {
+        console.error('[useAccounts] Error al ajustar saldo en Supabase:', err);
+      }
+    }
+
     toast.success('Saldo ajustado correctamente');
   }, []);
 
-  // Resetear cuentas
+  // Resetear cuentas a cero en React
   const resetAccounts = useCallback(() => {
     setAccounts([]);
-    saveAccountsToStorage([]);
   }, []);
 
   return {

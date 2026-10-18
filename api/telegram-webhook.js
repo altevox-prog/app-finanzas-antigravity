@@ -288,14 +288,19 @@ export default async function handler(req, res) {
     // Inicializar cliente Supabase
     const supabase = getSupabaseClient();
 
-    // Obtener user_id configurado
-    const userId = process.env.VITE_USER_ID || process.env.USER_ID;
-    if (!userId) {
-      console.error('[telegram-webhook] Variable VITE_USER_ID o USER_ID no configurada en las variables de entorno.');
-      await sendTelegramMessage(chatId, `❌ Error de configuración en el servidor: no se encontró el ID de usuario asociado.`);
-      return res.status(200).json({ ok: true, error: 'missing_user_id' });
+    // Obtener user_id dinamicamente desde telegram_users
+    let userId = null;
+    const { data: tgUser } = await supabase.from('telegram_users').select('user_id').eq('telegram_chat_id', chatId).maybeSingle();
+    if (tgUser && tgUser.user_id) {
+      userId = tgUser.user_id;
+    } else {
+      userId = process.env.VITE_USER_ID || process.env.USER_ID;
+      if (!userId) {
+        console.warn(`[telegram-webhook] Chat ID ${chatId} no registrado en telegram_users ni en variables de entorno.`);
+        await sendTelegramMessage(chatId, `?? Tu usuario no est� vinculado.\n\nTu Telegram Chat ID es:\n\`${chatId}\`\n\nP�dele al administrador que lo registre en Supabase.`);
+        return res.status(200).json({ ok: true });
+      }
     }
-
     console.log('[DEBUG-3] Intentando consultar Supabase con userId:', userId);
 
     // Consultar cuentas disponibles del usuario en Supabase
@@ -314,7 +319,7 @@ export default async function handler(req, res) {
     const category = extractCategory(rawText, movementType);
 
     // Limpieza determinista sin regex de acentos
-    let cleanConcept = (baseText || concept || rawText || '').trim();
+    let cleanConcept = (concept || rawText || '').trim();
 
     // 1. Quitar el monto numérico si aún aparece
     if (typeof matchedRaw !== 'undefined' && matchedRaw) {
@@ -427,3 +432,4 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, error: error.message });
   }
 }
+

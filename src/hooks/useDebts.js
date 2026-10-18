@@ -1,61 +1,193 @@
-import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS } from '../constants/storageKeys';
-import { INITIAL_DEBTS_AND_LOANS } from '../data/initialData';
-import { saveDebtsToStorage, saveAccountsToStorage, saveTransactionsToStorage } from '../services/storageService';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateElapsedMonths } from '../utils/debtAlerts';
 import { toast } from '../utils/toast';
 import { ensureUUID } from '../services/syncEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getSupabaseUser } from '../services/supabaseClient';
 import { toSafeNumber } from '../utils/financeMath';
+import { normalizeRemoteDebt } from '../services/sync/syncNormalizers';
 
-function getInitialDebts() {
-  const saved = localStorage.getItem('user_debts') ||
-                localStorage.getItem(STORAGE_KEYS.DEBTS) ||
-                localStorage.getItem(STORAGE_KEYS.DEBTS_AND_LOANS) ||
-                localStorage.getItem('app_loans');
-  if (saved !== null) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => {
-          const disbursements = Array.isArray(item.disbursements) ? item.disbursements : [];
-          const totalDisbursed = disbursements.reduce((sum, d) => sum + Number(d.amount || 0), 0);
-          const initial = Number(item.initialAmount ?? item.initial_amount ?? (Number(item.totalAmount || item.amount || 0) - totalDisbursed)) || Number(item.totalAmount || item.amount || 0);
-          const total = initial + totalDisbursed;
-          return {
-            ...item,
-            initialAmount: initial,
-            initial_amount: initial,
-            totalAmount: total,
-            principalAmount: total,
-            amount: total,
-            total_amount: total,
-            disbursements: Array.isArray(item.disbursements) ? item.disbursements : []
-          };
-        });
-      }
-    } catch (e) {
-      console.error('Error parseando deudas:', e);
-    }
-  }
-  return INITIAL_DEBTS_AND_LOANS;
+/**
+ * Mapea una fila de Supabase a un objeto de deuda/préstamo normalizado para React
+ */
+export function mapSupabaseRowToDebt(row) {
+  if (!row || typeof row !== 'object') return row;
+  return normalizeRemoteDebt(row);
 }
 
+/**
+ * Mapea un objeto local de deuda al payload para Supabase
+ */
+export function mapDebtToSupabasePayload(item, userId) {
+  const cleanId = ensureUUID(item.id);
+  const nowIso = new Date().toISOString();
+  const baseAmount = toSafeNumber(item.totalAmount || item.amount || item.principalAmount || item.initialAmount);
+  const remAmount = toSafeNumber(item.remainingAmount ?? item.remaining_amount ?? baseAmount);
+
+  const rawDataPayload = {
+    payments: Array.isArray(item.payments) ? item.payments : [],
+    disbursements: Array.isArray(item.disbursements) ? item.disbursements : [],
+    initialAmount: toSafeNumber(item.initialAmount ?? item.initial_amount ?? baseAmount),
+    totalAmount: baseAmount,
+    dueDate: item.dueDate || item.due_date || item.computedDueDate || null,
+    interestRate: toSafeNumber(item.interestRate || item.interest_rate || 0),
+    startDate: item.startDate || item.start_date || null,
+    notes: item.notes || item.note || '',
+    updated_at: nowIso
+  };
+
+  return {
+    id: cleanId,
+    user_id: userId,
+    name: item.name || item.personName || 'Deuda',
+    person: item.personName || item.name || 'Deuda',
+    person_name: item.personName || item.name || 'Deuda',
+    type: item.type || 'payable',
+    amount: baseAmount,
+    total_amount: baseAmount,
+    remaining_amount: remAmount,
+    current_balance: remAmount,
+    status: item.status || (remAmount <= 0.01 ? 'paid' : 'active'),
+    due_date: item.dueDate || item.due_date || item.computedDueDate || null,
+    notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
+    raw_data: rawDataPayload,
+    updated_at: nowIso
+  };
+}
+
+/**
+ * useDebts
+ * Hook de gestión de deudas y préstamos conectado a Supabase Puro y sincronizado en tiempo real (Realtime).
+ */
 export function useDebts({
   isResettingRef,
   accounts = [],
   categories = [],
   setAccounts,
   setTransactions,
-  setCategories
+  setCategories,
+  user: explicitUser = null
 } = {}) {
-  const [debtsAndLoans, setDebtsAndLoans] = useState(getInitialDebts);
+  // Inicialización limpia en memoria vacía
+  const [debtsAndLoans, setDebtsAndLoans] = useState([]);
+  const [activeUser, setActiveUser] = useState(explicitUser);
+  const activeUserRef = useRef(explicitUser);
+  activeUserRef.current = activeUser;
 
-  // Persistencia reactiva en localStorage
+  // 1. Detección y suscripción a la sesión del usuario de Supabase Auth
+  useEffect(() => {
+    if (explicitUser) {
+      setActiveUser(explicitUser);
+      return;
+    }
+
+    if (!isSupabaseConfigured || !supabase) return;
+
+    let isMounted = true;
+    getSupabaseUser().then((u) => {
+      if (isMounted && u?.id) {
+        setActiveUser(u);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) {
+        setActiveUser(session?.user || null);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, [explicitUser]);
+
+  // 2. Consulta y carga inicial reactiva desde Supabase
+  const fetchDebts = useCallback(async (userId = null) => {
+    if (!isSupabaseConfigured || !supabase) return [];
+    try {
+      let uid = userId || activeUserRef.current?.id;
+      if (!uid) {
+        const user = await getSupabaseUser();
+        uid = user?.id;
+      }
+      if (!uid) return [];
+
+      const { data, error } = await supabase
+        .from('debts')
+        .select('*')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[useDebts] Error al consultar deudas en Supabase:', error);
+        return [];
+      }
+
+      if (Array.isArray(data)) {
+        const mapped = data.map(mapSupabaseRowToDebt);
+        setDebtsAndLoans(mapped);
+        return mapped;
+      }
+      return [];
+    } catch (err) {
+      console.error('[useDebts] Fallo al consultar deudas:', err);
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
     if (isResettingRef?.current) return;
-    saveDebtsToStorage(debtsAndLoans);
-  }, [debtsAndLoans, isResettingRef]);
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
+
+    fetchDebts(activeUser.id);
+  }, [activeUser?.id, isResettingRef, fetchDebts]);
+
+  // 3. Suscripción en Tiempo Real (Realtime WebSockets)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
+
+    const channelName = `realtime:debts:${activeUser.id}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'debts',
+          filter: `user_id=eq.${activeUser.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newDebt = mapSupabaseRowToDebt(payload.new);
+            setDebtsAndLoans((prev) => {
+              if (prev.some((d) => d.id === newDebt.id || ensureUUID(d.id) === ensureUUID(newDebt.id))) {
+                return prev.map((d) => (d.id === newDebt.id || ensureUUID(d.id) === ensureUUID(newDebt.id) ? { ...d, ...newDebt } : d));
+              }
+              return [newDebt, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedDebt = mapSupabaseRowToDebt(payload.new);
+            setDebtsAndLoans((prev) =>
+              prev.map((d) => (d.id === updatedDebt.id || ensureUUID(d.id) === ensureUUID(updatedDebt.id) ? { ...d, ...updatedDebt } : d))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setDebtsAndLoans((prev) => prev.filter((d) => d.id !== deletedId && ensureUUID(d.id) !== ensureUUID(deletedId)));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeUser?.id]);
+
+  // 4. Operaciones CRUD directas a Supabase
 
   // Agregar deuda o préstamo
   const handleAddDebtOrLoan = useCallback(async (newItem) => {
@@ -76,39 +208,24 @@ export function useDebts({
       payments: Array.isArray(newItem.payments) ? newItem.payments : [],
       updated_at: new Date().toISOString()
     };
-    setDebtsAndLoans((prev) => {
-      const nextDebts = [itemWithId, ...prev];
-      saveDebtsToStorage(nextDebts);
-      return nextDebts;
-    });
+
+    // Actualización optimista en React
+    setDebtsAndLoans((prev) => [itemWithId, ...prev]);
 
     if (isSupabaseConfigured && supabase) {
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          const rawDataPayload = {
-            payments: itemWithId.payments,
-            disbursements: itemWithId.disbursements,
-            initialAmount: baseAmount
-          };
-          supabase.from('debts').upsert({
-            id: ensureUUID(itemWithId.id),
-            user_id: user.id,
-            name: itemWithId.name || itemWithId.personName || 'Deuda',
-            person: itemWithId.personName || itemWithId.name || 'Deuda',
-            person_name: itemWithId.personName || itemWithId.name || 'Deuda',
-            type: itemWithId.type,
-            amount: baseAmount,
-            total_amount: baseAmount,
-            remaining_amount: itemWithId.remaining_amount,
-            notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
-            raw_data: rawDataPayload,
-            due_date: itemWithId.dueDate || itemWithId.computedDueDate || null,
-            updated_at: itemWithId.updated_at
-          }, { onConflict: 'id' }).then(({ error }) => {
-            if (error) console.warn('[useDebts] Advertencia upsert Supabase:', error.message);
-          });
+          const payload = mapDebtToSupabasePayload(itemWithId, user.id);
+          const { error } = await supabase.from('debts').upsert(payload, { onConflict: 'id' });
+          if (error) {
+            console.warn('[useDebts] Advertencia upsert Supabase:', error.message);
+            toast.error('Error al guardar en la nube');
+          }
         }
-      }).catch(() => {});
+      } catch (e) {
+        console.error('[useDebts] Excepción al guardar deuda en Supabase:', e);
+      }
     }
 
     return itemWithId;
@@ -133,39 +250,23 @@ export function useDebts({
       payments: Array.isArray(updatedItem.payments) ? updatedItem.payments : [],
       updated_at: new Date().toISOString()
     };
-    setDebtsAndLoans((prev) => {
-      const nextDebts = prev.map((item) => (item.id === sanitized.id ? { ...item, ...sanitized } : item));
-      saveDebtsToStorage(nextDebts);
-      return nextDebts;
-    });
+
+    // Actualización optimista en React
+    setDebtsAndLoans((prev) => prev.map((item) => (item.id === sanitized.id ? { ...item, ...sanitized } : item)));
 
     if (isSupabaseConfigured && supabase) {
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          const rawDataPayload = {
-            payments: sanitized.payments,
-            disbursements: sanitized.disbursements,
-            initialAmount: initial
-          };
-          supabase.from('debts').upsert({
-            id: ensureUUID(sanitized.id),
-            user_id: user.id,
-            name: sanitized.name || sanitized.personName || 'Deuda',
-            person: sanitized.personName || sanitized.name || 'Deuda',
-            person_name: sanitized.personName || sanitized.name || 'Deuda',
-            type: sanitized.type,
-            amount: total,
-            total_amount: total,
-            remaining_amount: toSafeNumber(sanitized.remaining_amount ?? sanitized.remainingAmount),
-            notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
-            raw_data: rawDataPayload,
-            due_date: sanitized.dueDate || sanitized.computedDueDate || null,
-            updated_at: sanitized.updated_at
-          }, { onConflict: 'id' }).then(({ error }) => {
-            if (error) console.warn('[useDebts] Advertencia upsert Supabase:', error.message);
-          });
+          const payload = mapDebtToSupabasePayload(sanitized, user.id);
+          const { error } = await supabase.from('debts').upsert(payload, { onConflict: 'id' });
+          if (error) {
+            console.warn('[useDebts] Advertencia al actualizar deuda en Supabase:', error.message);
+          }
         }
-      }).catch(() => {});
+      } catch (e) {
+        console.error('[useDebts] Excepción al actualizar deuda en Supabase:', e);
+      }
     }
 
     return sanitized;
@@ -206,24 +307,22 @@ export function useDebts({
             { id: 'sub-cobro-prestamo', name: 'Cobro de préstamo' }
           ]
         };
-        const updated = [...prev, newFinCat];
-        try { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(updated)); } catch {}
-        try { localStorage.setItem('categories', JSON.stringify(updated)); } catch {}
-        return updated;
+        return [...prev, newFinCat];
       });
     }
 
     const targetAccId = payment.accountId || accounts[0]?.id || 'acc-1';
     const targetAcc = accounts.find((a) => a.id === targetAccId);
     const targetAccName = payment.accountName || targetAcc?.name || 'Principal';
+    const nowIso = new Date().toISOString();
 
     // 1. Movimiento de intereses (si aplica)
     if (intAmt > 0) {
-      const txIntId = 'tx-int-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+      const txIntId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ensureUUID('tx-int-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6));
       createdTxIds.push(txIntId);
       const newTxInt = {
         id: txIntId,
-        date: payment.date || new Date().toISOString().split('T')[0],
+        date: payment.date || nowIso.split('T')[0],
         type: isReceivable ? 'income' : 'expense',
         amount: intAmt,
         originalCurrency: 'COP',
@@ -245,11 +344,11 @@ export function useDebts({
 
     // 2. Movimiento de capital (si aplica)
     if (capAmt > 0) {
-      const txCapId = 'tx-cap-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+      const txCapId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ensureUUID('tx-cap-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6));
       createdTxIds.push(txCapId);
       const newTxCap = {
         id: txCapId,
-        date: payment.date || new Date().toISOString().split('T')[0],
+        date: payment.date || nowIso.split('T')[0],
         type: isReceivable ? 'income' : 'expense',
         amount: capAmt,
         originalCurrency: 'COP',
@@ -269,29 +368,70 @@ export function useDebts({
       newTransactions.push(newTxCap);
     }
 
-    // Guardar transacciones para actualizar historial y balance
+    // Guardar transacciones para actualizar historial
     if (newTransactions.length > 0 && setTransactions) {
-      setTransactions((prev) => {
-        const nextTxList = [...newTransactions, ...prev];
-        saveTransactionsToStorage(nextTxList);
-        return nextTxList;
-      });
+      setTransactions((prev) => [...newTransactions, ...prev]);
+
+      if (isSupabaseConfigured && supabase) {
+        getSupabaseUser().then((user) => {
+          if (user?.id) {
+            newTransactions.forEach((tx) => {
+              supabase.from('transactions').upsert({
+                id: ensureUUID(tx.id),
+                user_id: user.id,
+                account_id: tx.accountId ? ensureUUID(tx.accountId) : null,
+                amount: tx.amount,
+                type: tx.type,
+                date: tx.date,
+                description: tx.note,
+                category: tx.categoryName,
+                notes: tx.note,
+                is_transfer: false,
+                updated_at: nowIso
+              }, { onConflict: 'id' }).catch(() => {});
+            });
+          }
+        });
+      }
     }
 
     // Actualización atómica de saldo en la cuenta
+    let newAccBalance = null;
     if (targetAccId && totAmt > 0 && setAccounts) {
-      setAccounts((prevAccounts) => {
-        const updated = prevAccounts.map((acc) => {
+      setAccounts((prevAccounts) =>
+        prevAccounts.map((acc) => {
           if (acc.id === targetAccId) {
             const curBal = Number(acc.balance) || 0;
             const newBal = isReceivable ? curBal + totAmt : curBal - totAmt;
-            return { ...acc, balance: newBal, updated_at: new Date().toISOString() };
+            newAccBalance = newBal;
+            return { ...acc, balance: newBal, updated_at: nowIso };
           }
           return acc;
+        })
+      );
+
+      if (isSupabaseConfigured && supabase && targetAccId) {
+        getSupabaseUser().then((user) => {
+          if (user?.id) {
+            supabase
+              .from('accounts')
+              .select('balance')
+              .eq('id', ensureUUID(targetAccId))
+              .maybeSingle()
+              .then(({ data: accData }) => {
+                if (accData) {
+                  const currentDbBal = Number(accData.balance) || 0;
+                  const calculatedBal = isReceivable ? currentDbBal + totAmt : currentDbBal - totAmt;
+                  supabase
+                    .from('accounts')
+                    .update({ balance: calculatedBal, updated_at: nowIso })
+                    .eq('id', ensureUUID(targetAccId))
+                    .catch(() => {});
+                }
+              });
+          }
         });
-        saveAccountsToStorage(updated);
-        return updated;
-      });
+      }
     }
 
     // Guardar pago con transactionIds y actualizar remainingAmount en la deuda
@@ -305,8 +445,8 @@ export function useDebts({
       transactionIds: createdTxIds
     };
 
-    setDebtsAndLoans((prev) => {
-      const nextDebts = prev.map((item) => {
+    setDebtsAndLoans((prev) =>
+      prev.map((item) => {
         if (item.id === itemId) {
           const payments = [...(item.payments || []), enrichedPayment];
           const base = Number(item.principalAmount || item.totalAmount) || 0;
@@ -342,69 +482,83 @@ export function useDebts({
           };
 
           if (isSupabaseConfigured && supabase) {
-            supabase.auth.getUser().then(({ data: { user } }) => {
+            getSupabaseUser().then((user) => {
               if (user?.id) {
-                const rawDataPayload = {
-                  payments,
-                  disbursements: item.disbursements || [],
-                  initialAmount: item.initialAmount || item.initial_amount || base
-                };
-                supabase.from('debts').upsert({
-                  id: ensureUUID(itemId),
+                const payload = mapDebtToSupabasePayload(updated, user.id);
+                supabase.from('debts').upsert(payload, { onConflict: 'id' }).catch(() => {});
+
+                // Registrar en tabla debt_payments
+                supabase.from('debt_payments').insert({
+                  id: ensureUUID(payment.id || crypto.randomUUID()),
+                  debt_id: ensureUUID(itemId),
                   user_id: user.id,
-                  name: item.name || item.personName || 'Deuda',
-                  person: item.personName || item.name || 'Deuda',
-                  person_name: item.personName || item.name || 'Deuda',
-                  type: item.type,
-                  amount: base,
-                  total_amount: base,
-                  remaining_amount: remCap,
-                  current_balance: remCap,
-                  status: updated.status,
-                  notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
-                  raw_data: rawDataPayload,
-                  updated_at: new Date().toISOString()
-                }, { onConflict: 'id' }).catch(() => {});
+                  amount: totAmt,
+                  type: 'PAYMENT',
+                  payment_type: payment.mode === 'interest' ? 'INTEREST' : 'CAPITAL',
+                  date: payment.date || nowIso.split('T')[0],
+                  notes: payment.note || 'Abono registrado',
+                  created_at: nowIso
+                }).catch(() => {});
               }
-            }).catch(() => {});
+            });
           }
 
           return updated;
         }
         return item;
-      });
-      saveDebtsToStorage(nextDebts);
-      return nextDebts;
-    });
+      })
+    );
   }, [debtsAndLoans, accounts, categories, setAccounts, setTransactions, setCategories]);
 
   // Eliminar abono / pago
   const handleDeletePayment = useCallback((itemId, paymentId) => {
     const debtItem = debtsAndLoans.find((d) => d.id === itemId);
     const paymentToDelete = debtItem?.payments?.find((p) => p.id === paymentId);
+    const nowIso = new Date().toISOString();
 
     // Revertir el saldo en la cuenta afectada
     if (paymentToDelete && paymentToDelete.accountId && setAccounts) {
       const isReceivable = debtItem?.type === 'receivable';
       const totAmt = Number(paymentToDelete.amount) || 0;
       if (totAmt > 0) {
-        setAccounts((prevAccounts) => {
-          const updated = prevAccounts.map((acc) => {
+        setAccounts((prevAccounts) =>
+          prevAccounts.map((acc) => {
             if (acc.id === paymentToDelete.accountId) {
               const curBal = Number(acc.balance) || 0;
               const newBal = isReceivable ? curBal - totAmt : curBal + totAmt;
-              return { ...acc, balance: newBal, updated_at: new Date().toISOString() };
+              return { ...acc, balance: newBal, updated_at: nowIso };
             }
             return acc;
+          })
+        );
+
+        if (isSupabaseConfigured && supabase && paymentToDelete.accountId) {
+          getSupabaseUser().then((user) => {
+            if (user?.id) {
+              supabase
+                .from('accounts')
+                .select('balance')
+                .eq('id', ensureUUID(paymentToDelete.accountId))
+                .maybeSingle()
+                .then(({ data: accData }) => {
+                  if (accData) {
+                    const currentDbBal = Number(accData.balance) || 0;
+                    const calculatedBal = isReceivable ? currentDbBal - totAmt : currentDbBal + totAmt;
+                    supabase
+                      .from('accounts')
+                      .update({ balance: calculatedBal, updated_at: nowIso })
+                      .eq('id', ensureUUID(paymentToDelete.accountId))
+                      .catch(() => {});
+                  }
+                });
+            }
           });
-          saveAccountsToStorage(updated);
-          return updated;
-        });
+        }
       }
     }
 
-    setDebtsAndLoans((prev) => {
-      const nextDebts = prev.map((item) => {
+    setDebtsAndLoans((prev) =>
+      prev.map((item) => {
         if (item.id === itemId) {
           const remainingPayments = (item.payments || []).filter((p) => p.id !== paymentId);
           const base = Number(item.principalAmount || item.totalAmount) || 0;
@@ -440,48 +594,36 @@ export function useDebts({
           };
 
           if (isSupabaseConfigured && supabase) {
-            supabase.auth.getUser().then(({ data: { user } }) => {
+            getSupabaseUser().then((user) => {
               if (user?.id) {
-                const rawDataPayload = {
-                  payments: remainingPayments,
-                  disbursements: item.disbursements || [],
-                  initialAmount: item.initialAmount || item.initial_amount || base
-                };
-                supabase.from('debts').upsert({
-                  id: ensureUUID(itemId),
-                  user_id: user.id,
-                  name: item.name || item.personName || 'Deuda',
-                  person: item.personName || item.name || 'Deuda',
-                  person_name: item.personName || item.name || 'Deuda',
-                  type: item.type,
-                  amount: base,
-                  total_amount: base,
-                  remaining_amount: remCap,
-                  current_balance: remCap,
-                  status: updated.status,
-                  notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
-                  raw_data: rawDataPayload,
-                  updated_at: new Date().toISOString()
-                }, { onConflict: 'id' }).catch(() => {});
+                const payload = mapDebtToSupabasePayload(updated, user.id);
+                supabase.from('debts').upsert(payload, { onConflict: 'id' }).catch(() => {});
+
+                // Eliminar registro en tabla debt_payments
+                supabase
+                  .from('debt_payments')
+                  .delete()
+                  .eq('id', ensureUUID(paymentId))
+                  .catch(() => {});
               }
-            }).catch(() => {});
+            });
           }
 
           return updated;
         }
         return item;
-      });
-      saveDebtsToStorage(nextDebts);
-      return nextDebts;
-    });
+      })
+    );
 
     // Revertir eliminando transacciones asociadas
     if (setTransactions) {
-      setTransactions((prev) => {
-        const remaining = prev.filter((t) => t.paymentId !== paymentId);
-        saveTransactionsToStorage(remaining);
-        return remaining;
-      });
+      setTransactions((prev) => prev.filter((t) => t.paymentId !== paymentId));
+
+      if (isSupabaseConfigured && supabase && paymentToDelete?.transactionIds?.length > 0) {
+        paymentToDelete.transactionIds.forEach((txId) => {
+          supabase.from('transactions').delete().eq('id', ensureUUID(txId)).catch(() => {});
+        });
+      }
     }
   }, [debtsAndLoans, setAccounts, setTransactions]);
 
@@ -503,8 +645,8 @@ export function useDebts({
     // 1. Descontar inmediatamente el dinero prestado de la cuenta de origen
     let updatedAccountBalance = fromAcc ? Number(fromAcc.balance) - disbAmount : null;
     if (fromAccountId && setAccounts) {
-      setAccounts((prevAccounts) => {
-        const updated = prevAccounts.map((acc) => {
+      setAccounts((prevAccounts) =>
+        prevAccounts.map((acc) => {
           if (acc.id === fromAccountId) {
             const curBal = Number(acc.balance) || 0;
             const newBal = curBal - disbAmount;
@@ -512,10 +654,8 @@ export function useDebts({
             return { ...acc, balance: newBal, updated_at: nowIso };
           }
           return acc;
-        });
-        saveAccountsToStorage(updated);
-        return updated;
-      });
+        })
+      );
     }
 
     // 2. Registrar transacción de gasto en transactions
@@ -540,11 +680,7 @@ export function useDebts({
     };
 
     if (setTransactions) {
-      setTransactions((prev) => {
-        const nextTxList = [newTx, ...prev];
-        saveTransactionsToStorage(nextTxList);
-        return nextTxList;
-      });
+      setTransactions((prev) => [newTx, ...prev]);
     }
 
     // 3. Registrar el desembolso y sumar el monto al capital del préstamo
@@ -598,28 +734,22 @@ export function useDebts({
       updated_at: nowIso
     };
 
-    setDebtsAndLoans((prev) => {
-      const nextDebts = prev.map((item) => (item.id === debtId ? updatedDebtItem : item));
-      saveDebtsToStorage(nextDebts);
-      return nextDebts;
-    });
+    setDebtsAndLoans((prev) => prev.map((item) => (item.id === debtId ? updatedDebtItem : item)));
 
-    // 4. Persistencia obligatoria en Supabase
+    // 4. Persistencia directa en Supabase
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          // A. Descontar saldo en la cuenta de origen en Supabase
+          // Descontar saldo en la cuenta de origen en Supabase
           if (fromAccountId && updatedAccountBalance !== null) {
             supabase.from('accounts').update({
               balance: updatedAccountBalance,
               updated_at: nowIso
-            }).eq('id', ensureUUID(fromAccountId)).catch((accErr) => {
-              console.warn('[useDebts] Advertencia actualizando cuenta en Supabase:', accErr);
-            });
+            }).eq('id', ensureUUID(fromAccountId)).catch(() => {});
           }
 
-          // B. Insertar transacción de salida en transactions
+          // Insertar transacción de salida en transactions
           supabase.from('transactions').upsert({
             id: ensureUUID(txUUID),
             user_id: user.id,
@@ -633,11 +763,9 @@ export function useDebts({
             notes: `LEND_MORE: Desembolso adicional a ${debtName}`,
             is_transfer: false,
             updated_at: nowIso
-          }, { onConflict: 'id' }).catch((txErr) => {
-            console.warn('[useDebts] Advertencia guardando transacción de desembolso en Supabase:', txErr);
-          });
+          }, { onConflict: 'id' }).catch(() => {});
 
-          // C. Registrar en debt_payments / loan_movements con tipo "INCREMENT" / "LEND_MORE"
+          // Registrar en debt_payments con tipo "INCREMENT"
           supabase.from('debt_payments').insert({
             id: ensureUUID(disbUUID),
             debt_id: ensureUUID(debtId),
@@ -651,45 +779,9 @@ export function useDebts({
             created_at: nowIso
           }).catch(() => {});
 
-          // D. Actualizar registro padre en tabla debts
-          const rawDataPayload = {
-            payments,
-            disbursements,
-            initialAmount
-          };
-
-          const debtUpsertPayload = {
-            id: ensureUUID(debtId),
-            user_id: user.id,
-            name: updatedDebtItem.name || updatedDebtItem.personName || 'Préstamo',
-            person: updatedDebtItem.personName || updatedDebtItem.name || 'Préstamo',
-            person_name: updatedDebtItem.personName || updatedDebtItem.name || 'Préstamo',
-            type: updatedDebtItem.type || 'receivable',
-            amount: newTotal,
-            total_amount: newTotal,
-            remaining_amount: remCap,
-            current_balance: remCap,
-            status: updatedDebtItem.status,
-            notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
-            raw_data: rawDataPayload,
-            updated_at: nowIso
-          };
-
-          const { error: debtErr } = await supabase.from('debts').upsert(debtUpsertPayload, { onConflict: 'id' });
-          if (debtErr) {
-            console.warn('[useDebts] Reintentando upsert esencial de deuda en Supabase:', debtErr.message);
-            await supabase.from('debts').upsert({
-              id: ensureUUID(debtId),
-              user_id: user.id,
-              name: updatedDebtItem.name || updatedDebtItem.personName || 'Préstamo',
-              type: updatedDebtItem.type || 'receivable',
-              amount: newTotal,
-              total_amount: newTotal,
-              remaining_amount: remCap,
-              notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
-              updated_at: nowIso
-            }, { onConflict: 'id' });
-          }
+          // Actualizar registro padre en tabla debts
+          const debtPayload = mapDebtToSupabasePayload(updatedDebtItem, user.id);
+          await supabase.from('debts').upsert(debtPayload, { onConflict: 'id' });
         }
       } catch (cloudErr) {
         console.warn('[useDebts] Error sincronizando desembolso con Supabase:', cloudErr);
@@ -706,31 +798,39 @@ export function useDebts({
       if (!window.confirm('¿Eliminar este registro de deuda/préstamo?')) return;
     }
 
-    setDebtsAndLoans((prev) => {
-      const nextDebts = prev.filter((item) => item.id !== itemId);
-      saveDebtsToStorage(nextDebts);
-      return nextDebts;
-    });
+    const canonicalId = ensureUUID(itemId);
+
+    // Actualización optimista en React
+    setDebtsAndLoans((prev) => prev.filter((item) => item.id !== itemId && ensureUUID(item.id) !== canonicalId));
 
     if (setTransactions) {
-      setTransactions((prev) => {
-        const nextTxs = prev.filter((t) => t.debtId !== itemId);
-        saveTransactionsToStorage(nextTxs);
-        return nextTxs;
-      });
+      setTransactions((prev) => prev.filter((t) => t.debtId !== itemId && ensureUUID(t.debtId) !== canonicalId));
     }
 
     if (isSupabaseConfigured && supabase) {
-      supabase.from('debts').delete().eq('id', ensureUUID(itemId)).catch(() => {});
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+
+        // Eliminar pagos asociados en debt_payments
+        let paymentsQuery = supabase.from('debt_payments').delete().eq('debt_id', canonicalId);
+        if (user?.id) paymentsQuery = paymentsQuery.eq('user_id', user.id);
+        await paymentsQuery.catch(() => {});
+
+        // Eliminar deuda en tabla debts
+        let debtQuery = supabase.from('debts').delete().eq('id', canonicalId);
+        if (user?.id) debtQuery = debtQuery.eq('user_id', user.id);
+        await debtQuery;
+      } catch (err) {
+        console.error('[useDebts] Error al eliminar deuda en Supabase:', err);
+      }
     }
 
     toast.info('Elemento eliminado');
   }, [setTransactions]);
 
-  // Resetear deudas
+  // Resetear deudas a cero en memoria
   const resetDebts = useCallback(() => {
     setDebtsAndLoans([]);
-    saveDebtsToStorage([]);
   }, []);
 
   return {
@@ -743,6 +843,7 @@ export function useDebts({
     handleDeletePayment,
     handleAddDisbursement,
     handleDeleteDebtOrLoan,
+    fetchDebts,
     resetDebts
   };
 }

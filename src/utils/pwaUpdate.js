@@ -91,37 +91,39 @@ export async function checkForAppUpdates() {
 
 /**
  * Aplica la actualización encontrada:
- * 1. Envía SKIP_WAITING a los Service Workers
- * 2. Limpia los caches del navegador (CacheStorage)
+ * 1. Envía SKIP_WAITING al worker activo y al worker waiting
+ * 2. Limpia todos los caches del navegador (CacheStorage)
  * 3. Actualiza el build id en localStorage
- * 4. Recarga la ventana para cargar la versión fresca de Vercel
+ * 4. Recarga la ventana para cargar la versión fresca
  */
 export async function applyAppUpdate(remoteVersion = null, registration = null) {
   try {
-    // 1. Notificar al Service Worker que tome el control
+    // 1. Notificar al Service Worker para omitir espera y tomar control inmediato
     if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       const reg = registration || (await navigator.serviceWorker.getRegistration());
-      if (reg) {
-        if (reg.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        }
-        if (reg.installing) {
-          reg.installing.postMessage({ type: 'SKIP_WAITING' });
-        }
-        if (reg.active) {
-          reg.active.postMessage({ type: 'SKIP_WAITING' });
-        }
-      }
+
       if (navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
       }
+
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+
+      if (reg?.installing) {
+        reg.installing.postMessage({ type: 'SKIP_WAITING' });
+      }
+
+      if (reg?.active) {
+        reg.active.postMessage({ type: 'SKIP_WAITING' });
+      }
     }
 
-    // 2. Limpiar todos los caches obsoletos del navegador
+    // 2. Limpiar todos los caches obsoletos del navegador (CacheStorage)
     if (typeof window !== 'undefined' && 'caches' in window) {
       try {
         const cacheKeys = await caches.keys();
-        await Promise.all(cacheKeys.map(k => caches.delete(k)));
+        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
       } catch (cErr) {
         console.warn('[PWA] Error limpiando CacheStorage:', cErr);
       }
@@ -134,12 +136,13 @@ export async function applyAppUpdate(remoteVersion = null, registration = null) 
       } catch (_) {}
     }
 
-    // 4. Esperar un instante para que el SW nuevo tome control y recargar
+    // 4. Esperar un instante para que el SW tome control y recargar
     setTimeout(() => {
-      window.location.reload(true);
-    }, 400);
+      window.location.reload();
+    }, 250);
   } catch (err) {
     console.error('[PWA] Error aplicando actualización:', err);
-    window.location.reload(true);
+    window.location.reload();
   }
 }
+

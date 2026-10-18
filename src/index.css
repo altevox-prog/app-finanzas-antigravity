@@ -399,7 +399,7 @@ input:-webkit-autofill:focus {
 html:not(.dark) input:-webkit-autofill,
 html:not(.dark) input:-webkit-autofill:hover, 
 html:not(.dark) input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #0f172a !important;
+  -webkit-text-fill-color: theme('colors.slate.900') !important;
   -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
 }
 

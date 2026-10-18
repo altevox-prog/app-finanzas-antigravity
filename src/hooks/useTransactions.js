@@ -1,90 +1,279 @@
-import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS } from '../constants/storageKeys';
-import { INITIAL_TRANSACTIONS } from '../data/initialData';
-import { saveTransactionsToStorage, saveAccountsToStorage } from '../services/storageService';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ensureUUID } from '../services/syncEngine';
 import { generateUUID } from '../utils/recordMerger';
 import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { toast } from '../utils/toast';
-import { createDemoTransactions, seedTestTransactions } from '../utils/seedData';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getSupabaseUser } from '../services/supabaseClient';
+import { normalizeRemoteTransaction } from '../services/sync/syncNormalizers';
 
-const TX_LEGACY_ID_MAP = {
-  'acc-1': '00000001-0000-4000-8000-000000000001',
-  'acc-2': '00000002-0000-4000-8000-000000000002',
-  'acc-3': '00000003-0000-4000-8000-000000000003',
-  'acc-4': '00000004-0000-4000-8000-000000000004',
-  'acc-5': '00000005-0000-4000-8000-000000000005'
-};
+/**
+ * Mapea una fila de la base de datos Supabase al formato esperado por el frontend
+ */
+export function mapSupabaseRowToTransaction(row) {
+  if (!row || typeof row !== 'object') return row;
+  const normalized = normalizeRemoteTransaction(row);
+  const rawData = row.raw_data && typeof row.raw_data === 'object' ? row.raw_data : {};
 
-function getInitialTransactions() {
-  try {
-    const local = localStorage.getItem('presu_transactions') ||
-                  localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) ||
-                  localStorage.getItem('app_transactions') ||
-                  localStorage.getItem('finanzas_transactions_v3') ||
-                  localStorage.getItem('transactions');
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed)) {
-        const seen = new Set();
-        let needsWrite = false;
-        const result = parsed.filter((t) => {
-          if (!t || !t.id) return false;
-          if (seen.has(t.id)) return false;
-          seen.add(t.id);
-          return true;
-        }).map((t) => {
-          const txIdOK = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-          const rawAccId = t.accountId || t.account_id;
-          const migratedAccId = rawAccId && TX_LEGACY_ID_MAP[rawAccId]
-            ? (needsWrite = true, TX_LEGACY_ID_MAP[rawAccId])
-            : rawAccId;
-          return {
-            ...t,
-            id: (t.id && txIdOK.test(t.id)) ? t.id : (t.id || generateUUID()),
-            accountId: migratedAccId || t.accountId,
-            amount: toSafeNumber(t.amount),
-            originalAmount: toSafeNumber(t.originalAmount ?? t.amount),
-            exchangeRate: toSafeNumber(t.exchangeRate || 1)
-          };
-        });
-        if (needsWrite) {
-          try {
-            localStorage.setItem('presu_transactions', JSON.stringify(result));
-          } catch {}
-        }
-        return result;
-      }
-    }
-    // Si no existe ninguna clave en localStorage (primera vez absoluta), retornar vacío o demo
-    return [];
-  } catch (e) {
-    console.error('Error parseando transacciones:', e);
-    return [];
-  }
+  return {
+    ...normalized,
+    id: row.id,
+    date: row.date || (row.created_at ? String(row.created_at).split('T')[0] : new Date().toISOString().split('T')[0]),
+    type: normalized.type || 'expense',
+    amount: toSafeNumber(row.amount),
+    originalAmount: toSafeNumber(row.original_amount ?? rawData.originalAmount ?? row.amount),
+    originalCurrency: row.original_currency || rawData.originalCurrency || 'COP',
+    exchangeRate: toSafeNumber(row.exchange_rate ?? rawData.exchangeRate ?? 1),
+    accountId: row.account_id || rawData.accountId || null,
+    account_id: row.account_id || rawData.accountId || null,
+    accountName: rawData.accountName || '',
+    categoryId: row.category_id || rawData.categoryId || null,
+    category_id: row.category_id || rawData.categoryId || null,
+    categoryName: normalized.categoryName || 'General',
+    category: normalized.category || 'General',
+    subcategoryId: rawData.subcategoryId || null,
+    subcategoryName: rawData.subcategoryName || null,
+    description: row.description || row.notes || rawData.description || 'Movimiento',
+    note: row.notes || row.description || rawData.note || '',
+    notes: row.notes || row.description || rawData.notes || '',
+    isTransfer: Boolean(row.is_transfer ?? rawData.isTransfer ?? (normalized.type === 'transfer')),
+    is_transfer: Boolean(row.is_transfer ?? rawData.is_transfer ?? (normalized.type === 'transfer')),
+    fromAccountId: rawData.fromAccountId || null,
+    toAccountId: rawData.toAccountId || null,
+    fromAccountName: rawData.fromAccountName || null,
+    toAccountName: rawData.toAccountName || null,
+    receiptImage: rawData.receiptImage || null,
+    created_at: row.created_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString()
+  };
 }
 
+/**
+ * Mapea un objeto de transacción del frontend a la carga útil (payload) de Supabase
+ */
+export function mapTransactionToSupabasePayload(tx, userId) {
+  const cleanId = (tx.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tx.id))
+    ? tx.id
+    : ensureUUID(tx.id || generateUUID());
+
+  const rawAccId = tx.accountId || tx.account_id || null;
+  const cleanAccId = rawAccId ? ensureUUID(rawAccId) : null;
+  const isTxTransfer = Boolean(tx.isTransfer || tx.is_transfer || tx.type === 'transfer' || tx.type === 'transferencia');
+  const nowIso = new Date().toISOString();
+
+  const rawData = {
+    originalAmount: toSafeNumber(tx.originalAmount ?? tx.amount),
+    originalCurrency: tx.originalCurrency || 'COP',
+    exchangeRate: toSafeNumber(tx.exchangeRate || 1),
+    accountName: tx.accountName || '',
+    categoryId: tx.categoryId || tx.category_id || null,
+    categoryName: tx.categoryName || tx.category || 'General',
+    subcategoryId: tx.subcategoryId || null,
+    subcategoryName: tx.subcategoryName || null,
+    fromAccountId: tx.fromAccountId || null,
+    toAccountId: tx.toAccountId || null,
+    fromAccountName: tx.fromAccountName || null,
+    toAccountName: tx.toAccountName || null,
+    isTransfer: isTxTransfer,
+    receiptImage: tx.receiptImage || null,
+    note: (tx.note || tx.notes || '').trim()
+  };
+
+  return {
+    id: cleanId,
+    user_id: userId,
+    type: tx.type || 'expense',
+    amount: toSafeNumber(tx.amount),
+    original_amount: toSafeNumber(tx.originalAmount ?? tx.amount),
+    original_currency: tx.originalCurrency || 'COP',
+    exchange_rate: toSafeNumber(tx.exchangeRate || 1),
+    account_id: cleanAccId,
+    category_id: tx.categoryId || tx.category_id || null,
+    category: tx.category || tx.categoryName || 'General',
+    date: tx.date || nowIso.split('T')[0],
+    description: (tx.description || tx.notes || tx.note || 'Movimiento').trim(),
+    notes: (tx.notes || tx.note || '').trim(),
+    is_transfer: isTxTransfer,
+    raw_data: rawData,
+    updated_at: tx.updated_at || nowIso
+  };
+}
+
+/**
+ * useTransactions
+ * Hook de transacciones conectado a Supabase Puro y sincronizado en tiempo real (Realtime).
+ */
 export function useTransactions({
   isResettingRef,
   accounts = [],
   setAccounts,
-  trm = 4050
+  trm = 4050,
+  user: explicitUser = null
 } = {}) {
-  const [transactions, setTransactions] = useState(getInitialTransactions);
+  const [transactions, setTransactions] = useState([]);
+  const [activeUser, setActiveUser] = useState(explicitUser);
+  const activeUserRef = useRef(explicitUser);
+  activeUserRef.current = activeUser;
 
-  // Persistencia reactiva en localStorage
+  // Sincronizar referencia de cuentas para cálculos de saldo
+  const accountsRef = useRef(accounts);
+  accountsRef.current = accounts;
+
+  // 1. Detectar usuario activo de Supabase Auth
+  useEffect(() => {
+    if (explicitUser) {
+      setActiveUser(explicitUser);
+      return;
+    }
+
+    if (!isSupabaseConfigured || !supabase) return;
+
+    let isMounted = true;
+    getSupabaseUser().then((u) => {
+      if (isMounted && u?.id) {
+        setActiveUser(u);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (isMounted) {
+        setActiveUser(session?.user || null);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, [explicitUser]);
+
+  // Función para re-calcular saldos en el estado de cuentas
+  const recalculateAccountsBalance = useCallback((currentTransactions) => {
+    if (!setAccounts || !Array.isArray(accountsRef.current) || accountsRef.current.length === 0) return;
+
+    setAccounts((prevAccounts) => {
+      if (!Array.isArray(prevAccounts) || prevAccounts.length === 0) return prevAccounts;
+
+      return prevAccounts.map((acc) => {
+        const baseInitial = acc.initialBalance !== undefined
+          ? acc.initialBalance
+          : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
+        const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, currentTransactions, trm);
+
+        return {
+          ...acc,
+          initialBalance: baseInitial,
+          balance: liveBalance,
+          currentBalance: liveBalance,
+          updated_at: new Date().toISOString()
+        };
+      });
+    });
+  }, [setAccounts, trm]);
+
+  // 2. Carga inicial desde Supabase al montar o al cambiar de usuario
   useEffect(() => {
     if (isResettingRef?.current) return;
-    saveTransactionsToStorage(transactions);
-  }, [transactions, isResettingRef]);
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function fetchTransactions() {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', activeUser.id)
+          .order('date', { ascending: false });
+
+        if (error) {
+          console.error('[useTransactions] Error al cargar transacciones de Supabase:', error);
+          return;
+        }
+
+        if (isMounted && Array.isArray(data)) {
+          const mapped = data.map(mapSupabaseRowToTransaction);
+          setTransactions(mapped);
+          recalculateAccountsBalance(mapped);
+        }
+      } catch (err) {
+        console.error('[useTransactions] Fallo al consultar Supabase:', err);
+      }
+    }
+
+    fetchTransactions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeUser?.id, isResettingRef, recalculateAccountsBalance]);
+
+  // 3. Suscripción en Tiempo Real (Realtime)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !activeUser?.id) {
+      return;
+    }
+
+    const channelName = `public:transactions:${activeUser.id}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${activeUser.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newTx = mapSupabaseRowToTransaction(payload.new);
+            setTransactions((prev) => {
+              // Evitar duplicar si ya existe localmente
+              if (prev.some((t) => t.id === newTx.id)) {
+                return prev.map((t) => (t.id === newTx.id ? { ...t, ...newTx } : t));
+              }
+              const next = [newTx, ...prev];
+              recalculateAccountsBalance(next);
+              return next;
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedTx = mapSupabaseRowToTransaction(payload.new);
+            setTransactions((prev) => {
+              const next = prev.map((t) => (t.id === updatedTx.id ? { ...t, ...updatedTx } : t));
+              recalculateAccountsBalance(next);
+              return next;
+            });
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setTransactions((prev) => {
+                const next = prev.filter((t) => t.id !== deletedId);
+                recalculateAccountsBalance(next);
+                return next;
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeUser?.id, recalculateAccountsBalance]);
+
+  // 4. Operaciones CRUD asíncronas directas a Supabase
 
   // Agregar transacción nueva (ingreso o gasto)
   const handleAddTransaction = useCallback(async (newTx) => {
     const id = (newTx.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newTx.id))
       ? newTx.id
       : generateUUID();
+
     const sanitizedTx = {
       ...newTx,
       id,
@@ -93,111 +282,37 @@ export function useTransactions({
       exchangeRate: toSafeNumber(newTx.exchangeRate || 1),
       updated_at: new Date().toISOString()
     };
-    const updated = [sanitizedTx, ...transactions.filter((t) => t.id !== id)];
 
-    try {
-      localStorage.setItem('presu_transactions', JSON.stringify(updated));
-      saveTransactionsToStorage(updated);
-      setTransactions(updated);
-    } catch (localErr) {
-      console.error('Fallo real en localStorage:', localErr);
-      toast.error('Error al guardar localmente');
-      return null;
-    }
-
-    // Si es un movimiento de tipo transferencia con origen y destino válidos
-    const isTxTransfer = Boolean(
-      sanitizedTx.isTransfer ||
-      sanitizedTx.is_transfer ||
-      sanitizedTx.type === 'transfer' ||
-      sanitizedTx.type === 'transferencia'
-    );
-    const fromId = sanitizedTx.fromAccountId || sanitizedTx.from_account_id;
-    const toId = sanitizedTx.toAccountId || sanitizedTx.to_account_id;
-
-    if (setAccounts && Array.isArray(accounts) && accounts.length > 0) {
-      if (isTxTransfer && fromId && toId && fromId !== toId) {
-        const transferAmount = toSafeNumber(sanitizedTx.originalAmount || sanitizedTx.amount);
-        const updatedAccounts = accounts.map((acc) => {
-          if (acc.id === fromId) {
-            const currentBalance = toSafeNumber(acc.balance);
-            return {
-              ...acc,
-              initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-              balance: currentBalance - transferAmount,
-              currentBalance: currentBalance - transferAmount,
-              updated_at: new Date().toISOString()
-            };
-          }
-          if (acc.id === toId) {
-            const currentBalance = toSafeNumber(acc.balance);
-            return {
-              ...acc,
-              initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-              balance: currentBalance + transferAmount,
-              currentBalance: currentBalance + transferAmount,
-              updated_at: new Date().toISOString()
-            };
-          }
-          return acc;
-        });
-        setAccounts(updatedAccounts);
-        localStorage.setItem('presu_accounts', JSON.stringify(updatedAccounts));
-        saveAccountsToStorage(updatedAccounts);
-      } else {
-        // Sincronizar saldos nativos de cuentas actualizadas sin duplicar descuentos
-        const updatedAccounts = accounts.map((acc) => {
-          const baseInitial = acc.initialBalance !== undefined 
-            ? acc.initialBalance 
-            : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
-          const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, updated, trm);
-          return {
-            ...acc,
-            initialBalance: baseInitial,
-            balance: liveBalance,
-            currentBalance: liveBalance,
-            updated_at: new Date().toISOString()
-          };
-        });
-        setAccounts(updatedAccounts);
-        localStorage.setItem('presu_accounts', JSON.stringify(updatedAccounts));
-        saveAccountsToStorage(updatedAccounts);
-      }
-    }
+    // Actualizar optimísticamente el estado local
+    setTransactions((prev) => {
+      const next = [sanitizedTx, ...prev.filter((t) => t.id !== id)];
+      recalculateAccountsBalance(next);
+      return next;
+    });
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          const rawAccId = sanitizedTx.accountId ? ensureUUID(sanitizedTx.accountId) : null;
-          const { error } = await supabase.from('transactions').upsert({
-            id: ensureUUID(sanitizedTx.id),
-            user_id: user.id,
-            account_id: rawAccId,
-            amount: sanitizedTx.amount,
-            type: sanitizedTx.type || 'expense',
-            date: sanitizedTx.date || new Date().toISOString().split('T')[0],
-            description: sanitizedTx.description || sanitizedTx.notes || sanitizedTx.note || 'Movimiento',
-            category: sanitizedTx.category || sanitizedTx.categoryName || 'General',
-            category_id: sanitizedTx.categoryId || null,
-            notes: sanitizedTx.notes || sanitizedTx.note || '',
-            is_transfer: Boolean(sanitizedTx.isTransfer || sanitizedTx.is_transfer),
-            updated_at: sanitizedTx.updated_at || new Date().toISOString()
-          }, { onConflict: 'id' });
-          if (error) console.warn('[useTransactions] Advertencia upsert Supabase:', error);
+          const payload = mapTransactionToSupabasePayload(sanitizedTx, user.id);
+          const { error } = await supabase.from('transactions').upsert(payload, { onConflict: 'id' });
+          if (error) {
+            console.error('[useTransactions] Error en upsert Supabase:', error);
+            toast.error('Error al sincronizar con la nube');
+          }
         }
       } catch (e) {
-        console.warn('[useTransactions] Advertencia upsert Supabase:', e);
+        console.error('[useTransactions] Excepción al guardar en Supabase:', e);
       }
     }
 
     toast.success('Movimiento registrado con éxito');
     return sanitizedTx;
-  }, [transactions, accounts, setAccounts, trm]);
+  }, [recalculateAccountsBalance]);
 
   const handleSaveTransaction = handleAddTransaction;
 
-  // Actualizar transacción existente con ajuste retroactivo en saldos
+  // Actualizar transacción existente
   const handleUpdateTransaction = useCallback(async (updatedTx) => {
     const sanitizedTx = {
       ...updatedTx,
@@ -206,124 +321,65 @@ export function useTransactions({
       exchangeRate: toSafeNumber(updatedTx.exchangeRate || 1),
       updated_at: new Date().toISOString()
     };
-    const updated = transactions.map((t) => (t.id === sanitizedTx.id ? sanitizedTx : t));
 
-    try {
-      localStorage.setItem('presu_transactions', JSON.stringify(updated));
-      saveTransactionsToStorage(updated);
-      setTransactions(updated);
-    } catch (localErr) {
-      console.error('Fallo real en localStorage:', localErr);
-      toast.error('Error al guardar localmente');
-      return null;
-    }
-
-    // Ajuste retroactivo en saldos de cuentas sin duplicar descuentos
-    if (setAccounts && Array.isArray(accounts) && accounts.length > 0) {
-      const nextAccounts = accounts.map((acc) => {
-        const baseInitial = acc.initialBalance !== undefined 
-          ? acc.initialBalance 
-          : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
-        const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, updated, trm);
-        return {
-          ...acc,
-          initialBalance: baseInitial,
-          balance: liveBalance,
-          currentBalance: liveBalance,
-          updated_at: new Date().toISOString()
-        };
-      });
-      setAccounts(nextAccounts);
-      localStorage.setItem('presu_accounts', JSON.stringify(nextAccounts));
-      saveAccountsToStorage(nextAccounts);
-    }
+    // Actualización optimista en React
+    setTransactions((prev) => {
+      const next = prev.map((t) => (t.id === sanitizedTx.id ? { ...t, ...sanitizedTx } : t));
+      recalculateAccountsBalance(next);
+      return next;
+    });
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          const rawAccId = sanitizedTx.accountId ? ensureUUID(sanitizedTx.accountId) : null;
-          const { error } = await supabase.from('transactions').upsert({
-            id: ensureUUID(sanitizedTx.id),
-            user_id: user.id,
-            account_id: rawAccId,
-            amount: sanitizedTx.amount,
-            type: sanitizedTx.type || 'expense',
-            date: sanitizedTx.date || new Date().toISOString().split('T')[0],
-            description: sanitizedTx.description || sanitizedTx.notes || sanitizedTx.note || 'Movimiento',
-            category: sanitizedTx.category || sanitizedTx.categoryName || 'General',
-            category_id: sanitizedTx.categoryId || null,
-            notes: sanitizedTx.notes || sanitizedTx.note || '',
-            is_transfer: Boolean(sanitizedTx.isTransfer || sanitizedTx.is_transfer),
-            updated_at: sanitizedTx.updated_at || new Date().toISOString()
-          }, { onConflict: 'id' });
-          if (error) console.warn('[useTransactions] Advertencia update Supabase:', error);
+          const payload = mapTransactionToSupabasePayload(sanitizedTx, user.id);
+          const { error } = await supabase.from('transactions').upsert(payload, { onConflict: 'id' });
+          if (error) {
+            console.error('[useTransactions] Error al actualizar en Supabase:', error);
+            toast.error('Error al actualizar en la nube');
+          }
         }
       } catch (e) {
-        console.warn('[useTransactions] Advertencia update Supabase:', e);
+        console.error('[useTransactions] Excepción al actualizar en Supabase:', e);
       }
     }
 
     toast.success('Movimiento actualizado con éxito');
     return sanitizedTx;
-  }, [transactions, accounts, setAccounts, trm]);
+  }, [recalculateAccountsBalance]);
 
-  // Eliminar transacción con reversión de saldos
+  // Eliminar transacción
   const handleDeleteTransaction = useCallback(async (txId) => {
-    const updated = transactions.filter((t) => t.id !== txId && ensureUUID(t.id) !== txId);
+    if (!txId) return;
 
-    try {
-      localStorage.setItem('presu_transactions', JSON.stringify(updated));
-      saveTransactionsToStorage(updated);
-      setTransactions(updated);
-    } catch (localErr) {
-      console.error('Fallo real en localStorage:', localErr);
-      toast.error('Error al guardar localmente');
-      return;
-    }
-
-    // Revertir y ajustar saldos en las cuentas
-    if (setAccounts && Array.isArray(accounts) && accounts.length > 0) {
-      const nextAccounts = accounts.map((acc) => {
-        const baseInitial = acc.initialBalance !== undefined 
-          ? acc.initialBalance 
-          : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
-        const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, updated, trm);
-        return {
-          ...acc,
-          initialBalance: baseInitial,
-          balance: liveBalance,
-          currentBalance: liveBalance,
-          updated_at: new Date().toISOString()
-        };
-      });
-      setAccounts(nextAccounts);
-      localStorage.setItem('presu_accounts', JSON.stringify(nextAccounts));
-      saveAccountsToStorage(nextAccounts);
-    }
+    // Actualización optimista inmediata en React
+    setTransactions((prev) => {
+      const next = prev.filter((t) => t.id !== txId && ensureUUID(t.id) !== txId);
+      recalculateAccountsBalance(next);
+      return next;
+    });
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        let query = supabase
-          .from('transactions')
-          .delete()
-          .eq('id', ensureUUID(txId));
-        if (user?.id) query = query.eq('user_id', user.id);
+        const user = activeUserRef.current || (await getSupabaseUser());
+        let query = supabase.from('transactions').delete().eq('id', ensureUUID(txId));
+        if (user?.id) {
+          query = query.eq('user_id', user.id);
+        }
         const { error } = await query;
-
         if (error) {
-          console.error('Error al eliminar transacción en Supabase:', error);
+          console.error('[useTransactions] Error al eliminar transacción en Supabase:', error);
         }
       } catch (err) {
-        console.error('Fallo en operación de transacción:', err);
+        console.error('[useTransactions] Fallo en eliminación de transacción:', err);
       }
     }
 
     toast.info('Elemento eliminado');
-  }, [transactions, accounts, setAccounts, trm]);
+  }, [recalculateAccountsBalance]);
 
-  // Transferencia entre cuentas
+  // Transferencia entre cuentas (emite dos movimientos en Supabase)
   const handleExecuteTransfer = useCallback(async ({
     fromAcc,
     toAcc,
@@ -351,11 +407,12 @@ export function useTransactions({
 
     const outId = generateUUID();
     const inId = generateUUID();
+    const nowIso = new Date().toISOString();
 
     // Débito / Gasto en cuenta origen
     const outTx = {
       id: outId,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || nowIso.split('T')[0],
       type: 'expense',
       amount: copAmount,
       originalAmount: transferAmount,
@@ -363,23 +420,27 @@ export function useTransactions({
       exchangeRate: rate,
       categoryId: 'cat-transfer',
       categoryName: 'Transferencias',
+      category: 'Transferencias',
       subcategoryId: 'sub-transfer-out',
       subcategoryName: 'Transferencia Enviada',
       accountId: fromAcc.id,
       accountName: fromAcc.name,
       fromAccountId: fromAcc.id,
       toAccountId: toAcc.id,
+      fromAccountName: fromAcc.name,
+      toAccountName: toAcc.name,
       note: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
       notes: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
+      description: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
       isTransfer: true,
-      updated_at: new Date().toISOString()
+      updated_at: nowIso
     };
 
     // Crédito / Ingreso en cuenta destino
     const inRate = toCurrency === 'USD' ? (Number(trm) || 4050) : toCurrency === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
     const inTx = {
       id: inId,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || nowIso.split('T')[0],
       type: 'income',
       amount: copAmount,
       originalAmount: cleanDestAmount,
@@ -387,121 +448,54 @@ export function useTransactions({
       exchangeRate: inRate,
       categoryId: 'cat-transfer',
       categoryName: 'Transferencias',
+      category: 'Transferencias',
       subcategoryId: 'sub-transfer-in',
       subcategoryName: 'Transferencia Recibida',
       accountId: toAcc.id,
       accountName: toAcc.name,
       fromAccountId: fromAcc.id,
       toAccountId: toAcc.id,
+      fromAccountName: fromAcc.name,
+      toAccountName: toAcc.name,
       note: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
       notes: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
+      description: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
       isTransfer: true,
-      updated_at: new Date().toISOString()
+      updated_at: nowIso
     };
 
-    // Actualización atómica de saldos de ambas cuentas
-    let updatedAccounts = accounts;
-    if (setAccounts && Array.isArray(accounts)) {
-      updatedAccounts = accounts.map((acc) => {
-        if (acc.id === fromAcc.id) {
-          const currentBalance = toSafeNumber(acc.balance);
-          return {
-            ...acc,
-            initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-            balance: currentBalance - transferAmount,
-            currentBalance: currentBalance - transferAmount,
-            updated_at: new Date().toISOString()
-          };
-        }
-        if (acc.id === toAcc.id) {
-          const currentBalance = toSafeNumber(acc.balance);
-          return {
-            ...acc,
-            initialBalance: acc.initialBalance !== undefined ? acc.initialBalance : currentBalance,
-            balance: currentBalance + cleanDestAmount,
-            currentBalance: currentBalance + cleanDestAmount,
-            updated_at: new Date().toISOString()
-          };
-        }
-        return acc;
-      });
-    }
-
-    const nextTxs = [inTx, outTx, ...transactions];
-    try {
-      if (setAccounts && Array.isArray(accounts)) {
-        setAccounts(updatedAccounts);
-        localStorage.setItem('presu_accounts', JSON.stringify(updatedAccounts));
-        saveAccountsToStorage(updatedAccounts);
-      }
-      localStorage.setItem('presu_transactions', JSON.stringify(nextTxs));
-      saveTransactionsToStorage(nextTxs);
-      setTransactions(nextTxs);
-    } catch (localErr) {
-      console.error('Fallo real en localStorage:', localErr);
-      toast.error('Error al guardar localmente');
-      return null;
-    }
+    // Actualización optimista de estado local
+    setTransactions((prev) => {
+      const next = [inTx, outTx, ...prev];
+      recalculateAccountsBalance(next);
+      return next;
+    });
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          await supabase.from('transactions').upsert([
-            {
-              id: ensureUUID(outTx.id),
-              user_id: user.id,
-              account_id: ensureUUID(outTx.accountId),
-              amount: outTx.amount,
-              type: outTx.type,
-              date: outTx.date,
-              description: outTx.note,
-              category: outTx.categoryName || 'Transferencias',
-              category_id: outTx.categoryId,
-              notes: outTx.note,
-              is_transfer: true,
-              updated_at: outTx.updated_at
-            },
-            {
-              id: ensureUUID(inTx.id),
-              user_id: user.id,
-              account_id: ensureUUID(inTx.accountId),
-              amount: inTx.amount,
-              type: inTx.type,
-              date: inTx.date,
-              description: inTx.note,
-              category: inTx.categoryName || 'Transferencias',
-              category_id: inTx.categoryId,
-              notes: inTx.note,
-              is_transfer: true,
-              updated_at: inTx.updated_at
-            }
-          ], { onConflict: 'id' });
+          const payloadOut = mapTransactionToSupabasePayload(outTx, user.id);
+          const payloadIn = mapTransactionToSupabasePayload(inTx, user.id);
+          const { error } = await supabase.from('transactions').upsert([payloadOut, payloadIn], { onConflict: 'id' });
+          if (error) {
+            console.error('[useTransactions] Error en transferencia Supabase:', error);
+          }
         }
       } catch (e) {
-        console.warn('[useTransactions] Advertencia transferencia Supabase:', e);
+        console.error('[useTransactions] Advertencia transferencia Supabase:', e);
       }
     }
 
     toast.success('Movimiento registrado con éxito');
     return { inTx, outTx };
-  }, [transactions, accounts, setAccounts, trm]);
+  }, [trm, recalculateAccountsBalance]);
 
   const handleTransfer = handleExecuteTransfer;
 
-  // Resetear transacciones a cero
+  // Resetear transacciones a cero (limpieza en React sin persistir en localStorage)
   const resetTransactions = useCallback(() => {
     setTransactions([]);
-    try {
-      localStorage.setItem('presu_transactions', JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
-      localStorage.setItem('app_transactions', JSON.stringify([]));
-      localStorage.setItem('finanzas_transactions_v3', JSON.stringify([]));
-      localStorage.setItem('transactions', JSON.stringify([]));
-      saveTransactionsToStorage([]);
-    } catch (e) {
-      console.error('Error al resetear transacciones:', e);
-    }
   }, []);
 
   return {
