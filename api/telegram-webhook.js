@@ -313,36 +313,49 @@ export default async function handler(req, res) {
     const movementType = extractType(rawText);
     const category = extractCategory(rawText, movementType);
 
-    // Limpieza por tokenización directa
-    let baseText = (concept || rawText || '').trim();
+    // Limpieza determinista sin regex de acentos
+    let cleanConcept = (baseText || concept || rawText || '').trim();
 
-    // 1. Quitar el monto si sigue presente
+    // 1. Quitar el monto numérico si aún aparece
     if (typeof matchedRaw !== 'undefined' && matchedRaw) {
-      baseText = baseText.replace(matchedRaw, '');
+      cleanConcept = cleanConcept.replace(matchedRaw, ' ');
     }
 
-    // 2. Set de palabras prohibidas en minúsculas
-    const stopWords = new Set([
+    // 2. Lista de términos exactos a remover (en minúsculas)
+    const forbiddenTerms = [
       'efectivo', 'cash', 'plata',
       'nequi', 'daviplata', 'davi',
       'bancolombia', 'banco',
-      'tarjeta', 'debito', 'crédito', 'credito',
+      'tarjeta', 'debito', 'credito',
       'en', 'con', 'por', 'del', 'de'
-    ]);
+    ];
 
-    if (accountName && accountName.toLowerCase() !== 'sin cuenta asignada') {
-      accountName.toLowerCase().split(/\s+/).forEach(w => stopWords.add(w.trim()));
+    if (accountName && typeof accountName === 'string') {
+      const accLower = accountName.toLowerCase().trim();
+      if (accLower !== 'sin cuenta asignada') {
+        accLower.split(/\s+/).forEach(t => {
+          if (t.length > 1) forbiddenTerms.push(t);
+        });
+      }
     }
 
-    // 3. Separar por palabras, filtrar y reconstruir
-    const cleanTokens = baseText
-      .split(/\s+/)
-      .filter(word => {
-        const cleanWord = word.toLowerCase().replace(/[^a-záéíóúüñ]/gi, '');
-        return !stopWords.has(cleanWord);
-      });
+    // 3. Tokenizar dividiendo solo por espacios
+    const rawWords = cleanConcept.split(/\s+/);
+    const preservedWords = [];
 
-    const finalConcept = cleanTokens.join(' ').trim();
+    for (const rawWord of rawWords) {
+      if (!rawWord) continue;
+      // Normalizar quitando signos de puntuación comunes en los bordes
+      const normalized = rawWord.toLowerCase().replace(/^[.,;:!?¿¡()]+|[.,;:!?¿¡()]+$/g, '');
+      
+      // Si la palabra normalizada está en la lista prohibida, la ignoramos
+      if (forbiddenTerms.includes(normalized)) {
+        continue;
+      }
+      preservedWords.push(rawWord);
+    }
+
+    const finalConcept = preservedWords.join(' ').trim();
 
     const description = finalConcept.length > 0
       ? finalConcept.charAt(0).toUpperCase() + finalConcept.slice(1)
