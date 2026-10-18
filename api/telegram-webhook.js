@@ -139,15 +139,27 @@ function parseAmountAndConcept(rawText) {
   // Limpiar concepto: remover el bloque del monto completo y caracteres de cuenta/palabras clave
   let concept = text.replace(matchedRaw, '').trim();
 
-  // Remover la palabra de la cuenta si está presente al final o inicio
-  const accountKeywords = ['efectivo', 'cash', 'nequi', 'daviplata', 'bancolombia', 'tarjeta'];
-  for (const kw of accountKeywords) {
-    const reg = new RegExp(`\\b${kw}\\b`, 'gi');
-    concept = concept.replace(reg, '');
+  // Lista de cuentas y alias a remover del texto del concepto
+  const paymentWords = [
+    'efectivo', 'cash', 'plata',
+    'nequi', 'daviplata', 'davi',
+    'bancolombia', 'banco',
+    'tarjeta', 'debito', 'débito', 'credito', 'crédito'
+  ];
+
+  for (const word of paymentWords) {
+    // Remueve la palabra precedida opcionalmente de preposiciones (ej: "en efectivo", "por nequi", "con tarjeta")
+    const pattern = new RegExp(`\\b(en|con|por|de|a|del)?\\s*${word}\\b`, 'gi');
+    concept = concept.replace(pattern, '');
   }
 
+  // Limpiar espacios en blanco dobles y extremos
   concept = concept.replace(/\s+/g, ' ').trim();
-  if (!concept) concept = 'Gasto general';
+
+  // Si el concepto quedó vacío, asignar valor por defecto
+  if (!concept) {
+    concept = 'Gasto general';
+  }
 
   return { amount: isNaN(amount) ? 0 : amount, concept, matchedRaw };
 }
