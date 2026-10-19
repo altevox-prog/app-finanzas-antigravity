@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PieChart } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { safeNumber } from '../../utils/financeMath';
@@ -62,16 +62,6 @@ export default function ReportsAndCharts({
   const currentYear = selectedDate.getFullYear();
   const currentMonth = selectedDate.getMonth();
 
-  // Filter transactions for period
-  const currentMonthTxs = transactions.filter(tx => {
-    const d = new Date(tx.date + 'T00:00:00');
-    return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-  });
-
-  const scopedTransactions = selectedDay 
-    ? currentMonthTxs.filter(tx => tx.date === selectedDay)
-    : currentMonthTxs;
-
   const isTransferTx = (tx) => Boolean(
     tx && (
       tx.isTransfer ||
@@ -89,43 +79,64 @@ export default function ReportsAndCharts({
     )
   );
 
-  const monthExpenses = scopedTransactions.filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t));
-  const totalExpense = monthExpenses.reduce((sum, t) => sum + safeNumber(t?.amount), 0);
+  // Filter transactions for period
+  const currentMonthTxs = useMemo(() => {
+    return transactions.filter(tx => {
+      if (!tx || !tx.date) return false;
+      const d = new Date(tx.date + 'T00:00:00');
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    });
+  }, [transactions, currentYear, currentMonth]);
 
-  // Group expenses by category
-  const expenseByCategoryMap = {};
-  monthExpenses.forEach(tx => {
-    if (!expenseByCategoryMap[tx.categoryId]) {
-      const cat = categories.find(c => c.id === tx.categoryId || c.name === tx.categoryName);
-      expenseByCategoryMap[tx.categoryId] = {
-        id: tx.categoryId,
-        name: tx.categoryName || (cat ? cat.name : 'Varios'),
-        icon: cat?.icon,
-        color: cat?.color || null,
-        amount: 0
-      };
-    }
-    expenseByCategoryMap[tx.categoryId].amount += safeNumber(tx.amount);
-  });
+  const scopedTransactions = useMemo(() => {
+    if (!selectedDay) return currentMonthTxs;
+    return currentMonthTxs.filter(tx => tx.date === selectedDay);
+  }, [currentMonthTxs, selectedDay]);
 
-  // Calculate percentages and assign vibrant palette
-  const categoryExpenses = Object.values(expenseByCategoryMap)
-    .sort((a, b) => b.amount - a.amount)
-    .map((cat, index) => {
-      const exactPercent = totalExpense > 0 ? (cat.amount / totalExpense) * 100 : 0;
-      const roundedPercent = Math.round(exactPercent);
-      return {
-        ...cat,
-        color: cat.color || MODERN_PALETTE[index % MODERN_PALETTE.length],
-        exactPercent,
-        percent: roundedPercent,
-        percentage: roundedPercent
-      };
+  const { monthExpenses, totalExpense, categoryExpenses } = useMemo(() => {
+    const expenses = scopedTransactions.filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t));
+    const total = expenses.reduce((sum, t) => sum + safeNumber(t?.amount), 0);
+
+    const expenseByCategoryMap = {};
+    expenses.forEach(tx => {
+      const catKey = tx.categoryId || tx.categoryName || 'cat-general';
+      if (!expenseByCategoryMap[catKey]) {
+        const cat = categories.find(c => c.id === tx.categoryId || c.name === tx.categoryName);
+        expenseByCategoryMap[catKey] = {
+          id: catKey,
+          name: tx.categoryName || (cat ? cat.name : 'Varios'),
+          icon: cat?.icon,
+          color: cat?.color || null,
+          amount: 0
+        };
+      }
+      expenseByCategoryMap[catKey].amount += safeNumber(tx.amount);
     });
 
-  const topCategories = categoryExpenses.slice(0, 4);
+    const list = Object.values(expenseByCategoryMap)
+      .sort((a, b) => b.amount - a.amount)
+      .map((cat, index) => {
+        const exactPercent = total > 0 ? (cat.amount / total) * 100 : 0;
+        const roundedPercent = Math.round(exactPercent);
+        return {
+          ...cat,
+          color: cat.color || MODERN_PALETTE[index % MODERN_PALETTE.length],
+          exactPercent,
+          percent: roundedPercent,
+          percentage: roundedPercent
+        };
+      });
+
+    return {
+      monthExpenses: expenses,
+      totalExpense: total,
+      categoryExpenses: list
+    };
+  }, [scopedTransactions, categories]);
+
+  const topCategories = useMemo(() => categoryExpenses.slice(0, 4), [categoryExpenses]);
   const remainingCount = Math.max(0, categoryExpenses.length - 4);
-  const hoveredCategory = categoryExpenses.find(c => c.id === hoveredCategoryId);
+  const hoveredCategory = useMemo(() => categoryExpenses.find(c => c.id === hoveredCategoryId), [categoryExpenses, hoveredCategoryId]);
 
   // Period label for pill
   const periodLabel = selectedDay 
@@ -177,7 +188,7 @@ export default function ReportsAndCharts({
 
               return (
                 <div 
-                  key={cat.id || cat.name || index} 
+                  key={`top-cat-${cat.id || cat.name || 'unassigned'}-${index}`} 
                   onMouseEnter={() => setHoveredCategoryId(cat.id)}
                   onMouseLeave={() => setHoveredCategoryId(null)}
                   className={`flex flex-col gap-1 group/row rounded-lg p-1 transition-all ${
