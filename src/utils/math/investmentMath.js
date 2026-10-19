@@ -74,19 +74,37 @@ export const calculateNetWorth = ({
     const isReceivable = type === 'receivable' || type === 'lent' || type === 'prestamo' || type === 'me_deben';
     const isPayable = type === 'payable' || type === 'borrowed' || type === 'deuda' || type === 'debo';
 
-    const base = safeNumber(item.principalAmount || item.totalAmount || item.amount);
+    // Soporte dual camelCase y snake_case para saldo pendiente
+    const explicitRemaining = 
+      item.remainingCapital ?? 
+      item.remaining_capital ?? 
+      item.remainingAmount ?? 
+      item.remaining_amount;
+
+    const base = safeNumber(
+      item.principalAmount ?? 
+      item.principal_amount ?? 
+      item.totalAmount ?? 
+      item.total_amount ?? 
+      item.amount
+    );
+
     const payments = Array.isArray(item.payments) ? item.payments : [];
     const totalCapitalPaid = payments.reduce((s, p) => {
-      return s + safeNumber(p?.capitalAmount !== undefined ? p.capitalAmount : (p?.mode === 'interest' ? 0 : p?.amount));
+      const cap = p?.capitalAmount ?? p?.capital_amount;
+      return s + safeNumber(cap !== undefined ? cap : (p?.mode === 'interest' ? 0 : p?.amount));
     }, 0);
 
-    const remainingCapital = Math.max(0,
-      item.remainingCapital !== undefined
-        ? safeNumber(item.remainingCapital)
-        : (item.remainingAmount !== undefined
-            ? safeNumber(item.remainingAmount)
-            : base - totalCapitalPaid)
+    const remainingCapitalRaw = Math.max(0,
+      explicitRemaining !== undefined && explicitRemaining !== null
+        ? safeNumber(explicitRemaining)
+        : base - totalCapitalPaid
     );
+
+    // Conversión de divisa si la deuda está pactada en moneda extranjera
+    const currency = String(item.currency || 'COP').toUpperCase();
+    const rate = currency === 'USD' ? trmValue : currency === 'EUR' ? trmValue * 1.08 : 1;
+    const remainingCapital = remainingCapitalRaw * rate;
 
     if (isReceivable) {
       totalReceivableCOP += remainingCapital;
