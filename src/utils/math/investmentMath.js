@@ -36,20 +36,51 @@ export const calculateNetWorth = ({
   // 2. Activos Totales - Inversiones: Total valor actual de inversiones en COP
   let totalInvestmentsValueCOP = 0;
   let totalInvestmentsCostCOP = 0;
+  
   (Array.isArray(investments) ? investments : []).forEach((inv) => {
-    const currency = inv?.currency || 'USD';
-    const rate = currency === 'USD' ? trmValue : 1;
-    const shares = safeNumber(inv?.shares);
-    const buyPrice = safeNumber(inv?.buyPrice || inv?.unitPrice);
-    const currentPrice = safeNumber(inv?.currentPrice || buyPrice);
+    if (!inv) return;
+    
+    const currency = String(inv.currency || 'USD').toUpperCase();
+    const rate = currency === 'USD' 
+      ? trmValue 
+      : currency === 'EUR' 
+        ? trmValue * 1.08 
+        : 1; // Si es COP o no especifica divisa extranjera
 
-    let costOrigin = safeNumber(inv?.total_invested || inv?.buy_price || inv?.investedAmount);
-    if (costOrigin === 0 && shares > 0 && buyPrice > 0) {
-      costOrigin = shares * buyPrice;
+    const shares = safeNumber(inv.shares);
+    const rawInvested = safeNumber(
+      inv.investedAmount ?? 
+      inv.invested_amount ?? 
+      inv.total_invested ?? 
+      inv.totalInvested ?? 
+      inv.amount
+    );
+    const rawCurrent = safeNumber(
+      inv.currentAmount ?? 
+      inv.currentValue ?? 
+      inv.current_value
+    );
+
+    let buyPrice = safeNumber(inv.buyPrice || inv.buy_price || inv.purchasePrice || inv.unitPrice);
+    if (buyPrice === 0 && shares > 0 && rawInvested > 0) {
+      buyPrice = rawInvested / shares;
     }
 
-    let currentOrigin = safeNumber(inv?.current_value || inv?.currentAmount);
-    if (currentOrigin === 0 && shares > 0 && currentPrice > 0) {
+    let currentPrice = safeNumber(inv.currentPrice || inv.current_price || buyPrice);
+    if (currentPrice === 0 && shares > 0 && rawCurrent > 0) {
+      currentPrice = rawCurrent / shares;
+    } else if (currentPrice === 0 && buyPrice > 0) {
+      currentPrice = buyPrice;
+    }
+
+    // Costo base en moneda de origen
+    let costOrigin = rawInvested > 0
+      ? rawInvested
+      : (shares > 0 && buyPrice > 0 ? (shares * buyPrice) : 0);
+
+    // Valor actual en moneda de origen
+    let currentOrigin = rawCurrent > 0 ? rawCurrent : costOrigin;
+    if (rawCurrent === 0 && shares > 0 && currentPrice > 0) {
       currentOrigin = shares * currentPrice;
     }
     if (currentOrigin === 0) {
