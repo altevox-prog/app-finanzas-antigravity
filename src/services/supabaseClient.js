@@ -34,18 +34,75 @@ export const supabase = isSupabaseConfigured
     })
   : null;
 
+// Variables de control de caché y deduplicación en memoria
+let cachedUser = null;
+let lastUserFetchTime = 0;
+const USER_CACHE_TTL = 10000; // 10 segundos de vigencia
+let inFlightUserPromise = null;
+
+// Escuchar cambios de autenticación para invalidar la caché oportunamente
+if (supabase?.auth) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      cachedUser = null;
+      lastUserFetchTime = 0;
+      inFlightUserPromise = null;
+    } else if (session?.user) {
+      cachedUser = session.user;
+      lastUserFetchTime = Date.now();
+    }
+  });
+}
+
 /**
- * Obtiene el usuario actual autenticado en Supabase de forma segura.
+ * Obtiene el usuario autenticado en Supabase deduplicando llamadas de red.
  */
 export async function getSupabaseUser() {
   if (!supabase) return null;
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) return null;
-    return user;
-  } catch {
-    return null;
+
+  const now = Date.now();
+
+  // 1. Reutilizar usuario en memoria si la caché permanece vigente
+  if (cachedUser && (now - lastUserFetchTime < USER_CACHE_TTL)) {
+    return cachedUser;
   }
+
+  // 2. Comprobar sesión local sin emisión de red
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      cachedUser = session.user;
+      lastUserFetchTime = now;
+      return cachedUser;
+    }
+  } catch {
+    // Continuar a la consulta de red si la lectura de sesión falla
+  }
+
+  // 3. Deduplicar solicitudes concurrentes en curso
+  if (inFlightUserPromise) {
+    return inFlightUserPromise;
+  }
+
+  inFlightUserPromise = (async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        cachedUser = null;
+        return null;
+      }
+      cachedUser = user;
+      lastUserFetchTime = Date.now();
+      return cachedUser;
+    } catch {
+      cachedUser = null;
+      return null;
+    } finally {
+      inFlightUserPromise = null;
+    }
+  })();
+
+  return inFlightUserPromise;
 }
 
 /**

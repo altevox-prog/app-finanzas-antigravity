@@ -7,7 +7,8 @@ import {
   normalizeRemoteDebt,
   normalizeRemoteInvestment,
   normalizeRemoteRecurring,
-  resolveRemoteBudgets
+  resolveRemoteBudgets,
+  normalizeRemoteCategory
 } from '../services/sync/syncNormalizers';
 import {
   buildAccountsPayload,
@@ -281,10 +282,12 @@ export function useDataSync({
         } catch {}
       }
 
-      // Categorías
+      // Categorías (proteger subcategorías locales en caso de que raw_data.subcategories en Supabase esté vacío)
       if (categoriesRes.status === 'fulfilled' && !categoriesRes.value.error && Array.isArray(categoriesRes.value.data) && categoriesRes.value.data.length > 0) {
         if (typeof setCategories === 'function') {
-          setCategories(categoriesRes.value.data);
+          const currentCats = latestDataRef.current?.categories || [];
+          const protectedCategories = categoriesRes.value.data.map(cat => normalizeRemoteCategory(cat, currentCats));
+          setCategories(protectedCategories);
         }
       }
 
@@ -474,21 +477,52 @@ export function useDataSync({
     }
   }, [syncUser]);
 
+  // Mantener referencia estable y mutable de pushLocalToCloud para listeners y autoSync
+  const pushLocalToCloudRef = useRef(pushLocalToCloud);
+  pushLocalToCloudRef.current = pushLocalToCloud;
+
   // Sincronización automática con debounce al modificar datos teniendo sesión activa
   const autoSyncTimerRef = useRef(null);
+  const prevDataSignatureRef = useRef('');
+
   useEffect(() => {
     if (!syncApiService.isConfigured() || !syncUser?.id || syncUser.id === 'local-user') {
       return;
     }
     if (!hasInitialPullCompletedRef.current) return;
 
+    // Firma basada estrictamente en IDs, cantidades y nombres (SIN timestamps ni updated_at volátiles)
+    let currentSignature = '';
+    try {
+      currentSignature = [
+        (accounts || []).map(x => `${x.id}:${x.balance}`).join('|'),
+        (transactions || []).map(x => `${x.id}:${x.amount}:${x.category}`).join('|'),
+        (debtsAndLoans || []).map(x => `${x.id}:${x.current_balance || x.amount}`).join('|'),
+        (investments || []).map(x => `${x.id}:${x.invested_amount || x.amount}`).join('|'),
+        (recurringPayments || []).map(x => `${x.id}:${x.amount}:${x.is_active}`).join('|'),
+        `${budgets?.global || 0}:${Object.entries(budgets?.categories || {}).map(([k, v]) => `${k}=${v}`).sort().join(',')}`,
+        (categories || []).map(x => `${x.id}:${(x.subcategories || []).map(s => s.name || s).join(',')}`).join('|'),
+        (savingsGoals || []).map(x => `${x.id}:${x.currentAmount}:${x.targetAmount}`).join('|')
+      ].join('###');
+    } catch {
+      currentSignature = '';
+    }
+
+    // Si el contenido real de los datos no cambió, no sincronizar
+    if (!currentSignature || prevDataSignatureRef.current === currentSignature) {
+      return;
+    }
+
     if (autoSyncTimerRef.current) {
       clearTimeout(autoSyncTimerRef.current);
     }
 
-    autoSyncTimerRef.current = setTimeout(() => {
-      pushLocalToCloud();
-    }, 1500);
+    autoSyncTimerRef.current = setTimeout(async () => {
+      if (pushLocalToCloudRef.current && !isSyncingRef.current) {
+        prevDataSignatureRef.current = currentSignature;
+        await pushLocalToCloudRef.current();
+      }
+    }, 2000);
 
     return () => {
       if (autoSyncTimerRef.current) {
@@ -504,8 +538,7 @@ export function useDataSync({
     budgets,
     categories,
     savingsGoals,
-    syncUser?.id,
-    pushLocalToCloud
+    syncUser?.id
   ]);
 
   // Detector de conectividad nativo (online / offline)
@@ -515,7 +548,9 @@ export function useDataSync({
     const handleOnline = () => {
       console.log('[useDataSync] Red recuperada (online). Sincronizando datos pendientes...');
       if (syncUser?.id && syncUser.id !== 'local-user') {
-        pushLocalToCloud();
+        if (pushLocalToCloudRef.current) {
+          pushLocalToCloudRef.current();
+        }
       } else {
         setSyncStatus('idle');
       }
@@ -533,7 +568,7 @@ export function useDataSync({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [syncUser, pushLocalToCloud]);
+  }, [syncUser]);
 
   // Mantener referencia actualizada de pullCloudToLocal para el listener de autenticación
   const pullCloudToLocalRef = useRef(pullCloudToLocal);

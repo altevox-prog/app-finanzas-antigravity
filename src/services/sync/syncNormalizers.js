@@ -442,3 +442,32 @@ export function resolveRemoteBudgets(remoteBudgetsOrRes, userSettingsData = null
     categories: categoriesMap
   };
 }
+
+/**
+ * Normaliza una categoría descargada de Supabase garantizando que sus subcategorías no se pierdan.
+ * Si raw_data.subcategories o subcategories no vienen poblados, no borra las subcategorías por defecto.
+ *
+ * @param {Object} c - Categoría proveniente de Supabase
+ * @param {Array} [currentCategories=[]] - Lista actual de categorías en memoria/local
+ * @returns {Object} Categoría normalizada con subcategorías protegidas
+ */
+export function normalizeRemoteCategory(c, currentCategories = []) {
+  if (!c || typeof c !== 'object') return c;
+
+  const rawData = c.raw_data && typeof c.raw_data === 'object' ? c.raw_data : {};
+  let subcategories = c.subcategories || rawData.subcategories;
+
+  if (!Array.isArray(subcategories) || subcategories.length === 0) {
+    const existing = (currentCategories || []).find(
+      (cat) => String(cat.id) === String(c.id) || cat.name?.trim().toLowerCase() === c.name?.trim().toLowerCase()
+    );
+    if (existing && Array.isArray(existing.subcategories) && existing.subcategories.length > 0) {
+      subcategories = existing.subcategories;
+    }
+  }
+
+  return {
+    ...c,
+    subcategories: Array.isArray(subcategories) ? subcategories : []
+  };
+}

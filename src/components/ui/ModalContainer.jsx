@@ -115,6 +115,9 @@ export default function ModalContainer({
     handleUpdateSubcategory,
     handleDeleteSubcategory,
     handleAddAccount,
+    handleUpdateAccount,
+    handleDeleteAccount,
+    handleReorderAccounts,
     handleTabChange,
     setFromSettings,
     handleRestoreBackup,
@@ -436,6 +439,10 @@ export default function ModalContainer({
           investments={investments}
           debtsAndLoans={debtsAndLoans}
           accounts={accounts}
+          onAddAccount={handleAddAccount}
+          onUpdateAccount={handleUpdateAccount}
+          onDeleteAccount={handleDeleteAccount}
+          onReorderAccounts={handleReorderAccounts}
           trm={trm}
           onOpenAuth={() => {}}
           onRestoreBackup={handleRestoreBackup}

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import CategoriesView from '../../categories/CategoriesView';
+import AccountsAndCategories from '../../accounts/AccountsAndCategories';
 import TaxView from '../../taxes/TaxView';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 import { useAuth } from '../../../context/AuthContext';
@@ -58,6 +59,10 @@ export default function ProfileModal({
   investments = [],
   debtsAndLoans = [],
   accounts = [],
+  onAddAccount,
+  onUpdateAccount,
+  onDeleteAccount,
+  onReorderAccounts,
   trm = 4000,
   onRestoreBackup,
   onFactoryReset,
@@ -74,7 +79,7 @@ export default function ProfileModal({
   const { formatMoney, enableDecimals, toggleEnableDecimals } = usePrivacy();
   const { user, signOut } = useAuth();
 
-  // Internal view state: 'main' | 'subscriptions' | 'pin_setup' | 'budgets' | 'savings_goals' | 'categories' | 'tax'
+  // Internal view state: 'main' | 'subscriptions' | 'pin_setup' | 'budgets' | 'savings_goals' | 'categories' | 'tax' | 'accounts'
   const [currentView, setCurrentView] = useState('main');
 
   // Sistema de 4 Pestañas en el Centro de Control: 'finances' | 'security' | 'cloud' | 'system'
@@ -423,6 +428,22 @@ export default function ProfileModal({
               investments={investments}
               onBack={() => setCurrentView('main')}
               onClose={onClose}
+            />
+          )}
+
+          {/* VIEW: MIS CUENTAS Y MÉTODOS DE PAGO */}
+          {currentView === 'accounts' && (
+            <AccountsAndCategories
+              accounts={accounts}
+              transactions={transactions}
+              onAddAccount={onAddAccount}
+              onUpdateAccount={onUpdateAccount}
+              onDeleteAccount={onDeleteAccount}
+              onReorderAccounts={onReorderAccounts}
+              isReadOnly={false}
+              fromSettings={true}
+              trm={trm}
+              onBack={() => setCurrentView('main')}
             />
           )}
 

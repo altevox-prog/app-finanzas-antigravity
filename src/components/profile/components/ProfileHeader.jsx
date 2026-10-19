@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, ArrowLeft, X, RefreshCw, LogOut } from 'lucide-react';
+import { Check, ArrowLeft, X, RefreshCw, LogOut, Plus } from 'lucide-react';
 import Avatar from '../../ui/Avatar';
 
 /**
@@ -163,17 +163,31 @@ export default function ProfileHeader({
               {currentView === 'savings_goals' && 'Metas de ahorro'}
               {currentView === 'categories' && 'Mis categorías'}
               {currentView === 'tax' && 'Impuestos y declaración de renta'}
+              {currentView === 'accounts' && 'Mis cuentas'}
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
-            title="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {currentView === 'accounts' && (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('monety:open-add-account'))}
+                className="w-8 h-8 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm"
+                title="Añadir nueva cuenta"
+                aria-label="Agregar cuenta"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              title="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
     </div>

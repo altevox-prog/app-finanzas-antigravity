@@ -107,7 +107,7 @@ export default function AccountCard({
   };
 
   return (
-    <div className="relative w-full h-full rounded-2xl overflow-hidden select-none">
+    <div className="relative w-full h-full min-h-[132px] flex flex-col rounded-2xl overflow-hidden select-none">
       {/* Fondo de acción Swipe a la derecha: EDITAR (tono esmeralda/azul) */}
       {!isReadOnly && onEdit && (
         <div className="absolute inset-y-0 left-0 w-full flex items-center justify-start pl-5 bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-transparent dark:from-emerald-500/25 dark:via-emerald-500/15 border border-emerald-500/30 rounded-2xl z-0 pointer-events-none">
@@ -138,7 +138,6 @@ export default function AccountCard({
         </div>
       )}
 
-      {/* Tarjeta de Cuenta con arrastre horizontal suave */}
       <motion.div
         style={{ x }}
         drag={!isReadOnly ? "x" : false}
@@ -147,15 +146,12 @@ export default function AccountCard({
         dragElastic={0.4}
         onDragEnd={(e, { offset, velocity }) => {
           if (isReadOnly) return;
-          // Swipe hacia la derecha: Editar
           if (offset.x > 65 || velocity.x > 300) {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
               try { navigator.vibrate(25); } catch (_) {}
             }
             if (onEdit) onEdit(account);
-          } 
-          // Swipe hacia la izquierda: Eliminar
-          else if (offset.x < -65 || velocity.x < -300) {
+          } else if (offset.x < -65 || velocity.x < -300) {
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
               try { navigator.vibrate(35); } catch (_) {}
             }
@@ -163,12 +159,12 @@ export default function AccountCard({
           }
         }}
         onClick={handleCardClick}
-        className={`group w-full h-full flex flex-col justify-between bg-white dark:bg-[#12151E] border border-slate-200/80 dark:border-white/[0.07] hover:border-emerald-500/40 hover:dark:bg-[#151924] rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-colors select-none relative z-10 touch-pan-y ${
+        className={`group w-full h-full min-h-[132px] flex flex-col justify-between bg-white dark:bg-[#12151E] border border-slate-200/80 dark:border-white/[0.07] hover:border-emerald-500/40 hover:dark:bg-[#151924] rounded-2xl p-3 sm:p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.06)] transition-all select-none relative z-10 touch-pan-y ${
           isReadOnly ? 'cursor-default' : 'cursor-default lg:cursor-pointer'
         }`}
       >
       {/* Fila superior (Cabecera homogénea): Logo limpio y nítido, Nombre y Tipo en bloque vertical, y Acciones */}
-      <div className="flex items-start justify-between gap-3 min-h-[44px]">
+      <div className="flex items-start justify-between gap-3 min-h-[36px]">
         {/* Izquierda: Logo limpio sin caja opaca + Bloque vertical (Nombre + Tipo) */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="flex items-center justify-center shrink-0">
@@ -195,9 +191,9 @@ export default function AccountCard({
           </div>
         </div>
 
-        {/* Derecha: Botones de administración visibles en escritorio (>= md) si no es readOnly */}
+        {/* Derecha: Botones de administración visibles en escritorio (>= md) si no es readOnly con hover dinámico */}
         {!isReadOnly && (
-          <div className="hidden md:flex items-center gap-1.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="hidden md:flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             {onEdit && (
               <button
                 type="button"
@@ -231,28 +227,28 @@ export default function AccountCard({
       </div>
 
       {/* Fila inferior (Saldo perfectamente alineado y compacto) */}
-      <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100/60 dark:border-white/[0.07]">
-        <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+      <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-slate-100/60 dark:border-white/[0.07]">
+        <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">
           {isCreditCard ? 'Saldo utilizado / Deuda' : 'Saldo disponible'}
         </span>
         <div className="text-right">
           {isCreditCard ? (
-            <span className={`text-xl font-bold font-mono tracking-tight tabular-nums block ${
+            <span className={`text-lg font-bold font-mono tracking-tight tabular-nums block ${
               saldoRestante > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'
             }`}>
               {!isVisible ? '••••••' : (saldoRestante > 0 ? `-${formatMoney(saldoRestante)}` : formatMoney(0))}
             </span>
           ) : isForeignCurrency ? (
-            <div>
-              <span className="text-xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 tabular-nums block leading-tight">
+            <div className="flex flex-col items-end">
+              <span className="text-lg font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 tabular-nums block leading-tight">
                 {!isVisible ? '••••••' : formatNativeCurrency(balance, currency)}
               </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono tracking-tight block tabular-nums leading-tight mt-0.5">
-                {!isVisible ? '≈ •••••• COP' : `≈ $ ${Math.round(balanceInCop).toLocaleString('es-CO')} COP`}
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-tight block tabular-nums leading-tight mt-0.5">
+                {!isVisible ? '≈ •••••• COP' : `≈ $${Math.round(balanceInCop).toLocaleString('es-CO')} COP`}
               </span>
             </div>
           ) : (
-            <span className={`text-xl font-bold font-mono tracking-tight tabular-nums block ${
+            <span className={`text-lg font-bold font-mono tracking-tight tabular-nums block ${
               balance < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-slate-50'
             }`}>
               {!isVisible ? '••••••' : formatMoney(balance)}
@@ -261,24 +257,18 @@ export default function AccountCard({
         </div>
       </div>
 
-      {/* Si es Tarjeta de Crédito: cupo disponible y deuda visible */}
+      {/* Si es Tarjeta de Crédito: desglose limpio de cupo y fecha de corte */}
       {isCreditCard && (
-        <div className="mt-2.5 pt-2 border-t border-slate-100/60 dark:border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-          <span className="flex items-center gap-1.5">
-            <span className="text-slate-400 dark:text-slate-500">Cupo disponible:</span>
-            <strong className="text-emerald-600 dark:text-emerald-400 font-bold font-mono tabular-nums">
+        <div className="mt-1.5 pt-1.5 border-t border-slate-100/60 dark:border-white/[0.06] flex items-center justify-between text-[10px] gap-2">
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="text-slate-400 dark:text-slate-500 text-[10px] truncate">Cupo:</span>
+            <strong className="text-emerald-600 dark:text-emerald-400 font-bold font-mono tabular-nums text-[10px] sm:text-[11px] truncate">
               {!isVisible ? '••••••' : formatMoney(cupoDisponible)}
             </strong>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="text-slate-400 dark:text-slate-500">Deuda:</span>
-            <strong className="text-rose-600 dark:text-rose-400 font-bold font-mono tabular-nums">
-              {!isVisible ? '••••••' : (saldoRestante > 0 ? formatMoney(saldoRestante) : formatMoney(0))}
-            </strong>
-          </span>
-          <span className="tabular-nums shrink-0 text-slate-400 dark:text-slate-500 text-[10px] sm:text-[11px] hidden sm:inline">
-            Corte: día {account.closingDate || account.paymentDueDate || 17} • Pago: día {account.paymentDueDate || 17}
-          </span>
+          </div>
+          <div className="shrink-0 text-slate-400 dark:text-slate-500 text-[10px] font-mono tabular-nums bg-slate-100/80 dark:bg-white/[0.05] px-1.5 py-0.5 rounded-md">
+            Corte d.{account.closingDate || account.paymentDueDate || 17}
+          </div>
         </div>
       )}
       </motion.div>

@@ -63,16 +63,15 @@ export function useBudgets(isResettingRef, options = {}) {
 
   // 2. Consulta y carga inicial desde Supabase
   const fetchBudgets = useCallback(async (userId = null) => {
-    if (!isSupabaseConfigured || !supabase) return budgets;
+    if (!isSupabaseConfigured || !supabase) return;
     try {
       let uid = userId || activeUserRef.current?.id;
       if (!uid) {
         const user = await getSupabaseUser();
         uid = user?.id;
       }
-      if (!uid) return budgets;
+      if (!uid) return;
 
-      // Consultar la tabla budgets y user_settings en paralelo
       const [budgetsRes, settingsRes] = await Promise.allSettled([
         supabase.from('budgets').select('*').eq('user_id', uid),
         supabase.from('user_settings').select('*').eq('user_id', uid).maybeSingle()
@@ -83,21 +82,20 @@ export function useBudgets(isResettingRef, options = {}) {
 
       const resolved = resolveRemoteBudgets(rawBudgets, userSettings);
       const normalized = normalizeBudgetsState(resolved);
-
       setBudgets(normalized);
       return normalized;
     } catch (err) {
-      console.error('[useBudgets] Error al consultar presupuestos en Supabase:', err);
-      return budgets;
+      console.error('[useBudgets] Error al consultar presupuestos:', err);
     }
-  }, [budgets]);
+  }, []);
 
   useEffect(() => {
     if (resetRef?.current) return;
     if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
 
     fetchBudgets(activeUser.id);
-  }, [activeUser?.id, resetRef, fetchBudgets]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeUser?.id]);
 
   // 3. Suscripción en Tiempo Real (Realtime WebSockets)
   useEffect(() => {

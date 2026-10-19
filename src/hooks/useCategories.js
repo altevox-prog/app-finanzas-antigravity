@@ -4,6 +4,7 @@ import { toast } from '../utils/toast';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
 import { ensureUUID } from '../services/syncEngine';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const legacyIconMap = {
   Utensils: '🍔', Home: '🏠', Car: '🚗', Zap: '💡', Film: '🍿',
@@ -93,13 +94,20 @@ export function mapSupabaseRowToCategory(row) {
  * Mapea un objeto de categoría local al payload para Supabase (únicamente columnas estándar confirmadas)
  */
 export function mapCategoryToSupabasePayload(cat, userId) {
+  const subcategories = Array.isArray(cat.subcategories) ? cat.subcategories : [];
+  const existingRaw = cat.raw_data && typeof cat.raw_data === 'object' ? cat.raw_data : {};
+
   return {
     id: String(cat.id),
     user_id: userId,
     name: cat.name,
     type: cat.type || 'expense',
     icon: cat.icon || 'Tag',
-    color: cat.color || '#64748b'
+    color: cat.color || '#64748b',
+    raw_data: {
+      ...existingRaw,
+      subcategories
+    }
   };
 }
 
@@ -114,11 +122,37 @@ export function useCategories({
   onSubcategoryUpdated,
   user: explicitUser = null
 } = {}) {
-  // Inicialización limpia en memoria con catálogo predeterminado
-  const [categories, setCategories] = useState(() => DEFAULT_CATEGORIES.map(normalizeCategoryItem));
+  // Inicialización limpia en memoria con catálogo predeterminado o almacenado
+  const [categories, setCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES) || localStorage.getItem('categories');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(normalizeCategoryItem);
+        }
+      }
+    } catch (e) {
+      console.warn('[useCategories] Error leyendo categorías locales:', e);
+    }
+    return DEFAULT_CATEGORIES.map(normalizeCategoryItem);
+  });
   const [activeUser, setActiveUser] = useState(explicitUser);
   const activeUserRef = useRef(explicitUser);
   activeUserRef.current = activeUser;
+
+  // Persistencia reactiva en localStorage de categorías
+  useEffect(() => {
+    if (isResettingRef?.current) return;
+    if (!categories || categories.length === 0) return;
+    try {
+      const serialized = JSON.stringify(categories);
+      localStorage.setItem(STORAGE_KEYS.CATEGORIES, serialized);
+      localStorage.setItem('categories', serialized);
+    } catch (e) {
+      console.warn('[useCategories] Error guardando categorías en localStorage:', e);
+    }
+  }, [categories, isResettingRef]);
 
   // 1. Detección y suscripción a la sesión del usuario de Supabase Auth
   useEffect(() => {
@@ -150,14 +184,14 @@ export function useCategories({
 
   // 2. Consulta y carga inicial desde Supabase
   const fetchCategories = useCallback(async (userId = null) => {
-    if (!isSupabaseConfigured || !supabase) return categories;
+    if (!isSupabaseConfigured || !supabase) return [];
     try {
       let uid = userId || activeUserRef.current?.id;
       if (!uid) {
         const user = await getSupabaseUser();
         uid = user?.id;
       }
-      if (!uid) return categories;
+      if (!uid) return [];
 
       const { data, error } = await supabase
         .from('categories')
@@ -167,7 +201,7 @@ export function useCategories({
 
       if (error) {
         console.error('[useCategories] Error al consultar categorías en Supabase:', error);
-        return categories;
+        return [];
       }
 
       // Si el usuario no tiene categorías creadas en Supabase, insertar DEFAULT_CATEGORIES asociadas a su user_id
@@ -210,9 +244,9 @@ export function useCategories({
       return mapped;
     } catch (err) {
       console.error('[useCategories] Excepción al consultar categorías:', err);
-      return categories;
+      return [];
     }
-  }, [categories]);
+  }, []);
 
   useEffect(() => {
     if (isResettingRef?.current) return;
@@ -373,50 +407,72 @@ export function useCategories({
 
   // Agregar subcategoría (actualiza el campo raw_data / subcategories de la categoría padre)
   const handleAddSubcategory = useCallback(async (categoryId, subcategoryName) => {
-    const trimmedName = subcategoryName.trim();
+    const trimmedName = (subcategoryName || '').trim();
+    if (!trimmedName || !categoryId) return null;
+
     const newSub = {
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `sub-${Date.now()}`,
-      name: subcatEmojiMap[trimmedName] || trimmedName
+      name: subcatEmojiMap?.[trimmedName] || trimmedName
     };
 
-    let parentCat = null;
+    let createdSub = newSub;
+    let categoryToSync = null;
 
     setCategories((prev) => {
       const updated = prev.map((cat) => {
-        if (cat.id !== categoryId) return cat;
-        const subExists = (cat.subcategories || []).some(
-          (s) => s.name.trim().toLowerCase() === trimmedName.toLowerCase()
+        if (String(cat.id) !== String(categoryId)) return cat;
+
+        const existingSub = (cat.subcategories || []).find(
+          (s) => s.name?.trim().toLowerCase() === trimmedName.toLowerCase()
         );
-        if (subExists) return cat;
+
+        if (existingSub) {
+          createdSub = existingSub;
+          categoryToSync = cat;
+          return cat;
+        }
 
         const nextCat = {
           ...cat,
           subcategories: [...(cat.subcategories || []), newSub]
         };
-        parentCat = nextCat;
+        categoryToSync = nextCat;
         return nextCat;
       });
+
+      // Persistencia local inmediata de respaldo
+      try {
+        localStorage.setItem('app_categories', JSON.stringify(updated));
+        localStorage.setItem('presu_categories', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Error al guardar categorías en localStorage:', e);
+      }
+
       return updated;
     });
 
-    if (parentCat && isSupabaseConfigured && supabase) {
+    // Sincronización en Supabase usando la categoría calculada
+    if (categoryToSync && isSupabaseConfigured && supabase) {
       try {
         const user = activeUserRef.current || (await getSupabaseUser());
         if (user?.id) {
-          const payload = mapCategoryToSupabasePayload(parentCat, user.id);
-          await supabase
+          const payload = mapCategoryToSupabasePayload(categoryToSync, user.id);
+          // Usar upsert para soportar tanto categorías nuevas como predefinidas
+          const { error } = await supabase
             .from('categories')
-            .update(payload)
-            .eq('id', String(categoryId))
-            .eq('user_id', user.id);
+            .upsert(payload, { onConflict: 'id' });
+
+          if (error) {
+            console.error('Error al persistir subcategoría en Supabase:', error);
+          }
         }
       } catch (err) {
-        console.error('[useCategories] Error al agregar subcategoría en Supabase:', err);
+        console.error('Fallo en sincronización de subcategoría:', err);
       }
     }
 
-    return newSub;
-  }, []);
+    return createdSub;
+  }, [isSupabaseConfigured, supabase, mapCategoryToSupabasePayload]);
 
   // Actualizar subcategoría
   const handleUpdateSubcategory = useCallback(async (categoryId, subcategoryId, newName, newColor) => {

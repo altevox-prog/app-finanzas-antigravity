@@ -392,11 +392,11 @@ export default function AccountsAndCategories({
         </div>
 
         {/* Tarjetas de Cuenta Individuales en Grilla de 2 Columnas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-fr items-stretch">
           {accountsWithBalance.map((acc, index) => (
             <div
               key={acc?.id || `acc-${index}`}
-              className="w-full h-full flex"
+              className="w-full h-full flex flex-col"
             >
               <AccountCard
                 account={acc}

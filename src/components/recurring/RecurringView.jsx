@@ -478,15 +478,17 @@ export default function RecurringView({
       {/* A. Cabecera (Header) */}
       <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={handleGoBack}
-            className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
-            aria-label="Volver"
-            title="Volver"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          {Boolean(onBack || fromSettings || previousView === 'settings') && (
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className="lg:hidden w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+              aria-label="Volver"
+              title="Volver"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate">
               Pagos recurrentes

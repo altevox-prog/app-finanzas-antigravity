@@ -40,6 +40,18 @@ const VIEW_TITLES = {
   profile: 'Perfil'
 };
 
+const ROOT_TABS = new Set([
+  'dashboard',
+  'inicio',
+  'transactions',
+  'movements',
+  'movimientos',
+  'investments',
+  'debts',
+  'loans',
+  'prestamos'
+]);
+
 /**
  * TopAppBar
  * Barra superior dinámica y contextual por vista con acabado translúcido glass.
@@ -73,6 +85,8 @@ export default function TopAppBar({
   onSkipRecurring = null
 }) {
   const current = (currentView || activeTab || 'dashboard').toLowerCase();
+  const isRootTab = ROOT_TABS.has(current);
+  const showBackButton = !isRootTab || Boolean(fromSettings);
   const isDashboard = current === 'dashboard' || current === 'inicio';
   const isTransactions = current === 'transactions' || current === 'movements' || current === 'movimientos';
   const isInvestments = current === 'investments';
@@ -198,10 +212,10 @@ export default function TopAppBar({
         <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent pointer-events-none z-0" />
 
         {/* ============================================================== */}
-        {/* SECCIÓN IZQUIERDA: Logo (Dashboard) o Botón Retroceso (Vistas) */}
+        {/* SECCIÓN IZQUIERDA: Logo (Pestañas raíz) o Botón Retroceso     */}
         {/* ============================================================== */}
         <div className="flex items-center shrink-0 relative z-10">
-          {isDashboard ? (
+          {!showBackButton ? (
             <div className="flex items-center gap-2.5">
               <AppLogo size="md" showText={false} />
               <span className="text-base sm:text-lg font-bold text-slate-100 tracking-tight select-none">
@@ -213,8 +227,8 @@ export default function TopAppBar({
               type="button"
               onClick={handleBack}
               className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] active:scale-95 transition-all cursor-pointer shadow-sm shrink-0"
-              aria-label="Volver al inicio"
-              title="Volver al inicio"
+              aria-label="Volver"
+              title="Volver"
             >
               <ArrowLeft className="w-4.5 h-4.5" />
             </button>
@@ -224,7 +238,7 @@ export default function TopAppBar({
         {/* ============================================================== */}
         {/* SECCIÓN CENTRAL: Título Rigurosamente Centrado (Vistas sec.)   */}
         {/* ============================================================== */}
-        {!isDashboard && (
+        {showBackButton && (
           <div className="absolute left-1/2 -translate-x-1/2 max-w-[55%] sm:max-w-[65%] text-center pointer-events-none px-2 z-10">
             <h1 className="text-base sm:text-lg font-bold text-slate-100 truncate tracking-tight">
               {title}

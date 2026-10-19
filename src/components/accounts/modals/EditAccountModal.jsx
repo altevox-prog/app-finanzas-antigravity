@@ -55,7 +55,7 @@ export default function EditAccountModal({
   const [unitPrice, setUnitPrice] = useState('');
   const [creditLimit, setCreditLimit] = useState('5000000');
   const [paymentDueDate, setPaymentDueDate] = useState('17');
-  const [closingDate, setClosingDate] = useState('25');
+  const [closingDate, setClosingDate] = useState('17');
   const [color, setColor] = useState('#007AFF');
   const [icon, setIcon] = useState('Building2');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,7 +77,7 @@ export default function EditAccountModal({
       setUnitPrice(account.unitPrice !== undefined ? String(account.unitPrice) : '');
       setCreditLimit(account.creditLimit !== undefined ? String(account.creditLimit) : '5000000');
       setPaymentDueDate(account.paymentDueDate !== undefined ? String(account.paymentDueDate) : '17');
-      setClosingDate(account.closingDate !== undefined ? String(account.closingDate) : '25');
+      setClosingDate(account.closingDate !== undefined && account.closingDate !== null ? String(account.closingDate) : '17');
       setColor(account.color || '#007AFF');
       setIcon(
         account.icon || 
@@ -445,7 +445,7 @@ export default function EditAccountModal({
             {(type === 'card' || type === 'credit') && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40 animate-fadeIn">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Cupo Total ($ COP) *</label>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Cupo Total ({currency}) *</label>
                   <input
                     type="number"
                     inputMode="decimal"

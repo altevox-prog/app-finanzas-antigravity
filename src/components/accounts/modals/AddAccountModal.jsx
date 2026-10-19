@@ -55,7 +55,7 @@ export default function AddAccountModal({
   const [newAccUnitPrice, setNewAccUnitPrice] = useState('');
   const [newAccCreditLimit, setNewAccCreditLimit] = useState('5000000');
   const [newAccPaymentDueDate, setNewAccPaymentDueDate] = useState('17');
-  const [newAccClosingDate, setNewAccClosingDate] = useState('25');
+  const [newAccClosingDate, setNewAccClosingDate] = useState('17');
   const [newAccColor, setNewAccColor] = useState('#007AFF');
   const [newAccIcon, setNewAccIcon] = useState('Building2');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,7 +73,7 @@ export default function AddAccountModal({
     setNewAccUnitPrice('');
     setNewAccCreditLimit('5000000');
     setNewAccPaymentDueDate('17');
-    setNewAccClosingDate('25');
+    setNewAccClosingDate('17');
     setNewAccColor('#007AFF');
     setNewAccIcon('Building2');
   };
@@ -447,7 +447,7 @@ export default function AddAccountModal({
             {(newAccType === 'card' || newAccType === 'credit') && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40 animate-fadeIn">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Cupo Total ($ COP) *</label>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Cupo Total ({newAccCurrency}) *</label>
                   <input
                     type="number"
                     inputMode="decimal"

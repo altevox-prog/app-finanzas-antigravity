@@ -167,10 +167,7 @@ export default function ProfileFinancesTab({
           {/* Mis Cuentas */}
           <button
             type="button"
-            onClick={() => {
-              onClose?.();
-              onOpenAccounts?.();
-            }}
+            onClick={() => setCurrentView('accounts')}
             className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
           >
             <div className="flex items-center gap-3">
