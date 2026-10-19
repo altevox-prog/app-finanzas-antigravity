@@ -59,6 +59,7 @@ export function useDataSync({
 
   // Bandera de control para evitar bucles infinitos y ejecuciones concurrentes en cascada
   const isSyncingRef = useRef(false);
+  const pendingPushRef = useRef(false);
   const hasInitialPullCompletedRef = useRef(false);
 
   // Referencias mutables para acceder siempre a los datos más recientes
@@ -333,7 +334,8 @@ export function useDataSync({
   // ==========================================================================
   const pushLocalToCloud = useCallback(async () => {
     if (isSyncingRef.current) {
-      return { success: false, reason: 'already_syncing' };
+      pendingPushRef.current = true;
+      return { success: false, reason: 'queued_pending' };
     }
     if (!isSupabaseConfigured || !syncApiService.isConfigured() || !syncUser?.id) {
       return { success: false, reason: 'unauthenticated' };
@@ -341,6 +343,7 @@ export function useDataSync({
 
     const userId = syncUser.id;
     isSyncingRef.current = true;
+    pendingPushRef.current = false;
     setSyncStatus('syncing');
 
     try {
@@ -464,6 +467,10 @@ export function useDataSync({
       return { success: false, error: err };
     } finally {
       isSyncingRef.current = false;
+      if (pendingPushRef.current) {
+        pendingPushRef.current = false;
+        pushLocalToCloud();
+      }
     }
   }, [syncUser]);
 
@@ -473,7 +480,6 @@ export function useDataSync({
     if (!syncApiService.isConfigured() || !syncUser?.id || syncUser.id === 'local-user') {
       return;
     }
-    if (isSyncingRef.current) return;
     if (!hasInitialPullCompletedRef.current) return;
 
     if (autoSyncTimerRef.current) {
@@ -496,9 +502,38 @@ export function useDataSync({
     investments,
     recurringPayments,
     budgets,
+    categories,
+    savingsGoals,
     syncUser?.id,
     pushLocalToCloud
   ]);
+
+  // Detector de conectividad nativo (online / offline)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      console.log('[useDataSync] Red recuperada (online). Sincronizando datos pendientes...');
+      if (syncUser?.id && syncUser.id !== 'local-user') {
+        pushLocalToCloud();
+      } else {
+        setSyncStatus('idle');
+      }
+    };
+
+    const handleOffline = () => {
+      console.warn('[useDataSync] Conexión perdida (offline). Operando en modo local.');
+      setSyncStatus('offline');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [syncUser, pushLocalToCloud]);
 
   // Mantener referencia actualizada de pullCloudToLocal para el listener de autenticación
   const pullCloudToLocalRef = useRef(pullCloudToLocal);
