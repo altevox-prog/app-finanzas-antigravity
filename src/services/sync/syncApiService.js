@@ -73,15 +73,19 @@ export async function fetchAccounts(userId = null) {
   if (!isSupabaseConfigured || !supabase) {
     return { data: [], error: new Error('Supabase no configurado') };
   }
-  let query = supabase
+  let uid = userId;
+  if (!uid) {
+    const userRes = await getCurrentUser();
+    uid = userRes.user?.id;
+  }
+  if (!uid) {
+    return { data: [], error: new Error('Usuario no autenticado') };
+  }
+  return await supabase
     .from('accounts')
     .select('*')
+    .eq('user_id', uid)
     .order('order_index', { ascending: true, nullsFirst: false });
-
-  if (userId) {
-    query = query.eq('user_id', userId);
-  }
-  return await query;
 }
 
 export async function fetchUserSettings(userId) {

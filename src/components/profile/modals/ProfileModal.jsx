@@ -66,7 +66,10 @@ export default function ProfileModal({
   onNavigateToNetWorth,
   onNavigate,
   onManualCloudSync,
-  onLogout
+  onLogout,
+  selectedDate,
+  selectedMonth,
+  selectedYear
 }) {
   const { formatMoney, enableDecimals, toggleEnableDecimals } = usePrivacy();
   const { user, signOut } = useAuth();
@@ -152,7 +155,14 @@ export default function ProfileModal({
   });
 
   // Métricas mensuales
-  const metrics = useProfileMetrics({ transactions, savingsGoals, safeNumber });
+  const metrics = useProfileMetrics({
+    transactions,
+    savingsGoals,
+    safeNumber,
+    selectedDate,
+    selectedMonth,
+    selectedYear
+  });
 
   // Manejador centralizado de tecla Volver / Popstate para navegación interna escalonada
   useBackHandler(isOpen, () => {

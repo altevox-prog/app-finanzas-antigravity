@@ -141,9 +141,25 @@ export default function AccountsWidget({
               const rate = currency === 'USD' ? Number(trm || 4000) : currency === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1;
               const copBal = balNative * rate;
 
-              const cardTxs = Array.isArray(transactions) ? transactions.filter(t => t?.accountId === acc?.id) : [];
-              const initialDebt = acc?.initialBalance < 0 ? Math.abs(safeNumber(acc.initialBalance)) : 0;
-              const initialCredit = acc?.initialBalance > 0 ? safeNumber(acc.initialBalance) : 0;
+              const rawCardTxs = Array.isArray(transactions) 
+                ? transactions.filter(t => t && acc?.id && (
+                    t.accountId === acc.id || t.account_id === acc.id || 
+                    t.toAccountId === acc.id || t.to_account_id === acc.id || 
+                    t.fromAccountId === acc.id || t.from_account_id === acc.id
+                  )) 
+                : [];
+
+              const seenTxIds = new Set();
+              const cardTxs = rawCardTxs.filter(t => {
+                const txId = t?.id || t?._id;
+                if (!txId) return true;
+                if (seenTxIds.has(txId)) return false;
+                seenTxIds.add(txId);
+                return true;
+              });
+              const rawInitial = safeNumber(acc?.initialBalance ?? acc?.initial_balance ?? 0);
+              const initialDebt = rawInitial < 0 ? Math.abs(rawInitial) : 0;
+              const initialCredit = rawInitial > 0 ? rawInitial : 0;
               const cardExpenses = cardTxs.filter(t => t?.type === 'expense').reduce((s, t) => s + safeNumber(t?.amount), 0);
               const cardPayments = cardTxs.filter(t => t?.type === 'income').reduce((s, t) => s + safeNumber(t?.amount), 0);
               const cardOutstandingDebt = isCreditCard ? Math.round(Math.max(0, (initialDebt + cardExpenses) - (initialCredit + cardPayments)) * 100) / 100 : 0;

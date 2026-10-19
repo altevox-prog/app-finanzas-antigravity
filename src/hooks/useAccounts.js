@@ -25,6 +25,8 @@ export function mapSupabaseRowToAccount(row) {
   return {
     ...normalized,
     id: row.id,
+    user_id: row.user_id,
+    userId: row.user_id,
     name: (row.name || rawData.name || 'Cuenta').trim(),
     type: normalizeAccountType(row.type || rawData.type),
     currency: (row.currency || rawData.currency || 'COP').toUpperCase(),
@@ -123,7 +125,9 @@ export function useAccounts({
       }
 
       if (Array.isArray(data)) {
-        const mapped = data
+        // Garantizar aislamiento: jamás procesar ni mezclar filas pertenecientes a otro usuario
+        const userAccounts = data.filter((row) => !row.user_id || row.user_id === uid);
+        const mapped = userAccounts
           .map(mapSupabaseRowToAccount)
           .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
         setAccounts(mapped);
@@ -159,6 +163,9 @@ export function useAccounts({
           filter: `user_id=eq.${activeUser.id}`
         },
         (payload) => {
+          // Descartar inmediatamente cualquier evento de otro usuario
+          if (payload.new?.user_id && payload.new.user_id !== activeUser.id) return;
+
           if (payload.eventType === 'INSERT') {
             const newAcc = mapSupabaseRowToAccount(payload.new);
             setAccounts((prev) => {
@@ -217,9 +224,9 @@ export function useAccounts({
       updated_at: new Date().toISOString()
     };
 
-    // Actualización optimista inmediata en React
+    // Actualización optimista inmediata en React haciendo match estrictamente por ID
     setAccounts((prev) => [
-      ...prev.filter((a) => a.id !== id && `${(a.name || '').trim().toLowerCase()}___${(a.currency || 'COP').toUpperCase()}` !== `${normalizedAcc.name.toLowerCase()}___${normalizedAcc.currency}`),
+      ...prev.filter((a) => a.id !== id),
       normalizedAcc
     ].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)));
 
@@ -384,6 +391,7 @@ export function useAccounts({
   const updateAccountsOrder = useCallback(async (reorderedAccounts) => {
     if (!isSupabaseConfigured || !supabase || !Array.isArray(reorderedAccounts)) return;
     try {
+      const user = activeUserRef.current || (await getSupabaseUser());
       const updates = reorderedAccounts.map((account, index) => ({
         id: account.id,
         order_index: index,
@@ -391,10 +399,12 @@ export function useAccounts({
 
       await Promise.all(
         updates.map(async (item) => {
-          const { error } = await supabase
+          let query = supabase
             .from('accounts')
             .update({ order_index: item.order_index })
             .eq('id', item.id);
+          if (user?.id) query = query.eq('user_id', user.id);
+          const { error } = await query;
 
           if (error) throw error;
         })

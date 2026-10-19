@@ -5,18 +5,11 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-const ACCOUNTS = {
-  BANCOLOMBIA: "314a3960-a494-45af-b90b-ff884f50c008",
-  MASTERCARD: "5921535f-d046-43a3-a7ed-0b1e7767e44b",
-  RAPPICARD: "860b533e-6ea9-4fee-93ee-1053941c69ad",
-  ARQ: "703dd6c6-6440-45f6-b5c9-bc0bf7847a4d",
-};
-
 interface ExtractedTransaction {
   amount: number;
   description: string;
   date: string;
-  account_type: "BANCOLOMBIA" | "MASTERCARD" | "RAPPICARD" | "ARQ";
+  account_type: string;
   type?: "income" | "expense";
 }
 
@@ -150,7 +143,16 @@ serve(async (req) => {
 
   try {
     const requestData = await req.json();
+    const effectiveUserId = requestData.userId || requestData.user_id;
+    if (!effectiveUserId) {
+      return new Response(JSON.stringify({ error: "Missing userId in request" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const email_body = requestData.email_body || requestData.emailText || requestData.body;
+    const email_message_id = requestData.email_message_id || requestData.messageId || null;
 
     if (!email_body) {
       return new Response(JSON.stringify({ error: "Missing email_body" }), {
@@ -232,32 +234,69 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin 
       );
     }
 
-    let targetAccountId = ACCOUNTS.BANCOLOMBIA;
-    if (parsedData.account_type === "MASTERCARD") {
-      targetAccountId = ACCOUNTS.MASTERCARD;
-    } else if (parsedData.account_type === "RAPPICARD") {
-      targetAccountId = ACCOUNTS.RAPPICARD;
-    } else if (parsedData.account_type === "ARQ") {
-      targetAccountId = ACCOUNTS.ARQ;
-    }
-
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Obtener user_id asociado a la cuenta
-    const { data: accountData, error: accountError } = await supabase
-      .from("accounts")
-      .select("user_id")
-      .eq("id", targetAccountId)
-      .single();
+    // Manejo preventivo de duplicados si viene email_message_id
+    if (email_message_id) {
+      const { data: existingTx } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("email_message_id", email_message_id)
+        .maybeSingle();
 
-    if (accountError || !accountData) {
-      return new Response(JSON.stringify({ error: "Account not found", details: accountError }), {
+      if (existingTx) {
+        return new Response(
+          JSON.stringify({ message: "Transaction already processed (duplicate email_message_id)", id: existingTx.id, email_message_id }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Obtener las cuentas del usuario activo dinámicamente
+    const { data: userAccounts, error: accountsError } = await supabase
+      .from("accounts")
+      .select("id, name, type")
+      .eq("user_id", effectiveUserId);
+
+    if (accountsError || !userAccounts || userAccounts.length === 0) {
+      return new Response(JSON.stringify({ error: "No accounts found for user", details: accountsError }), {
         status: 404,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // Insertar la transacción con el tipo dinámico (income o expense)
+    // Emparejar dinámicamente la cuenta destino
+    let targetAccountId = requestData.account_id || requestData.accountId || null;
+
+    if (!targetAccountId) {
+      const accType = (parsedData.account_type || "").toUpperCase();
+      let matched = null;
+
+      if (accType === "RAPPICARD") {
+        matched = userAccounts.find((a: any) => /rappi/i.test(a.name));
+      } else if (accType === "MASTERCARD") {
+        matched = userAccounts.find((a: any) => /mastercard|tc\s*bancolombia/i.test(a.name)) ||
+                  userAccounts.find((a: any) => a.type === "card" || a.type === "credit");
+      } else if (accType === "ARQ") {
+        matched = userAccounts.find((a: any) => /arq/i.test(a.name));
+      } else if (accType === "BANCOLOMBIA") {
+        matched = userAccounts.find((a: any) => /bancolombia/i.test(a.name)) ||
+                  userAccounts.find((a: any) => a.type === "savings" || a.type === "bank" || a.type === "checking");
+      }
+
+      // Fallback inteligente si no hubo coincidencia por palabras clave
+      if (!matched) {
+        if (accType.includes("CARD") || accType.includes("CREDIT")) {
+          matched = userAccounts.find((a: any) => a.type === "card" || a.type === "credit") || userAccounts[0];
+        } else {
+          matched = userAccounts.find((a: any) => a.type !== "card" && a.type !== "credit") || userAccounts[0];
+        }
+      }
+
+      targetAccountId = matched?.id || userAccounts[0].id;
+    }
+
+    // Insertar la transacción con el tipo dinámico (income o expense) y email_message_id
     const { data: txData, error: txError } = await supabase
       .from("transactions")
       .insert({
@@ -266,13 +305,22 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin 
         date: parsedData.date,
         description: parsedData.description,
         account_id: targetAccountId,
-        user_id: accountData.user_id,
+        user_id: effectiveUserId,
         type: parsedData.type || "expense",
+        email_message_id: email_message_id,
       })
       .select()
       .single();
 
     if (txError) {
+      // Manejo de duplicado por índice UNIQUE (código 23505)
+      if (txError.code === "23505" || txError.message?.includes("idx_transactions_email_message_id") || txError.message?.includes("duplicate")) {
+        return new Response(
+          JSON.stringify({ message: "Duplicate email_message_id ignored", email_message_id }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(JSON.stringify({ error: "DB Insert error", details: txError }), {
         status: 500,
         headers: { "Content-Type": "application/json" },

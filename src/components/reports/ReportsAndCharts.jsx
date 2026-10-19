@@ -76,12 +76,16 @@ export default function ReportsAndCharts({
     tx && (
       tx.isTransfer ||
       tx.is_transfer ||
+      tx.isDebtCapital ||
+      tx.isCapitalReturn ||
       tx.type === 'transfer' ||
       tx.type === 'transferencia' ||
       tx.categoryId === 'cat-transfer' ||
       tx.category_id === 'cat-transfer' ||
       tx.subcategoryId === 'sub-transfer-in' ||
-      tx.subcategoryId === 'sub-transfer-out'
+      tx.subcategoryId === 'sub-transfer-out' ||
+      tx.subcategoryId === 'sub-amortizacion-deuda' ||
+      tx.subcategoryId === 'sub-retorno-capital'
     )
   );
 

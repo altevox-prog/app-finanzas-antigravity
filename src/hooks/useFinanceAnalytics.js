@@ -83,6 +83,8 @@ export function useFinanceAnalytics({
       tx && (
         tx.isTransfer ||
         tx.is_transfer ||
+        tx.isDebtCapital ||
+        tx.subcategoryId === 'sub-amortizacion-deuda' ||
         tx.type === 'transfer' ||
         tx.type === 'transferencia' ||
         tx.categoryId === 'cat-transfer' ||

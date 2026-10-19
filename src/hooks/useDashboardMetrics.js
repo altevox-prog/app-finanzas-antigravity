@@ -126,6 +126,8 @@ export function useDashboardMetrics({
     t && (
       t.isTransfer ||
       t.is_transfer ||
+      t.isDebtCapital ||
+      t.subcategoryId === 'sub-amortizacion-deuda' ||
       t.type === 'transfer' ||
       t.type === 'transferencia' ||
       t.categoryId === 'cat-transfer' ||
@@ -220,6 +222,8 @@ export function useDashboardMetrics({
       const isTransfer = Boolean(
         tx.isTransfer ||
         tx.is_transfer ||
+        tx.isDebtCapital ||
+        tx.subcategoryId === 'sub-amortizacion-deuda' ||
         type === 'transfer' ||
         type === 'transferencia' ||
         tx.categoryId === 'cat-transfer' ||

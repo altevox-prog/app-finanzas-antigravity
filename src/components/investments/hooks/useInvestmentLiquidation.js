@@ -49,21 +49,62 @@ export default function useInvestmentLiquidation({
       const netGain = Number(stats?.netReturn || 0);
       const invested = Number(inv.investedAmount || inv.buyPrice || 0);
 
-      // 1. Crear transacción contable de ingreso para abonar saldo en la cuenta destino
+      // 1. Crear transacciones contables respetando la separación de capital y rendimiento
       if (onAddTransaction) {
         const txDate = liquidationDate || new Date().toISOString().split('T')[0];
-        const tx = {
-          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-' + Date.now()),
-          date: txDate,
-          type: 'income',
-          amount: maturityTotal,
-          accountId: selectedAccount ? selectedAccount.id : null,
-          accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
-          category: 'Rendimientos / Inversiones',
-          categoryId: 'cat-inversiones',
-          note: `Liquidación CDT: ${inv.name} (Capital: $${Number(invested).toLocaleString('es-CO')} + Rendimiento neto: $${Number(netGain).toLocaleString('es-CO')})`
-        };
-        onAddTransaction(tx);
+
+        if (invested > 0 && netGain > 0) {
+          // Retorno de Capital: afecta balance sin inflar ingresos operativos
+          const txCapital = {
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-cap-' + Date.now()),
+            date: txDate,
+            type: 'income',
+            amount: invested,
+            accountId: selectedAccount ? selectedAccount.id : null,
+            accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
+            category: 'Retorno de Capital / Inversiones',
+            categoryId: 'cat-inversiones',
+            subcategoryId: 'sub-retorno-capital',
+            isCapitalReturn: true,
+            isTransfer: true, // Asegura exclusión de ingresos operativos en motores que ignoran banderas custom
+            note: `Liquidación Capital: ${inv.name}`
+          };
+          onAddTransaction(txCapital);
+
+          // Rendimiento Neto Ganado: ingreso operativo genuino
+          const txYield = {
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-yield-' + (Date.now() + 1)),
+            date: txDate,
+            type: 'income',
+            amount: netGain,
+            accountId: selectedAccount ? selectedAccount.id : null,
+            accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
+            category: 'Rendimientos / Inversiones',
+            categoryId: 'cat-inversiones',
+            subcategoryId: 'sub-rendimiento-inversion',
+            isInvestmentYield: true,
+            note: `Rendimiento Neto CDT: ${inv.name}`
+          };
+          onAddTransaction(txYield);
+        } else {
+          // Si netGain <= 0 y no hay rendimiento, solo se emite txCapital con maturityTotal
+          const capitalAmount = maturityTotal > 0 ? maturityTotal : (invested > 0 ? invested : 0);
+          const txCapital = {
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-cap-' + Date.now()),
+            date: txDate,
+            type: 'income',
+            amount: capitalAmount,
+            accountId: selectedAccount ? selectedAccount.id : null,
+            accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
+            category: 'Retorno de Capital / Inversiones',
+            categoryId: 'cat-inversiones',
+            subcategoryId: 'sub-retorno-capital',
+            isCapitalReturn: true,
+            isTransfer: true,
+            note: `Liquidación Capital: ${inv.name}`
+          };
+          onAddTransaction(txCapital);
+        }
       }
 
       // 2. Actualizar estado de la inversión a 'liquidated' para archivarla

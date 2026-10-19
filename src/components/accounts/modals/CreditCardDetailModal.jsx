@@ -33,13 +33,29 @@ export default function CreditCardDetailModal({
   if (!isOpen || !card) return null;
 
   // 1. Transactions on this card
-  const cardTxs = transactions
-    .filter(t => t.accountId === card.id)
+  const rawCardTxs = Array.isArray(transactions) 
+    ? transactions.filter(t => t && card?.id && (
+        t.accountId === card.id || t.account_id === card.id || 
+        t.toAccountId === card.id || t.to_account_id === card.id || 
+        t.fromAccountId === card.id || t.from_account_id === card.id
+      )) 
+    : [];
+
+  const seenTxIds = new Set();
+  const cardTxs = rawCardTxs
+    .filter(t => {
+      const txId = t?.id || t?._id;
+      if (!txId) return true;
+      if (seenTxIds.has(txId)) return false;
+      seenTxIds.add(txId);
+      return true;
+    })
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Initial debt if initialBalance was negative
-  const initialDebt = card.initialBalance < 0 ? Math.abs(safeNumber(card.initialBalance)) : 0;
-  const initialCredit = card.initialBalance > 0 ? safeNumber(card.initialBalance) : 0;
+  const rawInitial = safeNumber(card?.initialBalance ?? card?.initial_balance ?? 0);
+  const initialDebt = rawInitial < 0 ? Math.abs(rawInitial) : 0;
+  const initialCredit = rawInitial > 0 ? rawInitial : 0;
 
   // Consumos (gastos cargados a la tarjeta)
   const totalExpenses = cardTxs

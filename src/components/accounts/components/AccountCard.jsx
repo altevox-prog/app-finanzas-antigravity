@@ -56,11 +56,25 @@ export default function AccountCard({
     account?.type === 'investment' ? 'Inversión / Acciones' : 'Cuenta Bancaria';
 
   // Cálculos específicos para Tarjeta de Crédito
-  const cardTxs = Array.isArray(transactions) 
-    ? transactions.filter(t => t?.accountId === account?.id || t?.account === account?.name) 
+  const rawCardTxs = Array.isArray(transactions) 
+    ? transactions.filter(t => t && account?.id && (
+        t.accountId === account.id || t.account_id === account.id || 
+        t.toAccountId === account.id || t.to_account_id === account.id || 
+        t.fromAccountId === account.id || t.from_account_id === account.id
+      )) 
     : [];
-  const initialDebt = balance < 0 ? Math.abs(balance) : 0;
-  const initialCredit = balance > 0 ? balance : 0;
+
+  const seenTxIds = new Set();
+  const cardTxs = rawCardTxs.filter(t => {
+    const txId = t?.id || t?._id;
+    if (!txId) return true;
+    if (seenTxIds.has(txId)) return false;
+    seenTxIds.add(txId);
+    return true;
+  });
+  const rawInitial = safeNumber(account?.initialBalance ?? account?.initial_balance ?? 0);
+  const initialDebt = rawInitial < 0 ? Math.abs(rawInitial) : 0;
+  const initialCredit = rawInitial > 0 ? rawInitial : 0;
   const totalExpenses = cardTxs.filter(t => t?.type === 'expense').reduce((s, t) => s + safeNumber(t?.amount), 0);
   const totalPayments = cardTxs.filter(t => t?.type === 'income').reduce((s, t) => s + safeNumber(t?.amount), 0);
   const saldoRestante = Math.max(0, (initialDebt + totalExpenses) - (initialCredit + totalPayments));

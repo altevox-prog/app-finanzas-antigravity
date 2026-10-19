@@ -7,34 +7,34 @@ import { safeNumber, toSafeNumber } from './mathHelpers';
 export const calculateAccountBalance = (account, transactions = []) => {
   if (!account) return 0;
 
-  let baseBalance = 0;
-  if (account.initialBalance !== undefined) {
-    baseBalance = toSafeNumber(account.initialBalance);
-  } else if (account.initial_balance !== undefined) {
-    baseBalance = toSafeNumber(account.initial_balance);
-  } else if (account.balance !== undefined) {
-    baseBalance = toSafeNumber(account.balance);
-  } else {
-    baseBalance = toSafeNumber(account.saldo ?? 0);
-  }
+  const storedBalance = toSafeNumber(
+    account.balance ?? account.current_balance ?? account.currentBalance ?? account.saldo ?? 0
+  );
+
+  const rawInitial = account.initialBalance !== undefined 
+    ? account.initialBalance 
+    : (account.initial_balance !== undefined ? account.initial_balance : undefined);
+
+  const baseBalance = rawInitial !== undefined ? toSafeNumber(rawInitial) : storedBalance;
 
   const txs = Array.isArray(transactions) ? transactions : [];
+  if (txs.length === 0) {
+    return storedBalance !== 0 ? storedBalance : baseBalance;
+  }
+
   const accId = account.id;
-  const accName = account.name;
 
   const movements = txs.reduce((acc, t) => {
     if (!t) return acc;
+
     const tAccId = t.accountId || t.account_id;
-    const tAccName = t.account || t.accountName;
-    const isThisAccount = (tAccId && tAccId === accId) || (accName && tAccName === accName);
+    const isThisAccount = tAccId === accId;
 
     const tToId = t.toAccountId || t.to_account_id;
-    const tToName = t.toAccountName;
-    const isToThisAccount = (tToId && tToId === accId) || (accName && tToName === accName);
+    const isToThisAccount = tToId === accId;
 
     const tFromId = t.fromAccountId || t.from_account_id;
-    const tFromName = t.fromAccountName;
-    const isFromThisAccount = (tFromId && tFromId === accId) || (accName && tFromName === accName);
+    const isFromThisAccount = tFromId === accId;
 
     const amt = toSafeNumber(t.amount);
     const txType = String(t.type || '').toLowerCase();
@@ -83,6 +83,9 @@ export const calculateMonthlyIncome = (transactions = [], year, month, { exclude
       if (excludeTransfers && (
         t.isTransfer || 
         t.is_transfer || 
+        t.isCapitalReturn ||
+        t.subcategoryId === 'sub-retorno-capital' ||
+        t.subcategory_id === 'sub-retorno-capital' ||
         t.categoryId === 'cat-transfer' || 
         t.category_id === 'cat-transfer' || 
         type === 'transfer' || 
@@ -109,6 +112,9 @@ export const calculateMonthlyExpenses = (transactions = [], year, month, { exclu
       if (excludeTransfers && (
         t.isTransfer || 
         t.is_transfer || 
+        t.isDebtCapital ||
+        t.subcategoryId === 'sub-amortizacion-deuda' ||
+        t.subcategory_id === 'sub-amortizacion-deuda' ||
         t.categoryId === 'cat-transfer' || 
         t.category_id === 'cat-transfer' || 
         type === 'transfer' || 

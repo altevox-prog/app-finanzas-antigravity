@@ -153,20 +153,46 @@ export function useTransactions({
     if (!setAccounts || !Array.isArray(accountsRef.current) || accountsRef.current.length === 0) return;
 
     setAccounts((prevAccounts) => {
-      if (!Array.isArray(prevAccounts) || prevAccounts.length === 0) return prevAccounts;
+      const sourceAccounts = Array.isArray(prevAccounts) && prevAccounts.length > 0 ? prevAccounts : accountsRef.current;
 
-      return prevAccounts.map((acc) => {
-        const baseInitial = acc.initialBalance !== undefined
+      return sourceAccounts.map((acc) => {
+        // Obtener el saldo real persistido que vino de Supabase
+        const storedBalance = toSafeNumber(
+          acc.balance ?? acc.current_balance ?? acc.currentBalance ?? 0
+        );
+        const baseInitial = acc.initialBalance !== undefined && acc.initialBalance !== null
           ? acc.initialBalance
-          : (acc.initial_balance !== undefined ? acc.initial_balance : acc.balance);
+          : (acc.initial_balance !== undefined && acc.initial_balance !== null ? acc.initial_balance : storedBalance);
+
+        // Filtrar si esta cuenta tiene transacciones reales en el conjunto actual (estrictamente por ID)
+        const accId = acc.id;
+        const hasTransactions = currentTransactions.some((t) => {
+          if (!t || !accId) return false;
+          const tAccId = t.accountId || t.account_id;
+          const tToId = t.toAccountId || t.to_account_id;
+          const tFromId = t.fromAccountId || t.from_account_id;
+          return tAccId === accId || tToId === accId || tFromId === accId;
+        });
+
+        // Si la cuenta NO tiene transacciones asociadas, PRESERVAR su saldo persistido intacto
+        if (!hasTransactions) {
+          const stored = Number(acc.balance ?? acc.current_balance ?? acc.currentBalance ?? 0);
+          return {
+            ...acc,
+            balance: stored,
+            currentBalance: stored,
+            current_balance: stored
+          };
+        }
+
+        // Si sí tiene transacciones, calcular saldo dinámico con getAccountNativeBalance
         const liveBalance = getAccountNativeBalance({ ...acc, initialBalance: baseInitial }, currentTransactions, trm);
 
         return {
           ...acc,
-          initialBalance: baseInitial,
           balance: liveBalance,
           currentBalance: liveBalance,
-          updated_at: new Date().toISOString()
+          current_balance: liveBalance
         };
       });
     });
@@ -197,7 +223,6 @@ export function useTransactions({
         if (isMounted && Array.isArray(data)) {
           const mapped = data.map(mapSupabaseRowToTransaction);
           setTransactions(mapped);
-          recalculateAccountsBalance(mapped);
         }
       } catch (err) {
         console.error('[useTransactions] Fallo al consultar Supabase:', err);
@@ -209,7 +234,7 @@ export function useTransactions({
     return () => {
       isMounted = false;
     };
-  }, [activeUser?.id, isResettingRef, recalculateAccountsBalance]);
+  }, [activeUser?.id, isResettingRef]);
 
   // 3. Suscripción en Tiempo Real (Realtime)
   useEffect(() => {

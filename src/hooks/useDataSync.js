@@ -182,11 +182,22 @@ export function useDataSync({
         setUserProfile(prev => normalizeRemoteProfile(safeCloudProfile, prev));
       }
 
-      // Cuentas
+      // Cuentas (useAccounts.js es el dueño legítimo de las cuentas y su Realtime)
       if (accountsRes.status === 'fulfilled' && !accountsRes.value.error && Array.isArray(accountsRes.value.data)) {
-        if (accountsRes.value.data.length > 0) {
+        // Filtrar estrictamente las filas pertenecientes al usuario activo
+        const userRemoteAccounts = accountsRes.value.data.filter(
+          (r) => !r.user_id || r.user_id === userId
+        );
+
+        if (userRemoteAccounts.length > 0) {
           if (typeof setAccounts === 'function') {
-            setAccounts(accountsRes.value.data.map(normalizeRemoteAccount));
+            setAccounts((prevAccounts) => {
+              // Si useAccounts ya mantiene el estado hidratado, NO sobreescribir ni degradar
+              if (Array.isArray(prevAccounts) && prevAccounts.length > 0) {
+                return prevAccounts;
+              }
+              return userRemoteAccounts.map(normalizeRemoteAccount);
+            });
           }
           try {
             localStorage.setItem(`has_completed_onboarding_${userId}`, 'true');

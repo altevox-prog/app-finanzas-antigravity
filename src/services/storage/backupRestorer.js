@@ -181,10 +181,8 @@ export async function restoreBackupData(backupData, setters = {}) {
             user_id: uid,
             name: c.name || 'Categoría',
             type: c.type || 'expense',
-            icon: c.icon || '🏷️',
-            color: c.color || '#FF9500',
-            raw_data: { subcategories: c.subcategories || [], updated_at: nowIso },
-            updated_at: nowIso
+            icon: c.icon || 'Tag',
+            color: c.color || '#64748b'
           }));
           await upsertWithFallback('categories', catsPayload, {
             onConflict: 'id',

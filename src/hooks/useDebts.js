@@ -363,7 +363,10 @@ export function useDebts({
         note: payment.note ? `${payment.note} (Capital ${debtName})` : `Amortización de deuda - ${debtName}`,
         debtId: itemId,
         paymentId: payment.id,
-        isDebtPayment: true
+        isDebtPayment: true,
+        isTransfer: true,
+        is_transfer: true,
+        isDebtCapital: true
       };
       newTransactions.push(newTxCap);
     }
@@ -386,7 +389,7 @@ export function useDebts({
                 description: tx.note,
                 category: tx.categoryName,
                 notes: tx.note,
-                is_transfer: false,
+                is_transfer: Boolean(tx.isTransfer ?? tx.is_transfer ?? false),
                 updated_at: nowIso
               }, { onConflict: 'id' }).catch(() => {});
             });

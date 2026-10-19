@@ -126,33 +126,33 @@ export function getAccountNativeBalance(account, transactions = [], trm = 4050) 
   try {
     const accCurrency = account?.currency || 'COP';
     const accId = account?.id;
-    const accName = account?.name;
-    const initial = safeNumber(
-      account.initialBalance !== undefined 
-        ? account.initialBalance 
-        : (account.initial_balance !== undefined ? account.initial_balance : (account.balance ?? account.saldo ?? 0))
+
+    // 1. Determinar el saldo almacenado directo de la cuenta
+    const storedBalance = safeNumber(
+      account.balance ?? account.current_balance ?? account.currentBalance ?? account.saldo ?? account.initialBalance ?? account.initial_balance ?? 0
     );
 
-    const accTxs = Array.isArray(transactions) 
-      ? transactions.filter(t => {
-          if (!t) return false;
-          const tAccId = t.accountId || t.account_id;
-          const tAccName = t.account || t.accountName;
-          const tToId = t.toAccountId || t.to_account_id;
-          const tToName = t.toAccountName;
-          const tFromId = t.fromAccountId || t.from_account_id;
-          const tFromName = t.fromAccountName;
+    const rawInitial = account.initialBalance !== undefined 
+      ? account.initialBalance 
+      : (account.initial_balance !== undefined ? account.initial_balance : undefined);
 
-          return (
-            tAccId === accId ||
-            (accName && tAccName === accName) ||
-            tToId === accId ||
-            (accName && tToName === accName) ||
-            tFromId === accId ||
-            (accName && tFromName === accName)
-          );
-        }) 
+    const initial = safeNumber(rawInitial !== undefined ? rawInitial : storedBalance);
+
+    // 2. Cruce estrictamente por ID único (sin comparaciones por nombre de texto)
+    const accTxs = Array.isArray(transactions)
+      ? transactions.filter((t) => {
+          if (!t || !accId) return false;
+          const tAccId = t.accountId || t.account_id;
+          const tToId = t.toAccountId || t.to_account_id;
+          const tFromId = t.fromAccountId || t.from_account_id;
+          return tAccId === accId || tToId === accId || tFromId === accId;
+        })
       : [];
+
+    // 3. Si la cuenta no tiene transacciones asociadas, respetar incondicionalmente el saldo almacenado
+    if (accTxs.length === 0) {
+      return storedBalance;
+    }
 
     let inc = 0;
     let exp = 0;
@@ -163,16 +163,13 @@ export function getAccountNativeBalance(account, transactions = [], trm = 4050) 
       const tAmount = safeNumber(t.amount);
 
       const tAccId = t.accountId || t.account_id;
-      const tAccName = t.account || t.accountName;
-      const isThisAccount = tAccId === accId || (accName && tAccName === accName);
+      const isThisAccount = tAccId === accId;
 
       const tToId = t.toAccountId || t.to_account_id;
-      const tToName = t.toAccountName;
-      const isToThis = tToId === accId || (accName && tToName === accName);
+      const isToThis = tToId === accId;
 
       const tFromId = t.fromAccountId || t.from_account_id;
-      const tFromName = t.fromAccountName;
-      const isFromThis = tFromId === accId || (accName && tFromName === accName);
+      const isFromThis = tFromId === accId;
 
       const isTransfer = Boolean(
         t.isTransfer || 
@@ -185,19 +182,41 @@ export function getAccountNativeBalance(account, transactions = [], trm = 4050) 
         t.subcategoryId === 'sub-transfer-out'
       );
 
-      // Si la transacción fue registrada con la misma moneda que la cuenta
-      const origCur = t.originalCurrency || t.original_currency;
-      const origAmt = t.originalAmount ?? t.original_amount;
-      if (origCur === accCurrency && origAmt !== undefined) {
-        nativeAmount = safeNumber(origAmt);
-      } else if (accCurrency === 'COP') {
+      // Lectura robusta de la divisa de la transacción y conversión contextual
+      const txCurrency = t.currency || t.originalCurrency || t.original_currency;
+
+      if (txCurrency === accCurrency) {
+        // Si la transacción ya está en la misma moneda que la cuenta (ej. USD en cuenta USD),
+        // no se aplica ninguna conversión.
         nativeAmount = tAmount;
+      } else if (accCurrency === 'COP') {
+        // Si la cuenta es COP y la transacción vino en moneda extranjera
+        if (txCurrency === 'USD') {
+          const usdRate = safeNumber(t.exchangeRate || t.exchange_rate) || safeNumber(trm) || 4050;
+          nativeAmount = tAmount * usdRate;
+        } else if (txCurrency === 'EUR') {
+          const eurRate = safeNumber(t.exchangeRate || t.exchange_rate) || Math.round((safeNumber(trm) || 4050) * 1.08);
+          nativeAmount = tAmount * eurRate;
+        } else {
+          nativeAmount = tAmount;
+        }
       } else if (accCurrency === 'USD') {
-        const usdRate = safeNumber(t.exchangeRate || t.exchange_rate) || safeNumber(trm) || 4050;
-        nativeAmount = tAmount / (usdRate || 1);
+        // Solo si la transacción es explícitamente en COP se divide por la TRM
+        if (txCurrency === 'COP') {
+          const usdRate = safeNumber(t.exchangeRate || t.exchange_rate) || safeNumber(trm) || 4050;
+          nativeAmount = tAmount / (usdRate || 1);
+        } else {
+          nativeAmount = tAmount;
+        }
       } else if (accCurrency === 'EUR') {
-        const eurRate = safeNumber(t.exchangeRate || t.exchange_rate) || Math.round((safeNumber(trm) || 4050) * 1.08);
-        nativeAmount = tAmount / (eurRate || 1);
+        if (txCurrency === 'COP') {
+          const eurRate = safeNumber(t.exchangeRate || t.exchange_rate) || Math.round((safeNumber(trm) || 4050) * 1.08);
+          nativeAmount = tAmount / (eurRate || 1);
+        } else {
+          nativeAmount = tAmount;
+        }
+      } else {
+        nativeAmount = tAmount;
       }
 
       const txType = String(t.type || '').toLowerCase();

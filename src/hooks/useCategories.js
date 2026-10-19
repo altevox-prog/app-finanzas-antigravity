@@ -46,6 +46,14 @@ export function normalizeCategoryItem(c) {
 
   const rawData = c.raw_data && typeof c.raw_data === 'object' ? c.raw_data : {};
   let subcategories = c.subcategories || rawData.subcategories;
+  if (!subcategories || subcategories.length === 0) {
+    const defaultMatch = DEFAULT_CATEGORIES.find(
+      (dc) => String(dc.id) === String(c.id) || dc.name?.trim().toLowerCase() === c.name?.trim().toLowerCase()
+    );
+    if (defaultMatch && Array.isArray(defaultMatch.subcategories)) {
+      subcategories = defaultMatch.subcategories;
+    }
+  }
   if (Array.isArray(subcategories)) {
     subcategories = subcategories.map((sub) => {
       if (sub && sub.name && subcatEmojiMap[sub.name]) {
@@ -82,25 +90,19 @@ export function mapSupabaseRowToCategory(row) {
 }
 
 /**
- * Mapea un objeto de categoría local al payload para Supabase
+ * Mapea un objeto de categoría local al payload para Supabase (únicamente columnas estándar confirmadas)
  */
 export function mapCategoryToSupabasePayload(cat, userId) {
-  const norm = normalizeCategoryItem(cat);
-  const nowIso = new Date().toISOString();
   return {
-    id: String(norm.id),
+    id: String(cat.id),
     user_id: userId,
-    name: norm.name,
-    type: norm.type || 'expense',
-    icon: norm.icon || '🏷️',
-    color: norm.color || '#FF9500',
-    raw_data: {
-      subcategories: norm.subcategories || [],
-      updated_at: nowIso
-    },
-    updated_at: nowIso
+    name: cat.name,
+    type: cat.type || 'expense',
+    icon: cat.icon || 'Tag',
+    color: cat.color || '#64748b'
   };
 }
+
 
 /**
  * useCategories

@@ -73,6 +73,7 @@ export default function ModalContainer({
     transactions = [],
     investments = [],
     debtsAndLoans = [],
+    recurringPayments = [],
     subscriptions = [],
     setSubscriptions,
     savingsGoals = [],
@@ -99,6 +100,10 @@ export default function ModalContainer({
     handleAddInvestment,
     handleAddDebtOrLoan,
     handleAddRecurring,
+    handleDeleteRecurring,
+    handleUpdateRecurring,
+    onDeleteRecurring,
+    deleteRecurringPayment,
     handleUpdateProfile,
     handleAddGoal,
     handleUpdateGoal,
@@ -116,6 +121,10 @@ export default function ModalContainer({
     handleResetData,
     onLogout
   } = merged;
+
+  const activeSubscriptions = (recurringPayments && recurringPayments.length > 0)
+    ? recurringPayments
+    : subscriptions;
 
   const isTransferOpen = Boolean(
     merged.isTransferOpen ||
@@ -365,9 +374,22 @@ export default function ModalContainer({
           onUpdateProfile={handleUpdateProfile}
           securitySettings={securitySettings}
           onUpdateSecurity={setSecuritySettings}
-          subscriptions={subscriptions}
-          onAddSubscription={(newSub) => setSubscriptions && setSubscriptions(prev => [newSub, ...prev])}
-          onDeleteSubscription={(id) => setSubscriptions && setSubscriptions(prev => prev.filter(s => s.id !== id))}
+          subscriptions={activeSubscriptions}
+          onAddSubscription={(newSub) => {
+            if (handleAddRecurring) {
+              handleAddRecurring(newSub);
+            } else if (setSubscriptions) {
+              setSubscriptions(prev => [newSub, ...prev]);
+            }
+          }}
+          onDeleteSubscription={(id) => {
+            const deleteFn = handleDeleteRecurring || onDeleteRecurring || deleteRecurringPayment;
+            if (deleteFn) {
+              deleteFn(id);
+            } else if (setSubscriptions) {
+              setSubscriptions(prev => prev.filter(s => s.id !== id));
+            }
+          }}
           accountsCount={accounts.length}
           categoriesCount={categories.length}
           onOpenAccounts={() => {
@@ -421,6 +443,7 @@ export default function ModalContainer({
           onManualCloudSync={merged.pushLocalToCloud}
           syncStatus={merged.syncStatus}
           user={user}
+          selectedDate={selectedDate}
           onLogout={onLogout}
         />
       )}
