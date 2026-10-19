@@ -12,6 +12,7 @@ import {
   MoreVertical,
   TrendingUp,
   TrendingDown,
+  Repeat,
   Check
 } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
@@ -500,42 +501,42 @@ export default function RecurringView({
         </div>
       </div>
 
-      {/* B. Tarjetas de Resumen Financiero Recurrente (KPIs) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Total Ingresos Recurrentes esperados */}
-        <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] p-4 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-              Ingresos esperados
-            </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+        {/* Resumen Métrico de Pagos Recurrentes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+          {/* Tarjeta 1: Total Gastos Comprometidos */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <TrendingDown className="w-3.5 h-3.5 text-rose-500"/>
+                Gastos comprometidos
+              </span>
+              <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+            </div>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-rose-500 dark:text-rose-400">
+              -{formatMoney(totalExpenseProjected)}
+            </div>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
+              Proyección mensual fija
+            </p>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-emerald-500 dark:text-emerald-400">
-            +{formatMoney(totalIncomeProjected)}
-          </div>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
-            Proyección mensual activa
-          </p>
-        </div>
 
-        {/* Total Gastos Recurrentes comprometidos */}
-        <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] p-4 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
-              Gastos comprometidos
-            </span>
-            <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+          {/* Tarjeta 2: Suscripciones y Pagos Activos */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Repeat className="w-3.5 h-3.5 text-indigo-500"/>
+                Servicios activos
+              </span>
+              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+            </div>
+            <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-slate-800 dark:text-white">
+              {activeItems.length}
+            </div>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
+              {autoCount || 0} automáticos • {manualCount || 0} manuales
+            </p>
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-rose-500 dark:text-rose-400">
-            -{formatMoney(totalExpenseProjected)}
-          </div>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
-            {autoCount} automáticos • {manualCount} manuales
-          </p>
         </div>
-      </div>
 
       {/* C. Filtros de vista ("Todos" | "Gastos" | "Ingresos") */}
       {safeRecurring.length > 0 && (
