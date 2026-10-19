@@ -12,45 +12,89 @@ import { normalizeRemoteInvestment } from '../services/sync/syncNormalizers';
 export function sanitizeInvestment(inv) {
   if (!inv || typeof inv !== 'object') return inv;
   const normalized = normalizeRemoteInvestment(inv);
-  const rawData = inv.raw_data && typeof inv.raw_data === 'object' ? inv.raw_data : {};
 
-  const investedAmount = toSafeNumber(
-    inv.investedAmount ?? inv.invested_amount ?? inv.amount ?? inv.totalInvested ?? rawData.investedAmount ?? 0
+  let rawData = {};
+  if (typeof inv.raw_data === 'string') {
+    try {
+      rawData = JSON.parse(inv.raw_data);
+    } catch {
+      rawData = {};
+    }
+  } else if (inv.raw_data && typeof inv.raw_data === 'object') {
+    rawData = inv.raw_data;
+  }
+
+  const pickValidNumber = (...candidates) => {
+    for (const c of candidates) {
+      const n = Number(c);
+      if (!isNaN(n) && n > 0) return n;
+    }
+    for (const c of candidates) {
+      const n = Number(c);
+      if (!isNaN(n) && c !== null && c !== undefined && c !== '') return n;
+    }
+    return 0;
+  };
+
+  const investedAmount = pickValidNumber(
+    normalized.investedAmount,
+    normalized.invested_amount,
+    normalized.amount,
+    rawData.investedAmount,
+    rawData.invested_amount,
+    rawData.amount,
+    rawData.totalInvested,
+    rawData.buyPrice,
+    inv.investedAmount,
+    inv.invested_amount,
+    inv.amount,
+    inv.totalInvested
   );
-  const currentAmount = toSafeNumber(
-    inv.currentAmount !== undefined && inv.currentAmount !== null ? inv.currentAmount :
-    inv.currentValue !== undefined && inv.currentValue !== null ? inv.currentValue :
-    inv.current_value !== undefined && inv.current_value !== null ? inv.current_value :
-    rawData.currentAmount ?? investedAmount
+
+  const currentAmount = pickValidNumber(
+    normalized.currentAmount,
+    normalized.currentValue,
+    normalized.current_value,
+    rawData.currentAmount,
+    rawData.currentValue,
+    rawData.current_value,
+    inv.currentAmount,
+    inv.currentValue,
+    inv.current_value,
+    investedAmount
   );
 
   return {
-    ...normalized,
+    ...inv,
     ...rawData,
-    id: inv.id || crypto.randomUUID(),
-    name: inv.name || rawData.name || 'Inversión',
-    ticker: inv.ticker || rawData.ticker || null,
-    category: inv.category || rawData.category || 'stock',
-    assetType: inv.assetType || inv.asset_type || inv.category || rawData.assetType || 'other',
-    type: inv.subtype || inv.type || rawData.type || 'stock',
-    subtype: inv.subtype || inv.type || rawData.subtype || 'stock',
-    currency: (inv.currency || rawData.currency || 'USD').toUpperCase(),
-    quantity: toSafeNumber(inv.quantity || inv.shares || rawData.quantity),
-    shares: toSafeNumber(inv.shares || inv.quantity || rawData.shares),
-    buyPrice: toSafeNumber(inv.buyPrice || inv.purchasePrice || rawData.buyPrice),
-    currentPrice: toSafeNumber(inv.currentPrice || inv.unitPrice || inv.buyPrice || rawData.currentPrice),
-    rate: toSafeNumber(inv.rate || rawData.rate),
-    institution: inv.institution || rawData.institution || null,
-    issueDate: inv.issueDate || inv.issue_date || rawData.issueDate || null,
-    dueDate: inv.dueDate || inv.due_date || rawData.dueDate || null,
+    ...normalized,
+    id: inv.id || normalized.id || rawData.id || crypto.randomUUID(),
+    name: inv.name || normalized.name || rawData.name || 'Inversión',
+    ticker: inv.ticker || normalized.ticker || rawData.ticker || null,
+    category: normalized.category || inv.category || rawData.category || 'fixed',
+    assetType: normalized.assetType || inv.assetType || inv.asset_type || rawData.assetType || (inv.category === 'fixed' ? 'cdt' : 'other'),
+    type: normalized.type || inv.subtype || inv.type || rawData.subtype || rawData.type || 'fixed_income',
+    subtype: normalized.subtype || inv.subtype || inv.type || rawData.subtype || rawData.type || 'cdt',
+    currency: (inv.currency || normalized.currency || rawData.currency || 'USD').toUpperCase(),
+    quantity: toSafeNumber(inv.quantity || inv.shares || normalized.quantity || rawData.quantity),
+    shares: toSafeNumber(inv.shares || inv.quantity || normalized.shares || rawData.shares),
+    buyPrice: toSafeNumber(inv.buyPrice || inv.purchasePrice || normalized.buyPrice || rawData.buyPrice),
+    currentPrice: toSafeNumber(inv.currentPrice || inv.unitPrice || inv.buyPrice || normalized.currentPrice || rawData.currentPrice),
+    rate: Number(normalized.rate ?? inv.rate ?? rawData.rate ?? 0),
+    interestRate: Number(normalized.interestRate ?? inv.interestRate ?? rawData.interestRate ?? normalized.rate ?? 0),
+    institution: inv.institution || normalized.institution || rawData.institution || null,
+    issueDate: inv.issueDate || inv.issue_date || normalized.issueDate || rawData.issueDate || null,
+    dueDate: inv.dueDate || inv.due_date || normalized.dueDate || rawData.dueDate || null,
+    startDate: inv.startDate || inv.start_date || normalized.startDate || rawData.startDate || null,
     investedAmount,
     invested_amount: investedAmount,
     amount: investedAmount,
+    totalInvested: investedAmount,
     currentAmount,
     currentValue: currentAmount,
     current_value: currentAmount,
-    created_at: inv.created_at || new Date().toISOString(),
-    updated_at: inv.updated_at || new Date().toISOString()
+    created_at: inv.created_at || normalized.created_at || new Date().toISOString(),
+    updated_at: inv.updated_at || normalized.updated_at || new Date().toISOString()
   };
 }
 
@@ -193,15 +237,35 @@ export function useInvestments(isResettingRef, options = {}) {
           if (payload.eventType === 'INSERT') {
             const newInv = sanitizeInvestment(payload.new);
             setInvestments((prev) => {
-              if (prev.some((inv) => inv.id === newInv.id || ensureUUID(inv.id) === ensureUUID(newInv.id))) {
-                return prev.map((inv) => (inv.id === newInv.id || ensureUUID(inv.id) === ensureUUID(newInv.id) ? { ...inv, ...newInv } : inv));
+              const matchIdx = prev.findIndex((inv) => inv.id === newInv.id || ensureUUID(inv.id) === ensureUUID(newInv.id));
+              if (matchIdx !== -1) {
+                const existing = prev[matchIdx];
+                const merged = {
+                  ...existing,
+                  ...newInv,
+                  investedAmount: newInv.investedAmount > 0 ? newInv.investedAmount : existing.investedAmount,
+                  currentAmount: newInv.currentAmount > 0 ? newInv.currentAmount : (newInv.investedAmount > 0 ? newInv.investedAmount : existing.currentAmount)
+                };
+                const next = [...prev];
+                next[matchIdx] = merged;
+                return next;
               }
               return [newInv, ...prev];
             });
           } else if (payload.eventType === 'UPDATE') {
             const updatedInv = sanitizeInvestment(payload.new);
             setInvestments((prev) =>
-              prev.map((inv) => (inv.id === updatedInv.id || ensureUUID(inv.id) === ensureUUID(updatedInv.id) ? { ...inv, ...updatedInv } : inv))
+              prev.map((inv) => {
+                if (inv.id === updatedInv.id || ensureUUID(inv.id) === ensureUUID(updatedInv.id)) {
+                  return {
+                    ...inv,
+                    ...updatedInv,
+                    investedAmount: updatedInv.investedAmount > 0 ? updatedInv.investedAmount : inv.investedAmount,
+                    currentAmount: updatedInv.currentAmount > 0 ? updatedInv.currentAmount : (updatedInv.investedAmount > 0 ? updatedInv.investedAmount : inv.currentAmount)
+                  };
+                }
+                return inv;
+              })
             );
           } else if (payload.eventType === 'DELETE') {
             const deletedId = payload.old?.id;

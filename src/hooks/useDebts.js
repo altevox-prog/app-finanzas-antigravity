@@ -46,7 +46,6 @@ export function mapDebtToSupabasePayload(item, userId) {
     amount: baseAmount,
     total_amount: baseAmount,
     remaining_amount: remAmount,
-    current_balance: remAmount,
     status: item.status || (remAmount <= 0.01 ? 'paid' : 'active'),
     due_date: item.dueDate || item.due_date || item.computedDueDate || null,
     notes: `PAYMENTS_JSON:${JSON.stringify(rawDataPayload)}`,
@@ -316,6 +315,10 @@ export function useDebts({
     const targetAccName = payment.accountName || targetAcc?.name || 'Principal';
     const nowIso = new Date().toISOString();
 
+    const paymentId = (payment.id && payment.id.length >= 32)
+      ? ensureUUID(payment.id)
+      : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ensureUUID('pmt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6)));
+
     // 1. Movimiento de intereses (si aplica)
     if (intAmt > 0) {
       const txIntId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ensureUUID('tx-int-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6));
@@ -336,7 +339,7 @@ export function useDebts({
         accountName: targetAccName,
         note: payment.note ? `${payment.note} (Intereses ${debtName})` : `Intereses de deuda - ${debtName}`,
         debtId: itemId,
-        paymentId: payment.id,
+        paymentId: paymentId,
         isDebtPayment: true
       };
       newTransactions.push(newTxInt);
@@ -362,7 +365,7 @@ export function useDebts({
         accountName: targetAccName,
         note: payment.note ? `${payment.note} (Capital ${debtName})` : `Amortización de deuda - ${debtName}`,
         debtId: itemId,
-        paymentId: payment.id,
+        paymentId: paymentId,
         isDebtPayment: true,
         isTransfer: true,
         is_transfer: true,
@@ -391,7 +394,9 @@ export function useDebts({
                 notes: tx.note,
                 is_transfer: Boolean(tx.isTransfer ?? tx.is_transfer ?? false),
                 updated_at: nowIso
-              }, { onConflict: 'id' }).catch(() => {});
+              }, { onConflict: 'id' }).then(({ error }) => {
+                if (error) console.warn('[useDebts] Error guardando transacción:', error);
+              }, (err) => console.warn('[useDebts] Error de red guardando transacción:', err));
             });
           }
         });
@@ -429,7 +434,9 @@ export function useDebts({
                     .from('accounts')
                     .update({ balance: calculatedBal, updated_at: nowIso })
                     .eq('id', ensureUUID(targetAccId))
-                    .catch(() => {});
+                    .then(({ error }) => {
+                      if (error) console.warn('[useDebts] Error actualizando saldo de cuenta:', error);
+                    }, (err) => console.warn('[useDebts] Error de red actualizando saldo:', err));
                 }
               });
           }
@@ -440,6 +447,7 @@ export function useDebts({
     // Guardar pago con transactionIds y actualizar remainingAmount en la deuda
     const enrichedPayment = {
       ...payment,
+      id: paymentId,
       capitalAmount: capAmt,
       interestAmount: intAmt,
       amount: totAmt,
@@ -488,20 +496,25 @@ export function useDebts({
             getSupabaseUser().then((user) => {
               if (user?.id) {
                 const payload = mapDebtToSupabasePayload(updated, user.id);
-                supabase.from('debts').upsert(payload, { onConflict: 'id' }).catch(() => {});
+                supabase.from('debts').upsert(payload, { onConflict: 'id' }).then(({ error }) => {
+                  if (error) console.warn('[useDebts] Error actualizando deuda en Supabase:', error);
+                }, (err) => console.warn('[useDebts] Error de red actualizando deuda:', err));
 
                 // Registrar en tabla debt_payments
-                supabase.from('debt_payments').insert({
-                  id: ensureUUID(payment.id || crypto.randomUUID()),
+                supabase.from('debt_payments').upsert({
+                  id: paymentId,
                   debt_id: ensureUUID(itemId),
                   user_id: user.id,
                   amount: totAmt,
-                  type: 'PAYMENT',
                   payment_type: payment.mode === 'interest' ? 'INTEREST' : 'CAPITAL',
-                  date: payment.date || nowIso.split('T')[0],
+                  payment_date: payment.date || nowIso.split('T')[0],
                   notes: payment.note || 'Abono registrado',
                   created_at: nowIso
-                }).catch(() => {});
+                }, { onConflict: 'id' }).then(({ error }) => {
+                  if (error) console.error('[useDebts] Error registrando debt_payment:', error);
+                }, (err) => {
+                  console.error('[useDebts] Error registrando debt_payment:', err);
+                });
               }
             });
           }
@@ -551,7 +564,9 @@ export function useDebts({
                       .from('accounts')
                       .update({ balance: calculatedBal, updated_at: nowIso })
                       .eq('id', ensureUUID(paymentToDelete.accountId))
-                      .catch(() => {});
+                      .then(({ error }) => {
+                        if (error) console.warn('[useDebts] Error revirtiendo saldo:', error);
+                      }, (err) => console.warn('[useDebts] Error de red:', err));
                   }
                 });
             }
@@ -600,14 +615,18 @@ export function useDebts({
             getSupabaseUser().then((user) => {
               if (user?.id) {
                 const payload = mapDebtToSupabasePayload(updated, user.id);
-                supabase.from('debts').upsert(payload, { onConflict: 'id' }).catch(() => {});
+                supabase.from('debts').upsert(payload, { onConflict: 'id' }).then(({ error }) => {
+                  if (error) console.warn('[useDebts] Error actualizando deuda:', error);
+                }, (err) => console.warn('[useDebts] Error de red:', err));
 
                 // Eliminar registro en tabla debt_payments
                 supabase
                   .from('debt_payments')
                   .delete()
                   .eq('id', ensureUUID(paymentId))
-                  .catch(() => {});
+                  .then(({ error }) => {
+                    if (error) console.warn('[useDebts] Error eliminando debt_payment:', error);
+                  }, (err) => console.warn('[useDebts] Error de red:', err));
               }
             });
           }
@@ -624,7 +643,9 @@ export function useDebts({
 
       if (isSupabaseConfigured && supabase && paymentToDelete?.transactionIds?.length > 0) {
         paymentToDelete.transactionIds.forEach((txId) => {
-          supabase.from('transactions').delete().eq('id', ensureUUID(txId)).catch(() => {});
+          supabase.from('transactions').delete().eq('id', ensureUUID(txId)).then(({ error }) => {
+            if (error) console.warn('[useDebts] Error eliminando transacción:', error);
+          }, (err) => console.warn('[useDebts] Error de red:', err));
         });
       }
     }
@@ -749,7 +770,9 @@ export function useDebts({
             supabase.from('accounts').update({
               balance: updatedAccountBalance,
               updated_at: nowIso
-            }).eq('id', ensureUUID(fromAccountId)).catch(() => {});
+            }).eq('id', ensureUUID(fromAccountId)).then(({ error }) => {
+              if (error) console.warn('[useDebts] Error actualizando saldo cuenta desembolso:', error);
+            }, (err) => console.warn('[useDebts] Error de red:', err));
           }
 
           // Insertar transacción de salida en transactions
@@ -766,7 +789,9 @@ export function useDebts({
             notes: `LEND_MORE: Desembolso adicional a ${debtName}`,
             is_transfer: false,
             updated_at: nowIso
-          }, { onConflict: 'id' }).catch(() => {});
+          }, { onConflict: 'id' }).then(({ error }) => {
+            if (error) console.warn('[useDebts] Error insertando transacción desembolso:', error);
+          }, (err) => console.warn('[useDebts] Error de red:', err));
 
           // Registrar en debt_payments con tipo "INCREMENT"
           supabase.from('debt_payments').insert({
@@ -777,10 +802,12 @@ export function useDebts({
             type: 'INCREMENT',
             payment_type: 'INCREMENT',
             movement_type: 'LEND_MORE',
-            date: opDate,
+            payment_date: opDate,
             notes: notes || 'Desembolso adicional / Prestar más',
             created_at: nowIso
-          }).catch(() => {});
+          }).then(({ error }) => {
+            if (error) console.warn('[useDebts] Error registrando debt_payment desembolso:', error);
+          }, (err) => console.warn('[useDebts] Error de red:', err));
 
           // Actualizar registro padre en tabla debts
           const debtPayload = mapDebtToSupabasePayload(updatedDebtItem, user.id);
@@ -817,7 +844,7 @@ export function useDebts({
         // Eliminar pagos asociados en debt_payments
         let paymentsQuery = supabase.from('debt_payments').delete().eq('debt_id', canonicalId);
         if (user?.id) paymentsQuery = paymentsQuery.eq('user_id', user.id);
-        await paymentsQuery.catch(() => {});
+        await paymentsQuery.then(() => {}, (err) => console.warn('[useDebts] Error eliminando pagos:', err));
 
         // Eliminar deuda en tabla debts
         let debtQuery = supabase.from('debts').delete().eq('id', canonicalId);

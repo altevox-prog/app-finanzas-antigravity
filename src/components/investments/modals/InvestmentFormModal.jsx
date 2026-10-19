@@ -125,9 +125,21 @@ export default function InvestmentFormModal({
           ? formatCurrencyInput(rawCurr, true)
           : ''
       );
-      setInterestRate(currentInitial.interestRate !== undefined ? String(currentInitial.interestRate) : '');
-      setStartDate(currentInitial.startDate || '');
-      setDueDate(currentInitial.dueDate || '');
+      setInterestRate(currentInitial.interestRate !== undefined ? String(currentInitial.interestRate) : (currentInitial.rate !== undefined ? String(currentInitial.rate) : ''));
+      const rawStart = currentInitial.startDate || currentInitial.start_date || currentInitial.issueDate || currentInitial.issue_date;
+      const initialStart = rawStart || (initialCat === 'fixed' ? new Date().toISOString().split('T')[0] : '');
+      setStartDate(initialStart);
+
+      const rawDue = currentInitial.dueDate || currentInitial.due_date;
+      if (rawDue) {
+        setDueDate(rawDue);
+      } else if (initialCat === 'fixed') {
+        const baseStart = initialStart ? new Date(initialStart + 'T00:00:00') : new Date();
+        baseStart.setDate(baseStart.getDate() + 180);
+        setDueDate(baseStart.toISOString().split('T')[0]);
+      } else {
+        setDueDate('');
+      }
       setSubType(currentInitial.subType === 'bond' ? 'bond' : 'cdt');
     } else {
       setName('');
@@ -223,8 +235,17 @@ export default function InvestmentFormModal({
     setCategory(newCat);
     if (newCat === 'fixed' || newCat === 'liquidity') {
       setCurrency('COP');
-      if (newCat === 'fixed') setAssetType('cdt');
-      else setAssetType('fund');
+      if (newCat === 'fixed') {
+        setAssetType('cdt');
+        if (!startDate) setStartDate(new Date().toISOString().split('T')[0]);
+        if (!dueDate) {
+          const future = new Date();
+          future.setDate(future.getDate() + 180);
+          setDueDate(future.toISOString().split('T')[0]);
+        }
+      } else {
+        setAssetType('fund');
+      }
     } else {
       if (!isEditing && currency !== 'USD') {
         setCurrency('USD');
@@ -301,8 +322,20 @@ export default function InvestmentFormModal({
         current_value: currNum,
         notes: currentInitial?.notes || '',
         interestRate: interestRate ? parseFloat(interestRate) : undefined,
-        startDate: category === 'fixed' ? startDate : undefined,
-        dueDate: category === 'fixed' ? dueDate : undefined,
+        rate: interestRate ? parseFloat(interestRate) : undefined,
+        startDate: category === 'fixed' ? (startDate || new Date().toISOString().split('T')[0]) : undefined,
+        start_date: category === 'fixed' ? (startDate || new Date().toISOString().split('T')[0]) : undefined,
+        dueDate: category === 'fixed' ? (dueDate || (() => {
+          const f = new Date((startDate || new Date().toISOString().split('T')[0]) + 'T00:00:00');
+          f.setDate(f.getDate() + 180);
+          return f.toISOString().split('T')[0];
+        })()) : undefined,
+        due_date: category === 'fixed' ? (dueDate || (() => {
+          const f = new Date((startDate || new Date().toISOString().split('T')[0]) + 'T00:00:00');
+          f.setDate(f.getDate() + 180);
+          return f.toISOString().split('T')[0];
+        })()) : undefined,
+        issueDate: category === 'fixed' ? (startDate || new Date().toISOString().split('T')[0]) : undefined,
         isImmediateLiquidity: category === 'liquidity'
       };
 

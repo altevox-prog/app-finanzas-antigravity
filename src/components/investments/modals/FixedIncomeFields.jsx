@@ -49,6 +49,16 @@ export default function FixedIncomeFields({
     }
   }
 
+  const handleQuickDuration = (days) => {
+    const baseStr = startDate || new Date().toISOString().split('T')[0];
+    if (!startDate) {
+      setStartDate(baseStr);
+    }
+    const baseDate = new Date(baseStr + 'T00:00:00');
+    baseDate.setDate(baseDate.getDate() + days);
+    setDueDate(baseDate.toISOString().split('T')[0]);
+  };
+
   return (
     <div className="space-y-3 animate-fadeIn">
       {/* Selector / Tabs de Subtipo en Renta Fija */}
@@ -116,7 +126,7 @@ export default function FixedIncomeFields({
             </label>
             <input
               type="date"
-              value={startDate}
+              value={startDate || new Date().toISOString().split('T')[0]}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
               style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
@@ -135,6 +145,25 @@ export default function FixedIncomeFields({
               style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
             />
           </div>
+        </div>
+
+        {/* Atajos de plazo rápido para vencimiento */}
+        <div className="flex items-center gap-1.5 pt-0.5">
+          <span className="text-[10px] opacity-60 font-medium">Plazo sugerido:</span>
+          {[
+            { label: '90 días', days: 90 },
+            { label: '180 días', days: 180 },
+            { label: '360 días', days: 360 }
+          ].map((item) => (
+            <button
+              key={item.days}
+              type="button"
+              onClick={() => handleQuickDuration(item.days)}
+              className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all border border-emerald-500/20 cursor-pointer"
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
         {/* Cálculo en tiempo real de Días y Ganancia Estimada */}

@@ -405,19 +405,42 @@ export default function InvestmentCard({
             </div>
 
             {/* Info y Liquidación para CDTs */}
-            {isCDT && isMatured && cdtStats && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
+            {isCDT && cdtStats && (
+              <div className={`p-3.5 rounded-xl border space-y-2.5 ${
+                isMatured
+                  ? 'bg-amber-500/10 border-amber-500/25'
+                  : 'bg-emerald-500/10 border-emerald-500/25'
+              }`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span>CDT Vencido el {inv.dueDate}</span>
+                  <span className={`text-xs font-bold flex items-center gap-1.5 ${
+                    isMatured
+                      ? 'text-amber-800 dark:text-amber-300'
+                      : 'text-emerald-800 dark:text-emerald-300'
+                  }`}>
+                    {isMatured ? (
+                      <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    )}
+                    <span>
+                      {isMatured 
+                        ? `CDT Vencido el ${inv.dueDate || 'Hoy'}` 
+                        : `CDT Vigente ${inv.dueDate ? `(Vence el ${inv.dueDate})` : ''}`
+                      }
+                    </span>
                   </span>
-                  <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                    {cdtTermDays} días ({inv.interestRate}% E.A.)
+                  <span className={`text-[11px] font-semibold ${
+                    isMatured
+                      ? 'text-amber-700 dark:text-amber-400'
+                      : 'text-emerald-700 dark:text-emerald-400'
+                  }`}>
+                    {cdtTermDays} días ({inv.interestRate || 0}% E.A.)
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-1 border-t border-amber-500/20">
+                <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-1 border-t ${
+                  isMatured ? 'border-amber-500/20' : 'border-emerald-500/20'
+                }`}>
                   <div>
                     <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Capital inicial</span>
                     <span className="font-bold text-slate-900 dark:text-white font-mono tabular-nums">
@@ -425,14 +448,20 @@ export default function InvestmentCard({
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Ganancia neta (retefuente 4%)</span>
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                      {isMatured ? 'Ganancia neta (retefuente 4%)' : 'Rendimiento proyectado'}
+                    </span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
                       +{formatInvestMoney(cdtStats.netReturn, inv.currency || 'COP')}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Total liquidable</span>
-                    <span className="font-extrabold text-amber-700 dark:text-amber-300 font-mono tabular-nums">
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                      {isMatured ? 'Total liquidable' : 'Total proyectado'}
+                    </span>
+                    <span className={`font-extrabold font-mono tabular-nums ${
+                      isMatured ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'
+                    }`}>
                       {formatInvestMoney(cdtStats.maturityTotal, inv.currency || 'COP')}
                     </span>
                   </div>
@@ -444,24 +473,15 @@ export default function InvestmentCard({
                     e.stopPropagation();
                     if (onOpenLiquidation) onOpenLiquidation(inv, cdtStats);
                   }}
-                  className="w-full mt-1.5 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-98 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+                  className={`w-full mt-1.5 py-2 px-3 rounded-xl active:scale-98 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer ${
+                    isMatured
+                      ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Liquidar a cuenta</span>
+                  <span>Liquidar CDT a cuenta</span>
                 </button>
-              </div>
-            )}
-
-            {/* Info para CDTs vigentes (no vencidos) */}
-            {isCDT && !isMatured && inv.interestRate && (
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 pt-0.5 font-medium flex-wrap gap-1">
-                <span>Tasa: <strong className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">{inv.interestRate}% E.A.</strong></span>
-                {inv.dueDate && (
-                  <span>Vence: <strong className="text-slate-700 dark:text-slate-200">{inv.dueDate}</strong> ({cdtTermDays}d)</span>
-                )}
-                {cdtStats && (
-                  <span className="hidden sm:inline">Rendimiento proyectado: <strong className="text-emerald-600 dark:text-emerald-400 font-semibold tabular-nums">+{formatInvestMoney(cdtStats.netReturn, inv.currency || 'COP')}</strong></span>
-                )}
               </div>
             )}
 

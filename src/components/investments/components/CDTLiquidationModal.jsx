@@ -14,15 +14,20 @@ export default function CDTLiquidationModal({
   liquidationDate,
   setLiquidationDate,
   isSubmittingLiquidation = false,
+  isSubmitting,
+  isOpen,
   onClose,
   onConfirm,
 }) {
-  if (!liquidatingCDT) return null;
+  const isVisible = isOpen !== undefined ? isOpen : Boolean(liquidatingCDT);
+  const submitting = Boolean(isSubmittingLiquidation || isSubmitting);
+
+  if (!isVisible || !liquidatingCDT) return null;
 
   return (
     <div 
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
-      onClick={() => !isSubmittingLiquidation && onClose && onClose()}
+      onClick={() => !submitting && onClose && onClose()}
     >
       <div 
         onClick={(e) => e.stopPropagation()}
@@ -45,7 +50,7 @@ export default function CDTLiquidationModal({
           </div>
           <button
             type="button"
-            disabled={isSubmittingLiquidation}
+            disabled={submitting}
             onClick={onClose}
             className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
@@ -93,7 +98,7 @@ export default function CDTLiquidationModal({
               <select
                 value={liquidationAccountId}
                 onChange={(e) => setLiquidationAccountId && setLiquidationAccountId(e.target.value)}
-                disabled={isSubmittingLiquidation}
+                disabled={submitting}
                 className="w-full text-xs sm:text-sm font-medium px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
                 {accounts.map(acc => (
@@ -117,7 +122,7 @@ export default function CDTLiquidationModal({
               type="date"
               value={liquidationDate}
               onChange={(e) => setLiquidationDate && setLiquidationDate(e.target.value)}
-              disabled={isSubmittingLiquidation}
+              disabled={submitting}
               className="w-full text-xs sm:text-sm font-medium px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             />
           </div>
@@ -127,7 +132,7 @@ export default function CDTLiquidationModal({
         <div className="flex items-center justify-end gap-2.5 pt-2">
           <button
             type="button"
-            disabled={isSubmittingLiquidation}
+            disabled={submitting}
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
           >
@@ -135,12 +140,12 @@ export default function CDTLiquidationModal({
           </button>
           <button
             type="button"
-            disabled={isSubmittingLiquidation}
+            disabled={submitting}
             onClick={onConfirm}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>{isSubmittingLiquidation ? 'Liquidando...' : 'Confirmar Liquidación'}</span>
+            <span>{submitting ? 'Liquidando...' : 'Confirmar Liquidación'}</span>
           </button>
         </div>
       </div>

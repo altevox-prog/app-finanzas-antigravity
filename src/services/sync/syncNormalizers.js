@@ -209,18 +209,73 @@ export function normalizeRemoteDebt(d) {
  */
 export function normalizeRemoteInvestment(inv) {
   if (!inv || typeof inv !== 'object') return inv;
-  const invAmount = Number(inv.invested_amount ?? inv.investedAmount ?? inv.current_value ?? inv.currentValue ?? inv.currentAmount ?? inv.amount ?? 0);
-  const currVal = Number(inv.current_value ?? inv.currentValue ?? inv.currentAmount ?? inv.invested_amount ?? inv.investedAmount ?? inv.amount ?? 0);
+
+  let rawData = {};
+  if (typeof inv.raw_data === 'string') {
+    try {
+      rawData = JSON.parse(inv.raw_data);
+    } catch {
+      rawData = {};
+    }
+  } else if (inv.raw_data && typeof inv.raw_data === 'object') {
+    rawData = inv.raw_data;
+  }
+
+  // Helper para extraer el primer número mayor a cero o el primer número definido
+  const pickValidNumber = (...candidates) => {
+    for (const c of candidates) {
+      const n = Number(c);
+      if (!isNaN(n) && n > 0) return n;
+    }
+    for (const c of candidates) {
+      const n = Number(c);
+      if (!isNaN(n) && c !== null && c !== undefined && c !== '') return n;
+    }
+    return 0;
+  };
+
+  const invAmount = pickValidNumber(
+    inv.investedAmount,
+    inv.invested_amount,
+    rawData.investedAmount,
+    rawData.invested_amount,
+    inv.amount,
+    rawData.amount,
+    inv.totalInvested,
+    rawData.totalInvested,
+    inv.buyPrice,
+    rawData.buyPrice
+  );
+
+  const currVal = pickValidNumber(
+    inv.currentAmount,
+    inv.currentValue,
+    inv.current_value,
+    rawData.currentAmount,
+    rawData.currentValue,
+    rawData.current_value,
+    invAmount
+  );
+
   return {
+    ...rawData,
     ...inv,
     amount: invAmount,
     investedAmount: invAmount,
     invested_amount: invAmount,
+    totalInvested: invAmount,
     currentAmount: currVal,
     currentValue: currVal,
     current_value: currVal,
-    type: inv.subtype || inv.type || 'stock',
-    subtype: inv.subtype || inv.type || 'stock'
+    category: inv.category || rawData.category || 'fixed',
+    assetType: inv.assetType || inv.asset_type || rawData.assetType || (inv.category === 'fixed' ? 'cdt' : 'other'),
+    type: inv.subtype || inv.type || rawData.subtype || rawData.type || 'fixed_income',
+    subtype: inv.subtype || inv.type || rawData.subtype || rawData.type || 'cdt',
+    institution: inv.institution || rawData.institution || null,
+    interestRate: Number(inv.interestRate ?? rawData.interestRate ?? inv.rate ?? rawData.rate ?? 0),
+    rate: Number(inv.rate ?? rawData.rate ?? inv.interestRate ?? rawData.interestRate ?? 0),
+    dueDate: inv.dueDate || inv.due_date || rawData.dueDate || rawData.due_date || null,
+    startDate: inv.startDate || inv.start_date || rawData.startDate || rawData.start_date || null
   };
 }
 
