@@ -2,12 +2,11 @@ import React from 'react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import SegmentedControl from '../common/SegmentedControl';
 import AmountInput from '../common/AmountInput';
-import RecurringPopularPills from './RecurringPopularPills';
 
 /**
  * RecurringBasicFields
  * Subcomponente para los campos principales del pago recurrente:
- * Selector de tipo (gasto vs ingreso), nombre/concepto con sugerencias rápidas,
+ * Selector de tipo (gasto vs ingreso), nombre del servicio/beneficiario,
  * e input de monto en COP.
  *
  * @param {Object} props
@@ -54,24 +53,18 @@ export default function RecurringBasicFields({
         />
       </div>
 
-      {/* 2. Nombre o Concepto con Píldoras de Sugerencias */}
+      {/* 2. Nombre del Servicio o Beneficiario */}
       <div>
         <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-          Nombre o Concepto *
+          Servicio o Entidad *
         </label>
         <input
           type="text"
           required
           value={name}
           onChange={(e) => setName?.(e.target.value)}
-          placeholder="Ej. Arriendo, Internet Fibra, Netflix, Salario"
+          placeholder="Ej. Netflix, Arriendo Apartamento, Internet Fibra, Gimnasio"
           className="w-full h-11 px-3.5 rounded-xl text-sm font-semibold border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100"
-        />
-
-        {/* Carrusel de sugerencias rápidas */}
-        <RecurringPopularPills
-          onSelectSuggestion={(sug) => setName?.(sug)}
-          currentValue={name}
         />
       </div>
 

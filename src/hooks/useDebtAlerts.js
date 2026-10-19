@@ -102,7 +102,6 @@ export function useDebtAlerts({ debtsAndLoans = [], accounts = [], onNavigateToD
                       options: {
                         body: alert.message || '',
                         icon: '/android-chrome-192x192.png',
-                        badge: '/android-chrome-192x192.png',
                         tag: alert.id
                       }
                     });
