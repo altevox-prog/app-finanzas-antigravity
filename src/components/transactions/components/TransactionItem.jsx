@@ -68,11 +68,11 @@ export default function TransactionItem({
       onEdit={onEdit ? () => onEdit(tx) : undefined}
       onDelete={onDelete ? handleDelete : undefined}
       className="w-full"
-      contentClassName="bg-white dark:bg-zinc-900"
+      contentClassName="bg-white dark:bg-zinc-900 touch-pan-y"
     >
       <div 
         onClick={() => onSelect && onSelect(tx)}
-        className="p-2.5 sm:p-3 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex items-center justify-between gap-3 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05]"
+        className="p-2.5 sm:p-3 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex items-center justify-between gap-3 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05] touch-pan-y"
       >
         {/* Izquierda: Avatar / Icono + Información (Concepto y Cuenta/Categoría) */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">

@@ -376,7 +376,15 @@ export function useTransactions({
 
   // Eliminar transacción
   const handleDeleteTransaction = useCallback(async (txId) => {
-    if (!txId) return;
+    if (!txId) return false;
+
+    const targetTx = transactions.find((t) => t.id === txId || (ensureUUID && ensureUUID(t.id) === txId));
+    const isLinkedToDebt = Boolean(targetTx?.isDebtPayment || targetTx?.debtId || targetTx?.paymentId);
+
+    if (isLinkedToDebt) {
+      toast.warning('Esta transacción pertenece al abono de una deuda. Para revertirla y mantener los saldos al día, elimínala desde el módulo de Deudas.');
+      return false;
+    }
 
     // Actualización optimista inmediata en React
     setTransactions((prev) => {
@@ -402,7 +410,8 @@ export function useTransactions({
     }
 
     toast.info('Elemento eliminado');
-  }, [recalculateAccountsBalance]);
+    return true;
+  }, [transactions, recalculateAccountsBalance]);
 
   // Transferencia entre cuentas (emite dos movimientos en Supabase)
   const handleExecuteTransfer = useCallback(async ({

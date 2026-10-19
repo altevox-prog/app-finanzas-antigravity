@@ -10,7 +10,9 @@ import {
   Calendar,
   RotateCcw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { MONTH_NAMES } from '../../data/initialData';
 import { usePrivacy } from '../../context/PrivacyContext';
@@ -400,10 +402,11 @@ export default function TransactionList({
           {/* Cabecera de columnas para Escritorio */}
           {!isCompact && itemsToRender.length > 0 && (
             <div className="hidden md:grid md:grid-cols-12 items-center py-2.5 px-4 border-b border-slate-100 dark:border-white/[0.06] text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider bg-slate-50/60 dark:bg-zinc-800/20 select-none">
-              <div className="col-span-5">Categoría</div>
+              <div className="col-span-4">Concepto / Categoría</div>
               <div className="col-span-3">Cuenta</div>
               <div className="col-span-2 text-center">Fecha</div>
               <div className="col-span-2 text-right">Monto</div>
+              <div className="col-span-1 text-right">Acciones</div>
             </div>
           )}
 
@@ -437,7 +440,7 @@ export default function TransactionList({
                   className="hidden md:grid md:grid-cols-12 items-center py-2.5 px-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer select-none"
                 >
                   {/* Columna 1 (Categoría): Icono compacto (w-8 h-8 rounded-xl) + Nombre de categoría */}
-                  <div className="col-span-5 flex items-center gap-2.5 min-w-0 pr-3">
+                  <div className="col-span-4 flex items-center gap-2.5 min-w-0 pr-3">
                     <div className="w-8 h-8 rounded-xl shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/10 shadow-xs">
                       <BrandIcon
                         name={tx.note || tx.categoryName || ''}
@@ -489,6 +492,35 @@ export default function TransactionList({
                     }`}>
                       {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
                     </span>
+                  </div>
+
+                  {/* Columna 5 (Acciones): Botones editar y eliminar */}
+                  <div className="col-span-1 flex items-center justify-end gap-1 pl-2">
+                    <button
+                      type="button"
+                      title="Editar movimiento"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEdit(tx);
+                      }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Eliminar movimiento"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const txLabel = tx.note || tx.categoryName || 'este movimiento';
+                        if (window.confirm(`¿Eliminar permanentemente "${txLabel}"?`)) {
+                          onDeleteTransaction(tx.id || tx);
+                        }
+                      }}
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 </div>
               </React.Fragment>

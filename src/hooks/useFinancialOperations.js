@@ -3,6 +3,7 @@ import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { saveTransactionsToStorage, saveAccountsToStorage } from '../services/storageService';
 import { toast } from '../utils/toast';
+import { ensureUUID } from '../services/syncEngine';
 
 /**
  * useFinancialOperations
@@ -131,11 +132,21 @@ export function useFinancialOperations({
 
   // 3. Eliminar Transacción con Reversión de Saldos
   const handleDeleteTransaction = useCallback(async (txId) => {
+    if (!txId) return false;
+
+    const targetTx = transactions.find((t) => t.id === txId || (ensureUUID && ensureUUID(t.id) === txId));
+    const isLinkedToDebt = Boolean(targetTx?.isDebtPayment || targetTx?.debtId || targetTx?.paymentId);
+
+    if (isLinkedToDebt) {
+      toast.warning('Esta transacción pertenece al abono de una deuda. Para revertirla y mantener los saldos al día, elimínala desde el módulo de Deudas.');
+      return false;
+    }
+
     if (baseDeleteTransaction) {
       return await baseDeleteTransaction(txId);
     }
 
-    const updatedTxs = transactions.filter((t) => t.id !== txId);
+    const updatedTxs = transactions.filter((t) => t.id !== txId && (ensureUUID ? ensureUUID(t.id) !== txId : true));
     if (setTransactions) {
       setTransactions(updatedTxs);
       saveTransactionsToStorage(updatedTxs);
@@ -156,6 +167,7 @@ export function useFinancialOperations({
     }
 
     toast.info('Elemento eliminado');
+    return true;
   }, [baseDeleteTransaction, transactions, setTransactions, accounts, setAccounts, trm]);
 
   // 4. Transferencias entre Cuentas (con o sin conversión de divisas)

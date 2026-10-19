@@ -41,8 +41,9 @@ export default function Toaster({ position = 'top-center' }) {
     >
       {toasts.map((t) => {
         const isError = t.type === 'error';
-        const isInfo = t.type === 'info' || t.type === 'warning';
-        const isSuccess = !isError && !isInfo;
+        const isWarning = t.type === 'warning';
+        const isInfo = t.type === 'info';
+        const isSuccess = !isError && !isWarning && !isInfo;
 
         return (
           <div
@@ -54,6 +55,11 @@ export default function Toaster({ position = 'top-center' }) {
             <div className="shrink-0">
               {isError && (
                 <div className="p-1.5 rounded-xl bg-rose-500/15 text-rose-400">
+                  <AlertCircle className="w-4 h-4" />
+                </div>
+              )}
+              {isWarning && (
+                <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-400">
                   <AlertCircle className="w-4 h-4" />
                 </div>
               )}

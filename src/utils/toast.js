@@ -33,6 +33,16 @@ export const toast = {
         new CustomEvent('app-toast', { detail })
       );
     }
+  },
+  warning: (message, options) => {
+    if (typeof window !== 'undefined') {
+      const detail = typeof message === 'object' && message !== null
+        ? { type: 'warning', id: Date.now() + Math.random(), ...message }
+        : { message, ...(typeof options === 'object' && options !== null ? options : {}), type: 'warning', id: Date.now() + Math.random() };
+      window.dispatchEvent(
+        new CustomEvent('app-toast', { detail })
+      );
+    }
   }
 };
 
