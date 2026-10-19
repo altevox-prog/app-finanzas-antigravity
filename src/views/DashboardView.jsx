@@ -55,8 +55,10 @@ export default function DashboardView(props) {
     onSaveWidgets,
     financeData = {},
     financeActions = {},
+    livePrices = null,
     ...restProps
   } = props;
+  const resolvedLivePrices = livePrices || restProps.livePrices || financeData?.livePrices || {};
   const isForcedMobile = Boolean(props.isForcedMobile || restProps.isForcedMobile || financeData?.isForcedMobile);
   const isForcedDesktop = Boolean(props.isForcedDesktop || restProps.isForcedDesktop || financeData?.isForcedDesktop);
   const userProfile = props.userProfile || restProps.userProfile || financeData?.userProfile;
@@ -117,6 +119,7 @@ export default function DashboardView(props) {
         widgets={widgets || widgetsConfig}
         onCustomizeWidgets={onCustomizeWidgets}
         onSaveWidgets={onSaveWidgets}
+        livePrices={resolvedLivePrices}
       />
     </div>
   );

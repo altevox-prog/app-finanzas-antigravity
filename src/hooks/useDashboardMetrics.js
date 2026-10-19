@@ -26,7 +26,8 @@ export function useDashboardMetrics({
   selectedDay = null,
   currentMonthLabel = '',
   trm = 4050,
-  onSelectDay = null
+  onSelectDay = null,
+  livePrices = {}
 } = {}) {
   const safeDebtsAndLoans = (debtsAndLoans && debtsAndLoans.length > 0) ? debtsAndLoans : (debts || []);
   const trmValue = toSafeNumber(trm) || 4050;
@@ -39,9 +40,10 @@ export function useDashboardMetrics({
       investments,
       debtsAndLoans: safeDebtsAndLoans,
       trm: trmValue,
-      getAccountBalanceFn: getAccountNativeBalance
+      getAccountBalanceFn: getAccountNativeBalance,
+      livePrices
     });
-  }, [accounts, transactions, investments, safeDebtsAndLoans, trmValue]);
+  }, [accounts, transactions, investments, safeDebtsAndLoans, trmValue, livePrices]);
 
   const totalAccountsBalanceCOP = netWorthMetrics.totalAccountsBalanceCOP;
   const totalAssetsCOP = netWorthMetrics.totalAssetsCOP;

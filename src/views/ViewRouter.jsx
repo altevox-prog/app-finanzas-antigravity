@@ -156,6 +156,7 @@ export default function ViewRouter({
           onSaveWidgets={(newCfg) => {
             if (setWidgets) queueMicrotask(() => setWidgets(newCfg));
           }}
+          livePrices={merged.livePrices || financeData?.livePrices}
         />
       )}
 
@@ -252,6 +253,9 @@ export default function ViewRouter({
           onDeleteInvestment={handleDeleteInvestment}
           onAddTransaction={handleAddTransaction}
           trm={trm}
+          livePrices={merged.livePrices || financeData?.livePrices}
+          handleRefreshQuotes={merged.handleRefreshQuotes || financeActions?.handleRefreshQuotes}
+          isRefreshing={merged.isRefreshingQuotes !== undefined ? merged.isRefreshingQuotes : financeData?.isRefreshingQuotes}
         />
       )}
 

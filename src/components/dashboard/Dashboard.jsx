@@ -37,8 +37,9 @@ export default function Dashboard({
   widgetsConfig = null, widgets: widgetsProp = null, onCustomizeWidgets = null,
   onSaveWidgets = null, allowedWidgetIds = null, className = null,
   financeData = {}, financeActions = {}, isForcedMobile = false, isForcedDesktop = false,
-  userProfile = null
+  userProfile = null, livePrices = null
 }) {
+  const effectiveLivePrices = livePrices || financeData?.livePrices || {};
   const effectiveUser = userProfile || financeData?.userProfile;
   const userName = (effectiveUser?.name && effectiveUser.name !== 'Usuario')
     ? effectiveUser.name.split(' ')[0]
@@ -97,7 +98,8 @@ export default function Dashboard({
 
   const metrics = useDashboardMetrics({
     accounts, transactions, investments, debtsAndLoans, monthlyTransactions,
-    monthlyStats, selectedDate, selectedDay, currentMonthLabel, trm, onSelectDay
+    monthlyStats, selectedDate, selectedDay, currentMonthLabel, trm, onSelectDay,
+    livePrices: effectiveLivePrices
   });
 
   const WIDGET_REGISTRY = useWidgetRegistry({

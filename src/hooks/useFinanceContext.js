@@ -39,6 +39,7 @@ export function useFinanceContext({
   showTutorial = false,
   setShowTutorial,
   isResettingRef,
+  livePrices = {},
 
   // Handlers base de entidades
   baseAddTransaction,
@@ -203,7 +204,8 @@ export function useFinanceContext({
     showTutorial,
     syncStatus,
     syncUser,
-    isCloudEnabled
+    isCloudEnabled,
+    livePrices
   }), [
     accounts,
     transactions,
@@ -236,7 +238,8 @@ export function useFinanceContext({
     showTutorial,
     syncStatus,
     syncUser,
-    isCloudEnabled
+    isCloudEnabled,
+    livePrices
   ]);
 
   // 2. Objeto consolidado y memorizado de acciones y operaciones

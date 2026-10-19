@@ -19,7 +19,8 @@ export const calculateNetWorth = ({
   investments = [],
   debtsAndLoans = [],
   trm = 4050,
-  getAccountBalanceFn = null
+  getAccountBalanceFn = null,
+  livePrices = {}
 } = {}) => {
   const trmValue = safeNumber(trm) || 4050;
 
@@ -47,6 +48,9 @@ export const calculateNetWorth = ({
         ? trmValue * 1.08 
         : 1; // Si es COP o no especifica divisa extranjera
 
+    const ticker = (inv.ticker || inv.symbol || (inv.name && inv.name.length <= 6 ? inv.name : '')).toUpperCase().trim();
+    const livePrice = safeNumber(livePrices[ticker]);
+
     const shares = safeNumber(inv.shares);
     const rawInvested = safeNumber(
       inv.investedAmount ?? 
@@ -66,7 +70,7 @@ export const calculateNetWorth = ({
       buyPrice = rawInvested / shares;
     }
 
-    let currentPrice = safeNumber(inv.currentPrice || inv.current_price || buyPrice);
+    let currentPrice = safeNumber(livePrice || inv.currentPrice || inv.current_price || buyPrice);
     if (currentPrice === 0 && shares > 0 && rawCurrent > 0) {
       currentPrice = rawCurrent / shares;
     } else if (currentPrice === 0 && buyPrice > 0) {
@@ -80,7 +84,9 @@ export const calculateNetWorth = ({
 
     // Valor actual en moneda de origen
     let currentOrigin = rawCurrent > 0 ? rawCurrent : costOrigin;
-    if (rawCurrent === 0 && shares > 0 && currentPrice > 0) {
+    if (livePrice > 0 && shares > 0) {
+      currentOrigin = shares * livePrice;
+    } else if (rawCurrent === 0 && shares > 0 && currentPrice > 0) {
       currentOrigin = shares * currentPrice;
     }
     if (currentOrigin === 0) {

@@ -58,6 +58,7 @@ function sanitizeGoal(goal) {
   };
 }
 import { useInvestments } from './useInvestments';
+import useInvestmentQuotes from '../components/investments/hooks/useInvestmentQuotes';
 import { useDebts } from './useDebts';
 import { useAccounts } from './useAccounts';
 import { useTransactions } from './useTransactions';
@@ -149,6 +150,9 @@ export function useAppOrchestrator() {
     investments, setInvestments, handleAddInvestment: baseAddInvestment, handleSaveInvestment: baseSaveInvestment,
     handleUpdateInvestment: baseUpdateInvestment, handleDeleteInvestment: baseDeleteInvestment, resetInvestments
   } = useInvestments(isResettingRef);
+
+  // Cotizaciones de mercado en tiempo real para activos de inversión
+  const { livePrices, handleRefreshQuotes, isRefreshing: isRefreshingQuotes } = useInvestmentQuotes({ investments });
 
   // Modo de visualización responsive y vistas fijas
   const { viewMode, isForcedMobile, isForcedDesktop, desktopOnlyClass, desktopBlockClass, mobileOnlyClass } = useViewMode();
@@ -347,7 +351,7 @@ export function useAppOrchestrator() {
 
   // Cálculos derivados y métricas analíticas memorizadas
   const { monthlyTransactions, scopedTransactions, monthlyStats, netWorth, taxMetrics } = useFinanceAnalytics({
-    transactions, accounts, investments, debtsAndLoans, selectedDate, selectedMonth, selectedYear, selectedDay, trm
+    transactions, accounts, investments, debtsAndLoans, selectedDate, selectedMonth, selectedYear, selectedDay, trm, livePrices
   });
 
   // Sistema de Alertas Preventivas y Notificaciones PWA
@@ -374,7 +378,8 @@ export function useAppOrchestrator() {
     handleResetToToday, handleChangeMonth, widgets, setWidgets, isEditWidgetsModalOpen, setIsEditWidgetsModalOpen,
     tomorrowDebtAlerts, handleDismissAlert, handleReviewDebtAlert, formatMoney, fromSettings, setFromSettings,
     handleGoBackFromSubView, handleUnlock, handleVerifyPin, handleUpdatePin, monthlyTransactions, scopedTransactions,
-    monthlyStats, netWorth, taxMetrics, activeTab, handleTabChange, handleResetTab, modalControls
+    monthlyStats, netWorth, taxMetrics, activeTab, handleTabChange, handleResetTab, modalControls,
+    livePrices
   });
 
   return {
@@ -395,7 +400,8 @@ export function useAppOrchestrator() {
     setIsEditWidgetsModalOpen, showTutorial, setShowTutorial, monthlyTransactions, scopedTransactions, monthlyStats,
     netWorth, taxMetrics, tomorrowDebtAlerts, handleDismissAlert, handleReviewDebtAlert, hasPwaUpdate, setHasPwaUpdate,
     handleFullReset, handleFactoryReset, handleResetData, handleImportBackup, formatMoney, financeData, financeActions,
-    financialOps, handleReorderAccounts, updateAccountsOrder, fetchAccounts
+    financialOps, handleReorderAccounts, updateAccountsOrder, fetchAccounts,
+    livePrices, handleRefreshQuotes, isRefreshingQuotes
   };
 }
 

@@ -25,7 +25,10 @@ export default function InvestmentsView({
   onDeleteInvestment,
   onAddTransaction,
   trm = 4050,
-  onBack = null
+  onBack = null,
+  livePrices: propLivePrices = null,
+  handleRefreshQuotes: propRefreshQuotes = null,
+  isRefreshing: propIsRefreshing = null
 }) {
   const { formatMoney, isPrivacyMode, enableDecimals } = usePrivacy();
   const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
@@ -67,14 +70,18 @@ export default function InvestmentsView({
     }));
   };
 
-  // Cotizaciones en vivo en tiempo real (Custom Hook)
-  const {
-    livePrices,
-    isRefreshing,
-    lastRefreshedAt,
-    handleRefreshQuotes,
-    setLivePrices
-  } = useInvestmentQuotes({ investments });
+  // Cotizaciones en vivo en tiempo real (Custom Hook con soporte para props externas de useAppOrchestrator)
+  const internalQuotes = useInvestmentQuotes({
+    investments: propLivePrices ? [] : investments
+  });
+
+  const livePrices = propLivePrices || internalQuotes.livePrices;
+  const isRefreshing = propIsRefreshing !== null && propIsRefreshing !== undefined
+    ? propIsRefreshing
+    : internalQuotes.isRefreshing;
+  const lastRefreshedAt = internalQuotes.lastRefreshedAt;
+  const handleRefreshQuotes = propRefreshQuotes || internalQuotes.handleRefreshQuotes;
+  const setLivePrices = internalQuotes.setLivePrices;
 
   // Notificar estado de refresco a TopAppBar
   useEffect(() => {

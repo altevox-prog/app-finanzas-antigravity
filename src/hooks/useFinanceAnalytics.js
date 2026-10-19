@@ -31,7 +31,8 @@ export function useFinanceAnalytics({
   selectedYear,
   selectedDate,
   selectedDay = null,
-  trm = 4050
+  trm = 4050,
+  livePrices = {}
 } = {}) {
   // Determinación de año y mes base
   const year = selectedYear !== undefined 
@@ -158,9 +159,10 @@ export function useFinanceAnalytics({
       investments,
       debtsAndLoans,
       trm,
-      getAccountBalanceFn: (acc, txs, rate) => getAccountNativeBalance(acc, txs, rate)
+      getAccountBalanceFn: (acc, txs, rate) => getAccountNativeBalance(acc, txs, rate),
+      livePrices
     });
-  }, [accounts, transactions, investments, debtsAndLoans, trm]);
+  }, [accounts, transactions, investments, debtsAndLoans, trm, livePrices]);
 
   // 5. Métricas Tributarias y Topes DIAN
   const taxMetrics = useMemo(() => {
