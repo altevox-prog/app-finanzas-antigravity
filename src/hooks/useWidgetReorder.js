@@ -21,9 +21,16 @@ export function useWidgetReorder({
 } = {}) {
   // 1. Estado central de widgets basado en configuración inicial o guardada
   const [widgets, setWidgets] = useState(() => {
+    // 1. Prioridad absoluta a la configuración guardada en localStorage
+    const stored = getStoredWidgetsConfig();
+    if (Array.isArray(stored) && stored.length > 0) {
+      return stored;
+    }
+
+    // 2. Si no hay nada guardado localmente, tomar props o default
     const candidate = widgetsConfig || widgetsProp;
     if (Array.isArray(candidate) && candidate.length > 0) return candidate;
-    return getStoredWidgetsConfig();
+    return DEFAULT_WIDGETS_CONFIG;
   });
 
 /**
