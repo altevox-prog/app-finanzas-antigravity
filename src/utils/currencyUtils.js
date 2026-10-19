@@ -222,20 +222,27 @@ export function getAccountNativeBalance(account, transactions = [], trm = 4050) 
       const txType = String(t.type || '').toLowerCase();
 
       if (isTransfer) {
-        // Transferencia única sin tipo específico débito/crédito
+        // Caso A: Registro único de transferencia (un solo registro que vincula origen y destino)
         if (txType === 'transfer' || txType === 'transferencia') {
-          if (isFromThis) exp += nativeAmount;
-          if (isToThis) inc += nativeAmount;
+          if (isFromThis && !isToThis) {
+            exp += nativeAmount;
+          } else if (isToThis && !isFromThis) {
+            inc += nativeAmount;
+          }
         } 
-        // Par de transacciones (gasto en origen, ingreso en destino)
-        else if (txType === 'expense' || txType === 'gasto') {
-          if (isThisAccount || isFromThis) exp += nativeAmount;
-        } 
-        else if (txType === 'income' || txType === 'ingreso') {
-          if (isThisAccount || isToThis) inc += nativeAmount;
+        // Caso B: Par atómico de transferencias (outTx con expense, inTx con income)
+        // Cada registro debe afectar ÚNICA y EXCLUSIVAMENTE a su cuenta asignada (isThisAccount)
+        else if (txType === 'expense' || txType === 'gasto' || t.subcategoryId === 'sub-transfer-out') {
+          if (isThisAccount) {
+            exp += nativeAmount;
+          }
+        } else if (txType === 'income' || txType === 'ingreso' || t.subcategoryId === 'sub-transfer-in') {
+          if (isThisAccount) {
+            inc += nativeAmount;
+          }
         }
       } else {
-        // Transacción estándar
+        // Transacción estándar (ingreso o gasto regular)
         if (isThisAccount) {
           if (txType === 'income' || txType === 'ingreso') inc += nativeAmount;
           if (txType === 'expense' || txType === 'gasto') exp += nativeAmount;
