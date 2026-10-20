@@ -15,17 +15,6 @@ import RecentMovementsSection from './RecentMovementsSection';
 import RecurringPaymentsWidget from './widgets/RecurringPaymentsWidget';
 import WeeklyExpensesChart from './WeeklyExpensesChart';
 
-// Re-exports de compatibilidad para módulos que consumían widgets satélite desde Dashboard.jsx
-export { default as MonthlyNetHeroCard } from './MonthlyNetHeroCard';
-export { default as DebtsWidget } from './widgets/DebtsWidget';
-export { default as InvestmentsWidget } from './widgets/InvestmentsWidget';
-export { default as AccountsWidget } from './widgets/AccountsWidget';
-export { default as RecurringPaymentsWidget } from './widgets/RecurringPaymentsWidget';
-export { default as TRMWidget } from './widgets/TRMWidget';
-export { default as WeeklyCashflowWidget } from './widgets/WeeklyCashflowWidget';
-export { default as RecentMovementsSection, RecentMovementsWidget, TransactionsWidget } from './RecentMovementsSection';
-export { default as BalanceCardsWidget, LiquidBalanceWidget, MonthlyIncomeWidget, MonthlyExpenseWidget, SavingsRateWidget } from './BalanceCardsWidget';
-
 export default function Dashboard({
   accounts = [], investments = [], debtsAndLoans = [], transactions = [],
   monthlyTransactions = null, categories = [], recurringPayments = [], subscriptions = [],
@@ -151,13 +140,6 @@ export default function Dashboard({
     handleTouchEnd, handleFinishReordering, handleToggleVisibility
   } = useWidgetReorder({ widgetsConfig, widgetsProp, allowedWidgetIds, onSaveWidgets, getWidget });
 
-  const ignoredWidgetIds = new Set([
-    'liquid_balance', 'available_balance', 'balance_summary', 'my_accounts', 'accounts',
-    'recent_movements', 'recent_transactions',
-    'recurring_payments', 'subscriptions', 'balance_cards', 'monthly_income',
-    'monthly_expense', 'top_accounts'
-  ]);
-
   const hasWidget = (id) => {
     const norm = normalizeWidgetId(id);
     return visibleWidgets.some(w => normalizeWidgetId(w.id) === norm);
@@ -167,58 +149,6 @@ export default function Dashboard({
     const norm = normalizeWidgetId(id);
     const idx = visibleWidgets.findIndex(w => normalizeWidgetId(w.id) === norm);
     return idx >= 0 ? idx : 0;
-  };
-
-  const operativeWidgets = visibleWidgets.filter(w => {
-    const norm = normalizeWidgetId(w.id);
-    if (ignoredWidgetIds.has(norm) || ignoredWidgetIds.has(w.id)) return false;
-    return norm === 'weekly_cashflow' || norm === 'weekly_cashflow_classic';
-  });
-
-  const analyticalWidgets = visibleWidgets.filter(w => {
-    const norm = normalizeWidgetId(w.id);
-    if (ignoredWidgetIds.has(norm) || ignoredWidgetIds.has(w.id)) return false;
-    return norm !== 'weekly_cashflow' && norm !== 'weekly_cashflow_classic';
-  });
-
-
-  const renderWidgetItem = (w, index) => {
-    const norm = normalizeWidgetId(w.id);
-    if (
-      norm === 'liquid_balance' || 
-      norm === 'available_balance' || 
-      norm === 'balance_summary' || 
-      norm === 'my_accounts' || 
-      norm === 'accounts'
-    ) {
-      return null;
-    }
-    const isInvestments = norm === 'investments' || w.id === 'investments';
-    const widgetComponent = getWidget(w.id);
-    if (!widgetComponent) return null;
-
-    return (
-      <DashboardWidgetWrapper
-        key={w.id} 
-        id={w.id} 
-        index={index} 
-        isReordering={isReordering} 
-        draggedIndex={draggedIndex}
-        className={`${isInvestments ? (isForcedMobile ? 'hidden' : 'hidden md:block') : ''}`}
-        onPressStart={handlePressStart} 
-        onPressEnd={handlePressEnd}
-        onTouchStart={handleTouchStart} 
-        onTouchMove={handleTouchMove} 
-        onTouchEnd={handleTouchEnd}
-        onDragStart={handleDragStart} 
-        onDragOver={handleDragOver} 
-        onDrop={handleDrop} 
-        onDragEnd={handleDragEnd}
-        onToggleVisibility={handleToggleVisibility}
-      >
-        {widgetComponent}
-      </DashboardWidgetWrapper>
-    );
   };
 
   return (
