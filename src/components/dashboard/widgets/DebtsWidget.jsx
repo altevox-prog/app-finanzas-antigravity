@@ -4,13 +4,15 @@ import { HandCoins } from 'lucide-react';
 /**
  * DebtsWidget
  * Widget de Préstamos y Deudas para el Dashboard.
+ * Armonizado para paridad de altura idéntica con InvestmentsWidget.
  */
 export default function DebtsWidget({
   debtsAndLoansMetrics = { totalReceivableCOP: 0, totalPayableCOP: 0, receivableCount: 0, payableCount: 0 },
   onNavigateToTab = () => {},
   setActiveTab = null,
   formatMoney = (val) => `$${Number(val).toLocaleString('es-CO')}`,
-  isReordering = false
+  isReordering = false,
+  className = ''
 }) {
   const handleNav = (tab = 'debts') => {
     if (isReordering) return;
@@ -19,14 +21,16 @@ export default function DebtsWidget({
   };
 
   const totalActivos = (debtsAndLoansMetrics.receivableCount || 0) + (debtsAndLoansMetrics.payableCount || 0);
+  const netBalance = (debtsAndLoansMetrics.totalReceivableCOP || 0) - (debtsAndLoansMetrics.totalPayableCOP || 0);
 
   return (
     <div 
       onClick={() => handleNav('debts')}
-      className="p-5 sm:p-6 bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group"
+      className={`w-full min-h-[170px] p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group ${className}`}
     >
       <div>
-        <div className="flex items-center justify-between gap-2 mb-3">
+        {/* Encabezado */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <HandCoins className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>Préstamos y deudas</span>
@@ -60,6 +64,18 @@ export default function DebtsWidget({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Pie simétrico con Inversiones */}
+      <div className="pt-2.5 mt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs font-mono">
+        <span className="text-slate-500 dark:text-zinc-400 font-medium">
+          Balance neto:
+        </span>
+        <span className={`font-bold font-mono tracking-tight tabular-nums ${
+          netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+        }`}>
+          {netBalance >= 0 ? '+' : ''}{formatMoney(netBalance)}
+        </span>
       </div>
     </div>
   );

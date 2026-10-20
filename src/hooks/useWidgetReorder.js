@@ -517,60 +517,68 @@ const SWAP_THROTTLE_MS = 100;
     if (onSaveWidgets) onSaveWidgets(updated);
   }, [widgets, onSaveWidgets]);
 
+  const VETOED_WIDGET_IDS = useMemo(() => new Set([
+    'accounts',
+    'my_accounts',
+    'liquid_balance',
+    'available_balance',
+    'monthly_net',
+    'hero_net',
+    'neto_mes',
+    'net_month',
+    'trm',
+    'trm_oficial'
+  ]), []);
+
   // Widgets visibles
   const visibleWidgets = useMemo(() => {
     return widgets.filter(w => {
       if (!w.visible) return false;
       const norm = normalizeWidgetId(w.id);
-      if (
-        norm === 'trm' || 
-        norm === 'trm_oficial' || 
-        w.id === 'trm' || 
-        w.id === 'trm_oficial' ||
-        norm === 'liquid_balance' ||
-        norm === 'available_balance' ||
-        norm === 'my_accounts' ||
-        norm === 'accounts'
-      ) return false;
+      if (VETOED_WIDGET_IDS.has(norm) || VETOED_WIDGET_IDS.has(w.id)) return false;
       if (allowedWidgetIds && Array.isArray(allowedWidgetIds)) {
         if (!allowedWidgetIds.includes(norm) && !allowedWidgetIds.includes(w.id)) return false;
       }
       return getWidget ? Boolean(getWidget(w.id)) : true;
     });
-  }, [widgets, allowedWidgetIds, getWidget]);
+  }, [widgets, allowedWidgetIds, getWidget, VETOED_WIDGET_IDS]);
 
   // Widgets ocultos (para la bandeja inferior durante reorganización)
   const hiddenWidgets = useMemo(() => {
-    const list = widgets.filter((w) => {
-      const norm = normalizeWidgetId(w.id);
-      if (
-        norm === 'liquid_balance' ||
-        norm === 'available_balance' ||
-        norm === 'my_accounts' ||
-        norm === 'accounts'
-      ) return false;
-      return w.visible === false || w.hidden === true;
-    });
-    const visibleIds = new Set(visibleWidgets.map(w => normalizeWidgetId(w.id)));
-    const existingHiddenIds = new Set(list.map(w => normalizeWidgetId(w.id)));
+    // 1. Obtener IDs de widgets actualmente visibles
+    const visibleNormIds = new Set(
+      visibleWidgets.map(w => normalizeWidgetId(w.id))
+    );
 
-    DEFAULT_WIDGETS_CONFIG.forEach(dw => {
-      const norm = normalizeWidgetId(dw.id);
-      if (
-        norm === 'trm' || 
-        norm === 'trm_oficial' ||
-        norm === 'liquid_balance' ||
-        norm === 'available_balance' ||
-        norm === 'my_accounts' ||
-        norm === 'accounts'
-      ) return;
+    // 2. Filtrar desde DEFAULT_WIDGETS_CONFIG o widgets los que no estén visibles
+    const allDefs = Array.isArray(widgets) && widgets.length > 0 ? widgets : DEFAULT_WIDGETS_CONFIG;
+    const result = [];
+    const seen = new Set();
+
+    allDefs.forEach((w) => {
+      const norm = normalizeWidgetId(w.id);
+      if (VETOED_WIDGET_IDS.has(norm) || VETOED_WIDGET_IDS.has(w.id)) return;
       if (allowedWidgetIds && Array.isArray(allowedWidgetIds) && !allowedWidgetIds.includes(norm)) return;
-      if (!visibleIds.has(norm) && !existingHiddenIds.has(norm)) {
-        list.push({ ...dw, visible: false, hidden: true });
+      if (!w.visible || !visibleNormIds.has(norm)) {
+        if (!seen.has(norm)) {
+          seen.add(norm);
+          result.push({ ...w, visible: false, hidden: true });
+        }
       }
     });
-    return list;
-  }, [widgets, visibleWidgets, allowedWidgetIds]);
+
+    DEFAULT_WIDGETS_CONFIG.forEach((dw) => {
+      const norm = normalizeWidgetId(dw.id);
+      if (VETOED_WIDGET_IDS.has(norm) || VETOED_WIDGET_IDS.has(dw.id)) return;
+      if (allowedWidgetIds && Array.isArray(allowedWidgetIds) && !allowedWidgetIds.includes(norm)) return;
+      if (!visibleNormIds.has(norm) && !seen.has(norm)) {
+        seen.add(norm);
+        result.push({ ...dw, visible: false, hidden: true });
+      }
+    });
+
+    return result;
+  }, [widgets, visibleWidgets, allowedWidgetIds, VETOED_WIDGET_IDS]);
 
   return {
     widgets,

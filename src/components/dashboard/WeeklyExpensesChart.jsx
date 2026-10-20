@@ -26,6 +26,7 @@ export default function WeeklyExpensesChart({
   selectedDay = null,
   currentMonthLabel = '',
   formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
+  onSelectWeek = null,
   height = 180,
   className = ''
 }) {
@@ -100,15 +101,19 @@ export default function WeeklyExpensesChart({
 
       let percentage = 0;
       if (hasExpense && rawValue > 0) {
-        percentage = Math.max(Math.round((rawValue / maxWeeklyExpense) * 100), 12);
+        percentage = Math.min(Math.max(Math.round((rawValue / maxWeeklyExpense) * 85), 10), 85);
       } else if (hasExpense && rawValue === 0) {
         percentage = 0;
       }
 
       return {
         label: w.name,
+        name: w.name,
         range: w.range,
+        start: w.start,
+        end: w.end,
         value: rawValue,
+        total: rawValue,
         percentage,
         active: isActive
       };
@@ -177,18 +182,25 @@ export default function WeeklyExpensesChart({
         className="h-36 sm:h-40 flex items-end justify-between gap-2 sm:gap-3 px-2 sm:px-4 py-2 max-w-sm sm:max-w-md mx-auto relative w-full"
       >
         {weeksData.map((item, idx) => {
-          const rawValue = item.value;
+          const rawValue = item.total ?? item.value ?? 0;
           const isHovered = hoveredIndex === idx;
+          const isClickable = rawValue > 0;
 
           return (
             <div
               key={item.label}
-              className="relative flex-1 max-w-[52px] sm:max-w-[60px] flex flex-col items-center justify-end h-full pt-6 cursor-pointer group select-none"
+              className={`relative flex-1 max-w-[52px] sm:max-w-[60px] flex flex-col items-center justify-end h-full pt-6 select-none ${
+                isClickable ? 'cursor-pointer hover:opacity-80 active:scale-95' : 'cursor-default'
+              } transition-all group`}
+              title={isClickable ? `Ver transacciones de ${item.label}: $${Number(rawValue).toLocaleString('es-CO')}` : item.label}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={(e) => {
                 e.stopPropagation();
                 setHoveredIndex(prev => prev === idx ? null : idx);
+                if (isClickable && typeof onSelectWeek === 'function') {
+                  onSelectWeek(item, idx + 1);
+                }
               }}
               onTouchStart={(e) => {
                 e.stopPropagation();
@@ -212,7 +224,7 @@ export default function WeeklyExpensesChart({
 
               {/* Cápsula de la barra */}
               <div
-                className={`w-full max-w-[28px] sm:max-w-[32px] h-full flex items-end justify-center rounded-full p-1 transition-all duration-200 ${
+                className={`w-full max-w-[28px] sm:max-w-[32px] h-full max-h-[110px] sm:max-h-[120px] flex items-end justify-center rounded-full p-1 transition-all duration-200 ${
                   isHovered
                     ? 'bg-rose-500/20 ring-2 ring-rose-500/40'
                     : 'bg-slate-100/90 dark:bg-white/[0.04]'

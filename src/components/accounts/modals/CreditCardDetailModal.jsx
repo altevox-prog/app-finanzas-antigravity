@@ -96,9 +96,9 @@ export default function CreditCardDetailModal({
 
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 animate-fadeIn">
+    <div className="fixed inset-0 bg-black/40 transition-opacity flex items-end sm:items-center justify-center z-[60] animate-fadeIn">
       <div 
-        className="rounded-t-[32px] sm:rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 animate-slide-up flex flex-col max-h-[92vh] overflow-hidden"
+        className="relative z-10 rounded-t-[32px] sm:rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 animate-slide-up flex flex-col max-h-[92vh] overflow-hidden"
         style={{ 
           color: 'var(--text-main, #ffffff)' 
         }}

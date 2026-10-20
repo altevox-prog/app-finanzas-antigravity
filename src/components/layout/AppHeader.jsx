@@ -265,19 +265,32 @@ export default function AppHeader({
         </div>
       )}
 
-      {/* Top Header Panorámico de Escritorio (visible en lg:) continuo full-width con acabado Dark Glass Neón */}
+      {/* Top Header Panorámico de Escritorio (visible en lg:) continuo full-width con estilo Consola Oscura y Top Glow */}
       {!mobileOnly && (
-        <header className={`${desktopOnlyClass} sticky top-0 z-40 w-full h-16 shrink-0 select-none relative bg-white/80 dark:bg-[#0D0F17]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.06] shadow-xs flex items-center`}>
-          {/* Línea base sutil con difuminado lateral */}
-          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent pointer-events-none z-0" />
+        <header className={`${desktopOnlyClass} sticky top-0 z-40 w-full h-16 shrink-0 select-none relative bg-[#090A0F]/95 backdrop-blur-md border-b border-emerald-500/10 shadow-2xl flex items-center overflow-visible`}>
+          {/* Resplandor esmeralda difuminado hacia arriba (Top Glow) */}
+          <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-emerald-500/15 via-emerald-500/5 to-transparent pointer-events-none z-0" />
+          <div className="absolute top-0 left-1/4 right-1/4 h-8 bg-emerald-500/20 blur-2xl pointer-events-none z-0" />
+
+          {/* Línea sutil inferior con acento esmeralda */}
+          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/35 to-transparent pointer-events-none z-0" />
 
           <div className="w-full px-6 flex items-center justify-between gap-3 relative z-10">
-            {/* Extremo Izquierdo: Logotipo e isotipo 'Finanzas al día' con texto blanco */}
-            <div className="flex items-center gap-3 shrink-0">
-              <AppLogo size="sm" showText={false} />
-              <span className="text-base sm:text-lg font-bold text-white tracking-tight select-none">
-                Finanzas al día
-              </span>
+            {/* Extremo Izquierdo: Brand Identity Monety */}
+            <div className="flex items-center gap-2.5 select-none shrink-0">
+              <AppLogo 
+                size="sm" 
+                showText={false} 
+                iconClassName="w-8 h-8 sm:w-9 sm:h-9 rounded-full [&_img]:rounded-full shadow-sm ring-1 ring-white/10" 
+              />
+              <div className="flex flex-col min-w-0">
+                <span className="text-base sm:text-lg font-black tracking-tight text-white leading-none">
+                  Monety
+                </span>
+                <span className="text-[9px] font-bold tracking-wider text-emerald-400 uppercase leading-none mt-0.5">
+                  Finanzas Personales
+                </span>
+              </div>
             </div>
 
             {/* Extremo Derecho: TRM, Ojo, Notificaciones, Avatar de usuario */}
@@ -291,7 +304,7 @@ export default function AppHeader({
                     className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
                       isSearchActive
                         ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                        : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
+                        : 'bg-[#12151E] border border-white/10 text-slate-200 hover:text-white hover:border-white/20'
                     }`}
                     title="Buscar movimientos"
                     aria-label="Buscar movimientos"
@@ -304,7 +317,7 @@ export default function AppHeader({
                     className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer relative active:scale-95 shadow-sm ${
                       hasActiveFilters
                         ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                        : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
+                        : 'bg-[#12151E] border border-white/10 text-slate-200 hover:text-white hover:border-white/20'
                     }`}
                     title="Filtros avanzados"
                     aria-label="Filtros avanzados"
@@ -324,7 +337,7 @@ export default function AppHeader({
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent('monety:open-add-account'))}
-                  className="w-9 h-9 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm mr-1"
+                  className="w-9 h-9 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm mr-1"
                   title="Añadir nueva cuenta"
                   aria-label="Agregar cuenta"
                 >
@@ -334,7 +347,7 @@ export default function AppHeader({
 
               {/* TRM Oficial Automatizado (No editable) */}
               <div 
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-xs text-slate-700 dark:text-slate-300 font-medium select-none shadow-sm"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#12151E] border border-white/10 text-xs text-slate-200 font-medium select-none shadow-sm"
                 title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
@@ -348,7 +361,7 @@ export default function AppHeader({
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
                   isPrivacyMode
                     ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30'
-                    : 'bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15]'
+                    : 'bg-[#12151E] border border-white/10 text-slate-200 hover:text-white hover:border-white/20'
                 }`}
                 title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"}
                 aria-label="Modo discreto"
@@ -365,7 +378,7 @@ export default function AppHeader({
                 <button
                   type="button"
                   onClick={() => setIsNotificationCenterOpen((prev) => !prev)}
-                  className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:dark:text-white hover:dark:border-white/[0.15] relative transition-colors cursor-pointer shadow-sm active:scale-95"
+                  className="w-9 h-9 rounded-full flex items-center justify-center bg-[#12151E] border border-white/10 text-slate-200 hover:text-white hover:border-white/20 relative transition-colors cursor-pointer shadow-sm active:scale-95"
                   title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"}
                   aria-label="Centro de notificaciones"
                 >

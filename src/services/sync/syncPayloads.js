@@ -468,13 +468,15 @@ export function buildBudgetsPayload(
   if (currentBudgets.categories && typeof currentBudgets.categories === 'object') {
     Object.entries(currentBudgets.categories).forEach(([catId, amount]) => {
       const numAmt = Number(amount || 0);
-      if (numAmt > 0) {
+      if (amount !== undefined && amount !== null && amount !== '' && !isNaN(numAmt) && numAmt >= 0) {
+        const catIdentifier = String(catId || 'General');
+
         budgetsPayload.push({
-          id: ensureUUID(`${userId}-budget-${catId}`),
+          id: ensureUUID(`${userId}-budget-${catIdentifier}`),
           user_id: userId,
-          name: `Presupuesto ${catId}`,
-          category: catId || 'General',
-          category_id: catId,
+          name: `Presupuesto ${catIdentifier}`,
+          category: catIdentifier,
+          category_id: catIdentifier,
           period: currentBudgets.period || 'monthly',
           amount: numAmt,
           is_global: false,

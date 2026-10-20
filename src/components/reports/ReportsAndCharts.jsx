@@ -134,10 +134,6 @@ export default function ReportsAndCharts({
     };
   }, [scopedTransactions, categories]);
 
-  const topCategories = useMemo(() => categoryExpenses.slice(0, 4), [categoryExpenses]);
-  const remainingCount = Math.max(0, categoryExpenses.length - 4);
-  const hoveredCategory = useMemo(() => categoryExpenses.find(c => c.id === hoveredCategoryId), [categoryExpenses, hoveredCategoryId]);
-
   // Period label for pill
   const periodLabel = selectedDay 
     ? selectedDay.split('-').slice(1).join('/')
@@ -146,10 +142,10 @@ export default function ReportsAndCharts({
   return (
     <div 
       onClick={() => handleNav('transactions')}
-      className="h-auto flex flex-col p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] shadow-sm hover:border-emerald-500/40 hover:shadow-sm transition-all cursor-pointer group select-none"
+      className="h-auto flex flex-col py-2 px-3.5 sm:px-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] shadow-sm hover:border-emerald-500/40 hover:shadow-sm transition-all cursor-pointer group select-none"
     >
       {/* Cabecera limpia interna con total */}
-      <div className="flex items-center justify-between gap-2 mb-3.5">
+      <div className="flex items-center justify-between gap-2 mb-1">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
           <PieChart className="w-4 h-4 text-emerald-500 shrink-0" />
           <span>Tus gastos</span>
@@ -161,9 +157,8 @@ export default function ReportsAndCharts({
         )}
       </div>
 
-      {/* Zona de visualización (Layout Horizontal 2 Columnas) */}
-      <div className="flex items-center justify-between gap-3">
-        {/* Columna Izquierda (Mini-Dona estilizada) */}
+      {/* Gráfico Donut Compacto */}
+      <div className="w-full flex items-center justify-center h-[148px] max-h-[150px] py-0">
         <CategoryDonutChart
           categories={categoryExpenses}
           totalExpenses={totalExpense}
@@ -172,62 +167,47 @@ export default function ReportsAndCharts({
           formatMoney={formatMoney}
           getCategoryEmoji={getCategoryEmoji}
         />
-
-        {/* Columna Derecha (Icono si vacío, o Top 4 categorías) */}
-        {categoryExpenses.length === 0 ? (
-          <div className="flex-1 flex flex-col justify-center items-center text-center pl-2 py-4">
-            <span className="text-2xl mb-1">🌱</span>
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Sin gastos este mes</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500">Tus finanzas están al día</p>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col justify-center gap-2 pl-1 min-w-0">
-            {topCategories.map((cat, index) => {
-              const displayEmoji = getCategoryEmoji(cat, cat.name);
-              const isHovered = hoveredCategoryId === cat.id;
-
-              return (
-                <div 
-                  key={`top-cat-${cat.id || cat.name || 'unassigned'}-${index}`} 
-                  onMouseEnter={() => setHoveredCategoryId(cat.id)}
-                  onMouseLeave={() => setHoveredCategoryId(null)}
-                  className={`flex flex-col gap-1 group/row rounded-lg p-1 transition-all ${
-                    isHovered ? 'bg-slate-100/80 dark:bg-white/[0.04]' : ''
-                  }`}
-                  title={`${cat.name}: ${formatMoney(cat.amount)}`}
-                >
-                  <div className="flex items-center justify-between text-[11px] leading-tight">
-                    <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300 truncate">
-                      <span className="text-xs shrink-0 leading-none">{displayEmoji}</span>
-                      <span className="truncate group-hover/row:text-emerald-500 transition-colors">
-                        {cat.name}
-                      </span>
-                    </span>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
-                      <span className="font-semibold text-slate-400 dark:text-slate-500 text-[10px] tabular-nums">
-                        {cat.percentage}%
-                      </span>
-                      <span className="font-bold text-slate-900 dark:text-slate-50 tabular-nums">
-                        {formatMoney(cat.amount)}
-                      </span>
-                    </div>
-                  </div>
-                  {/* Barra compacta de progreso con su color */}
-                  <div className="w-full h-1.5 bg-slate-100 dark:bg-white/[0.04] rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${Math.min(100, Math.max(4, cat.exactPercent))}%`, 
-                        backgroundColor: cat.color 
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
+
+      {/* Leyenda Horizontal Inferior (Píldoras) */}
+      {categoryExpenses.length === 0 ? (
+        <div className="flex items-center justify-center pt-1 pb-0.5">
+          <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.06] text-xs text-slate-400 dark:text-zinc-500 font-medium">
+            <span>🌱 Sin gastos registrados este mes</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 pt-1 pb-0.5 w-full">
+          {categoryExpenses.map((cat, index) => {
+            const isHovered = hoveredCategoryId === cat.id;
+
+            return (
+              <div 
+                key={`cat-pill-${cat.id || cat.name || index}`}
+                onMouseEnter={() => setHoveredCategoryId(cat.id)}
+                onMouseLeave={() => setHoveredCategoryId(null)}
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-50 dark:bg-white/[0.04] border transition-all cursor-pointer select-none ${
+                  isHovered 
+                    ? 'border-emerald-500/50 bg-emerald-500/10 shadow-xs scale-105' 
+                    : 'border-slate-100 dark:border-white/[0.06] hover:border-slate-300 dark:hover:border-white/[0.15]'
+                }`}
+                title={`${cat.name}: $ ${Number(cat.amount).toLocaleString('es-CO')} (${cat.percentage}%)`}
+              >
+                <span 
+                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" 
+                  style={{ backgroundColor: cat.color }} 
+                />
+                <span className="text-xs text-slate-600 dark:text-zinc-300 font-medium truncate max-w-[110px]">
+                  {cat.name}
+                </span>
+                <span className="text-slate-400 dark:text-zinc-500 text-[11px] font-semibold tabular-nums">
+                  {cat.percentage}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

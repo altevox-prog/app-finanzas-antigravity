@@ -34,25 +34,30 @@ export default function RecurringPaymentsWidget({
   return (
     <div 
       onClick={() => handleNav('recurring')}
-      className="p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden"
+      className="p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden w-full min-h-[135px]"
     >
       <div>
-        {/* Cabecera interna limpia ([📅] Presupuesto mensual) sin elementos flotantes externos */}
-        <div className="flex items-center justify-between gap-2 mb-3">
+        {/* Cabecera interna limpia ([📅] Pagos Recurrentes) */}
+        <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 min-w-0">
             <CalendarSync className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="truncate uppercase">PRESUPUESTO MENSUAL</span>
+            <span className="truncate uppercase">PAGOS RECURRENTES</span>
           </span>
+          {activeRecurring.length > 0 && (
+            <span className="text-[10px] text-slate-400 font-semibold font-mono">
+              {activeRecurring.length} {activeRecurring.length === 1 ? 'activo' : 'activos'}
+            </span>
+          )}
         </div>
 
         {/* Cuerpo */}
-        <div className="mt-1">
+        <div className="mt-0.5">
           {activeRecurring.length === 0 ? (
-            <div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <div className="py-1">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 Sin pagos activos
               </h3>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 font-medium">
                 No tienes suscripciones o pagos periódicos este mes.
               </p>
             </div>
@@ -66,7 +71,7 @@ export default function RecurringPaymentsWidget({
                   / mes
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 font-medium">
                 Total programado para el período
               </p>
             </div>

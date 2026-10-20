@@ -364,6 +364,8 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
 
     handleOpenSettings,
     handleOpenProfile,
+    openProfileModal: handleOpenProfile,
+    openSettingsModal: handleOpenSettings,
     handleCloseAllModals,
     modalFlags
   };

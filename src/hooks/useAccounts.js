@@ -18,8 +18,11 @@ export function mapSupabaseRowToAccount(row) {
   const parsedBalance = toSafeNumber(
     row.balance ?? row.current_balance ?? row.initial_balance ?? rawData.balance ?? 0
   );
+  const rawInit = row.initial_balance ?? rawData.initial_balance;
   const parsedInitial = toSafeNumber(
-    row.initial_balance ?? rawData.initial_balance ?? parsedBalance
+    rawInit !== undefined && rawInit !== null && Number(rawInit) !== 0
+      ? rawInit
+      : parsedBalance
   );
 
   return {
@@ -461,7 +464,16 @@ export function useAccounts({
 
     setAccounts((prev) =>
       prev.map((acc) =>
-        acc.id === accountId ? { ...acc, balance: parsedBalance, currentBalance: parsedBalance, updated_at: nowIso } : acc
+        acc.id === accountId
+          ? {
+              ...acc,
+              balance: parsedBalance,
+              currentBalance: parsedBalance,
+              initialBalance: parsedBalance,
+              initial_balance: parsedBalance,
+              updated_at: nowIso
+            }
+          : acc
       )
     );
 
@@ -470,7 +482,11 @@ export function useAccounts({
         const user = activeUserRef.current || (await getSupabaseUser());
         let query = supabase
           .from('accounts')
-          .update({ balance: parsedBalance, updated_at: nowIso })
+          .update({
+            balance: parsedBalance,
+            initial_balance: parsedBalance,
+            updated_at: nowIso
+          })
           .eq('id', ensureUUID(accountId));
         if (user?.id) query = query.eq('user_id', user.id);
         await query;

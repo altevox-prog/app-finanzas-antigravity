@@ -35,6 +35,7 @@ import BentoMetricsGrid from '../common/BentoMetricsGrid';
 import MetricCardsGrid from './widgets/MetricCardsGrid';
 import TopAccountsWidget from './widgets/TopAccountsWidget';
 import RecentTransactionsWidget from './widgets/RecentTransactionsWidget';
+import BudgetWidget from './widgets/BudgetWidget';
 
 export const WIDGET_ICON_MAP = {
   Landmark,
@@ -153,6 +154,15 @@ export function createWidgetRegistry({
       <SavingsRateWidget
         savingsRate={savingsRate}
         freeCash={freeCash}
+        formatMoney={formatMoney}
+      />
+    ),
+
+    budget: (
+      <BudgetWidget
+        monthlyStats={monthlyStats}
+        totalIncome={totalIncome}
+        totalExpense={totalExpense}
         formatMoney={formatMoney}
       />
     ),
@@ -323,7 +333,8 @@ export const getWidgetRegistry = createWidgetRegistry;
  */
 export const getWidgetComponent = (id, registry) => {
   if (!registry || !id) return null;
-  return registry[normalizeWidgetId(id)] || registry[id] || null;
+  const norm = normalizeWidgetId(id);
+  return registry[norm] || registry[id] || (norm === 'debts_loans' || id === 'debts_loans' ? registry.debts : null) || null;
 };
 
 /**

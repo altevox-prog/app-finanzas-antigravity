@@ -8,7 +8,8 @@ import {
   normalizeRemoteInvestment,
   normalizeRemoteRecurring,
   resolveRemoteBudgets,
-  normalizeRemoteCategory
+  normalizeRemoteCategory,
+  normalizeRemoteGoal
 } from '../services/sync/syncNormalizers';
 import {
   buildAccountsPayload,
@@ -291,10 +292,29 @@ export function useDataSync({
         }
       }
 
-      // Metas de ahorro
+      // Metas de ahorro (preservando metadatos locales extendidos)
       if (goalsRes.status === 'fulfilled' && !goalsRes.value.error && Array.isArray(goalsRes.value.data)) {
-        if (typeof setSavingsGoals === 'function') {
-          setSavingsGoals(goalsRes.value.data);
+        if (goalsRes.value.data.length > 0) {
+          if (typeof setSavingsGoals === 'function') {
+            setSavingsGoals((prevLocal) => {
+              const localList = Array.isArray(prevLocal) && prevLocal.length > 0 ? prevLocal : (latestDataRef.current?.savingsGoals || []);
+              const localMap = new Map((localList || []).map(g => [String(g.id), g]));
+              return goalsRes.value.data.map((remoteGoal) => {
+                const local = localMap.get(String(remoteGoal.id)) || {};
+                return normalizeRemoteGoal({
+                  ...local,
+                  ...remoteGoal,
+                  target_amount: Number(remoteGoal.target_amount ?? local.target_amount ?? local.targetAmount ?? 0),
+                  current_amount: Number(remoteGoal.current_amount ?? local.current_amount ?? local.currentAmount ?? 0),
+                });
+              }).filter(Boolean);
+            });
+          }
+        } else if ((latestDataRef.current.savingsGoals || []).length > 0) {
+          // Si la nube está vacía pero localmente hay metas de ahorro, sincronizar hacia la nube
+          setTimeout(() => {
+            pushLocalToCloud();
+          }, 800);
         }
       }
 
@@ -455,6 +475,46 @@ export function useDataSync({
         }
       }
 
+      // 8. SINCRONIZAR METAS DE AHORRO (Esquema enriquecido completo hacia Supabase)
+      if (Array.isArray(current.savingsGoals) && current.savingsGoals.length > 0) {
+        try {
+          const savingsGoalsPayload = current.savingsGoals.map((goal) => {
+            const normalized = normalizeRemoteGoal(goal);
+            return {
+              id: String(normalized.id),
+              user_id: userId,
+              name: String(normalized.name || 'Meta de Ahorro').trim(),
+              target_amount: Number(normalized.target_amount ?? normalized.targetAmount ?? 0),
+              current_amount: Number(normalized.current_amount ?? normalized.currentAmount ?? 0),
+              deadline: normalized.deadline || null,
+              icon: normalized.icon || 'Target',
+              color: normalized.color || '#10B981',
+              months: normalized.months ? Number(normalized.months) : 6,
+              target_account_id: normalized.target_account_id || normalized.targetAccountId || null,
+              notification_day: normalized.notification_day ? Number(normalized.notification_day) : 15,
+              notify_enabled: normalized.notify_enabled !== undefined ? Boolean(normalized.notify_enabled) : true,
+              created_at: normalized.created_at || nowIso,
+              updated_at: nowIso
+            };
+          });
+
+          await syncApiService.upsertWithFallback('savings_goals', savingsGoalsPayload, {
+            onConflict: 'id',
+            fallbackConflict: 'id,user_id',
+            sanitize: (payload) => payload.map(item => ({
+              id: item.id,
+              user_id: item.user_id,
+              name: item.name,
+              target_amount: Number(item.target_amount ?? item.targetAmount ?? 0),
+              current_amount: Number(item.current_amount ?? item.currentAmount ?? 0),
+              deadline: item.deadline || null
+            }))
+          });
+        } catch (goalSyncErr) {
+          console.warn('[useDataSync] Sincronización de savings_goals omitida de forma segura:', goalSyncErr);
+        }
+      }
+
       setSyncStatus('synced');
       setLastSyncTime(new Date());
       return { success: true };
@@ -502,7 +562,7 @@ export function useDataSync({
         (recurringPayments || []).map(x => `${x.id}:${x.amount}:${x.is_active}`).join('|'),
         `${budgets?.global || 0}:${Object.entries(budgets?.categories || {}).map(([k, v]) => `${k}=${v}`).sort().join(',')}`,
         (categories || []).map(x => `${x.id}:${(x.subcategories || []).map(s => s.name || s).join(',')}`).join('|'),
-        (savingsGoals || []).map(x => `${x.id}:${x.currentAmount}:${x.targetAmount}`).join('|')
+        (savingsGoals || []).map(x => `${x.id}:${x.currentAmount ?? x.current_amount}:${x.targetAmount ?? x.target_amount}:${x.name}`).join('|')
       ].join('###');
     } catch {
       currentSignature = '';

@@ -2,6 +2,8 @@
  * Servicio de persistencia y sanitización de presupuestos
  */
 
+import { ensureUUID } from '../syncEngine';
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
@@ -136,9 +138,17 @@ export async function persistGlobalBudget({
 /**
  * Guarda y actualiza el presupuesto por categoría.
  */
-export function persistCategoryBudget({ catId, amount, budgets, onUpdateBudgets }) {
-  const numericVal = Number(amount);
-  if (numericVal < 0) {
+export async function persistCategoryBudget({
+  catId,
+  amount,
+  budgets,
+  onUpdateBudgets,
+  supabase,
+  isSupabaseConfigured,
+  user
+}) {
+  const numericVal = Number(amount || 0);
+  if (numericVal < 0 || isNaN(numericVal)) {
     throw new Error('Ingresa un monto válido.');
   }
 
@@ -152,6 +162,96 @@ export function persistCategoryBudget({ catId, amount, budgets, onUpdateBudgets 
 
   if (typeof onUpdateBudgets === 'function') {
     onUpdateBudgets(updated);
+  }
+
+  try {
+    localStorage.setItem('presu_budgets_v1', JSON.stringify(updated));
+    localStorage.setItem('budgets', JSON.stringify(updated));
+  } catch {}
+
+  // Sincronizar directamente con Supabase si está disponible
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const targetUserId = authData?.user?.id || (user?.id !== 'local-user' ? user?.id : null);
+      if (targetUserId) {
+        const nowIso = new Date().toISOString();
+        const catBudgetId = ensureUUID(`${targetUserId}-budget-${catId}`);
+        const catRecord = {
+          id: catBudgetId,
+          user_id: targetUserId,
+          name: `Presupuesto ${catId}`,
+          category: String(catId),
+          category_id: String(catId),
+          period: 'monthly',
+          amount: numericVal,
+          is_global: false,
+          updated_at: nowIso,
+        };
+
+        const { error: bErr } = await supabase.from('budgets').upsert([catRecord], { onConflict: 'id' });
+        if (bErr) {
+          console.warn('[budgetService] Error al guardar presupuesto de categoría en Supabase:', bErr.message);
+        }
+      }
+    } catch (e) {
+      console.warn('[budgetService] Excepción al guardar presupuesto de categoría en Supabase:', e);
+    }
+  }
+
+  return updated;
+}
+
+/**
+ * Elimina el presupuesto por categoría tanto en estado local como en Supabase.
+ */
+export async function removeCategoryBudget({
+  catId,
+  budgets,
+  onUpdateBudgets,
+  supabase,
+  isSupabaseConfigured,
+  user
+}) {
+  if (!catId) return budgets;
+
+  const updatedCategories = { ...(budgets?.categories || {}) };
+  delete updatedCategories[catId];
+
+  const updated = {
+    ...budgets,
+    categories: updatedCategories,
+  };
+
+  if (typeof onUpdateBudgets === 'function') {
+    onUpdateBudgets(updated);
+  }
+
+  try {
+    localStorage.setItem('presu_budgets_v1', JSON.stringify(updated));
+    localStorage.setItem('budgets', JSON.stringify(updated));
+  } catch {}
+
+  // Eliminar físicamente en Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const targetUserId = authData?.user?.id || (user?.id !== 'local-user' ? user?.id : null);
+      if (targetUserId) {
+        const catBudgetId = ensureUUID(`${targetUserId}-budget-${catId}`);
+        const { error } = await supabase
+          .from('budgets')
+          .delete()
+          .eq('id', catBudgetId)
+          .eq('user_id', targetUserId);
+
+        if (error) {
+          console.warn('[budgetService] Error al eliminar presupuesto de categoría en Supabase:', error.message);
+        }
+      }
+    } catch (e) {
+      console.warn('[budgetService] Excepción al eliminar presupuesto de categoría en Supabase:', e);
+    }
   }
 
   return updated;

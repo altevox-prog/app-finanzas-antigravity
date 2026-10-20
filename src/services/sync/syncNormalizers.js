@@ -359,7 +359,8 @@ export function resolveRemoteBudgets(remoteBudgetsOrRes, userSettingsData = null
     // Priorizar explícitamente registro con is_global: true
     const globalRow = remoteBudgetList.find(b => b.is_global === true || b.is_global === 'true')
       || remoteBudgetList.find(b => b.isGlobal === true || b.isGlobal === 'true')
-      || remoteBudgetList.find(b => b.name === 'Límite Global' || b.name === 'Presupuesto Global' || !b.category_id);
+      || remoteBudgetList.find(b => b.name === 'Límite Global' || b.name === 'Presupuesto Global')
+      || remoteBudgetList.find(b => !b.category_id && (!b.category || b.category === 'General'));
 
     if (globalRow) {
       loadedGlobal = Number(globalRow.amount || 0);
@@ -371,9 +372,14 @@ export function resolveRemoteBudgets(remoteBudgetsOrRes, userSettingsData = null
     }
 
     remoteBudgetList.forEach(b => {
-      const isRowGlobal = b.is_global === true || b.is_global === 'true' || b.isGlobal === true || b.isGlobal === 'true' || b.name === 'Límite Global' || b.name === 'Presupuesto Global' || !b.category_id;
-      if (!isRowGlobal && b.category_id) {
-        categoriesMap[b.category_id] = Number(b.amount || 0);
+      const isRowGlobal = b.is_global === true || b.is_global === 'true' 
+        || b.isGlobal === true || b.isGlobal === 'true' 
+        || b.name === 'Límite Global' || b.name === 'Presupuesto Global' 
+        || (!b.category_id && (!b.category || b.category === 'General'));
+
+      const catKey = (b.category && b.category !== 'General') ? b.category : b.category_id;
+      if (!isRowGlobal && catKey && catKey !== 'General') {
+        categoriesMap[catKey] = Number(b.amount || 0);
       }
     });
   }
@@ -469,5 +475,53 @@ export function normalizeRemoteCategory(c, currentCategories = []) {
   return {
     ...c,
     subcategories: Array.isArray(subcategories) ? subcategories : []
+  };
+}
+
+/**
+ * Normaliza una meta de ahorro garantizando compatibilidad de nombres (camelCase y snake_case).
+ *
+ * @param {Object} g - Meta proveniente de Supabase o localStorage
+ * @returns {Object|null} Meta normalizada con targetAmount/target_amount y currentAmount/current_amount
+ */
+export function normalizeRemoteGoal(g) {
+  if (!g || typeof g !== 'object') return null;
+
+  const rawDate = g.deadline || g.target_date || g.dueDate || '';
+  let safeDate = '';
+  if (rawDate) {
+    try {
+      safeDate = new Date(rawDate).toISOString().split('T')[0];
+    } catch {
+      safeDate = String(rawDate).split('T')[0];
+    }
+  }
+
+  const targetNum = Number(g.target_amount ?? g.targetAmount ?? 0);
+  const currentNum = Number(g.current_amount ?? g.currentAmount ?? 0);
+
+  return {
+    ...g,
+    id: String(g.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`)),
+    user_id: g.user_id,
+    name: (g.name || 'Nueva Meta').trim(),
+    target_amount: targetNum,
+    targetAmount: targetNum,
+    current_amount: currentNum,
+    currentAmount: currentNum,
+    deadline: safeDate,
+    target_date: safeDate,
+    dueDate: safeDate,
+    icon: g.icon || 'Target',
+    color: g.color || '#10B981',
+    target_account_id: g.target_account_id || g.targetAccountId || null,
+    targetAccountId: g.target_account_id || g.targetAccountId || null,
+    months: g.months ? Number(g.months) : 6,
+    notification_day: g.notification_day ? Number(g.notification_day) : (g.notificationDay ? Number(g.notificationDay) : 15),
+    notificationDay: g.notification_day ? Number(g.notification_day) : (g.notificationDay ? Number(g.notificationDay) : 15),
+    notify_enabled: g.notify_enabled !== undefined ? Boolean(g.notify_enabled) : (g.notifyEnabled !== undefined ? Boolean(g.notifyEnabled) : true),
+    notifyEnabled: g.notify_enabled !== undefined ? Boolean(g.notify_enabled) : (g.notifyEnabled !== undefined ? Boolean(g.notifyEnabled) : true),
+    created_at: g.created_at || new Date().toISOString(),
+    updated_at: g.updated_at || new Date().toISOString()
   };
 }

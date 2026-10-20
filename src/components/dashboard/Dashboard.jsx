@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import useDashboardMetrics from '../../hooks/useDashboardMetrics';
@@ -11,6 +11,9 @@ import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import DashboardModals from './DashboardModals';
 import MonthlyNetHeroCard from './MonthlyNetHeroCard';
 import AccountsWidget from './widgets/AccountsWidget';
+import RecentMovementsSection from './RecentMovementsSection';
+import RecurringPaymentsWidget from './widgets/RecurringPaymentsWidget';
+import WeeklyExpensesChart from './WeeklyExpensesChart';
 
 // Re-exports de compatibilidad para módulos que consumían widgets satélite desde Dashboard.jsx
 export { default as MonthlyNetHeroCard } from './MonthlyNetHeroCard';
@@ -50,6 +53,31 @@ export default function Dashboard({
   const [selectedTxForEdit, setSelectedTxForEdit] = useState(null);
   const [selectedTxForReceipt, setSelectedTxForReceipt] = useState(null);
 
+  // Detección responsive para límites adaptativos de transacciones (móvil vs escritorio)
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 1024px)');
+    const updateMatch = (e) => setIsDesktopViewport(e.matches);
+    setIsDesktopViewport(media.matches);
+    if (media.addEventListener) {
+      media.addEventListener('change', updateMatch);
+      return () => media.removeEventListener('change', updateMatch);
+    } else if (media.addListener) {
+      media.addListener(updateMatch);
+      return () => media.removeListener(updateMatch);
+    }
+  }, []);
+
+  const isEffectiveDesktop = isForcedDesktop || (!isForcedMobile && isDesktopViewport);
+  const recentTxLimit = 4;
+
   const handleSelectTransaction = (tx) => {
     if (!tx || typeof tx !== 'object') return;
     setSelectedTxForDetail(tx);
@@ -59,12 +87,12 @@ export default function Dashboard({
     ...prev, [`is${type ? type.charAt(0).toUpperCase() + type.slice(1) : ''}ModalOpen`]: false 
   }));
 
-  const navigateToTab = (rawTab) => {
+  const navigateToTab = (rawTab, extra) => {
     const tab = (rawTab === 'movements' || rawTab === 'movimientos') ? 'transactions' : (rawTab === 'inicio') ? 'dashboard' : (rawTab === 'cuentas') ? 'accounts' : rawTab;
-    if (financeActions?.setActiveTab) financeActions.setActiveTab(tab);
-    else if (financeActions?.handleTabChange) financeActions.handleTabChange(tab);
-    else if (typeof onNavigateToTab === 'function') onNavigateToTab(tab);
-    else if (typeof setActiveTab === 'function') setActiveTab(tab);
+    if (financeActions?.setActiveTab) financeActions.setActiveTab(tab, extra);
+    else if (financeActions?.handleTabChange) financeActions.handleTabChange(tab, extra);
+    else if (typeof onNavigateToTab === 'function') onNavigateToTab(tab, extra);
+    else if (typeof setActiveTab === 'function') setActiveTab(tab, extra);
   };
 
   const handleOpenDebtModal = (type = 'payable') => {
@@ -87,7 +115,11 @@ export default function Dashboard({
   };
 
   const handleOpenTxModal = (type = 'expense') => {
-    const norm = (type === 'income' || type === 'ingreso') ? 'income' : 'expense';
+    const norm = (type === 'income' || type === 'ingreso') 
+      ? 'income' 
+      : (type === 'transfer' || type === 'transferencia') 
+        ? 'transfer' 
+        : 'expense';
     if (typeof onOpenTransaction === 'function') onOpenTransaction(norm);
     else if (typeof onOpenAddTransaction === 'function') onOpenAddTransaction(norm);
     else if (financeActions?.openAddTransaction) financeActions.openAddTransaction(norm);
@@ -119,6 +151,76 @@ export default function Dashboard({
     handleTouchEnd, handleFinishReordering, handleToggleVisibility
   } = useWidgetReorder({ widgetsConfig, widgetsProp, allowedWidgetIds, onSaveWidgets, getWidget });
 
+  const ignoredWidgetIds = new Set([
+    'liquid_balance', 'available_balance', 'balance_summary', 'my_accounts', 'accounts',
+    'recent_movements', 'recent_transactions',
+    'recurring_payments', 'subscriptions', 'balance_cards', 'monthly_income',
+    'monthly_expense', 'top_accounts'
+  ]);
+
+  const hasWidget = (id) => {
+    const norm = normalizeWidgetId(id);
+    return visibleWidgets.some(w => normalizeWidgetId(w.id) === norm);
+  };
+
+  const getWidgetIndex = (id) => {
+    const norm = normalizeWidgetId(id);
+    const idx = visibleWidgets.findIndex(w => normalizeWidgetId(w.id) === norm);
+    return idx >= 0 ? idx : 0;
+  };
+
+  const operativeWidgets = visibleWidgets.filter(w => {
+    const norm = normalizeWidgetId(w.id);
+    if (ignoredWidgetIds.has(norm) || ignoredWidgetIds.has(w.id)) return false;
+    return norm === 'weekly_cashflow' || norm === 'weekly_cashflow_classic';
+  });
+
+  const analyticalWidgets = visibleWidgets.filter(w => {
+    const norm = normalizeWidgetId(w.id);
+    if (ignoredWidgetIds.has(norm) || ignoredWidgetIds.has(w.id)) return false;
+    return norm !== 'weekly_cashflow' && norm !== 'weekly_cashflow_classic';
+  });
+
+
+  const renderWidgetItem = (w, index) => {
+    const norm = normalizeWidgetId(w.id);
+    if (
+      norm === 'liquid_balance' || 
+      norm === 'available_balance' || 
+      norm === 'balance_summary' || 
+      norm === 'my_accounts' || 
+      norm === 'accounts'
+    ) {
+      return null;
+    }
+    const isInvestments = norm === 'investments' || w.id === 'investments';
+    const widgetComponent = getWidget(w.id);
+    if (!widgetComponent) return null;
+
+    return (
+      <DashboardWidgetWrapper
+        key={w.id} 
+        id={w.id} 
+        index={index} 
+        isReordering={isReordering} 
+        draggedIndex={draggedIndex}
+        className={`${isInvestments ? (isForcedMobile ? 'hidden' : 'hidden md:block') : ''}`}
+        onPressStart={handlePressStart} 
+        onPressEnd={handlePressEnd}
+        onTouchStart={handleTouchStart} 
+        onTouchMove={handleTouchMove} 
+        onTouchEnd={handleTouchEnd}
+        onDragStart={handleDragStart} 
+        onDragOver={handleDragOver} 
+        onDrop={handleDrop} 
+        onDragEnd={handleDragEnd}
+        onToggleVisibility={handleToggleVisibility}
+      >
+        {widgetComponent}
+      </DashboardWidgetWrapper>
+    );
+  };
+
   return (
     <>
       {isReordering && (
@@ -131,106 +233,291 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* Saludo y contexto de bienvenida en Escritorio / Tablet */}
-      <div className={`${isForcedDesktop ? 'block' : 'hidden lg:block'} pt-1`}>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">
-          Hola, {userName}
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
-          Resumen financiero y actividad
-        </p>
-      </div>
+      {/* Bento Grid Principal In-Situ (Estructura Unificada para Lectura y Edición) */}
+      <div className={`w-full max-w-[1600px] mx-auto px-3 sm:px-6 py-4 space-y-6 ${className || ''}`}>
+        {/* 1. Header Saludo */}
+        <div className={`${isForcedDesktop ? 'block' : 'hidden lg:block'} pt-1`}>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">
+            Hola, {userName}
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+            Resumen financiero de {currentMonthLabel || 'este mes'}
+          </p>
+        </div>
 
-      {/* Hero Net Summary Card (Fijo y estático, fuera del grid de widgets reordenables) */}
-      <MonthlyNetHeroCard
-        netBalance={metrics.netBalance}
-        totalIncome={metrics.totalIncome}
-        totalExpense={metrics.totalExpense}
-        transactions={transactions}
-        monthlyTransactions={monthlyTransactions || metrics.scopedTransactions}
-        selectedDate={selectedDate}
-        selectedDay={selectedDay}
-        currentMonthLabel={currentMonthLabel}
-        onOpenCalendar={onOpenCalendar}
-        onOpenMonthPicker={onOpenMonthPicker || onOpenCalendar}
-        formatMoney={formatMoney}
-      />
-
-      {/* Bloque estático e inamovible de Cuentas (Consolidado de liquidez y tarjetas, fuera del grid) */}
-      <AccountsWidget
-        accounts={accounts}
-        transactions={transactions}
-        trm={trm}
-        availableLiquidBalance={metrics.availableLiquidBalance}
-        onNavigateToTab={navigateToTab}
-        setActiveTab={navigateToTab}
-        onOpenAccounts={() => navigateToTab('accounts')}
-        onSelectCreditCardDetail={onSelectCreditCardDetail}
-        formatMoney={formatMoney}
-      />
-
-      {/* Reorganización de widgets: 2 columnas en Desktop (lg:grid lg:grid-cols-12 lg:gap-6), columna única en móvil */}
-      {(() => {
-        const renderWidgetItem = (w, index) => {
-          const norm = normalizeWidgetId(w.id);
-          // Omitir widgets ya consolidados en la cabecera estática superior
-          if (
-            norm === 'liquid_balance' || 
-            norm === 'available_balance' || 
-            norm === 'balance_summary' || 
-            norm === 'my_accounts' || 
-            norm === 'accounts' ||
-            norm === 'budget' ||
-            norm === 'presupuesto_metas' ||
-            norm === 'meta' ||
-            w.id === 'budget'
-          ) {
-            return null;
-          }
-          const isInvestments = norm === 'investments' || w.id === 'investments';
-          const widgetComponent = getWidget(w.id);
-          if (!widgetComponent) return null;
-
-          const content = widgetComponent;
-
-          return (
-            <DashboardWidgetWrapper
-              key={w.id} 
-              id={w.id} 
-              index={index} 
-              isReordering={isReordering} 
-              draggedIndex={draggedIndex}
-              className={`${isInvestments ? (isForcedMobile ? 'hidden' : 'hidden md:block') : ''}`}
-              onPressStart={handlePressStart} 
-              onPressEnd={handlePressEnd}
-              onTouchStart={handleTouchStart} 
-              onTouchMove={handleTouchMove} 
-              onTouchEnd={handleTouchEnd}
-              onDragStart={handleDragStart} 
-              onDragOver={handleDragOver} 
-              onDrop={handleDrop} 
-              onDragEnd={handleDragEnd}
-              onToggleVisibility={handleToggleVisibility}
-            >
-              {content}
-            </DashboardWidgetWrapper>
-          );
-        };
-
-        const reorderStyles = isReordering 
-          ? 'select-none [&_*]:!transition-none' 
-          : (draggedIndex !== null ? 'cursor-grabbing' : '');
-
-        return (
-          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch mt-1 mb-6 w-full touch-pan-y ${reorderStyles} ${className || ''}`}>
-            {visibleWidgets.map((w, index) => renderWidgetItem(w, index))}
+        {/* 1. FILA 1: HERO HEADER FIJO (Inmóvil, permanente, no reordenable) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch w-full mb-6">
+          <div className={`${isForcedDesktop ? 'lg:col-span-7 xl:col-span-8' : (isForcedMobile ? 'col-span-1' : 'lg:col-span-7 xl:col-span-8')} flex flex-col`}>
+            <AccountsWidget
+              accounts={accounts}
+              transactions={transactions}
+              trm={trm}
+              availableLiquidBalance={metrics.availableLiquidBalance}
+              onNavigateToTab={navigateToTab}
+              setActiveTab={navigateToTab}
+              onOpenAccounts={() => navigateToTab('accounts')}
+              onSelectCreditCardDetail={onSelectCreditCardDetail}
+              formatMoney={formatMoney}
+            />
           </div>
-        );
-      })()}
 
-      {isReordering && (
-        <HiddenWidgetsSection hiddenWidgets={hiddenWidgets} onToggleVisibility={handleToggleVisibility} widgetIconMap={WIDGET_ICON_MAP} />
-      )}
+          <div className={`${isForcedDesktop ? 'lg:col-span-5 xl:col-span-4' : (isForcedMobile ? 'col-span-1' : 'lg:col-span-5 xl:col-span-4')} flex flex-col h-full [&>div]:h-full`}>
+            <MonthlyNetHeroCard
+              netBalance={metrics.netBalance}
+              totalIncome={metrics.totalIncome}
+              totalExpense={metrics.totalExpense}
+              savingsRate={metrics.savingsRate}
+              transactions={transactions}
+              monthlyTransactions={monthlyTransactions || metrics.scopedTransactions}
+              selectedDate={selectedDate}
+              selectedDay={selectedDay}
+              currentMonthLabel={currentMonthLabel}
+              onOpenCalendar={onOpenCalendar}
+              onOpenMonthPicker={onOpenMonthPicker || onOpenCalendar}
+              formatMoney={formatMoney}
+              trm={trm}
+            />
+          </div>
+        </div>
+
+        {/* 2. CONTENEDOR PRINCIPAL: MACRO BENTO GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start w-full">
+          
+          {/* COLUMNA IZQUIERDA: Operativa y Patrimonial (lg:col-span-7 xl:col-span-8) */}
+          <div className={`${isForcedDesktop ? 'lg:col-span-7 xl:col-span-8' : (isForcedMobile ? 'col-span-1' : 'lg:col-span-7 xl:col-span-8')} flex flex-col gap-5 sm:gap-6`}>
+            {/* 1. Actividad de Gastos */}
+            {hasWidget('weekly_cashflow') && (
+              <DashboardWidgetWrapper
+                id="weekly_cashflow"
+                index={getWidgetIndex('weekly_cashflow')}
+                isReordering={isReordering}
+                draggedIndex={draggedIndex}
+                onPressStart={handlePressStart}
+                onPressEnd={handlePressEnd}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                onToggleVisibility={handleToggleVisibility}
+              >
+                <WeeklyExpensesChart
+                  transactions={transactions}
+                  selectedDate={selectedDate}
+                  selectedDay={selectedDay}
+                  currentMonthLabel={currentMonthLabel}
+                  formatMoney={formatMoney}
+                  onSelectWeek={(weekData, maybeRange) => {
+                    const weekNum = typeof weekData === 'object'
+                      ? (weekData?.start ? Math.ceil(weekData.start / 7) : parseInt(String(weekData?.label || '').replace(/\D/g, ''), 10) || 1)
+                    : weekData;
+                    const weekRange = typeof weekData === 'object' ? weekData?.range : maybeRange;
+                    navigateToTab('transactions', { week: weekNum, weekRange, weekData });
+                  }}
+                />
+              </DashboardWidgetWrapper>
+            )}
+
+            {/* 2. Préstamos e Inversiones (Lado a Lado) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch w-full">
+              {hasWidget('debts_loans') && (
+                <div className="w-full h-full">
+                  <DashboardWidgetWrapper
+                    id="debts_loans"
+                    index={getWidgetIndex('debts_loans')}
+                    isReordering={isReordering}
+                    draggedIndex={draggedIndex}
+                    className="h-full"
+                    onPressStart={handlePressStart}
+                    onPressEnd={handlePressEnd}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
+                    onToggleVisibility={handleToggleVisibility}
+                  >
+                    {getWidget('debts_loans') || getWidget('debts')}
+                  </DashboardWidgetWrapper>
+                </div>
+              )}
+
+              {hasWidget('investments') && (
+                <div className="w-full h-full">
+                  <DashboardWidgetWrapper
+                    id="investments"
+                    index={getWidgetIndex('investments')}
+                    isReordering={isReordering}
+                    draggedIndex={draggedIndex}
+                    className="h-full"
+                    onPressStart={handlePressStart}
+                    onPressEnd={handlePressEnd}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
+                    onToggleVisibility={handleToggleVisibility}
+                  >
+                    {getWidget('investments')}
+                  </DashboardWidgetWrapper>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Tasa de Ahorro y Presupuesto Mensual (Lado a Lado en Columna Izquierda) */}
+            {(hasWidget('savings_rate') || hasWidget('budget')) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch w-full">
+                {hasWidget('savings_rate') && (
+                  <div className="w-full h-full">
+                    <DashboardWidgetWrapper
+                      id="savings_rate"
+                      index={getWidgetIndex('savings_rate')}
+                      isReordering={isReordering}
+                      draggedIndex={draggedIndex}
+                      className="h-full"
+                      onPressStart={handlePressStart}
+                      onPressEnd={handlePressEnd}
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                      onToggleVisibility={handleToggleVisibility}
+                    >
+                      {getWidget('savings_rate')}
+                    </DashboardWidgetWrapper>
+                  </div>
+                )}
+
+                {hasWidget('budget') && (
+                  <div className="w-full h-full">
+                    <DashboardWidgetWrapper
+                      id="budget"
+                      index={getWidgetIndex('budget')}
+                      isReordering={isReordering}
+                      draggedIndex={draggedIndex}
+                      className="h-full"
+                      onPressStart={handlePressStart}
+                      onPressEnd={handlePressEnd}
+                      onTouchStart={handleTouchStart}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                      onToggleVisibility={handleToggleVisibility}
+                    >
+                      {getWidget('budget')}
+                    </DashboardWidgetWrapper>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* COLUMNA DERECHA: Analítica y Flujo (lg:col-span-5 xl:col-span-4) */}
+          <div className={`${isForcedDesktop ? 'lg:col-span-5 xl:col-span-4' : (isForcedMobile ? 'col-span-1' : 'lg:col-span-5 xl:col-span-4')} flex flex-col gap-5 sm:gap-6`}>
+            {/* 1. Tus Gastos (Dona) */}
+            {hasWidget('expenses_category') && (
+              <DashboardWidgetWrapper
+                id="expenses_category"
+                index={getWidgetIndex('expenses_category')}
+                isReordering={isReordering}
+                draggedIndex={draggedIndex}
+                onPressStart={handlePressStart}
+                onPressEnd={handlePressEnd}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                onToggleVisibility={handleToggleVisibility}
+              >
+                {getWidget('expenses_category') || getWidget('expenses_chart') || getWidget('tus_gastos') || getWidget('donut')}
+              </DashboardWidgetWrapper>
+            )}
+
+            {/* 2. Pagos Recurrentes (Integrado en la columna derecha para cerrar el hueco) */}
+            {hasWidget('recurring_payments') && (
+              <DashboardWidgetWrapper
+                id="recurring_payments"
+                index={getWidgetIndex('recurring_payments')}
+                isReordering={isReordering}
+                draggedIndex={draggedIndex}
+                onPressStart={handlePressStart}
+                onPressEnd={handlePressEnd}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                onToggleVisibility={handleToggleVisibility}
+              >
+                {getWidget('recurring_payments') || <RecurringPaymentsWidget recurringPayments={recurringPayments} subscriptions={subscriptions} />}
+              </DashboardWidgetWrapper>
+            )}
+
+            {/* 3. Movimientos Recientes */}
+            {hasWidget('recent_movements') && (
+              <DashboardWidgetWrapper
+                id="recent_movements"
+                index={getWidgetIndex('recent_movements')}
+                isReordering={isReordering}
+                draggedIndex={draggedIndex}
+                onPressStart={handlePressStart}
+                onPressEnd={handlePressEnd}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                onToggleVisibility={handleToggleVisibility}
+              >
+                <RecentMovementsSection
+                  transactions={transactions.slice(0, recentTxLimit)}
+                  accounts={accounts}
+                  onSelectTransaction={handleSelectTransaction}
+                  onNavigateToMovements={() => navigateToTab('transactions')}
+                  onNavigateToTab={navigateToTab}
+                  setActiveTab={navigateToTab}
+                  onAddTransaction={handleOpenTxModal}
+                  compactMode={false}
+                  formatMoney={formatMoney}
+                  limit={recentTxLimit}
+                />
+              </DashboardWidgetWrapper>
+            )}
+          </div>
+
+        </div>
+
+
+
+        {/* Sección de widgets ocultos en modo reorganización */}
+        {isReordering && hiddenWidgets && hiddenWidgets.length > 0 && (
+          <HiddenWidgetsSection 
+            hiddenWidgets={hiddenWidgets} 
+            onToggleVisibility={handleToggleVisibility} 
+            widgetIconMap={WIDGET_ICON_MAP} 
+          />
+        )}
+      </div>
 
       <DashboardModals
         modalsState={modalsState} onClose={handleCloseModal}

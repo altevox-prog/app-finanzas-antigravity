@@ -136,7 +136,12 @@ export function getAccountNativeBalance(account, transactions = [], trm = 4050) 
       ? account.initialBalance 
       : (account.initial_balance !== undefined ? account.initial_balance : undefined);
 
-    const initial = safeNumber(rawInitial !== undefined ? rawInitial : storedBalance);
+    // Si initialBalance es 0 pero storedBalance tiene un saldo positivo/negativo real, priorizar el saldo real
+    const initial = safeNumber(
+      rawInitial !== undefined && rawInitial !== null && Number(rawInitial) !== 0
+        ? rawInitial
+        : storedBalance
+    );
 
     // 2. Cruce estrictamente por ID único (sin comparaciones por nombre de texto)
     const accTxs = Array.isArray(transactions)

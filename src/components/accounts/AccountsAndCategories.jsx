@@ -3,7 +3,11 @@ import {
   CreditCard, 
   Plus, 
   ArrowLeft,
-  Trash2
+  Trash2,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
@@ -379,44 +383,234 @@ export default function AccountsAndCategories({
     }
   };
 
+  const handleMoveAccount = (fromIndex, direction) => {
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= localAccounts.length) return;
+    setLocalAccounts((prev) => {
+      const updated = [...prev];
+      const [movedItem] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, movedItem);
+      localAccountsRef.current = updated;
+      if (onReorderAccounts) {
+        onReorderAccounts(updated);
+      }
+      return updated;
+    });
+    try {
+      navigator.vibrate?.(20);
+    } catch (_) {}
+  };
+
+  const handleToggleReorder = () => {
+    const next = !isReordering;
+    setIsReordering(next);
+    isReorderingRef.current = next;
+    if (!next && onReorderAccounts) {
+      onReorderAccounts(localAccountsRef.current);
+    }
+  };
+
   return (
-    <div className="space-y-4 pt-2">
-      
+    <div className="space-y-3 pt-1">
+      {/* CABECERA VISTA DEDICADA (!fromSettings) */}
+      {!fromSettings && (
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-white/[0.08]">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {onBack && (
+              <button
+                type="button"
+                onClick={handleGoBack}
+                className="p-2 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 opacity-75 hover:opacity-100 active:scale-90 transition-all cursor-pointer shrink-0"
+                title="Volver"
+                aria-label="Volver"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg font-bold truncate leading-tight text-slate-900 dark:text-white flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" />
+                <span>Cuentas y Métodos de Pago</span>
+              </h2>
+              <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">
+                Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Botón Reordenar Cuentas */}
+            {!readOnly && accounts.length > 1 && (
+              <button
+                type="button"
+                onClick={handleToggleReorder}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                  isReordering
+                    ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25 ring-2 ring-emerald-500/30'
+                    : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 border border-slate-200/60 dark:border-white/[0.06]'
+                }`}
+                title={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
+                aria-label={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
+              >
+                {isReordering ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Listo</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Reordenar</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Botón + Nueva cuenta */}
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => setShowAddAccount(true)}
+                className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
+                title="Nueva Cuenta"
+                aria-label="Nueva Cuenta"
+              >
+                <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* CUENTAS BANCARIAS Y EFECTIVO */}
       <div>
-        {/* Métrica secundaria: Total disponible */}
-        <div className="mb-3">
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-            Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
-          </p>
-        </div>
+        {/* Métrica secundaria cuando está dentro de Settings (fromSettings === true) */}
+        {fromSettings && (
+          <div className="mt-2 mb-2 px-1 flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400">
+              Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
+            </p>
+            {!readOnly && accounts.length > 1 && (
+              <button
+                type="button"
+                onClick={handleToggleReorder}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                  isReordering
+                    ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
+                    : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 border border-slate-200/60 dark:border-white/[0.06]'
+                }`}
+                title={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
+                aria-label={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
+              >
+                {isReordering ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Listo</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                    <span>Reordenar</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Banner informativo de modo reordenar activo */}
+        {isReordering && (
+          <div className="mb-3 p-2.5 px-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-between gap-2 animate-fadeIn">
+            <div className="flex items-center gap-2 min-w-0">
+              <ArrowUpDown className="w-4 h-4 shrink-0" />
+              <span className="truncate">Usa las flechas o arrastra las tarjetas para reorganizarlas.</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleReorder}
+              className="px-2.5 py-1 rounded-lg bg-emerald-500 text-white font-bold text-[11px] shadow-sm hover:bg-emerald-600 transition-colors shrink-0 cursor-pointer"
+            >
+              Listo
+            </button>
+          </div>
+        )}
 
         {/* Tarjetas de Cuenta Individuales en Grilla de 2 Columnas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-fr items-stretch">
-          {accountsWithBalance.map((acc, index) => (
-            <div
-              key={acc?.id || `acc-${index}`}
-              className="w-full h-full flex flex-col"
-            >
-              <AccountCard
-                account={acc}
-                index={index}
-                showBalance={!isPrivacyMode}
-                transactions={transactions}
-                trm={trm}
-                isReadOnly={readOnly}
-                onEdit={!readOnly ? handleOpenEditAccount : undefined}
-                onDelete={!readOnly ? handleRequestDelete : undefined}
-                onSelectCard={!readOnly ? (card) => {
-                  if (onOpenCreditCardDetail) {
-                    onOpenCreditCardDetail(card);
-                  } else {
-                    setLocalSelectedCard(card);
-                  }
-                } : undefined}
-              />
-            </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 auto-rows-fr items-stretch">
+          {accountsWithBalance.map((acc, index) => {
+            const isDragging = draggingIndex === index;
+            return (
+              <div
+                key={acc?.id || `acc-${index}`}
+                data-account-index={index}
+                draggable={isReordering}
+                onDragStart={(e) => isReordering && handleDragStart(e, index)}
+                onDragOver={(e) => isReordering && handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`relative w-full h-full flex flex-col transition-all rounded-2xl ${
+                  isReordering ? 'ring-2 ring-emerald-500/40' : ''
+                } ${isDragging ? 'opacity-40 scale-[0.98]' : ''}`}
+              >
+                {/* Controles visuales de reordenamiento explícito */}
+                {isReordering && (
+                  <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-sm p-1 rounded-xl shadow-md border border-slate-200 dark:border-white/10 animate-fadeIn">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveAccount(index, 'up');
+                      }}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                        index === 0 
+                          ? 'text-slate-300 dark:text-zinc-600 cursor-not-allowed' 
+                          : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 cursor-pointer active:scale-95'
+                      }`}
+                      title="Mover arriba / anterior"
+                      aria-label="Mover arriba"
+                    >
+                      <ChevronUp className="w-4 h-4 stroke-[2.5]" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === accountsWithBalance.length - 1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveAccount(index, 'down');
+                      }}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                        index === accountsWithBalance.length - 1
+                          ? 'text-slate-300 dark:text-zinc-600 cursor-not-allowed' 
+                          : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 cursor-pointer active:scale-95'
+                      }`}
+                      title="Mover abajo / siguiente"
+                      aria-label="Mover abajo"
+                    >
+                      <ChevronDown className="w-4 h-4 stroke-[2.5]" />
+                    </button>
+                  </div>
+                )}
+
+                <AccountCard
+                  account={acc}
+                  index={index}
+                  showBalance={!isPrivacyMode}
+                  transactions={transactions}
+                  trm={trm}
+                  isReadOnly={readOnly || isReordering}
+                  onEdit={!readOnly && !isReordering ? handleOpenEditAccount : undefined}
+                  onDelete={!readOnly && !isReordering ? handleRequestDelete : undefined}
+                  onSelectCard={!readOnly && !isReordering ? (card) => {
+                    if (onOpenCreditCardDetail) {
+                      onOpenCreditCardDetail(card);
+                    } else {
+                      setLocalSelectedCard(card);
+                    }
+                  } : undefined}
+                />
+              </div>
+            );
+          })}
 
           {accounts.length === 0 && (
             <div className="col-span-full text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 text-slate-400 bg-slate-50/50 dark:bg-white/[0.02]">

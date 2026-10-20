@@ -15,8 +15,12 @@ export default function RecentMovementsSection({
   onViewAll = null,
   setActiveTab = null,
   onNavigateToTab = null,
+  onNavigateToMovements = null,
   onSelectTransaction = null,
   onOpenTransaction = null,
+  onAddTransaction = null,
+  accounts = [],
+  compactMode = false,
   formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
   limit = 4,
   className = '',
@@ -33,7 +37,9 @@ export default function RecentMovementsSection({
       if (typeof e.preventDefault === 'function') e.preventDefault();
       if (typeof e.stopPropagation === 'function') e.stopPropagation();
     }
-    if (typeof onViewAll === 'function') {
+    if (typeof onNavigateToMovements === 'function') {
+      onNavigateToMovements();
+    } else if (typeof onViewAll === 'function') {
       onViewAll();
     } else if (typeof setActiveTab === 'function') {
       setActiveTab('transactions');
@@ -45,11 +51,11 @@ export default function RecentMovementsSection({
   return (
     <div
       onClick={handleViewAll}
-      className={`rounded-2xl bg-white dark:bg-[#12151E] border border-slate-200/80 dark:border-white/[0.07] p-5 shadow-sm flex flex-col justify-between transition-all select-none hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group ${className}`}
+      className={`${compactMode ? 'p-0 bg-transparent border-0 shadow-none' : 'rounded-2xl bg-white dark:bg-[#12151E] border border-slate-200/80 dark:border-white/[0.07] p-5 shadow-sm hover:border-emerald-500/40 hover:shadow-md'} flex flex-col justify-start gap-3.5 transition-all select-none cursor-pointer active:scale-[0.99] group ${className}`}
     >
       <div>
         {/* Encabezado del widget */}
-        <div className="flex items-center justify-between gap-2 mb-3.5">
+        <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="p-1.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
               <Activity className="w-4 h-4 animate-pulse" />
@@ -66,9 +72,9 @@ export default function RecentMovementsSection({
         </div>
 
         {/* Listado de últimas transacciones o estado vacío */}
-        <div className="min-h-[140px] flex flex-col justify-center">
+        <div className="w-full flex flex-col">
           {count === 0 ? (
-            <div className="py-6 flex flex-col items-center justify-center text-center">
+            <div className="py-8 flex flex-col items-center justify-center text-center">
               <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-white/[0.04] text-slate-400 dark:text-slate-500 flex items-center justify-center mb-2">
                 <Inbox className="w-5 h-5 opacity-70" />
               </div>
@@ -80,7 +86,7 @@ export default function RecentMovementsSection({
               </p>
             </div>
           ) : (
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-1 max-h-[260px] overflow-y-auto scroll-touch pr-0.5">
               {recentTransactions.map((tx, idx) => {
                 const type = String(tx?.type || '').toLowerCase();
                 const amt = Number(tx?.amount) || 0;
@@ -94,9 +100,9 @@ export default function RecentMovementsSection({
                 return (
                   <div
                     key={tx?.id || idx}
-                    className="flex items-center justify-between py-2.5 px-3 border-b border-slate-100 dark:border-white/[0.04] last:border-b-0 hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors rounded-xl group/item"
+                    className="flex items-center justify-between gap-3 py-2 px-2.5 border-b border-slate-100 dark:border-white/[0.04] last:border-b-0 hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors rounded-xl group/item min-h-[48px]"
                   >
-                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-white/10 shadow-xs">
                         <CategoryIcon
                           category={tx?.categoryName || tx?.category || tx?.category_id}
@@ -106,11 +112,11 @@ export default function RecentMovementsSection({
                           withBadge={false}
                         />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate group-hover/item:text-emerald-500 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 truncate group-hover/item:text-emerald-500 transition-colors">
                           {noteOrCategory}
                         </p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
                           {accountLabel ? `${accountLabel} • ` : ''}
                           {dateLabel || 'Reciente'}
                         </p>
@@ -119,7 +125,7 @@ export default function RecentMovementsSection({
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`text-sm font-semibold font-mono tracking-tight tabular-nums whitespace-nowrap ${
+                        className={`text-xs sm:text-sm font-semibold font-mono tracking-tight tabular-nums whitespace-nowrap ${
                           isExpense
                             ? 'text-rose-500 dark:text-rose-400'
                             : isIncome

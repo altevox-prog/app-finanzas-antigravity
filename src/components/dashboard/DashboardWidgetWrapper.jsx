@@ -69,13 +69,16 @@ export default function DashboardWidgetWrapper({
     return (
       <div
         data-widget-index={index}
+        draggable={true}
+        onDragStart={(e) => onDragStart?.(e, index)}
         onDragOver={(e) => onDragOver?.(e, index)}
-        onDrop={onDrop}
+        onDrop={(e) => onDrop?.(e, index)}
+        onDragEnd={onDragEnd}
         className={`relative ${
           wide ? 'col-span-1 lg:col-span-2' : 'col-span-1'
         } w-full select-none touch-pan-y ${transitionClass} ${animationClass} ${
           isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : (isDragging ? '' : 'hover:scale-[1.01]')
-        } ${className}`}
+        } cursor-grab active:cursor-grabbing ${className}`}
         style={{
           touchAction: 'pan-y',
           willChange: isReordering ? 'transform' : 'auto',
@@ -146,7 +149,7 @@ export default function DashboardWidgetWrapper({
       onTouchCancel={onTouchEnd}
       className={`relative ${
         wide ? 'col-span-1 lg:col-span-2' : 'col-span-1'
-      } w-full h-full flex flex-col touch-pan-y ${className}`}
+      } w-full h-auto flex flex-col touch-pan-y ${className}`}
       style={{
         transform: 'translate3d(0, 0, 0)',
       }}

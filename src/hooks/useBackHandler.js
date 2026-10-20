@@ -1,9 +1,35 @@
 import { useEffect, useRef } from 'react';
 
+// Pila global compartida en memoria para registrar modales abiertos en orden de apertura
+const modalStack = [];
+let isPopstateListenerActive = false;
+
+function globalPopstateHandler(event) {
+  if (modalStack.length === 0) return;
+
+  // Solo el modal que está al frente de la pantalla (el último en el stack) debe cerrarse
+  const topModal = modalStack[modalStack.length - 1];
+
+  // Si el montaje es demasiado reciente (< 120ms), ignorar popstates espurios
+  if (Date.now() - topModal.mountTime < 120) {
+    return;
+  }
+
+  topModal.isPopped = true;
+  if (typeof topModal.onClose === 'function') {
+    topModal.onClose();
+  }
+}
+
+function ensureGlobalListener() {
+  if (typeof window === 'undefined' || isPopstateListenerActive) return;
+  window.addEventListener('popstate', globalPopstateHandler);
+  isPopstateListenerActive = true;
+}
+
 /**
  * Hook para soportar el gesto de 'Volver Atrás' de Android en modales PWA.
- * Cada vez que se abre un modal, introduce un estado en el historial de navegación
- * para que el gesto de retroceso del sistema cierre el modal en lugar de salirse de la PWA.
+ * Gestiona una pila jerárquica: al pulsar atrás, solo se cierra el modal superior.
  */
 export function useBackHandler(isOpen, onClose) {
   const onCloseRef = useRef(onClose);
@@ -12,9 +38,19 @@ export function useBackHandler(isOpen, onClose) {
   useEffect(() => {
     if (typeof window === 'undefined' || !window.history || !isOpen) return;
 
+    ensureGlobalListener();
+
     const modalId = `modal_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const mountTime = Date.now();
-    let isPopped = false;
+    const entry = {
+      modalId,
+      mountTime: Date.now(),
+      isPopped: false,
+      get onClose() {
+        return onCloseRef.current;
+      }
+    };
+
+    modalStack.push(entry);
 
     try {
       window.history.pushState({ modalOpen: true, modalId }, '');
@@ -22,30 +58,20 @@ export function useBackHandler(isOpen, onClose) {
       console.warn('History pushState no soportado:', e);
     }
 
-    const handlePopState = (event) => {
-      // 1. Evitar auto-cierre prematuro por popstates espurios durante el ciclo de montaje (< 120ms)
-      if (Date.now() - mountTime < 120) {
-        return;
-      }
-
-      // 2. Si el estado del historial aún contiene este modalId, no es una navegación hacia atrás
-      if (event.state?.modalId === modalId) {
-        return;
-      }
-
-      isPopped = true;
-      if (typeof onCloseRef.current === 'function') {
-        onCloseRef.current();
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
     return () => {
-      window.removeEventListener('popstate', handlePopState);
-      // Revertir historial solo si se cerró por UI externa y el tope del stack aún es este modal
+      // Remover de la pila
+      const index = modalStack.findIndex((m) => m.modalId === modalId);
+      const isTop = index === modalStack.length - 1;
+      let wasPopped = false;
+
+      if (index !== -1) {
+        wasPopped = modalStack[index].isPopped;
+        modalStack.splice(index, 1);
+      }
+
+      // Revertir historial solo si se cerró por botón de UI (cruz/guardar) y este modal era el tope
       try {
-        if (!isPopped && window.history?.state?.modalId === modalId) {
+        if (!wasPopped && isTop && window.history?.state?.modalId === modalId) {
           window.history.back();
         }
       } catch (e) {

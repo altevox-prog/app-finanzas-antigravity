@@ -241,7 +241,7 @@ export default function ProfileModal({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-fadeIn">
       <div 
-        className="w-full max-w-xl h-[85dvh] sm:h-[620px] max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-zinc-100 shadow-2xl border border-slate-200/80 dark:border-white/[0.08] overflow-hidden animate-slide-up"
+        className="relative z-10 w-full max-w-xl h-[85dvh] sm:h-[620px] max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#121214] text-slate-900 dark:text-zinc-100 shadow-2xl border border-slate-200/80 dark:border-white/[0.08] overflow-hidden animate-slide-up"
       >
         {/* iOS Handle Indicator para Móvil */}
         <div className="w-12 h-1.5 bg-slate-400/30 dark:bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
@@ -278,7 +278,7 @@ export default function ProfileModal({
         )}
 
         {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 custom-scrollbar overscroll-contain pb-6">
+        <div className="relative z-10 flex-1 overflow-y-auto px-6 py-4 space-y-6 custom-scrollbar overscroll-contain pb-6">
 
           {/* ============================================================== */}
           {/* VIEW: MAIN PROFILE & CONTROL CENTER                            */}

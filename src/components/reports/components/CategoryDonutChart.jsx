@@ -16,32 +16,36 @@ export default function CategoryDonutChart({
     ? (categories || []).find((c) => c.id === hoveredCategoryId) 
     : null;
 
+  // Parámetros de trazo circular estilizado y espacioso para el centro (viewBox 0 0 200 200)
+  const radius = 76;
+  const strokeWidth = 14;
+  const circumference = 2 * Math.PI * radius; // ~477.52
+
   return (
     <div 
-      className="relative w-24 h-24 sm:w-26 sm:h-26 shrink-0 flex items-center justify-center cursor-pointer group"
-      title={`Total de gastos: ${formatMoney(totalExpenses)}`}
+      className="relative w-36 h-36 max-h-[148px] shrink-0 flex items-center justify-center cursor-pointer group select-none"
+      title={`Total de gastos: $ ${Number(totalExpenses || 0).toLocaleString('es-CO')}`}
     >
-      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-        {/* Pista base de fondo */}
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+        {/* Pista base de fondo circular */}
         <circle
-          cx="50"
-          cy="50"
-          r="38"
+          cx="100"
+          cy="100"
+          r={radius}
           fill="none"
-          strokeWidth="9"
-          className="stroke-slate-100 dark:stroke-white/[0.04]"
+          strokeWidth={strokeWidth}
+          className="stroke-slate-100 dark:stroke-white/[0.05]"
         />
 
-        {/* Segmentos de categorías */}
+        {/* Segmentos de categorías con terminación redondeada */}
         {categories.length > 0 && (() => {
-          const circumference = 2 * Math.PI * 38; // ~238.76
           let accumulatedPercent = 0;
+          const gap = categories.length > 1 ? 12 : 0;
 
           return categories.map((cat, index) => {
-            const percent = cat.exactPercent;
+            const percent = cat.exactPercent || 0;
             const strokeLength = (percent / 100) * circumference;
-            const gap = categories.length > 1 ? 1.8 : 0;
-            const visibleLength = Math.max(0, strokeLength - gap);
+            const visibleLength = Math.max(percent > 0 ? 3 : 0, strokeLength - gap);
             const offset = (accumulatedPercent / 100) * circumference;
             accumulatedPercent += percent;
 
@@ -50,17 +54,18 @@ export default function CategoryDonutChart({
             return (
               <circle
                 key={cat.id || index}
-                cx="50"
-                cy="50"
-                r="38"
+                cx="100"
+                cy="100"
+                r={radius}
                 fill="none"
                 stroke={cat.color}
-                strokeWidth={isHovered ? 11 : 9}
+                strokeWidth={isHovered ? strokeWidth + 2 : strokeWidth}
+                strokeLinecap="round"
                 strokeDasharray={`${visibleLength} ${circumference}`}
                 strokeDashoffset={-offset}
                 className="transition-all duration-300 cursor-pointer"
                 style={{
-                  transformOrigin: '50px 50px',
+                  transformOrigin: '100px 100px',
                   opacity: hoveredCategoryId && !isHovered ? 0.35 : 1
                 }}
                 onMouseEnter={() => setHoveredCategoryId(cat.id)}
@@ -71,27 +76,27 @@ export default function CategoryDonutChart({
         })()}
       </svg>
 
-      {/* Centro de la dona */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-1 select-none">
+      {/* Contenido central integrado (Total o Categoría activa) */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2 select-none">
         {hoveredCategory ? (
-          <div className="animate-fadeIn flex flex-col items-center">
-            <span className="text-base leading-none mb-0.5">
-              {resolveEmoji(hoveredCategory, hoveredCategory.name)}
-            </span>
-            <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300 truncate max-w-[65px]">
+          <div className="animate-fadeIn flex flex-col items-center max-w-[80%]">
+            <span className="text-[10px] uppercase tracking-wider font-medium text-slate-400 dark:text-zinc-500 truncate max-w-full">
               {hoveredCategory.name}
             </span>
-            <span className="text-xs font-extrabold text-slate-900 dark:text-slate-50 tabular-nums tracking-tight mt-0.5">
+            <span className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white tracking-tight truncate max-w-full leading-tight my-0.5">
+              $ {Number(hoveredCategory.amount || 0).toLocaleString('es-CO')}
+            </span>
+            <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400">
               {hoveredCategory.percent}%
             </span>
           </div>
         ) : (
-          <div className="animate-fadeIn flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-semibold leading-none">
+          <div className="animate-fadeIn flex flex-col items-center max-w-[80%]">
+            <span className="text-[10px] uppercase tracking-wider font-medium text-slate-400 dark:text-zinc-500">
               Total
             </span>
-            <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-50 tabular-nums tracking-tight mt-0.5 truncate max-w-[75px]">
-              {totalExpenses > 0 ? formatAbbreviatedMoney(totalExpenses, formatMoney) : '$0'}
+            <span className="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-white tracking-tight truncate max-w-full leading-tight my-0.5">
+              $ {Number(totalExpenses || 0).toLocaleString('es-CO')}
             </span>
           </div>
         )}

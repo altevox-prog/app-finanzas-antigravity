@@ -5,7 +5,7 @@ import {
   isSupabaseConfigured as defaultIsSupabaseConfigured 
 } from '../../../services/supabaseClient';
 import { compressImageFile, getInitialsFromName } from '../../../services/profile/profileImageService';
-import { persistGlobalBudget, persistCategoryBudget } from '../../../services/profile/budgetService';
+import { persistGlobalBudget, persistCategoryBudget, removeCategoryBudget } from '../../../services/profile/budgetService';
 import { useSavingsGoals } from '../../../hooks/useSavingsGoals';
 
 /**
@@ -115,12 +115,40 @@ export function useProfileFinances({
       .catch((err) => showToast?.(err.message, true));
   };
 
-  const handleSaveCategoryBudget = (catId) => {
+  const handleSaveCategoryBudget = async (catId, explicitAmount = null) => {
     try {
-      persistCategoryBudget({ catId, amount: tempCatBudgetAmount, budgets, onUpdateBudgets });
+      const amountToSave = explicitAmount !== null ? explicitAmount : tempCatBudgetAmount;
+      await persistCategoryBudget({
+        catId,
+        amount: amountToSave,
+        budgets,
+        onUpdateBudgets,
+        supabase,
+        isSupabaseConfigured,
+        user
+      });
       setEditingCatBudgetId(null);
       setTempCatBudgetAmount('');
-      showToast?.('Límite de categoría actualizado.');
+      const num = Number(amountToSave || 0);
+      showToast?.(num > 0 ? 'Límite de categoría actualizado.' : 'Límite fijado en $0.');
+    } catch (err) {
+      showToast?.(err.message, true);
+    }
+  };
+
+  const handleRemoveCategoryBudget = async (catId) => {
+    try {
+      await removeCategoryBudget({
+        catId,
+        budgets,
+        onUpdateBudgets,
+        supabase,
+        isSupabaseConfigured,
+        user
+      });
+      setEditingCatBudgetId(null);
+      setTempCatBudgetAmount('');
+      showToast?.('Límite de categoría eliminado.');
     } catch (err) {
       showToast?.(err.message, true);
     }
@@ -142,7 +170,7 @@ export function useProfileFinances({
     tempGlobalBudget, setTempGlobalBudget,
     editingCatBudgetId, setEditingCatBudgetId,
     tempCatBudgetAmount, setTempCatBudgetAmount,
-    handleSaveGlobalBudget, handleSaveCategoryBudget,
+    handleSaveGlobalBudget, handleSaveCategoryBudget, handleRemoveCategoryBudget,
 
     // Metas de Ahorro (delegadas)
     ...savings,

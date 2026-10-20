@@ -44,11 +44,17 @@ export function useSavingsGoals({
       }
     }
 
+    const generatedId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+      ? crypto.randomUUID() 
+      : `goal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     const goal = {
-      id: `goal-${Date.now()}`,
+      id: generatedId,
       name: newGoalName.trim(),
       targetAmount: Number(newGoalTarget),
+      target_amount: Number(newGoalTarget),
       currentAmount: Number(newGoalCurrent) || 0,
+      current_amount: Number(newGoalCurrent) || 0,
       dueDate: safeDate,
       target_date: safeDate,
       deadline: safeDate,
@@ -92,7 +98,9 @@ export function useSavingsGoals({
       ...editingGoal,
       name: editGoalName.trim(),
       targetAmount: Number(editGoalTarget),
+      target_amount: Number(editGoalTarget),
       currentAmount: Number(editGoalCurrent) || 0,
+      current_amount: Number(editGoalCurrent) || 0,
       dueDate: safeDate,
       target_date: safeDate,
       deadline: safeDate,
@@ -114,10 +122,14 @@ export function useSavingsGoals({
     const targetGoal = savingsGoals.find((g) => g.id === goalId);
     if (!targetGoal) return;
 
+    const currentVal = safeNumber(targetGoal.currentAmount ?? targetGoal.current_amount ?? 0);
+    const updatedVal = currentVal + val;
+
     if (typeof onUpdateGoal === 'function') {
       onUpdateGoal({
         ...targetGoal,
-        currentAmount: safeNumber(targetGoal.currentAmount) + val,
+        currentAmount: updatedVal,
+        current_amount: updatedVal,
       });
     }
     setContributeGoalId(null);
@@ -126,8 +138,8 @@ export function useSavingsGoals({
     if (showToast) showToast(`¡Abono de ${formattedAmount} registrado con éxito!`);
   };
 
-  const totalSavedAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.currentAmount), 0);
-  const totalTargetAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.targetAmount), 0);
+  const totalSavedAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.currentAmount ?? g.current_amount ?? 0), 0);
+  const totalTargetAcrossGoals = savingsGoals.reduce((sum, g) => sum + safeNumber(g.targetAmount ?? g.target_amount ?? 0), 0);
 
   return {
     showAddGoalForm,

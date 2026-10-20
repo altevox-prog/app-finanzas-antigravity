@@ -15,6 +15,50 @@ import { useBudgets } from './useBudgets';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { INITIAL_SAVINGS_GOALS } from '../data/initialData';
 import { useRecurringPayments } from './useRecurringPayments';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+
+export function sanitizeGoal(goal) {
+  if (!goal) return null;
+  const rawDate = goal.deadline || goal.target_date || goal.dueDate || '';
+  let safeDate = '';
+  if (rawDate) {
+    try {
+      safeDate = new Date(rawDate).toISOString().split('T')[0];
+    } catch {
+      safeDate = String(rawDate).split('T')[0];
+    }
+  }
+
+  const targetNum = Number(goal.target_amount ?? goal.targetAmount ?? 0);
+  const currentNum = Number(goal.current_amount ?? goal.currentAmount ?? 0);
+
+  const rawAccountId = goal.target_account_id !== undefined ? goal.target_account_id : goal.targetAccountId;
+  const resolvedAccountId = (rawAccountId !== undefined && rawAccountId !== null && rawAccountId !== '') 
+    ? String(rawAccountId) 
+    : null;
+
+  return {
+    ...goal,
+    id: String(goal.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`)),
+    name: (goal.name || 'Nueva Meta').trim(),
+    target_amount: targetNum,
+    targetAmount: targetNum,
+    current_amount: currentNum,
+    currentAmount: currentNum,
+    deadline: safeDate,
+    target_date: safeDate,
+    dueDate: safeDate,
+    icon: goal.icon || 'Target',
+    color: goal.color || '#10B981',
+    target_account_id: resolvedAccountId,
+    targetAccountId: resolvedAccountId,
+    months: goal.months ? Number(goal.months) : 6,
+    notification_day: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
+    notificationDay: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
+    notify_enabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true),
+    notifyEnabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true)
+  };
+}
 
 function getInitialSavingsGoals() {
   try {
@@ -24,38 +68,12 @@ function getInitialSavingsGoals() {
                   localStorage.getItem('goals');
     if (saved !== null) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) return parsed.map(sanitizeGoal).filter(Boolean);
     }
   } catch (e) {
     console.error('Error parseando metas de ahorro:', e);
   }
   return INITIAL_SAVINGS_GOALS;
-}
-
-function sanitizeGoal(goal) {
-  const rawDate = goal.target_date || goal.dueDate || goal.deadline || '';
-  let safeDate = '';
-  if (rawDate) {
-    try {
-      safeDate = new Date(rawDate).toISOString().split('T')[0];
-    } catch {
-      safeDate = String(rawDate).split('T')[0];
-    }
-  }
-  return {
-    ...goal,
-    id: goal.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`),
-    target_date: safeDate,
-    dueDate: safeDate,
-    deadline: safeDate,
-    target_account_id: goal.target_account_id || goal.targetAccountId || null,
-    targetAccountId: goal.target_account_id || goal.targetAccountId || null,
-    months: goal.months ? Number(goal.months) : 6,
-    notification_day: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
-    notificationDay: goal.notification_day ? Number(goal.notification_day) : (goal.notificationDay ? Number(goal.notificationDay) : 15),
-    notify_enabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true),
-    notifyEnabled: goal.notify_enabled !== undefined ? Boolean(goal.notify_enabled) : (goal.notifyEnabled !== undefined ? Boolean(goal.notifyEnabled) : true)
-  };
 }
 import { useInvestments } from './useInvestments';
 import useInvestmentQuotes from '../components/investments/hooks/useInvestmentQuotes';
@@ -208,29 +226,66 @@ export function useAppOrchestrator() {
 
   const handleAddGoal = useCallback(async (newGoal) => {
     const goalItem = sanitizeGoal(newGoal);
-    setSavingsGoals((prev) => [goalItem, ...(prev || []).filter((g) => g.id !== goalItem.id)]);
+    if (!goalItem || !goalItem.id) return null;
+    const targetId = String(goalItem.id);
+    setSavingsGoals((prev) => [goalItem, ...(Array.isArray(prev) ? prev : []).filter((g) => String(g?.id) !== targetId)]);
     return goalItem;
   }, []);
 
   const handleUpdateGoal = useCallback(async (updatedGoal) => {
     const goalItem = sanitizeGoal(updatedGoal);
-    setSavingsGoals((prev) => (prev || []).map((g) => (g.id === goalItem.id ? goalItem : g)));
+    if (!goalItem || !goalItem.id) return null;
+
+    setSavingsGoals((prev) => {
+      const list = Array.isArray(prev) ? prev : [];
+      const targetId = String(goalItem.id);
+      const exists = list.some((g) => String(g?.id) === targetId);
+
+      if (!exists) {
+        // Si por alguna discrepancia de ID no la encuentra, la añade
+        return [goalItem, ...list];
+      }
+
+      return list.map((g) => (String(g?.id) === targetId ? { ...g, ...goalItem } : g));
+    });
+
     return goalItem;
   }, []);
 
   const handleDeleteGoal = useCallback(async (goalId) => {
-    setSavingsGoals((prev) => (prev || []).filter((g) => g.id !== goalId));
-  }, []);
+    if (!goalId) return;
+    const targetId = String(goalId);
+    setSavingsGoals((prev) => (Array.isArray(prev) ? prev : []).filter((g) => String(g?.id) !== targetId));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        let query = supabase.from('savings_goals').delete().eq('id', targetId);
+        if (user?.id) {
+          query = query.eq('user_id', user.id);
+        }
+        const { error } = await query;
+        if (error) {
+          console.error('[useAppOrchestrator] Error al eliminar meta de ahorro en Supabase:', error);
+        }
+      } catch (err) {
+        console.error('[useAppOrchestrator] Excepción al eliminar meta de ahorro en Supabase:', err);
+      }
+    }
+  }, [user]);
 
   const handleContributeGoal = useCallback(async (goalId, amount) => {
     const val = Number(amount) || 0;
     if (val <= 0) return;
-    setSavingsGoals((prev) => (prev || []).map((g) => {
-      if (g.id !== goalId) return g;
-      return {
+    const targetId = String(goalId);
+    setSavingsGoals((prev) => (Array.isArray(prev) ? prev : []).map((g) => {
+      if (String(g?.id) !== targetId) return g;
+      const currentVal = Number(g.currentAmount ?? g.current_amount ?? 0);
+      const updatedCurrent = currentVal + val;
+      return sanitizeGoal({
         ...g,
-        currentAmount: (Number(g.currentAmount) || 0) + val
-      };
+        currentAmount: updatedCurrent,
+        current_amount: updatedCurrent
+      });
     }));
   }, []);
 

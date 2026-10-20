@@ -42,10 +42,10 @@ export default function GoalModal({
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [targetAccountId, setTargetAccountId] = useState('');
-  const [months, setMonths] = useState(6);
+  const [frequency, setFrequency] = useState('monthly'); // 'monthly' | 'biweekly'
+  const [installments, setInstallments] = useState(6);
   const [notificationDay, setNotificationDay] = useState(15);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
-  const [dueDate, setDueDate] = useState('');
   const [error, setError] = useState('');
 
   // Filtrar cuentas activas y no archivadas
@@ -56,13 +56,19 @@ export default function GoalModal({
   // Sincronizar estado cuando se abre el modal o cambia la meta activa
   useEffect(() => {
     if (activeGoal) {
+      // Si es edición, respetar estrictamente el ID que traiga la meta (camelCase o snake_case)
+      const existingAccountId = activeGoal.target_account_id || activeGoal.targetAccountId || '';
+      setTargetAccountId(String(existingAccountId));
+
       setName(activeGoal.name || '');
-      setTargetAmount(String(activeGoal.targetAmount || activeGoal.target_amount || ''));
-      setCurrentAmount(activeGoal.currentAmount != null ? String(activeGoal.currentAmount) : (activeGoal.current_amount != null ? String(activeGoal.current_amount) : ''));
-      setTargetAccountId(activeGoal.target_account_id || activeGoal.targetAccountId || '');
-      
-      const m = activeGoal.months ? Number(activeGoal.months) : 6;
-      setMonths(m > 0 ? m : 6);
+      setTargetAmount(String(activeGoal.target_amount ?? activeGoal.targetAmount ?? ''));
+      setCurrentAmount(String(activeGoal.current_amount ?? activeGoal.currentAmount ?? '0'));
+
+      const freq = activeGoal.frequency || 'monthly';
+      setFrequency(freq);
+
+      const count = activeGoal.installments || activeGoal.months || 6;
+      setInstallments(count > 0 ? count : 6);
 
       const nDay = activeGoal.notification_day || activeGoal.notificationDay;
       setNotificationDay(nDay ? Number(nDay) : 15);
@@ -72,60 +78,63 @@ export default function GoalModal({
           ? Boolean(activeGoal.notify_enabled) 
           : (activeGoal.notifyEnabled !== undefined ? Boolean(activeGoal.notifyEnabled) : true)
       );
-
-      const d = activeGoal.target_date || activeGoal.dueDate || activeGoal.deadline || '';
-      if (d) {
-        try {
-          setDueDate(new Date(d).toISOString().split('T')[0]);
-        } catch {
-          setDueDate(String(d).split('T')[0]);
-        }
-      } else {
-        // Calcular fecha estimada a partir de los meses
-        const computed = new Date();
-        computed.setMonth(computed.getMonth() + (m || 6));
-        setDueDate(computed.toISOString().split('T')[0]);
-      }
-    } else if (isOpen) {
+      setError('');
+    } else {
+      // Solo si es una meta TOTALMENTE NUEVA asignamos por defecto la primera cuenta activa si existe
       setName('');
       setTargetAmount('');
       setCurrentAmount('0');
-      setTargetAccountId(activeAccounts.length > 0 ? activeAccounts[0].id : '');
-      setMonths(6);
+      setTargetAccountId(activeAccounts.length > 0 ? String(activeAccounts[0].id) : '');
+      setInstallments(6);
+      setFrequency('monthly');
       setNotificationDay(15);
       setNotifyEnabled(true);
-
-      const computed = new Date();
-      computed.setMonth(computed.getMonth() + 6);
-      setDueDate(computed.toISOString().split('T')[0]);
       setError('');
     }
-  }, [activeGoal, isOpen, activeAccounts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, activeGoal]); // Evitar incluir 'activeAccounts' en las dependencias si provoca re-ejecución indeseada
 
-  // Si cambia el plazo en meses y no se fijó fecha manual, actualizar dueDate estimada
-  const handleMonthsChange = (val) => {
-    const num = Math.max(1, parseInt(val, 10) || 1);
-    setMonths(num);
-    const futureDate = new Date();
-    futureDate.setMonth(futureDate.getMonth() + num);
-    setDueDate(futureDate.toISOString().split('T')[0]);
+  // Manejo seguro del input numérico permitiendo borrar con backspace
+  const handleInstallmentsChange = (e) => {
+    const val = typeof e === 'object' && e?.target ? e.target.value : e;
+    if (val === '') {
+      setInstallments('');
+    } else {
+      const parsed = parseInt(val, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        setInstallments(parsed);
+      }
+    }
   };
 
-  // Cálculo dinámico de cuota mensual sugerida
-  const { remainingAmount, monthlyInstallment, selectedAccount } = useMemo(() => {
+  // Cálculo de fecha estimada, cuota periódica y formato humano
+  const { calculatedDeadline, quotaAmount, formattedDeadline, remainingAmount, selectedAccount } = useMemo(() => {
+    const count = Math.max(1, Number(installments) || 1);
     const target = Number(targetAmount) || 0;
     const current = Number(currentAmount) || 0;
-    const m = Math.max(1, Number(months) || 1);
-    const rem = Math.max(0, target - current);
-    const installment = Math.round(rem / m);
+    const remaining = Math.max(0, target - current);
+    const quota = Math.round(remaining / count);
+
+    const targetDate = new Date();
+    if (frequency === 'biweekly') {
+      targetDate.setDate(targetDate.getDate() + (count * 15));
+    } else {
+      targetDate.setMonth(targetDate.getMonth() + count);
+    }
+
+    const isoDate = targetDate.toISOString().split('T')[0];
+    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const humanDate = `${targetDate.getDate()} de ${monthNames[targetDate.getMonth()]} de ${targetDate.getFullYear()}`;
     const acc = activeAccounts.find(a => String(a.id) === String(targetAccountId));
 
     return {
-      remainingAmount: rem,
-      monthlyInstallment: installment,
+      calculatedDeadline: isoDate,
+      quotaAmount: quota,
+      formattedDeadline: humanDate,
+      remainingAmount: remaining,
       selectedAccount: acc
     };
-  }, [targetAmount, currentAmount, months, targetAccountId, activeAccounts]);
+  }, [installments, frequency, targetAmount, currentAmount, targetAccountId, activeAccounts]);
 
   if (!isOpen) return null;
 
@@ -144,23 +153,37 @@ export default function GoalModal({
       return;
     }
 
+    const generatedId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+      ? crypto.randomUUID() 
+      : `goal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const installmentsCount = Math.max(1, Number(installments) || 1);
+    const calculatedMonths = frequency === 'biweekly'
+      ? Math.max(1, Math.ceil(installmentsCount / 2))
+      : installmentsCount;
+    const resolvedNotificationDay = frequency === 'biweekly' ? 15 : (Number(notificationDay) || 15);
+
     const payload = {
-      id: activeGoal ? activeGoal.id : `goal-${Date.now()}`,
+      id: (activeGoal && activeGoal.id) ? String(activeGoal.id) : generatedId,
       name: cleanName,
-      targetAmount: target,
       target_amount: target,
-      currentAmount: current,
+      targetAmount: target,
       current_amount: current,
-      target_account_id: targetAccountId || null,
-      targetAccountId: targetAccountId || null,
-      months: Number(months) || 1,
-      notification_day: Number(notificationDay) || 15,
-      notificationDay: Number(notificationDay) || 15,
+      currentAmount: current,
+      deadline: calculatedDeadline || null,
+      target_date: calculatedDeadline || null,
+      dueDate: calculatedDeadline || null,
+      target_account_id: targetAccountId ? String(targetAccountId) : null,
+      targetAccountId: targetAccountId ? String(targetAccountId) : null,
+      months: calculatedMonths,
+      installments: installmentsCount,
+      frequency: frequency,
+      notification_day: resolvedNotificationDay,
+      notificationDay: resolvedNotificationDay,
       notify_enabled: Boolean(notifyEnabled),
       notifyEnabled: Boolean(notifyEnabled),
-      dueDate: dueDate || null,
-      target_date: dueDate || null,
-      deadline: dueDate || null,
+      icon: activeGoal?.icon || 'Target',
+      color: activeGoal?.color || '#10B981',
       category: 'Ahorro'
     };
 
@@ -283,7 +306,7 @@ export default function GoalModal({
                 >
                   <option value="">-- Sin asignar / Cuenta manual --</option>
                   {activeAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
+                    <option key={acc.id} value={String(acc.id)}>
                       {acc.name} {acc.institution ? `(${acc.institution})` : ''} • Saldo: {formatMoney(acc.balance || 0)}
                     </option>
                   ))}
@@ -291,116 +314,152 @@ export default function GoalModal({
               </div>
             </div>
 
-            {/* Plazo en Meses y Día de Notificación */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Plazo en meses</span>
+            {/* 1. SELECTOR DE FRECUENCIA (MENSUAL / QUINCENAL) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-emerald-500"/>
+                  <span>Frecuencia del Ahorro</span>
                 </label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  max="120"
-                  value={months}
-                  onChange={(e) => handleMonthsChange(e.target.value)}
-                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
-                />
+                <span className="text-[11px] text-slate-400">¿Cada cuánto abonarás?</span>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                  <Bell className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Día de notificación</span>
-                </label>
-                <select
-                  value={notificationDay}
-                  onChange={(e) => setNotificationDay(Number(e.target.value))}
-                  disabled={!notifyEnabled}
-                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 disabled:opacity-40 cursor-pointer"
+              <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/80 dark:border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setFrequency('monthly')}
+                  className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    frequency === 'monthly'
+                      ? 'bg-white dark:bg-zinc-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                      : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800'
+                  }`}
                 >
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                    <option key={d} value={d}>
-                      Día {d} de cada mes
-                    </option>
-                  ))}
-                </select>
+                  Mensual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFrequency('biweekly')}
+                  className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    frequency === 'biweekly'
+                      ? 'bg-white dark:bg-zinc-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                      : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800'
+                  }`}
+                >
+                  Quincenal
+                </button>
               </div>
             </div>
 
-            {/* Checkbox de activación de recordatorios - Fila táctil interactiva */}
-            <div 
-              onClick={() => setNotifyEnabled(!notifyEnabled)}
-              className="min-h-[48px] p-3.5 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/70 transition-colors bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-white/[0.08] select-none"
-            >
-              <div className="flex items-center gap-2.5">
-                <Bell className={`w-4 h-4 ${notifyEnabled ? 'text-amber-500' : 'text-slate-400'}`} />
-                <div>
-                  <span className="text-xs font-semibold text-slate-900 dark:text-zinc-100 block">
-                    Activar recordatorio mensual
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-zinc-400 block font-mono">
-                    Recibe una alerta cada día {notificationDay} para abonar tu cuota
+            {/* FILA DE 2 COLUMNAS PERFECTAMENTE SIMÉTRICA */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+              
+              {/* COLUMNA IZQUIERDA: PLAZO */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 h-4 flex items-center">
+                  {frequency === 'biweekly' ? 'Plazo en quincenas *' : 'Plazo en meses *'}
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="240"
+                    value={installments}
+                    onChange={handleInstallmentsChange}
+                    className="w-full h-12 text-sm font-semibold pl-3.5 pr-20 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
+                    placeholder={frequency === 'biweekly' ? 'Ej: 6' : 'Ej: 6'}
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 dark:text-zinc-400 pointer-events-none">
+                    {frequency === 'biweekly' ? 'quincenas' : 'meses'}
                   </span>
                 </div>
               </div>
-              <input
-                type="checkbox"
-                checked={notifyEnabled}
-                readOnly
-                className="w-4.5 h-4.5 rounded-md text-emerald-600 focus:ring-emerald-500 pointer-events-none"
-              />
+
+              {/* COLUMNA DERECHA: RECORDATORIO AUTOMÁTICO (Misma altura exacta h-12) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 h-4 flex items-center justify-between">
+                  <span>Recordatorio</span>
+                  <span className="text-[10px] font-normal text-slate-400">
+                    {notifyEnabled 
+                      ? (frequency === 'biweekly' ? 'Cada quincena' : 'Cada mes') 
+                      : 'Inactivo'}
+                  </span>
+                </label>
+                <div className={`h-12 px-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                  notifyEnabled
+                    ? 'border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20'
+                    : 'border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60'
+                }`}>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                      notifyEnabled
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-slate-200 dark:bg-zinc-700 text-slate-400'
+                    }`}>
+                      <Bell className="w-3.5 h-3.5 stroke-[2]"/>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200 truncate">
+                        {notifyEnabled 
+                          ? (frequency === 'biweekly' ? 'Avisos días 15 y 30' : `Aviso día ${notificationDay || 15}`) 
+                          : 'Alertas pausadas'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Switch Toggle iOS Estilizado */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notifyEnabled}
+                    onClick={() => setNotifyEnabled(!notifyEnabled)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
+                      notifyEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        notifyEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
             </div>
 
-            {/* Fecha Límite Opcional */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>Fecha límite estimada</span>
-              </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono"
-              />
-            </div>
-
-            {/* TARJETA VISUAL: CÁLCULO DINÁMICO DE CUOTA MENSUAL */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-200/80 dark:border-white/[0.08] space-y-2.5">
+            {/* TARJETA VISUAL: CÁLCULO DINÁMICO DE CUOTA SUGERIDA */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Cuota Mensual Sugerida
+                  <span>Cuota Sugerida ({frequency === 'biweekly' ? 'Quincenal' : 'Mensual'})</span>
                 </span>
-                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-300">
-                  {months} {months === 1 ? 'mes' : 'meses'}
+                <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  {installments || 1} {frequency === 'biweekly' ? (Number(installments) === 1 ? 'quincena' : 'quincenas') : (Number(installments) === 1 ? 'mes' : 'meses')}
                 </span>
               </div>
 
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">
-                  {formatMoney(monthlyInstallment)}
+                  {formatMoney(quotaAmount)}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">/ mes</span>
+                <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
+                  / {frequency === 'biweekly' ? 'quincena' : 'mes'}
+                </span>
               </div>
 
-              <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono leading-relaxed">
-                Fórmula: ({formatMoney(Number(targetAmount) || 0)} obj - {formatMoney(Number(currentAmount) || 0)} actual) ÷ {months} meses = {formatMoney(monthlyInstallment)} mensuales.
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-zinc-400 font-mono">
+                {remainingAmount > 0 ? (
+                  <span>Faltan <strong>{formatMoney(remainingAmount)}</strong></span>
+                ) : (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">¡Meta cubierta!</span>
+                )}
+                <span>• Meta estimada: <strong>{formattedDeadline}</strong></span>
+              </div>
 
               {selectedAccount && (
-                <div className="pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <div className="pt-2 border-t border-emerald-500/15 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                   <Wallet className="w-3.5 h-3.5 shrink-0" />
-                  <span>Destino de ahorro: <strong className="text-slate-900 dark:text-zinc-100">{selectedAccount.name}</strong></span>
-                </div>
-              )}
-
-              {notifyEnabled && (
-                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium font-mono">
-                  <Bell className="w-3.5 h-3.5 shrink-0" />
-                  <span>Alerta programada para el <strong>día {notificationDay}</strong> de cada mes.</span>
+                  <span>Destino: <strong className="text-slate-900 dark:text-zinc-100">{selectedAccount.name}</strong></span>
                 </div>
               )}
             </div>

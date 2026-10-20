@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { TrendingUp, Check } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import AmountInput from '../../common/AmountInput';
@@ -194,13 +195,13 @@ export default function EditAccountModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 transition-opacity animate-fadeIn"
       onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}
     >
       <div 
-        className="w-full max-w-lg bg-white dark:bg-[#12141C] rounded-t-3xl sm:rounded-2xl flex flex-col max-h-[85vh] sm:max-h-[90vh] shadow-2xl overflow-hidden animate-slide-up"
+        className="relative z-10 w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-white/[0.08] flex flex-col max-h-[85vh] sm:max-h-[90vh] overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabecera FIJA */}
@@ -490,7 +491,7 @@ export default function EditAccountModal({
           </div>
 
           {/* Pie de página FIJO SIEMPRE VISIBLE */}
-          <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-[#181B26] border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
+          <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-zinc-900 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -511,4 +512,6 @@ export default function EditAccountModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

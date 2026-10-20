@@ -100,6 +100,9 @@ export default function App() {
         {/* BARRA LATERAL FIJA EN ESCRITORIO (debajo de la barra superior continua) */}
         <DesktopSidebar
           modalControls={modalControls}
+          isActionMenuOpen={state.isActionMenuOpen}
+          setIsActionMenuOpen={state.setIsActionMenuOpen}
+          onOpenActionMenu={() => state.setIsActionMenuOpen(true)}
           activeTab={state.activeTab}
           setActiveTab={state.setActiveTab}
           onTabChange={state.handleTabChange}
