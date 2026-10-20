@@ -4,473 +4,195 @@ import DesktopMonthPicker from '../layout/DesktopMonthPicker';
 import CalendarDropdown from '../common/CalendarDropdown';
 import LockScreen from '../auth/LockScreen';
 import { DEFAULT_WIDGETS_CONFIG } from '../../utils/widgetsConfig';
-
 import AddTransactionModal from '../transactions/modals/AddTransactionModal';
 import AddLoanModal from '../debts/AddLoanModal';
 import AddInvestmentModal from '../investments/modals/AddInvestmentModal';
 import AddAccountModal from '../accounts/modals/AddAccountModal';
 import AddRecurringModal from '../recurring/modals/AddRecurringModal';
-
 import CreditCardDetailModal from '../accounts/modals/CreditCardDetailModal';
 
 const EditWidgetsModal = lazy(() => import('../dashboard/modals/EditWidgetsModal'));
 const ProfileModal = lazy(() => import('../profile/modals/ProfileModal'));
 const OnboardingFlow = lazy(() => import('../onboarding/OnboardingFlow'));
 
-/**
- * ModalContainer
- * Orquestador centralizado de todos los modales, overlays y diálogos emergentes de la aplicación.
- */
-export default function ModalContainer({
-  modalControls,
-  financeData = {},
-  financeActions = {},
-  ...rest
-}) {
-  // Soporte directo para objetos agrupados (financeData, financeActions) y props individuales
-  const merged = { ...financeData, ...financeActions, ...rest, ...(modalControls || rest.modalControls || {}) };
+export default function ModalContainer({ modalControls, financeData = {}, financeActions = {}, ...rest }) {
+  const m = { ...financeData, ...financeActions, ...rest, ...(modalControls || rest.modalControls || {}) };
 
-  const {
-    // Flags y setters de visibilidad
-    isAddTxOpen,
-    setIsAddTxOpen,
-    txDefaultType = 'expense',
-    isTransferModalOpen,
-    setIsTransferModalOpen,
-    isAddInvestmentOpen,
-    setIsAddInvestmentOpen,
-    isNewInvestmentModalOpen,
-    setIsNewInvestmentModalOpen,
-    isAddLoanOpen,
-    setIsAddLoanOpen,
-    addLoanInitialType = 'receivable',
-    isAddRecurringOpen,
-    setIsAddRecurringOpen,
-    showMonthPicker,
-    setShowMonthPicker,
-    isCalendarOpen,
-    setIsCalendarOpen,
-    selectedCreditCardDetail,
-    setSelectedCreditCardDetail,
-    isEditWidgetsModalOpen,
-    setIsEditWidgetsModalOpen,
-    isSettingsOpen,
-    setIsSettingsOpen,
-    isProfileOpen,
-    setIsProfileOpen,
-    profileResetKey = 0,
-    showTutorial,
-    setShowTutorial,
-    isLocked,
-    handleUnlock,
-    handleVerifyPin,
-    handleUpdatePin,
-    failedAttempts,
-
-    // Datos financieros y estados de configuración
-    accounts = [],
-    categories = [],
-    transactions = [],
-    investments = [],
-    debtsAndLoans = [],
-    recurringPayments = [],
-    subscriptions = [],
-    setSubscriptions,
-    savingsGoals = [],
-    budgets = {},
-    setBudgets,
-    widgets = DEFAULT_WIDGETS_CONFIG,
-    setWidgets,
-    userProfile = { name: 'Usuario' },
-    securitySettings = {},
-    setSecuritySettings,
-    user = null,
-    trm = 4050,
-    theme = 'dark',
-    setTheme,
-    selectedDate = new Date(),
-    setSelectedDate,
-    selectedDay = null,
-    setSelectedDay,
-
-    // Handlers CRUD y callbacks de eventos
-    handleSaveTransaction,
-    handleAddTransaction,
-    handleExecuteTransfer,
-    handleAddInvestment,
-    handleAddDebtOrLoan,
-    handleAddRecurring,
-    handleDeleteRecurring,
-    handleUpdateRecurring,
-    onDeleteRecurring,
-    deleteRecurringPayment,
-    handleUpdateProfile,
-    handleAddGoal,
-    handleUpdateGoal,
-    handleDeleteGoal,
-    handleAddCategory,
-    handleUpdateCategory,
-    handleDeleteCategory,
-    handleAddSubcategory,
-    handleUpdateSubcategory,
-    handleDeleteSubcategory,
-    handleAddAccount,
-    handleUpdateAccount,
-    handleDeleteAccount,
-    handleReorderAccounts,
-    handleTabChange,
-    setFromSettings,
-    handleRestoreBackup,
-    handleResetData,
-    onLogout
-  } = merged;
-
-  const activeSubscriptions = (recurringPayments && recurringPayments.length > 0)
-    ? recurringPayments
-    : subscriptions;
-
-  const isTransferOpen = Boolean(
-    merged.isTransferOpen ||
-    merged.isTransferModalOpen
-  );
-  const isTxOpen = Boolean(
-    merged.isAddTransactionOpen ||
-    merged.isTxOpen ||
-    merged.isAddTxOpen ||
-    merged.isTransactionModalOpen ||
-    merged.isNewTxModalOpen ||
-    isTransferOpen
-  );
-  const effectiveTxDefaultType = isTransferOpen
-    ? 'transfer'
-    : (txDefaultType || 'expense');
-  const isLoanOpen = Boolean(
-    merged.isAddLoanOpen ||
-    merged.isLoanOpen ||
-    merged.isDebtModalOpen ||
-    merged.isAddDebtOpen ||
-    merged.isNewDebtModalOpen
-  );
-  const isRecurringOpen = Boolean(
-    merged.isAddRecurringOpen ||
-    merged.isRecurringOpen ||
-    merged.isRecurringModalOpen ||
-    merged.isNewRecurringModalOpen
-  );
-  const isInvestmentOpen = Boolean(
-    merged.isAddInvestmentOpen ||
-    merged.isInvestmentOpen ||
-    merged.isNewInvestmentModalOpen
-  );
+  const isTransferOpen = Boolean(m.isTransferOpen || m.isTransferModalOpen);
+  const isTxOpen = Boolean(m.isAddTransactionOpen || m.isTxOpen || m.isAddTxOpen || m.isTransactionModalOpen || m.isNewTxModalOpen || isTransferOpen);
+  const isLoanOpen = Boolean(m.isAddLoanOpen || m.isLoanOpen || m.isDebtModalOpen || m.isAddDebtOpen || m.isNewDebtModalOpen);
+  const isRecurringOpen = Boolean(m.isAddRecurringOpen || m.isRecurringOpen || m.isRecurringModalOpen || m.isNewRecurringModalOpen);
+  const isInvestmentOpen = Boolean(m.isAddInvestmentOpen || m.isInvestmentOpen || m.isNewInvestmentModalOpen);
 
   const closeTx = () => {
-    if (typeof merged.closeAddTransaction === 'function') merged.closeAddTransaction();
-    else if (typeof merged.closeTx === 'function') merged.closeTx();
-    else if (typeof merged.closeTransactionModal === 'function') merged.closeTransactionModal();
-    else if (typeof merged.handleCloseTransaction === 'function') merged.handleCloseTransaction();
-    if (typeof merged.setIsAddTxOpen === 'function') merged.setIsAddTxOpen(false);
-    if (typeof merged.setIsAddTransactionOpen === 'function') merged.setIsAddTransactionOpen(false);
-    if (typeof merged.setIsNewTxModalOpen === 'function') merged.setIsNewTxModalOpen(false);
-    if (typeof merged.closeTransfer === 'function') merged.closeTransfer();
-    else if (typeof merged.closeTransferModal === 'function') merged.closeTransferModal();
-    else if (typeof merged.handleCloseTransfer === 'function') merged.handleCloseTransfer();
-    if (typeof merged.setIsTransferModalOpen === 'function') merged.setIsTransferModalOpen(false);
+    (m.closeAddTransaction || m.closeTx || m.closeTransactionModal || m.handleCloseTransaction)?.();
+    m.setIsAddTxOpen?.(false); m.setIsAddTransactionOpen?.(false); m.setIsNewTxModalOpen?.(false);
+    (m.closeTransfer || m.closeTransferModal || m.handleCloseTransfer)?.();
+    m.setIsTransferModalOpen?.(false);
   };
 
   const closeLoan = () => {
-    if (typeof merged.closeAddLoan === 'function') merged.closeAddLoan();
-    else if (typeof merged.closeLoan === 'function') merged.closeLoan();
-    else if (typeof merged.closeAddDebt === 'function') merged.closeAddDebt();
-    else if (typeof merged.closeDebtModal === 'function') merged.closeDebtModal();
-    else if (typeof merged.handleCloseLoan === 'function') merged.handleCloseLoan();
-    if (typeof merged.setIsAddLoanOpen === 'function') merged.setIsAddLoanOpen(false);
-    if (typeof merged.setIsNewDebtModalOpen === 'function') merged.setIsNewDebtModalOpen(false);
+    (m.closeAddLoan || m.closeLoan || m.closeAddDebt || m.closeDebtModal || m.handleCloseLoan)?.();
+    m.setIsAddLoanOpen?.(false); m.setIsNewDebtModalOpen?.(false);
   };
 
   const closeRecurring = () => {
-    if (typeof merged.closeAddRecurring === 'function') merged.closeAddRecurring();
-    else if (typeof merged.closeRecurring === 'function') merged.closeRecurring();
-    else if (typeof merged.closeRecurringModal === 'function') merged.closeRecurringModal();
-    else if (typeof merged.handleCloseRecurring === 'function') merged.handleCloseRecurring();
-    if (typeof merged.setIsAddRecurringOpen === 'function') merged.setIsAddRecurringOpen(false);
-    if (typeof merged.setIsNewRecurringModalOpen === 'function') merged.setIsNewRecurringModalOpen(false);
-  };
-
-  const closeTransfer = () => {
-    if (typeof merged.closeTransfer === 'function') merged.closeTransfer();
-    else if (typeof merged.closeTransferModal === 'function') merged.closeTransferModal();
-    else if (typeof merged.handleCloseTransfer === 'function') merged.handleCloseTransfer();
-    if (typeof merged.setIsTransferModalOpen === 'function') merged.setIsTransferModalOpen(false);
+    (m.closeAddRecurring || m.closeRecurring || m.closeRecurringModal || m.handleCloseRecurring)?.();
+    m.setIsAddRecurringOpen?.(false); m.setIsNewRecurringModalOpen?.(false);
   };
 
   const closeInvestment = () => {
-    if (typeof merged.closeInvestment === 'function') merged.closeInvestment();
-    else if (typeof merged.closeInvestmentModal === 'function') merged.closeInvestmentModal();
-    else if (typeof merged.handleCloseInvestment === 'function') merged.handleCloseInvestment();
-    if (typeof merged.setIsAddInvestmentOpen === 'function') merged.setIsAddInvestmentOpen(false);
-    if (typeof merged.setIsNewInvestmentModalOpen === 'function') merged.setIsNewInvestmentModalOpen(false);
+    (m.closeInvestment || m.closeInvestmentModal || m.handleCloseInvestment)?.();
+    m.setIsAddInvestmentOpen?.(false); m.setIsNewInvestmentModalOpen?.(false);
   };
+
+  const closeProfile = () => {
+    m.setIsSettingsOpen?.(false);
+    m.setIsProfileOpen?.(false);
+  };
+
+  const navigateFromSettings = (tab) => {
+    closeProfile();
+    m.setFromSettings?.(true);
+    m.handleTabChange?.(tab, 'settings');
+  };
+
+  const activeSubscriptions = (m.recurringPayments?.length > 0) ? m.recurringPayments : (m.subscriptions || []);
 
   return (
     <Suspense fallback={null}>
-      {/* 1. Modal Global para Nuevo Movimiento (AddTransactionModal) */}
+      {/* 1. Modal Transacción */}
       <AnimatePresence>
-        {Boolean(isTxOpen) && (
+        {isTxOpen && (
           <AddTransactionModal
-            key="global-add-transaction-modal"
-            isOpen={Boolean(isTxOpen)}
-            onClose={merged.closeAddTransaction || merged.closeTx || merged.closeTransactionModal || closeTx}
-            onSave={handleSaveTransaction}
-            onAddTransaction={handleAddTransaction}
-            onTransfer={merged.onTransfer || handleExecuteTransfer}
-            accounts={accounts}
-            categories={categories}
-            onAddCategory={handleAddCategory}
-            onAddSubcategory={handleAddSubcategory}
-            onUpdateSubcategory={handleUpdateSubcategory}
-            onDeleteSubcategory={handleDeleteSubcategory}
-            onAddAccount={handleAddAccount}
-            defaultDate={selectedDay || new Date().toLocaleDateString('en-CA')}
-            defaultType={effectiveTxDefaultType}
-            trm={trm}
-            {...merged}
+            key="global-add-transaction-modal" isOpen={isTxOpen}
+            onClose={m.closeAddTransaction || m.closeTx || m.closeTransactionModal || closeTx}
+            onSave={m.handleSaveTransaction} onAddTransaction={m.handleAddTransaction}
+            onTransfer={m.onTransfer || m.handleExecuteTransfer}
+            accounts={m.accounts || []} categories={m.categories || []}
+            onAddCategory={m.handleAddCategory} onAddSubcategory={m.handleAddSubcategory}
+            onUpdateSubcategory={m.handleUpdateSubcategory} onDeleteSubcategory={m.handleDeleteSubcategory}
+            onAddAccount={m.handleAddAccount} defaultDate={m.selectedDay || new Date().toLocaleDateString('en-CA')}
+            defaultType={isTransferOpen ? 'transfer' : (m.txDefaultType || 'expense')} trm={m.trm || 4050}
+            {...m}
           />
         )}
       </AnimatePresence>
 
-      {/* 2. Modal Global para Nueva Inversión */}
+      {/* 2. Modal Inversión */}
       <AnimatePresence mode="wait">
-        {Boolean(isInvestmentOpen) && (
+        {isInvestmentOpen && (
           <AddInvestmentModal
             isOpen={isInvestmentOpen}
-            onClose={merged.closeInvestment || merged.closeInvestmentModal || closeInvestment}
-            onSave={(newInv) => {
-              if (handleAddInvestment) handleAddInvestment(newInv);
-              closeInvestment();
-              if (handleTabChange) handleTabChange('investments');
-            }}
+            onClose={m.closeInvestment || m.closeInvestmentModal || closeInvestment}
+            onSave={(newInv) => { m.handleAddInvestment?.(newInv); closeInvestment(); m.handleTabChange?.('investments'); }}
           />
         )}
       </AnimatePresence>
 
-      {/* 4. Modal Global para Nuevo Préstamo o Deuda */}
+      {/* 3. Modal Préstamo / Deuda */}
       <AnimatePresence mode="wait">
-        {Boolean(isLoanOpen) && (
+        {isLoanOpen && (
           <AddLoanModal
-            isOpen={isLoanOpen}
-            initialType={addLoanInitialType}
-            defaultType={addLoanInitialType}
-            onClose={merged.closeAddLoan || merged.closeLoan || merged.closeAddDebt || merged.closeDebtModal || closeLoan}
-            onSave={(newItem) => {
-              if (handleAddDebtOrLoan) handleAddDebtOrLoan(newItem);
-              closeLoan();
-              if (handleTabChange) handleTabChange('debts');
-            }}
+            isOpen={isLoanOpen} initialType={m.addLoanInitialType || 'receivable'} defaultType={m.addLoanInitialType || 'receivable'}
+            onClose={m.closeAddLoan || m.closeLoan || m.closeAddDebt || m.closeDebtModal || closeLoan}
+            onSave={(newItem) => { m.handleAddDebtOrLoan?.(newItem); closeLoan(); m.handleTabChange?.('debts'); }}
           />
         )}
       </AnimatePresence>
 
-      {/* 5. Modal Global para Nuevo Pago Recurrente */}
-      {Boolean(isRecurringOpen) && (
+      {/* 4. Modal Recurrente */}
+      {isRecurringOpen && (
         <AddRecurringModal
           isOpen={isRecurringOpen}
-          onClose={merged.closeAddRecurring || merged.closeRecurring || merged.closeRecurringModal || closeRecurring}
-          onSave={(newItem) => {
-            if (handleAddRecurring) handleAddRecurring(newItem);
-            closeRecurring();
-            if (handleTabChange) handleTabChange('recurring');
-          }}
-          accounts={accounts}
-          categories={categories}
-          onAddCategory={handleAddCategory}
-          onAddSubcategory={handleAddSubcategory}
-          trm={trm}
+          onClose={m.closeAddRecurring || m.closeRecurring || m.closeRecurringModal || closeRecurring}
+          onSave={(newItem) => { m.handleAddRecurring?.(newItem); closeRecurring(); m.handleTabChange?.('recurring'); }}
+          accounts={m.accounts || []} categories={m.categories || []}
+          onAddCategory={m.handleAddCategory} onAddSubcategory={m.handleAddSubcategory} trm={m.trm || 4050}
         />
       )}
 
-      {/* Modal Global para Nueva Cuenta */}
-      {Boolean(merged.isAccountModalOpen || merged.isAddAccountOpen) && (
+      {/* 5. Modal Cuenta */}
+      {Boolean(m.isAccountModalOpen || m.isAddAccountOpen) && (
         <AddAccountModal
-          isOpen={Boolean(merged.isAccountModalOpen || merged.isAddAccountOpen)}
-          onClose={merged.closeAccountModal || merged.closeAddAccount || (() => {
-            if (typeof merged.setIsAccountModalOpen === 'function') merged.setIsAccountModalOpen(false);
-            if (typeof merged.setIsAddAccountOpen === 'function') merged.setIsAddAccountOpen(false);
-          })}
-          onCreateAccount={handleAddAccount}
-          trm={trm}
+          isOpen={Boolean(m.isAccountModalOpen || m.isAddAccountOpen)}
+          onClose={m.closeAccountModal || m.closeAddAccount || (() => { m.setIsAccountModalOpen?.(false); m.setIsAddAccountOpen?.(false); })}
+          onCreateAccount={m.handleAddAccount} trm={m.trm || 4050}
         />
       )}
 
-      {/* 6. Modal Selector de Mes / Año de Escritorio */}
-      {showMonthPicker && (
+      {/* 6. Selector de Mes */}
+      {m.showMonthPicker && (
         <DesktopMonthPicker
-          isOpen={showMonthPicker}
-          onClose={() => setShowMonthPicker && setShowMonthPicker(false)}
-          selectedDate={selectedDate}
-          onChangeMonth={(newDate) => {
-            if (setSelectedDate) setSelectedDate(newDate);
-          }}
-          selectedDay={selectedDay}
-          onSelectDay={(day) => setSelectedDay && setSelectedDay(day)}
-          onClearSelectedDay={() => setSelectedDay && setSelectedDay(null)}
-          transactions={transactions}
+          isOpen={m.showMonthPicker} onClose={() => m.setShowMonthPicker?.(false)}
+          selectedDate={m.selectedDate || new Date()} onChangeMonth={(d) => m.setSelectedDate?.(d)}
+          selectedDay={m.selectedDay} onSelectDay={(d) => m.setSelectedDay?.(d)}
+          onClearSelectedDay={() => m.setSelectedDay?.(null)} transactions={m.transactions || []}
         />
       )}
 
-      {/* 7. Modal Centrado para Calendario y Filtro por Día */}
-      {isCalendarOpen && (
+      {/* 7. Dropdown Calendario */}
+      {m.isCalendarOpen && (
         <CalendarDropdown
-          isOpen={isCalendarOpen}
-          onClose={() => setIsCalendarOpen && setIsCalendarOpen(false)}
-          selectedDate={selectedDate}
-          onChangeMonth={setSelectedDate}
-          selectedDay={selectedDay}
-          onSelectDay={(day) => {
-            if (setSelectedDay) setSelectedDay(day);
-          }}
-          transactions={transactions}
+          isOpen={m.isCalendarOpen} onClose={() => m.setIsCalendarOpen?.(false)}
+          selectedDate={m.selectedDate || new Date()} onChangeMonth={m.setSelectedDate}
+          selectedDay={m.selectedDay} onSelectDay={(d) => m.setSelectedDay?.(d)} transactions={m.transactions || []}
         />
       )}
 
-      {/* 8. Modal Global de Detalle de Tarjeta de Crédito */}
-      {Boolean(selectedCreditCardDetail) && (
+      {/* 8. Tarjeta de Crédito Detalle */}
+      {Boolean(m.selectedCreditCardDetail) && (
         <CreditCardDetailModal
-          isOpen={Boolean(selectedCreditCardDetail)}
-          onClose={() => setSelectedCreditCardDetail && setSelectedCreditCardDetail(null)}
-          card={accounts.find(a => a.id === selectedCreditCardDetail?.id) || selectedCreditCardDetail}
-          transactions={transactions}
-          accounts={accounts}
-          onAddTransaction={handleAddTransaction}
-          onOpenEdit={() => {
-            if (setSelectedCreditCardDetail) setSelectedCreditCardDetail(null);
-            if (handleTabChange) handleTabChange('accounts');
-          }}
+          isOpen={Boolean(m.selectedCreditCardDetail)} onClose={() => m.setSelectedCreditCardDetail?.(null)}
+          card={(m.accounts || []).find(a => a.id === m.selectedCreditCardDetail?.id) || m.selectedCreditCardDetail}
+          transactions={m.transactions || []} accounts={m.accounts || []} onAddTransaction={m.handleAddTransaction}
+          onOpenEdit={() => { m.setSelectedCreditCardDetail?.(null); m.handleTabChange?.('accounts'); }}
         />
       )}
 
-      {/* 9. Modal para Personalizar / Reordenar Widgets del Dashboard */}
-      {Boolean(isEditWidgetsModalOpen) && (
+      {/* 9. Widgets Modal */}
+      {Boolean(m.isEditWidgetsModalOpen) && (
         <EditWidgetsModal
-          isOpen={isEditWidgetsModalOpen}
-          onClose={() => setIsEditWidgetsModalOpen && setIsEditWidgetsModalOpen(false)}
-          widgetsConfig={widgets}
-          widgets={widgets}
-          onSave={(newWidgets) => {
-            if (setWidgets) setWidgets([...newWidgets]);
-          }}
-          onReset={(defWidgets) => {
-            if (setWidgets) setWidgets([...(defWidgets || DEFAULT_WIDGETS_CONFIG)]);
-          }}
+          isOpen={m.isEditWidgetsModalOpen} onClose={() => m.setIsEditWidgetsModalOpen?.(false)}
+          widgetsConfig={m.widgets || DEFAULT_WIDGETS_CONFIG} widgets={m.widgets || DEFAULT_WIDGETS_CONFIG}
+          onSave={(w) => m.setWidgets?.([...w])} onReset={(w) => m.setWidgets?.([...(w || DEFAULT_WIDGETS_CONFIG)])}
         />
       )}
 
-      {/* 10. Modal de Mi Perfil y Ajustes */}
-      {Boolean(isSettingsOpen || isProfileOpen) && (
+      {/* 10. Perfil y Ajustes */}
+      {Boolean(m.isSettingsOpen || m.isProfileOpen) && (
         <ProfileModal
-          key={`profile-modal-${profileResetKey}`}
-          isOpen={true}
-          onClose={() => {
-            if (typeof setIsSettingsOpen === 'function') setIsSettingsOpen(false);
-            if (typeof setIsProfileOpen === 'function') setIsProfileOpen(false);
-          }}
-          userProfile={userProfile}
-          onUpdateProfile={handleUpdateProfile}
-          securitySettings={securitySettings}
-          onUpdateSecurity={setSecuritySettings}
+          key={`profile-modal-${m.profileResetKey || 0}`} isOpen={true} onClose={closeProfile}
+          userProfile={m.userProfile || { name: 'Usuario' }} onUpdateProfile={m.handleUpdateProfile}
+          securitySettings={m.securitySettings || {}} onUpdateSecurity={m.setSecuritySettings}
           subscriptions={activeSubscriptions}
-          onAddSubscription={(newSub) => {
-            if (handleAddRecurring) {
-              handleAddRecurring(newSub);
-            } else if (setSubscriptions) {
-              setSubscriptions(prev => [newSub, ...prev]);
-            }
-          }}
-          onDeleteSubscription={(id) => {
-            const deleteFn = handleDeleteRecurring || onDeleteRecurring || deleteRecurringPayment;
-            if (deleteFn) {
-              deleteFn(id);
-            } else if (setSubscriptions) {
-              setSubscriptions(prev => prev.filter(s => s.id !== id));
-            }
-          }}
-          accountsCount={accounts.length}
-          categoriesCount={categories.length}
-          onOpenAccounts={() => {
-            if (setFromSettings) setFromSettings(true);
-            if (handleTabChange) handleTabChange('accounts', 'settings');
-          }}
-          onNavigateToRecurring={() => {
-            if (setIsSettingsOpen) setIsSettingsOpen(false);
-            if (setFromSettings) setFromSettings(true);
-            if (handleTabChange) handleTabChange('recurring', 'settings');
-          }}
-          onNavigateToNetWorth={() => {
-            if (setIsSettingsOpen) setIsSettingsOpen(false);
-            if (setIsProfileOpen) setIsProfileOpen(false);
-            if (setFromSettings) setFromSettings(true);
-            if (handleTabChange) handleTabChange('net_worth', 'settings');
-          }}
-          onNavigate={(tab) => {
-            if (setIsSettingsOpen) setIsSettingsOpen(false);
-            if (setIsProfileOpen) setIsProfileOpen(false);
-            if (setFromSettings) setFromSettings(true);
-            if (handleTabChange) handleTabChange(tab, 'settings');
-          }}
-          onOpenTutorial={() => {
-            if (setIsSettingsOpen) setIsSettingsOpen(false);
-            if (setShowTutorial) setShowTutorial(true);
-          }}
-          theme={theme}
-          onThemeChange={setTheme}
-          budgets={budgets}
-          onUpdateBudgets={setBudgets}
-          savingsGoals={savingsGoals}
-          onAddGoal={handleAddGoal}
-          onUpdateGoal={handleUpdateGoal}
-          onDeleteGoal={handleDeleteGoal}
-          transactions={transactions}
-          categories={categories}
-          onAddCategory={handleAddCategory}
-          onUpdateCategory={handleUpdateCategory}
-          onDeleteCategory={handleDeleteCategory}
-          onAddSubcategory={handleAddSubcategory}
-          onUpdateSubcategory={handleUpdateSubcategory}
-          onDeleteSubcategory={handleDeleteSubcategory}
-          investments={investments}
-          debtsAndLoans={debtsAndLoans}
-          accounts={accounts}
-          onAddAccount={handleAddAccount}
-          onUpdateAccount={handleUpdateAccount}
-          onDeleteAccount={handleDeleteAccount}
-          onReorderAccounts={handleReorderAccounts}
-          trm={trm}
-          onOpenAuth={() => {}}
-          onRestoreBackup={handleRestoreBackup}
-          onFactoryReset={handleResetData}
-          onManualCloudSync={merged.pushLocalToCloud}
-          syncStatus={merged.syncStatus}
-          user={user}
-          selectedDate={selectedDate}
-          onLogout={onLogout}
+          onAddSubscription={(sub) => { if (m.handleAddRecurring) m.handleAddRecurring(sub); else m.setSubscriptions?.(prev => [sub, ...prev]); }}
+          onDeleteSubscription={(id) => { const delFn = m.handleDeleteRecurring || m.onDeleteRecurring || m.deleteRecurringPayment; if (delFn) delFn(id); else m.setSubscriptions?.(prev => prev.filter(s => s.id !== id)); }}
+          accountsCount={(m.accounts || []).length} categoriesCount={(m.categories || []).length}
+          onOpenAccounts={() => navigateFromSettings('accounts')} onNavigateToRecurring={() => navigateFromSettings('recurring')}
+          onNavigateToNetWorth={() => navigateFromSettings('net_worth')} onNavigate={navigateFromSettings}
+          onOpenTutorial={() => { closeProfile(); m.setShowTutorial?.(true); }}
+          theme={m.theme || 'dark'} onThemeChange={m.setTheme}
+          budgets={m.budgets || {}} onUpdateBudgets={m.setBudgets}
+          savingsGoals={m.savingsGoals || []} onAddGoal={m.handleAddGoal} onUpdateGoal={m.handleUpdateGoal} onDeleteGoal={m.handleDeleteGoal}
+          transactions={m.transactions || []} categories={m.categories || []}
+          onAddCategory={m.handleAddCategory} onUpdateCategory={m.handleUpdateCategory} onDeleteCategory={m.handleDeleteCategory}
+          onAddSubcategory={m.handleAddSubcategory} onUpdateSubcategory={m.handleUpdateSubcategory} onDeleteSubcategory={m.handleDeleteSubcategory}
+          investments={m.investments || []} debtsAndLoans={m.debtsAndLoans || []} accounts={m.accounts || []}
+          onAddAccount={m.handleAddAccount} onUpdateAccount={m.handleUpdateAccount} onDeleteAccount={m.handleDeleteAccount} onReorderAccounts={m.handleReorderAccounts}
+          trm={m.trm || 4050} onOpenAuth={() => {}} onRestoreBackup={m.handleRestoreBackup} onFactoryReset={m.handleResetData}
+          onManualCloudSync={m.pushLocalToCloud} syncStatus={m.syncStatus} user={m.user} selectedDate={m.selectedDate} onLogout={m.onLogout}
         />
       )}
 
-      {/* 11. Modal / Overlay del Tutorial rápido */}
-      {Boolean(showTutorial) && (
-        <OnboardingFlow
-          tutorialOnly={true}
-          onClose={() => setShowTutorial && setShowTutorial(false)}
-        />
-      )}
+      {/* 11. Tutorial */}
+      {Boolean(m.showTutorial) && <OnboardingFlow tutorialOnly onClose={() => m.setShowTutorial?.(false)} />}
 
-      {/* 12. Pantalla de Bloqueo de Seguridad (Lock Screen) */}
-      {isLocked && Boolean(securitySettings?.pinEnabled) && Boolean(securitySettings?.pin && String(securitySettings.pin).trim().length >= 4) && (
+      {/* 12. Bloqueo */}
+      {m.isLocked && Boolean(m.securitySettings?.pinEnabled) && Boolean(m.securitySettings?.pin && String(m.securitySettings.pin).trim().length >= 4) && (
         <LockScreen
-          userProfile={userProfile}
-          expectedPin={securitySettings?.pin || ''}
-          biometricsEnabled={Boolean(securitySettings?.biometricsEnabled)}
-          onUnlock={handleUnlock}
-          failedAttempts={failedAttempts}
+          userProfile={m.userProfile} expectedPin={m.securitySettings?.pin || ''}
+          biometricsEnabled={Boolean(m.securitySettings?.biometricsEnabled)} onUnlock={m.handleUnlock} failedAttempts={m.failedAttempts}
         />
       )}
     </Suspense>

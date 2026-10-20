@@ -1,25 +1,18 @@
 /**
- * Servicio para validación, cálculos financieros y armado de payload de deudas y préstamos
+ * debtFormService.js
+ * Validación, cálculos financieros y armado de payload de deudas y préstamos.
  */
+
 import { getNextPaymentDate, calculateElapsedMonths } from '../../utils/debtAlerts';
 import { safeNumber } from '../../utils/financeMath';
 import { parseFormattedAmount } from '../../utils/currencyFormatter';
 
-/**
- * Normaliza el tipo de deuda a 'receivable' o 'payable'.
- */
 export const normalizeDebtType = (val) => {
   if (!val) return 'receivable';
   const s = String(val).toLowerCase().trim();
-  if (s === 'payable' || s === 'debo' || s === 'borrowed' || s.includes('prestaron') || s === 'debt' || s === 'deudas') {
-    return 'payable';
-  }
-  return 'receivable';
+  return ['payable', 'debo', 'borrowed', 'debt', 'deudas'].includes(s) || s.includes('prestaron') ? 'payable' : 'receivable';
 };
 
-/**
- * Normaliza el string de frecuencia a los 4 tipos estándar.
- */
 export const parseFrequency = (rawFreq) => {
   if (!rawFreq) return 'Único';
   const f = rawFreq.toLowerCase();
@@ -29,9 +22,6 @@ export const parseFrequency = (rawFreq) => {
   return 'Único';
 };
 
-/**
- * Calcula la fecha de vencimiento o próximo corte según la frecuencia elegida.
- */
 export const calculateComputedDueDate = ({
   frequency,
   biweeklyDay1 = 15,
@@ -41,25 +31,12 @@ export const calculateComputedDueDate = ({
   startDate,
   getNextPaymentDateFn = getNextPaymentDate
 }) => {
-  if (frequency === 'Único') {
-    return dueDate;
-  }
-  const tempItem = {
-    frequency,
-    biweeklyDays: [biweeklyDay1, biweeklyDay2],
-    dueDay,
-    startDate
-  };
-  const nextDate = getNextPaymentDateFn ? getNextPaymentDateFn(tempItem, new Date()) : null;
-  if (nextDate && !isNaN(nextDate.getTime())) {
-    return nextDate.toISOString().split('T')[0];
-  }
-  return dueDate || new Date().toISOString().split('T')[0];
+  if (frequency === 'Único') return dueDate;
+  const tempItem = { frequency, biweeklyDays: [biweeklyDay1, biweeklyDay2], dueDay, startDate };
+  const nextDate = getNextPaymentDateFn?.(tempItem, new Date());
+  return (nextDate && !isNaN(nextDate.getTime())) ? nextDate.toISOString().split('T')[0] : (dueDate || new Date().toISOString().split('T')[0]);
 };
 
-/**
- * Calcula intereses causados retroactivos según el monto, tasa y fecha de inicio.
- */
 export const calculateAccruedInterest = ({
   totalAmount,
   interestRate,
@@ -71,62 +48,36 @@ export const calculateAccruedInterest = ({
   const principalAmount = parseFormattedAmountFn ? parseFormattedAmountFn(totalAmount) : Number(totalAmount) || 0;
   const monthlyRate = parseFloat(interestRate) || 0;
   const monthsElapsed = calculateElapsedMonthsFn ? calculateElapsedMonthsFn(startDate, currentDate) : 0;
+  const accruedInterest = (monthsElapsed > 0 && monthlyRate > 0 && principalAmount > 0)
+    ? Math.round(principalAmount * (monthlyRate / 100) * monthsElapsed)
+    : 0;
 
-  let accruedInterest = 0;
-  if (monthsElapsed > 0 && monthlyRate > 0 && principalAmount > 0) {
-    accruedInterest = Math.round(principalAmount * (monthlyRate / 100) * monthsElapsed);
-  }
-
-  return {
-    principalAmount,
-    monthlyRate,
-    monthsElapsed,
-    accruedInterest,
-    totalOwedWithInterest: principalAmount + accruedInterest
-  };
+  return { principalAmount, monthlyRate, monthsElapsed, accruedInterest, totalOwedWithInterest: principalAmount + accruedInterest };
 };
 
-/**
- * Calcula el desglose de amortización: capital pagado, intereses pagados y saldos pendientes.
- */
-export const calculateDebtRemainingBalances = ({
-  baseAmount,
-  accruedInterest = 0,
-  payments = []
-}) => {
+export const calculateDebtRemainingBalances = ({ baseAmount, accruedInterest = 0, payments = [] }) => {
   const base = Number(baseAmount) || 0;
-  const existingPayments = Array.isArray(payments) ? payments : [];
+  const pmts = Array.isArray(payments) ? payments : [];
 
-  const totalCapitalPaid = existingPayments.reduce((sum, p) => {
-    if (!p) return sum;
-    if (p.capitalAmount !== undefined) return sum + safeNumber(p.capitalAmount);
-    if (p.mode === 'interest') return sum;
-    return sum + safeNumber(p.amount);
-  }, 0);
+  let totalCapitalPaid = 0;
+  let totalInterestPaid = 0;
 
-  const totalInterestPaid = existingPayments.reduce((sum, p) => {
-    if (!p) return sum;
-    if (p.interestAmount !== undefined) return sum + safeNumber(p.interestAmount);
-    if (p.mode === 'interest') return sum + safeNumber(p.amount);
-    return sum;
-  }, 0);
+  pmts.forEach(p => {
+    if (!p) return;
+    const amt = safeNumber(p.amount);
+    if (p.capitalAmount !== undefined) totalCapitalPaid += safeNumber(p.capitalAmount);
+    else if (p.mode !== 'interest') totalCapitalPaid += amt;
+
+    if (p.interestAmount !== undefined) totalInterestPaid += safeNumber(p.interestAmount);
+    else if (p.mode === 'interest') totalInterestPaid += amt;
+  });
 
   const remainingCapital = Math.max(0, base - totalCapitalPaid);
   const remainingInterest = Math.max(0, accruedInterest - totalInterestPaid);
-  const totalRemaining = remainingCapital + remainingInterest;
 
-  return {
-    totalCapitalPaid,
-    totalInterestPaid,
-    remainingCapital,
-    remainingInterest,
-    totalRemaining
-  };
+  return { totalCapitalPaid, totalInterestPaid, remainingCapital, remainingInterest, totalRemaining: remainingCapital + remainingInterest };
 };
 
-/**
- * Construye el payload completo del registro de deuda / préstamo para su guardado.
- */
 export const buildDebtPayload = ({
   editingItem = null,
   type = 'receivable',
@@ -150,22 +101,12 @@ export const buildDebtPayload = ({
   const finalTargetDate = frequency === 'Único' ? dueDate : (computedDueDate || dueDate);
 
   const { monthsElapsed, accruedInterest } = calculateAccruedInterest({
-    totalAmount,
-    interestRate,
-    startDate,
-    parseFormattedAmountFn,
-    calculateElapsedMonthsFn
+    totalAmount, interestRate, startDate, parseFormattedAmountFn, calculateElapsedMonthsFn
   });
 
-  const existingPayments = editingItem ? (editingItem.payments || []) : [];
-  const {
-    remainingCapital,
-    remainingInterest,
-    totalRemaining
-  } = calculateDebtRemainingBalances({
-    baseAmount: base,
-    accruedInterest,
-    payments: existingPayments
+  const existingPayments = editingItem?.payments || [];
+  const { remainingCapital, remainingInterest, totalRemaining } = calculateDebtRemainingBalances({
+    baseAmount: base, accruedInterest, payments: existingPayments
   });
 
   const cleanName = (name || '').trim();
@@ -182,7 +123,7 @@ export const buildDebtPayload = ({
     remainingCapital,
     remainingInterest,
     totalRemaining,
-    remainingAmount: remainingCapital, // Retrocompatibilidad
+    remainingAmount: remainingCapital,
     interestRate: parseFloat(interestRate) || 0,
     insuranceFee: parseFloat(insuranceFee) || 0,
     installments: parseInt(installments, 10) || 1,
@@ -197,18 +138,11 @@ export const buildDebtPayload = ({
   };
 };
 
-/**
- * Formatea la fecha calculada para previsualización legible en la UI.
- */
 export const formatPreviewDueDate = (computedDueDate) => {
   if (!computedDueDate) return '';
   const parts = computedDueDate.split('-');
   if (parts.length !== 3) return computedDueDate;
-  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-  return d.toLocaleDateString('es-CO', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
+  return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)).toLocaleDateString('es-CO', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
   });
 };

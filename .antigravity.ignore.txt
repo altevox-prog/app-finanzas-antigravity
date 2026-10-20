@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+.git/
+*.log
+package-lock.json
+*.svg
+*.png
+*.jpg
+*.ico

@@ -4,55 +4,37 @@ import { ensureUUID } from '../services/syncEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
 import { resolveRemoteBudgets } from '../services/sync/syncNormalizers';
-import { toast } from '../utils/toast';
 
 /**
  * Normaliza y construye el estado de presupuestos de React
  */
-export function normalizeBudgetsState(budgets) {
-  if (!budgets || typeof budgets !== 'object') {
-    return { global: 0, categories: {} };
-  }
-  return {
-    global: Number(budgets.global || 0),
-    categories: budgets.categories && typeof budgets.categories === 'object' ? { ...budgets.categories } : {}
-  };
-}
+const normalizeBudgetsState = (budgets) => ({
+  global: Number(budgets?.global || 0),
+  categories: budgets?.categories && typeof budgets.categories === 'object' ? { ...budgets.categories } : {}
+});
 
 /**
- * useBudgets
- * Hook de gestión de presupuestos conectado a Supabase Puro y sincronizado en tiempo real (Realtime).
+ * useBudgets: Hook de gestión de presupuestos conectado a Supabase Puro y sincronizado en tiempo real.
  */
 export function useBudgets(isResettingRef, options = {}) {
   const explicitUser = typeof isResettingRef === 'object' && isResettingRef?.user ? isResettingRef.user : options?.user;
   const resetRef = typeof isResettingRef === 'object' && 'current' in isResettingRef ? isResettingRef : options?.isResettingRef;
 
-  // Estado limpio en memoria
   const [budgets, setBudgets] = useState(() => ({ ...INITIAL_BUDGETS }));
   const [activeUser, setActiveUser] = useState(explicitUser || null);
   const activeUserRef = useRef(explicitUser || null);
   activeUserRef.current = activeUser;
 
-  // 1. Detección y suscripción a la sesión del usuario de Supabase Auth
+  // 1. Suscripción a la sesión del usuario de Supabase Auth
   useEffect(() => {
-    if (explicitUser) {
-      setActiveUser(explicitUser);
-      return;
-    }
-
+    if (explicitUser) return setActiveUser(explicitUser);
     if (!isSupabaseConfigured || !supabase) return;
 
     let isMounted = true;
-    getSupabaseUser().then((u) => {
-      if (isMounted && u?.id) {
-        setActiveUser(u);
-      }
-    });
+    getSupabaseUser().then((u) => { if (isMounted && u?.id) setActiveUser(u); });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (isMounted) {
-        setActiveUser(session?.user || null);
-      }
+      if (isMounted) setActiveUser(session?.user || null);
     });
 
     return () => {
@@ -61,15 +43,14 @@ export function useBudgets(isResettingRef, options = {}) {
     };
   }, [explicitUser]);
 
+  // Helper para obtener ID de usuario
+  const getUid = useCallback(async () => activeUserRef.current?.id || (await getSupabaseUser())?.id, []);
+
   // 2. Consulta y carga inicial desde Supabase
   const fetchBudgets = useCallback(async (userId = null) => {
     if (!isSupabaseConfigured || !supabase) return;
     try {
-      let uid = userId || activeUserRef.current?.id;
-      if (!uid) {
-        const user = await getSupabaseUser();
-        uid = user?.id;
-      }
+      const uid = userId || await getUid();
       if (!uid) return;
 
       const [budgetsRes, settingsRes] = await Promise.allSettled([
@@ -79,21 +60,18 @@ export function useBudgets(isResettingRef, options = {}) {
 
       const rawBudgets = budgetsRes.status === 'fulfilled' && !budgetsRes.value?.error ? budgetsRes.value.data : [];
       const userSettings = settingsRes.status === 'fulfilled' && !settingsRes.value?.error ? settingsRes.value.data : null;
-
-      const resolved = resolveRemoteBudgets(rawBudgets, userSettings);
-      const normalized = normalizeBudgetsState(resolved);
+      const normalized = normalizeBudgetsState(resolveRemoteBudgets(rawBudgets, userSettings));
       setBudgets(normalized);
       return normalized;
     } catch (err) {
       console.error('[useBudgets] Error al consultar presupuestos:', err);
     }
-  }, []);
+  }, [getUid]);
 
   useEffect(() => {
-    if (resetRef?.current) return;
-    if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
-
-    fetchBudgets(activeUser.id);
+    if (!resetRef?.current && isSupabaseConfigured && supabase && activeUser?.id) {
+      fetchBudgets(activeUser.id);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeUser?.id]);
 
@@ -101,211 +79,109 @@ export function useBudgets(isResettingRef, options = {}) {
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !activeUser?.id) return;
 
-    const channelName = `realtime:budgets:${activeUser.id}`;
     const channel = supabase
-      .channel(channelName)
+      .channel(`realtime:budgets:${activeUser.id}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'budgets',
-          filter: `user_id=eq.${activeUser.id}`
-        },
+        { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${activeUser.id}` },
         (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const row = payload.new;
-            if (!row) return;
-
-            const isRowGlobal = row.is_global === true || row.is_global === 'true' || row.isGlobal === true || row.name === 'Límite Global' || !row.category_id;
-            const amount = Number(row.amount || 0);
+          const { eventType, new: rowNew, old: rowOld } = payload;
+          if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            if (!rowNew) return;
+            const isGlobal = rowNew.is_global === true || rowNew.is_global === 'true' || rowNew.isGlobal === true || rowNew.name === 'Límite Global' || !rowNew.category_id;
+            const amount = Number(rowNew.amount || 0);
 
             setBudgets((prev) => {
-              if (isRowGlobal) {
-                return {
-                  ...prev,
-                  global: amount
-                };
-              }
-              const catId = row.category_id || row.category;
-              if (catId) {
-                return {
-                  ...prev,
-                  categories: {
-                    ...(prev?.categories || {}),
-                    [catId]: amount
-                  }
-                };
-              }
-              return prev;
+              if (isGlobal) return { ...prev, global: amount };
+              const catId = rowNew.category_id || rowNew.category;
+              return catId ? { ...prev, categories: { ...(prev?.categories || {}), [catId]: amount } } : prev;
             });
-          } else if (payload.eventType === 'DELETE') {
-            const row = payload.old;
-            if (!row) return;
-
+          } else if (eventType === 'DELETE' && rowOld?.category_id) {
             setBudgets((prev) => {
-              const updatedCats = { ...(prev?.categories || {}) };
-              if (row.category_id) {
-                delete updatedCats[row.category_id];
-              }
-              return {
-                ...prev,
-                categories: updatedCats
-              };
+              const updated = { ...(prev?.categories || {}) };
+              delete updated[rowOld.category_id];
+              return { ...prev, categories: updated };
             });
           }
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [activeUser?.id]);
 
-  // 4. Operaciones de persistencia directa en Supabase
-
-  // Actualizar presupuesto global
+  // 4. Operaciones de persistencia optimista directa
   const updateGlobalBudget = useCallback(async (amount) => {
     const val = Math.max(0, Number(amount) || 0);
+    setBudgets((prev) => ({ ...prev, global: val }));
 
-    // Actualización optimista inmediata en React
-    setBudgets((prev) => ({
-      ...prev,
-      global: val
-    }));
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const uid = await getUid();
+      if (!uid) return;
+      const nowIso = new Date().toISOString();
+      const globalId = ensureUUID(`${uid}-global-budget`);
+      const baseRec = { id: globalId, user_id: uid, name: 'Límite Global', category: 'General', period: 'monthly', amount: val, updated_at: nowIso };
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const user = activeUserRef.current || (await getSupabaseUser());
-        if (user?.id) {
-          const nowIso = new Date().toISOString();
-          const globalId = ensureUUID(`${user.id}-global-budget`);
+      const { error: bErr } = await supabase.from('budgets').upsert([{ ...baseRec, is_global: true }], { onConflict: 'id' });
+      if (bErr) await supabase.from('budgets').upsert([baseRec], { onConflict: 'id' });
 
-          const budgetRecord = {
-            id: globalId,
-            user_id: user.id,
-            name: 'Límite Global',
-            category: 'General',
-            period: 'monthly',
-            amount: val,
-            is_global: true,
-            updated_at: nowIso
-          };
-
-          const { error: bErr } = await supabase.from('budgets').upsert([budgetRecord], { onConflict: 'id' });
-          if (bErr) {
-            console.warn('[useBudgets] Upsert primario en budgets falló, intentando esquema básico:', bErr.message);
-            await supabase.from('budgets').upsert([{
-              id: globalId,
-              user_id: user.id,
-              name: 'Límite Global',
-              category: 'General',
-              period: 'monthly',
-              amount: val,
-              updated_at: nowIso
-            }], { onConflict: 'id' });
-          }
-
-          // Sincronizar también con user_settings para compatibilidad
-          supabase.from('user_settings').upsert({
-            user_id: user.id,
-            global_budget_limit: val,
-            updated_at: nowIso
-          }, { onConflict: 'user_id' }).catch(() => {});
-        }
-      } catch (err) {
-        console.error('[useBudgets] Excepción al actualizar presupuesto global en Supabase:', err);
-      }
+      supabase.from('user_settings').upsert({ user_id: uid, global_budget_limit: val, updated_at: nowIso }, { onConflict: 'user_id' }).catch(() => {});
+    } catch (err) {
+      console.error('[useBudgets] Error al actualizar presupuesto global:', err);
     }
-  }, []);
+  }, [getUid]);
 
-  const handleSetGlobalBudget = updateGlobalBudget;
-
-  // Actualizar presupuesto para una categoría específica
   const updateCategoryBudget = useCallback(async (categoryId, amount) => {
     const val = Math.max(0, Number(amount) || 0);
+    setBudgets((prev) => ({ ...prev, categories: { ...(prev?.categories || {}), [categoryId]: val } }));
 
-    // Actualización optimista inmediata en React
-    setBudgets((prev) => ({
-      ...prev,
-      categories: {
-        ...(prev?.categories || {}),
-        [categoryId]: val
-      }
-    }));
-
-    if (isSupabaseConfigured && supabase && categoryId) {
-      try {
-        const user = activeUserRef.current || (await getSupabaseUser());
-        if (user?.id) {
-          const nowIso = new Date().toISOString();
-          const catBudgetId = ensureUUID(`${user.id}-budget-${categoryId}`);
-
-          const catRecord = {
-            id: catBudgetId,
-            user_id: user.id,
-            name: `Presupuesto ${categoryId}`,
-            category: categoryId,
-            category_id: categoryId,
-            period: 'monthly',
-            amount: val,
-            is_global: false,
-            updated_at: nowIso
-          };
-
-          const { error } = await supabase.from('budgets').upsert([catRecord], { onConflict: 'id' });
-          if (error) {
-            console.warn('[useBudgets] Error al guardar presupuesto de categoría en Supabase:', error.message);
-          }
-        }
-      } catch (err) {
-        console.error('[useBudgets] Excepción al guardar presupuesto de categoría:', err);
-      }
+    if (!isSupabaseConfigured || !supabase || !categoryId) return;
+    try {
+      const uid = await getUid();
+      if (!uid) return;
+      await supabase.from('budgets').upsert([{
+        id: ensureUUID(`${uid}-budget-${categoryId}`),
+        user_id: uid,
+        name: `Presupuesto ${categoryId}`,
+        category: categoryId,
+        category_id: categoryId,
+        period: 'monthly',
+        amount: val,
+        is_global: false,
+        updated_at: new Date().toISOString()
+      }], { onConflict: 'id' });
+    } catch (err) {
+      console.error('[useBudgets] Error al guardar presupuesto de categoría:', err);
     }
-  }, []);
+  }, [getUid]);
 
-  // Eliminar presupuesto de una categoría
   const removeCategoryBudget = useCallback(async (categoryId) => {
     if (!categoryId) return;
-
-    // Actualización optimista inmediata en React
     setBudgets((prev) => {
-      const updatedCategories = { ...(prev?.categories || {}) };
-      delete updatedCategories[categoryId];
-      return {
-        ...prev,
-        categories: updatedCategories
-      };
+      const updated = { ...(prev?.categories || {}) };
+      delete updated[categoryId];
+      return { ...prev, categories: updated };
     });
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const user = activeUserRef.current || (await getSupabaseUser());
-        if (user?.id) {
-          const catBudgetId = ensureUUID(`${user.id}-budget-${categoryId}`);
-          await supabase
-            .from('budgets')
-            .delete()
-            .eq('id', catBudgetId)
-            .eq('user_id', user.id);
-        }
-      } catch (err) {
-        console.error('[useBudgets] Error al eliminar presupuesto de categoría en Supabase:', err);
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const uid = await getUid();
+      if (uid) {
+        await supabase.from('budgets').delete().eq('id', ensureUUID(`${uid}-budget-${categoryId}`)).eq('user_id', uid);
       }
+    } catch (err) {
+      console.error('[useBudgets] Error al eliminar presupuesto de categoría:', err);
     }
-  }, []);
+  }, [getUid]);
 
-  // Restaurar presupuestos por defecto en memoria
-  const resetBudgets = useCallback(() => {
-    setBudgets({ ...INITIAL_BUDGETS });
-  }, []);
+  const resetBudgets = useCallback(() => setBudgets({ ...INITIAL_BUDGETS }), []);
 
   return {
     budgets,
     setBudgets,
     updateGlobalBudget,
-    handleSetGlobalBudget,
+    handleSetGlobalBudget: updateGlobalBudget,
     updateCategoryBudget,
     removeCategoryBudget,
     fetchBudgets,

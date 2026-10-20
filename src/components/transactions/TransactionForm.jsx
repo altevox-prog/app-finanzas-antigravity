@@ -14,450 +14,141 @@ import { formatCurrencyInput, parseFormattedAmount, getEnableDecimals } from '..
 import { convertToCOP, convertFromCOP, formatNativeCurrency } from '../../utils/currencyUtils';
 import { buildTransactionPayload, saveTransactionRecord } from '../../services/transactions/transactionSubmitService';
 
+const getTodayLocalDate = () => new Date().toISOString().split('T')[0];
+const getRate = (curr, trm) => curr === 'USD' ? (Number(trm) || 4050) : curr === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
+
 export default function TransactionForm({
-  accounts: propAccounts, 
-  categories: propCategories, 
-  onAddTransaction, 
-  onTransfer,
-  onAddCategory,
-  onAddSubcategory, 
-  onUpdateSubcategory, 
-  onDeleteSubcategory, 
-  onAddAccount,
-  defaultDate, 
-  defaultType = 'expense', 
-  defaultAmount, 
-  transactionToEdit,
-  initialData, 
-  movement, 
-  isModal = false, 
-  onClose = null, 
-  onSuccess = null, 
-  trm = 4050
+  accounts: propAccounts, categories: propCategories, onAddTransaction, onTransfer, onAddCategory, onAddSubcategory,
+  onUpdateSubcategory, onDeleteSubcategory, onAddAccount, defaultDate, defaultType = 'expense', defaultAmount,
+  transactionToEdit, initialData, movement, isModal = false, onClose = null, onSuccess = null, trm = 4050
 }) {
   const accounts = Array.isArray(propAccounts) ? propAccounts.filter(Boolean) : [];
   const categories = Array.isArray(propCategories) ? propCategories.filter(Boolean) : [];
   useBackHandler(Boolean(isModal && onClose), onClose);
 
-  const { enableDecimals: privacyDecimals } = usePrivacy();
-  const enableDecimals = privacyDecimals ?? getEnableDecimals();
-  const editingMovement = transactionToEdit || initialData || movement;
-  const [currentEditing, setCurrentEditing] = useState(editingMovement);
+  const enableDecimals = (usePrivacy()?.enableDecimals) ?? getEnableDecimals();
+  const editingMovement = transactionToEdit || initialData || movement, editingId = editingMovement?.id;
 
-  useEffect(() => {
-    setCurrentEditing(transactionToEdit || initialData || movement || null);
-  }, [transactionToEdit, initialData, movement]);
-
-  const [type, setType] = useState(currentEditing?.type || defaultType || 'expense');
-  const [currency, setCurrency] = useState(currentEditing?.originalCurrency || 'COP');
-  const [exchangeRate, setExchangeRate] = useState(currentEditing?.exchangeRate ? String(currentEditing.exchangeRate) : String(trm || 4050));
-  const [amount, setAmount] = useState(() => {
-    const init = currentEditing?.amount !== undefined ? (currentEditing.originalAmount ?? currentEditing.amount) : defaultAmount;
-    return init !== undefined ? formatCurrencyInput(init, enableDecimals) : '';
-  });
-  const [categoryId, setCategoryId] = useState(currentEditing?.categoryId || categories[0]?.id || '');
-  const [subcategoryId, setSubcategoryId] = useState(currentEditing?.subcategoryId || '');
-  const [accountId, setAccountId] = useState(currentEditing?.accountId || currentEditing?.fromAccountId || accounts[0]?.id || '');
-  const [toAccountId, setToAccountId] = useState(() => {
-    if (currentEditing?.toAccountId) return currentEditing.toAccountId;
-    const initialFrom = currentEditing?.accountId || accounts[0]?.id;
-    const other = accounts.find(a => a?.id !== initialFrom);
-    return other ? other.id : (accounts[1]?.id || accounts[0]?.id || '');
-  });
-  const getTodayLocalDate = () => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+  const getInitialForm = (edit) => {
+    const type = edit?.type || defaultType || 'expense', accId = edit?.accountId || edit?.fromAccountId || accounts[0]?.id || '';
+    const initialAcc = accounts.find((a) => a?.id === accId), curr = edit?.originalCurrency || initialAcc?.currency || 'COP';
+    const avail = categories.filter((c) => c && (c.type === type || !c.type)), catId = edit?.categoryId || avail[0]?.id || categories[0]?.id || '';
+    const selCat = categories.find((c) => c?.id === catId), subcats = Array.isArray(selCat?.subcategories) ? selCat.subcategories : [];
+    return {
+      type, currency: curr, exchangeRate: edit?.exchangeRate ? String(edit.exchangeRate) : String(getRate(curr, trm)),
+      amount: edit?.amount !== undefined ? formatCurrencyInput(edit.originalAmount ?? edit.amount, enableDecimals) : (defaultAmount !== undefined ? formatCurrencyInput(defaultAmount, enableDecimals) : ''),
+      categoryId: catId, subcategoryId: edit?.subcategoryId || subcats[0]?.id || (typeof subcats[0] === 'string' ? subcats[0] : ''),
+      accountId: accId, toAccountId: edit?.toAccountId || (accounts.find((a) => a?.id !== accId)?.id || accounts[1]?.id || ''),
+      date: edit?.date || defaultDate || getTodayLocalDate(), note: edit?.note || '', receiptImage: edit?.receiptImage || null
+    };
   };
 
-  const [date, setDate] = useState(() => {
-    if (currentEditing?.date) return currentEditing.date;
-    if (defaultDate) return defaultDate;
-    return getTodayLocalDate();
-  });
-  const [note, setNote] = useState(currentEditing?.note || '');
-  const [receiptImage, setReceiptImage] = useState(currentEditing?.receiptImage || null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const submittingRef = useRef(false);
-  const isCurrencyManuallySetRef = useRef(Boolean(currentEditing?.originalCurrency));
-  const prevAccountIdRef = useRef(accountId);
-
-  const handleCurrencyChange = (newCurrency, newRate) => {
-    isCurrencyManuallySetRef.current = true;
-    setCurrency(newCurrency);
-    if (newRate) {
-      setExchangeRate(newRate);
-    } else {
-      if (newCurrency === 'USD') setExchangeRate(String(trm || 4050));
-      else if (newCurrency === 'EUR') setExchangeRate(String(Math.round((Number(trm) || 4050) * 1.08)));
-      else setExchangeRate('1');
+  const [form, setForm] = useState(() => getInitialForm(editingMovement));
+  const prevEditingIdRef = useRef(editingId);
+  useEffect(() => {
+    if (editingId && editingId !== prevEditingIdRef.current) {
+      prevEditingIdRef.current = editingId;
+      setForm(getInitialForm(editingMovement));
     }
+  }, [editingId]);
+
+  const [showSuccess, setShowSuccess] = useState(false), [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false), isCurrencyManuallySetRef = useRef(Boolean(editingMovement?.originalCurrency));
+
+  const setF = (k, v) => setForm((p) => (p[k] === v ? p : { ...p, [k]: v }));
+  const handleTypeChange = (type) => {
+    const firstCat = categories.find((c) => c && (c.type === type || !c.type)), sub = Array.isArray(firstCat?.subcategories) ? firstCat.subcategories[0] : null;
+    setForm((p) => ({ ...p, type, categoryId: firstCat?.id || '', subcategoryId: sub?.id || (typeof sub === 'string' ? sub : '') }));
+  };
+  const handleCategoryChange = (catId) => {
+    const sub = Array.isArray(categories.find((c) => c?.id === catId)?.subcategories) ? categories.find((c) => c?.id === catId).subcategories[0] : null;
+    setForm((p) => ({ ...p, categoryId: catId, subcategoryId: sub?.id || (typeof sub === 'string' ? sub : '') }));
+  };
+  const handleAccountChange = (accId) => {
+    const acc = accounts.find((a) => a?.id === accId);
+    setForm((p) => ({ ...p, accountId: accId, toAccountId: (p.type === 'transfer' && accId === p.toAccountId) ? (accounts.find((a) => a?.id !== accId)?.id || '') : p.toAccountId, currency: (!isCurrencyManuallySetRef.current && acc?.currency) || p.currency, exchangeRate: (!isCurrencyManuallySetRef.current && acc?.currency && acc.currency !== p.currency) ? String(getRate(acc.currency, trm)) : p.exchangeRate }));
   };
 
-  useEffect(() => {
-    if (defaultType && !currentEditing) setType(defaultType);
-  }, [defaultType, currentEditing]);
-
-  useEffect(() => {
-    if (!currentEditing) return;
-    if (currentEditing.type) setType(currentEditing.type);
-    if (currentEditing.amount !== undefined) setAmount(formatCurrencyInput(currentEditing.originalAmount ?? currentEditing.amount, enableDecimals));
-    if (currentEditing.originalCurrency) setCurrency(currentEditing.originalCurrency);
-    if (currentEditing.exchangeRate) setExchangeRate(String(currentEditing.exchangeRate));
-    if (currentEditing.date) setDate(currentEditing.date);
-    if (currentEditing.categoryId) setCategoryId(currentEditing.categoryId);
-    if (currentEditing.subcategoryId) setSubcategoryId(currentEditing.subcategoryId);
-    if (currentEditing.accountId) setAccountId(currentEditing.accountId);
-    if (currentEditing.fromAccountId) setAccountId(currentEditing.fromAccountId);
-    if (currentEditing.toAccountId) setToAccountId(currentEditing.toAccountId);
-    if (currentEditing.note) setNote(currentEditing.note);
-    if (currentEditing.receiptImage) setReceiptImage(currentEditing.receiptImage);
-  }, [currentEditing, enableDecimals]);
-
-  useEffect(() => {
-    if (prevAccountIdRef.current !== accountId) {
-      prevAccountIdRef.current = accountId;
-      if (!isCurrencyManuallySetRef.current) {
-        const acc = accounts.find(a => a?.id === accountId);
-        if (acc?.currency) setCurrency(acc.currency);
-      }
-    }
-  }, [accountId, accounts]);
-
-  useEffect(() => {
-    if (currency === 'USD') setExchangeRate(String(trm || 4050));
-    else if (currency === 'EUR') setExchangeRate(String(Math.round((Number(trm) || 4050) * 1.08)));
-    else setExchangeRate('1');
-  }, [currency, trm]);
-
-  const availableCategories = categories.filter(c => c && (c.type === type || !c.type));
-  const selectedCategory = categories.find(c => c && c.id === categoryId) || availableCategories[0] || null;
+  const availableCategories = categories.filter((c) => c && (c.type === form.type || !c.type));
+  const selectedCategory = categories.find((c) => c && c.id === form.categoryId) || availableCategories[0] || null;
   const availableSubcategories = (Array.isArray(selectedCategory?.subcategories) ? selectedCategory.subcategories : []).filter(Boolean);
+  const fromAcc = accounts.find((a) => a?.id === form.accountId) || accounts[0] || null, toAcc = accounts.find((a) => a?.id === form.toAccountId) || accounts.find((a) => a?.id !== form.accountId) || null;
+  const numAmount = parseFormattedAmount(form.amount);
+  const destAmount = (fromAcc?.currency && toAcc?.currency && fromAcc.currency !== toAcc.currency && numAmount > 0) ? convertFromCOP(convertToCOP(numAmount, fromAcc.currency, trm), toAcc.currency, trm) : numAmount;
 
-  useEffect(() => {
-    if (type !== 'transfer' && availableCategories.length > 0 && !availableCategories.some(c => c?.id === categoryId)) {
-      setCategoryId(availableCategories[0]?.id || '');
-    }
-  }, [type, availableCategories, categoryId]);
-
-  useEffect(() => {
-    if (type !== 'transfer') {
-      setSubcategoryId(availableSubcategories.some(s => s?.id === subcategoryId) ? subcategoryId : (availableSubcategories[0]?.id || ''));
-    }
-  }, [type, categoryId, availableSubcategories, subcategoryId]);
-
-  useEffect(() => {
-    if (accounts.length > 0 && !accounts.some(a => a?.id === accountId)) {
-      setAccountId(accounts[0]?.id || '');
-    }
-    if (accounts.length > 1 && (!toAccountId || toAccountId === accountId)) {
-      const other = accounts.find(a => a?.id !== accountId);
-      if (other) setToAccountId(other.id);
-    }
-  }, [accounts, accountId, toAccountId]);
-
-  // Cuentas origen y destino para transferencias
-  const fromAcc = accounts.find(a => a?.id === accountId) || accounts[0] || null;
-  const toAcc = accounts.find(a => a?.id === toAccountId) || accounts.find(a => a?.id !== accountId) || null;
-
-  const numAmount = parseFormattedAmount(amount);
-
-  // Cálculo de monto destino en transferencias multidivisa
-  let destAmount = numAmount;
-  if (fromAcc?.currency && toAcc?.currency && fromAcc.currency !== toAcc.currency && numAmount > 0) {
-    const copEquivalent = convertToCOP(numAmount, fromAcc.currency, trm);
-    destAmount = convertFromCOP(copEquivalent, toAcc.currency, trm);
-  }
-
-  // Intercambio rápido de cuentas origen y destino
-  const handleSwapAccounts = () => {
-    if (!toAccountId) return;
-    const temp = accountId;
-    setAccountId(toAccountId);
-    setToAccountId(temp);
+  const handlePostSubmit = (resultTx) => {
+    setForm((p) => ({ ...p, amount: '', note: '', receiptImage: null, date: getTodayLocalDate() }));
+    onClose ? onClose() : (setShowSuccess(true), setTimeout(() => setShowSuccess(false), 1500));
+    onSuccess?.(resultTx);
   };
 
   const handleSubmit = async (e) => {
-    if (e?.preventDefault) e.preventDefault();
-    if (e?.stopPropagation) e.stopPropagation();
-    if (submittingRef.current || isSubmitting) return;
-
-    if (isNaN(numAmount) || numAmount <= 0) return;
-
-    submittingRef.current = true;
-    setIsSubmitting(true);
-
+    e?.preventDefault?.();
+    if (submittingRef.current || isSubmitting || isNaN(numAmount) || numAmount <= 0) return;
+    submittingRef.current = true; setIsSubmitting(true);
     try {
-      // 1. Caso Transferencia entre cuentas
-      if (type === 'transfer') {
-        if (!fromAcc || !toAcc || fromAcc.id === toAcc.id) {
-          setIsSubmitting(false);
-          submittingRef.current = false;
-          return;
-        }
-
-        const fromCurrency = fromAcc?.currency || currency || 'COP';
-        const toCurrency = toAcc?.currency || 'COP';
-
-        const transferPayload = {
-          fromAcc,
-          toAcc,
-          amount: numAmount,
-          destAmount,
-          fromCurrency,
-          toCurrency,
-          date,
-          note: note.trim()
-        };
-
+      if (form.type === 'transfer') {
+        if (!fromAcc || !toAcc || fromAcc.id === toAcc.id) return;
+        const fromCur = fromAcc?.currency || form.currency || 'COP', toCur = toAcc?.currency || 'COP';
         if (typeof onTransfer === 'function') {
-          await onTransfer(transferPayload);
+          await onTransfer({ fromAcc, toAcc, amount: numAmount, destAmount, fromCurrency: fromCur, toCurrency: toCur, date: form.date, note: form.note.trim() });
         } else {
-          // Generación atómica local-first de transacciones de salida y entrada
-          const rate = fromCurrency === 'USD' ? (Number(trm) || 4050) : fromCurrency === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
-          const copAmount = fromCurrency === 'COP' ? numAmount : Math.round(numAmount * rate);
-          const inRate = toCurrency === 'USD' ? (Number(trm) || 4050) : toCurrency === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
-
-          const outId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tx-out-' + Date.now();
-          const inId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'tx-in-' + (Date.now() + 1);
-
-          const outTx = {
-            id: outId,
-            date: date || getTodayLocalDate(),
-            type: 'expense',
-            amount: copAmount,
-            originalAmount: numAmount,
-            originalCurrency: fromCurrency,
-            exchangeRate: rate,
-            categoryId: 'cat-transfer',
-            categoryName: 'Transferencias',
-            subcategoryId: 'sub-transfer-out',
-            subcategoryName: 'Transferencia Enviada',
-            accountId: fromAcc.id,
-            accountName: fromAcc.name,
-            fromAccountId: fromAcc.id,
-            toAccountId: toAcc.id,
-            note: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
-            notes: note ? `Transferencia a ${toAcc.name}: ${note}` : `Transferencia a ${toAcc.name}`,
-            isTransfer: true,
-            updated_at: new Date().toISOString()
-          };
-
-          const inTx = {
-            id: inId,
-            date: date || getTodayLocalDate(),
-            type: 'income',
-            amount: copAmount,
-            originalAmount: destAmount,
-            originalCurrency: toCurrency,
-            exchangeRate: inRate,
-            categoryId: 'cat-transfer',
-            categoryName: 'Transferencias',
-            subcategoryId: 'sub-transfer-in',
-            subcategoryName: 'Transferencia Recibida',
-            accountId: toAcc.id,
-            accountName: toAcc.name,
-            fromAccountId: fromAcc.id,
-            toAccountId: toAcc.id,
-            note: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
-            notes: note ? `Transferencia desde ${fromAcc.name}: ${note}` : `Transferencia desde ${fromAcc.name}`,
-            isTransfer: true,
-            updated_at: new Date().toISOString()
-          };
-
-          if (typeof onAddTransaction === 'function') {
-            await onAddTransaction(outTx);
-            await onAddTransaction(inTx);
-          }
-          if (typeof onSuccess === 'function') {
-            onSuccess(outTx);
-          }
-
+          const rate = getRate(fromCur, trm), inRate = getRate(toCur, trm), copAmt = fromCur === 'COP' ? numAmount : Math.round(numAmount * rate), mkId = (p) => (crypto?.randomUUID ? crypto.randomUUID() : `tx-${p}-${Date.now()}`);
+          const baseTx = { date: form.date || getTodayLocalDate(), categoryId: 'cat-transfer', categoryName: 'Transferencias', fromAccountId: fromAcc.id, toAccountId: toAcc.id, isTransfer: true, updated_at: new Date().toISOString() };
+          const outTx = { ...baseTx, id: mkId('out'), type: 'expense', amount: copAmt, originalAmount: numAmount, originalCurrency: fromCur, exchangeRate: rate, subcategoryId: 'sub-transfer-out', subcategoryName: 'Transferencia Enviada', accountId: fromAcc.id, accountName: fromAcc.name, note: `Transferencia a ${toAcc.name}`, notes: `Transferencia a ${toAcc.name}` };
+          const inTx = { ...baseTx, id: mkId('in'), type: 'income', amount: copAmt, originalAmount: destAmount, originalCurrency: toCur, exchangeRate: inRate, subcategoryId: 'sub-transfer-in', subcategoryName: 'Transferencia Recibida', accountId: toAcc.id, accountName: toAcc.name, note: `Transferencia desde ${fromAcc.name}`, notes: `Transferencia desde ${fromAcc.name}` };
+          if (typeof onAddTransaction === 'function') { await onAddTransaction(outTx); await onAddTransaction(inTx); }
           saveTransactionRecord({ txPayload: outTx, account: fromAcc, isEditing: false }).catch(() => {});
           saveTransactionRecord({ txPayload: inTx, account: toAcc, isEditing: false }).catch(() => {});
         }
-
-        setCurrentEditing(null);
-        setAmount('');
-        setNote('');
-        setReceiptImage(null);
-        setDate(getTodayLocalDate());
-
-        if (typeof onClose === 'function') {
-          onClose();
-        } else {
-          setShowSuccess(true);
-          setTimeout(() => setShowSuccess(false), 1500);
-        }
-        return;
+        handlePostSubmit(); return;
       }
-
-      // 2. Caso Gasto o Ingreso Ordinario
-      const isEditingTx = Boolean(currentEditing?.id);
-      const { newTx, selectedAccount } = buildTransactionPayload({
-        numAmount, currency, exchangeRate, enableDecimals, type, date, note, receiptImage,
-        categoryId, subcategoryId, accountId, categories, accounts, editingMovement: currentEditing
-      });
-
-      if (typeof onAddTransaction === 'function') {
-        await onAddTransaction(newTx);
-      }
-      if (typeof onSuccess === 'function') {
-        onSuccess(newTx);
-      }
-
-      setCurrentEditing(null);
-      setAmount('');
-      setCurrency('COP');
+      const { newTx, selectedAccount } = buildTransactionPayload({ numAmount, currency: form.currency, exchangeRate: form.exchangeRate, enableDecimals, type: form.type, date: form.date, note: form.note, receiptImage: form.receiptImage, categoryId: form.categoryId, subcategoryId: form.subcategoryId, accountId: form.accountId, categories, accounts, editingMovement });
+      if (typeof onAddTransaction === 'function') await onAddTransaction(newTx);
+      setForm((p) => ({ ...p, currency: 'COP', exchangeRate: String(trm || 4050) }));
       isCurrencyManuallySetRef.current = false;
-      setExchangeRate(String(trm || 4050));
-      setNote('');
-      setReceiptImage(null);
-      setDate(getTodayLocalDate());
-
-      if (typeof onClose === 'function') {
-        onClose();
-      } else {
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 1500);
-      }
-
-      saveTransactionRecord({ txPayload: newTx, account: selectedAccount, isEditing: isEditingTx })
-        .catch(err => {
-          console.warn('[Offline/Sync] No se pudo sincronizar de inmediato con Supabase. Queda guardado localmente:', err);
-        });
-    } catch (err) {
-      console.error('Error al procesar la transacción:', err);
-    } finally {
-      setIsSubmitting(false);
-      submittingRef.current = false;
-    }
+      handlePostSubmit(newTx);
+      saveTransactionRecord({ txPayload: newTx, account: selectedAccount, isEditing: Boolean(editingMovement?.id) }).catch(() => {});
+    } finally { setIsSubmitting(false); submittingRef.current = false; }
   };
 
   const formFields = (
     <>
-      <TransactionTypeSelector type={type} setType={setType} />
+      <TransactionTypeSelector type={form.type} setType={handleTypeChange} />
       <div>
-        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-          Monto ({currency === 'COP' ? '$ COP' : currency}) *
-        </label>
-        <AmountInput
-          value={amount}
-          onChange={(cleanVal) => setAmount(cleanVal)}
-          enableDecimals={enableDecimals}
-          required
-          onFocus={(e) => e.target.select()}
-          prefix={
-            <span className="opacity-40 font-black text-lg text-slate-900 dark:text-zinc-100">
-              {currency === 'EUR' ? '€' : '$'}
-            </span>
-          }
-          className="w-full pl-8 pr-3.5 h-12 text-2xl font-bold font-mono tracking-tight bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/60 transition-all"
-        />
-        <CurrencySelector
-          currency={currency} exchangeRate={exchangeRate} setExchangeRate={setExchangeRate}
-          trm={trm} amount={amount} enableDecimals={enableDecimals}
-          onCurrencyChange={handleCurrencyChange}
-        />
+        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Monto ({form.currency === 'COP' ? '$ COP' : form.currency}) *</label>
+        <AmountInput value={form.amount} onChange={(v) => setF('amount', v)} enableDecimals={enableDecimals} required onFocus={(e) => e.target.select()} prefix={<span className="opacity-40 font-black text-lg text-slate-900 dark:text-zinc-100">{form.currency === 'EUR' ? '€' : '$'}</span>} className="w-full pl-8 pr-3.5 h-12 text-2xl font-bold font-mono tracking-tight bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/60" />
+        <CurrencySelector currency={form.currency} exchangeRate={form.exchangeRate} setExchangeRate={(v) => setF('exchangeRate', v)} trm={trm} amount={form.amount} enableDecimals={enableDecimals} onCurrencyChange={(c, r) => { isCurrencyManuallySetRef.current = true; setForm((p) => ({ ...p, currency: c, exchangeRate: r || String(getRate(c, trm)) })); }} />
       </div>
 
-      {type === 'transfer' ? (
-        /* Selectores emparejados de Cuenta Origen y Cuenta Destino para Transferencia */
+      {form.type === 'transfer' ? (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+            <div><label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Cuenta origen *</label><AccountCombobox accounts={accounts} selectedAccountId={form.accountId} onSelectAccount={handleAccountChange} onAddAccount={onAddAccount} /></div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
-                Cuenta de origen (sale dinero) *
-              </label>
-              <AccountCombobox
-                accounts={accounts}
-                selectedAccountId={accountId}
-                onSelectAccount={(newFromId) => {
-                  setAccountId(newFromId);
-                  if (newFromId === toAccountId) {
-                    const nextOther = accounts.find(a => a?.id !== newFromId);
-                    if (nextOther) setToAccountId(nextOther.id);
-                  }
-                }}
-                onAddAccount={onAddAccount}
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 select-none">
-                  Cuenta de destino (entra dinero) *
-                </label>
-                {accounts.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={handleSwapAccounts}
-                    className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                    title="Intercambiar origen y destino"
-                  >
-                    <ArrowLeftRight className="w-3 h-3" />
-                    <span>Invertir</span>
-                  </button>
-                )}
-              </div>
-              <AccountCombobox
-                accounts={accounts.filter(a => a?.id !== accountId)}
-                selectedAccountId={toAccountId}
-                onSelectAccount={setToAccountId}
-                onAddAccount={onAddAccount}
-              />
+              <div className="flex items-center justify-between mb-1.5"><label className="block text-xs font-medium text-slate-600 dark:text-zinc-400">Cuenta destino *</label>{accounts.length > 1 && <button type="button" onClick={() => setForm((p) => ({ ...p, accountId: p.toAccountId, toAccountId: p.accountId }))} className="text-[11px] text-blue-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer"><ArrowLeftRight className="w-3 h-3" /><span>Invertir</span></button>}</div>
+              <AccountCombobox accounts={accounts.filter((a) => a?.id !== form.accountId)} selectedAccountId={form.toAccountId} onSelectAccount={(id) => setF('toAccountId', id)} onAddAccount={onAddAccount} />
             </div>
           </div>
-
           {fromAcc?.currency && toAcc?.currency && fromAcc.currency !== toAcc.currency && numAmount > 0 && (
-            <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between">
-              <span>Monto a recibir estimado:</span>
-              <span className="font-bold font-mono">
-                ~{formatNativeCurrency(destAmount, toAcc.currency)}
-              </span>
-            </div>
+            <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between"><span>Monto a recibir estimado:</span><span className="font-bold font-mono">~{formatNativeCurrency(destAmount, toAcc.currency)}</span></div>
           )}
         </div>
       ) : (
-        /* Categoría y Cuenta única para Gasto o Ingreso */
         <TransactionAccountCategoryFields
-          type={type} accountId={accountId} setAccountId={setAccountId} accounts={accounts} onAddAccount={onAddAccount}
-          categoryId={categoryId} setCategoryId={setCategoryId} categories={categories} availableCategories={availableCategories}
-          onAddCategory={onAddCategory} subcategoryId={subcategoryId} setSubcategoryId={setSubcategoryId}
-          availableSubcategories={availableSubcategories} onAddSubcategory={onAddSubcategory}
-          onUpdateSubcategory={onUpdateSubcategory} onDeleteSubcategory={onDeleteSubcategory}
+          type={form.type} accountId={form.accountId} setAccountId={handleAccountChange} accounts={accounts} onAddAccount={onAddAccount}
+          categoryId={form.categoryId} setCategoryId={handleCategoryChange} categories={categories} availableCategories={availableCategories}
+          onAddCategory={onAddCategory} subcategoryId={form.subcategoryId} setSubcategoryId={(v) => setF('subcategoryId', v)}
+          availableSubcategories={availableSubcategories} onAddSubcategory={onAddSubcategory} onUpdateSubcategory={onUpdateSubcategory} onDeleteSubcategory={onDeleteSubcategory}
         />
       )}
-
-      <TransactionDetailsFields
-        date={date} setDate={setDate} note={note} setNote={setNote}
-        receiptImage={receiptImage} setReceiptImage={setReceiptImage}
-      />
+      <TransactionDetailsFields date={form.date} setDate={(v) => setF('date', v)} note={form.note} setNote={(v) => setF('note', v)} receiptImage={form.receiptImage} setReceiptImage={(v) => setF('receiptImage', v)} />
     </>
   );
 
-  if (isModal) {
-    return (
-      <TransactionFormModalLayout
-        isModal={isModal} isSubmitting={isSubmitting} showSuccess={showSuccess}
-        editingMovement={editingMovement} onSubmit={handleSubmit} handleSubmit={handleSubmit} onClose={onClose}
-        type={type}
-      >
-        {formFields}
-      </TransactionFormModalLayout>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {formFields}
-      <SuccessAlert show={showSuccess} />
-      <div className="flex justify-end pt-2">
-        <SubmitBtn type={type} isSubmitting={isSubmitting} />
-      </div>
-    </form>
+  return isModal ? (
+    <TransactionFormModalLayout isModal={isModal} isSubmitting={isSubmitting} showSuccess={showSuccess} editingMovement={editingMovement} onSubmit={handleSubmit} handleSubmit={handleSubmit} onClose={onClose} type={form.type}>{formFields}</TransactionFormModalLayout>
+  ) : (
+    <form onSubmit={handleSubmit} className="space-y-4">{formFields}<SuccessAlert show={showSuccess} /><div className="flex justify-end pt-2"><SubmitBtn type={form.type} isSubmitting={isSubmitting} /></div></form>
   );
 }

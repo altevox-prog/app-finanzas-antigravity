@@ -80,5 +80,3 @@ export function useBackHandler(isOpen, onClose) {
     };
   }, [isOpen]);
 }
-
-export default useBackHandler;

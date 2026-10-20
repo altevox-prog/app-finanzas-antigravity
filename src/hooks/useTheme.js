@@ -71,5 +71,3 @@ export function useTheme() {
     toggleTheme: handleToggleTheme
   };
 }
-
-export default useTheme;

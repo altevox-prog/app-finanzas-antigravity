@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, CreditCard } from 'lucide-react';
-import { DynamicIcon } from '../../categories/components/CategoryIcon';
+import { ChevronDown, Check } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 
-const PRESET_COLORS = [
-  '#007AFF', '#34C759', '#FF9500', '#AF52DE', '#5856D6', '#FF2D55', '#5AC8FA'
-];
+const PRESET_COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#5856D6', '#FF2D55', '#5AC8FA'];
 
+/**
+ * AccountCombobox
+ * Selector con autocompletado y búsqueda en tiempo real de cuentas financieras.
+ */
 export default function AccountCombobox({
   accounts = [],
   selectedAccountId,
@@ -21,14 +22,10 @@ export default function AccountCombobox({
   const inputRef = useRef(null);
 
   const accountsList = Array.isArray(accounts) ? accounts.filter(Boolean) : [];
-  const selectedAcc = accountsList.find(a => a?.id === selectedAccountId);
+  const selectedAcc = accountsList.find((a) => a?.id === selectedAccountId);
 
   useEffect(() => {
-    if (selectedAcc && selectedAcc.name) {
-      setQuery(selectedAcc.name);
-    } else {
-      setQuery('');
-    }
+    setQuery(selectedAcc?.name || '');
     setIsUserTyping(false);
   }, [selectedAccountId, selectedAcc]);
 
@@ -37,41 +34,19 @@ export default function AccountCombobox({
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
         setIsUserTyping(false);
-        if (selectedAcc && selectedAcc.name) {
-          setQuery(selectedAcc.name);
-        }
+        if (selectedAcc?.name) setQuery(selectedAcc.name);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [selectedAcc]);
 
-  // If user hasn't typed yet or query matches current selection, show ALL predefined accounts!
-  const isShowingAll = !isUserTyping || query.trim() === '' || (selectedAcc && query.trim() === (selectedAcc?.name || '').trim());
-
+  const isShowingAll = !isUserTyping || !query.trim() || query.trim() === (selectedAcc?.name || '').trim();
   const filteredAccounts = isShowingAll
     ? accountsList
-    : accountsList.filter(a =>
-        (a?.name || '').toLowerCase().includes(query.toLowerCase().trim())
-      );
+    : accountsList.filter((a) => (a?.name || '').toLowerCase().includes(query.toLowerCase().trim()));
 
-  const exactMatch = accountsList.some(
-    a => (a?.name || '').toLowerCase() === query.toLowerCase().trim()
-  );
-
-  const handleInputFocus = () => {
-    setIsOpen(true);
-    setIsUserTyping(false); // Show all predefined accounts upon opening
-    if (inputRef.current) {
-      inputRef.current.select();
-    }
-  };
-
-  const handleInputChange = (e) => {
-    setQuery(e.target.value);
-    setIsUserTyping(true);
-    if (!isOpen) setIsOpen(true);
-  };
+  const exactMatch = accountsList.some((a) => (a?.name || '').toLowerCase() === query.toLowerCase().trim());
 
   const handleSelect = (acc) => {
     onSelectAccount(acc.id);
@@ -83,9 +58,7 @@ export default function AccountCombobox({
   const handleCreateAndSelect = () => {
     const trimmed = query.trim();
     if (!trimmed) return;
-
     const randomColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
-
     const newAccount = {
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('acc-' + Date.now()),
       name: trimmed,
@@ -94,10 +67,7 @@ export default function AccountCombobox({
       color: randomColor,
       icon: 'Building2'
     };
-
-    if (onAddAccount) {
-      onAddAccount(newAccount);
-    }
+    onAddAccount?.(newAccount);
     onSelectAccount(newAccount.id);
     setQuery(newAccount.name);
     setIsUserTyping(false);
@@ -108,14 +78,11 @@ export default function AccountCombobox({
     if (e.key === 'Enter') {
       e.preventDefault();
       if (filteredAccounts.length > 0 && exactMatch) {
-        handleSelect(filteredAccounts.find(a => a.name.toLowerCase() === query.toLowerCase().trim()) || filteredAccounts[0]);
+        handleSelect(filteredAccounts.find((a) => a.name.toLowerCase() === query.toLowerCase().trim()) || filteredAccounts[0]);
       } else if (filteredAccounts.length > 0 && isUserTyping && query.trim() !== '') {
-        const found = filteredAccounts.find(a => a.name.toLowerCase() === query.toLowerCase().trim());
-        if (found) {
-          handleSelect(found);
-        } else {
-          handleCreateAndSelect();
-        }
+        const found = filteredAccounts.find((a) => a.name.toLowerCase() === query.toLowerCase().trim());
+        if (found) handleSelect(found);
+        else handleCreateAndSelect();
       } else if (query.trim() !== '') {
         handleCreateAndSelect();
       }
@@ -127,33 +94,21 @@ export default function AccountCombobox({
   };
 
   const toggleDropdown = () => {
-    if (!isOpen) {
-      setIsOpen(true);
-      setIsUserTyping(false);
-      if (inputRef.current) inputRef.current.focus();
-    } else {
-      setIsOpen(false);
-    }
+    setIsOpen((prev) => !prev);
+    setIsUserTyping(false);
+    if (!isOpen && inputRef.current) inputRef.current.focus();
   };
 
   return (
     <div className="relative w-full" ref={containerRef}>
-      <div 
-        onClick={toggleDropdown}
-        className="relative flex items-center cursor-pointer"
-      >
+      <div onClick={toggleDropdown} className="relative flex items-center cursor-pointer">
         {selectedAcc && (
           <div className="ml-2.5 mr-1 shrink-0 flex items-center justify-center">
             <BrandIcon 
               name={selectedAcc.name} 
               type={selectedAcc.type} 
               size={18} 
-              fallback={
-                <div 
-                  className="w-3.5 h-3.5 rounded-full shadow-sm"
-                  style={{ backgroundColor: selectedAcc.color || '#007AFF' }}
-                />
-              } 
+              fallback={<div className="w-3.5 h-3.5 rounded-full shadow-sm" style={{ backgroundColor: selectedAcc.color || '#007AFF' }} />} 
             />
           </div>
         )}
@@ -161,16 +116,14 @@ export default function AccountCombobox({
           ref={inputRef}
           type="text"
           value={query}
-          onFocus={handleInputFocus}
-          onChange={handleInputChange}
+          onFocus={() => { setIsOpen(true); setIsUserTyping(false); inputRef.current?.select(); }}
+          onChange={(e) => { setQuery(e.target.value); setIsUserTyping(true); if (!isOpen) setIsOpen(true); }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full pl-2.5 pr-8 py-2.5 border border-transparent rounded-xl text-xs font-semibold focus:outline-none transition-all cursor-text"
           style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
         />
-        <ChevronDown 
-          className={`w-4 h-4 opacity-50 absolute right-3 pointer-events-none transition-transform ${isOpen ? 'rotate-180' : ''}`} 
-        />
+        <ChevronDown className={`w-4 h-4 opacity-50 absolute right-3 pointer-events-none transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && (
@@ -197,12 +150,7 @@ export default function AccountCombobox({
                       type={acc.type}
                       size={18} 
                       wrapperClassName="w-5 h-5 rounded-md flex items-center justify-center shrink-0 overflow-hidden" 
-                      fallback={
-                        <span 
-                          className="w-3 h-3 rounded-full shrink-0 shadow-sm" 
-                          style={{ backgroundColor: acc.color || '#007AFF' }} 
-                        />
-                      } 
+                      fallback={<span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: acc.color || '#007AFF' }} />} 
                     />
                     <span className="truncate">{acc.name}</span>
                   </div>
@@ -217,7 +165,7 @@ export default function AccountCombobox({
               <button
                 type="button"
                 onClick={handleCreateAndSelect}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs hover:bg-emerald-500/15 text-emerald-600 transition-colors font-semibold group text-left"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs hover:bg-emerald-500/15 text-emerald-600 transition-colors font-semibold group text-left cursor-pointer"
                 style={{ backgroundColor: 'var(--bg-card-sub)' }}
               >
                 <div className="flex items-center gap-2 truncate">

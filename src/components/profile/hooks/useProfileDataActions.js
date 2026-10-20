@@ -5,21 +5,15 @@ import {
 } from '../../../services/supabaseClient';
 import { clearSessionFinancialStorage } from '../../../services/storage/storageCleaner';
 
+const setTutorialFlags = (userId) => {
+  ['presu_tutorial_completed', 'has_completed_tutorial', 'tutorial_completed', 'hasSeenTutorial', 'tutorial_seen', 'app_onboarding_completed', 'has_completed_onboarding', 'hasCompletedOnboarding'].forEach(k => localStorage.setItem(k, 'true'));
+  if (userId) {
+    [`presu_tutorial_completed_${userId}`, `has_completed_tutorial_${userId}`, `tutorial_completed_${userId}`, `has_completed_onboarding_${userId}`, `hasCompletedOnboarding_${userId}`].forEach(k => localStorage.setItem(k, 'true'));
+  }
+};
+
 /**
- * useProfileDataActions
- * Custom hook para la gestión de sincronización en la nube, cierre de sesión
- * y restablecimiento de fábrica (borrado definitivo) en el modal de perfil.
- *
- * @param {Object} params
- * @param {Function} [params.onManualCloudSync] Handler de sync manual con la nube
- * @param {Function} [params.onLogout] Handler personalizado de cierre de sesión
- * @param {Function} [params.signOut] Función signOut de AuthContext
- * @param {boolean} [params.isSupabaseConfigured] Flag de configuración de Supabase
- * @param {Object} [params.supabase] Cliente de Supabase
- * @param {Function} [params.onFactoryReset] Handler de reseteo de fábrica
- * @param {Function} [params.onClose] Callback para cerrar el modal
- * @param {Function} [params.showToast] Función para notificaciones toast
- * @param {Object} [params.user] Usuario autenticado activo
+ * useProfileDataActions: Custom hook para gestión de sync, logout y reseteo de fábrica.
  */
 export function useProfileDataActions({
   onManualCloudSync,
@@ -40,20 +34,15 @@ export function useProfileDataActions({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleCloudSync = async () => {
-    if (typeof onManualCloudSync === 'function') {
-      setIsCloudSyncing(true);
-      try {
-        const res = await onManualCloudSync();
-        if (res && res.success === false) {
-          if (showToast) showToast(res.error?.message || 'Error al sincronizar con la nube', true);
-        } else {
-          if (showToast) showToast('¡Datos sincronizados con éxito en la nube!');
-        }
-      } catch {
-        if (showToast) showToast('Error al conectar con la nube', true);
-      } finally {
-        setIsCloudSyncing(false);
-      }
+    if (typeof onManualCloudSync !== 'function') return;
+    setIsCloudSyncing(true);
+    try {
+      const res = await onManualCloudSync();
+      showToast?.(res?.success === false ? (res.error?.message || 'Error al sincronizar con la nube') : '¡Datos sincronizados con éxito en la nube!', res?.success === false);
+    } catch {
+      showToast?.('Error al conectar con la nube', true);
+    } finally {
+      setIsCloudSyncing(false);
     }
   };
 
@@ -63,29 +52,23 @@ export function useProfileDataActions({
       if (typeof onLogout === 'function') {
         await onLogout();
       } else {
-        if (typeof signOut === 'function') {
-          await signOut();
-        } else if (isSupabaseConfigured && supabase) {
-          await supabase.auth.signOut();
-        }
+        if (typeof signOut === 'function') await signOut();
+        else if (isSupabaseConfigured && supabase) await supabase.auth.signOut();
         clearSessionFinancialStorage();
       }
       setShowLogoutConfirm(false);
-      if (typeof onClose === 'function') onClose();
-      if (showToast) showToast('Sesión cerrada exitosamente.');
+      onClose?.();
+      showToast?.('Sesión cerrada exitosamente.');
     } catch (err) {
       console.error('Error al cerrar sesión:', err);
-      if (showToast) showToast('Error al cerrar sesión', true);
+      showToast?.('Error al cerrar sesión', true);
     } finally {
       setIsLoggingOut(false);
     }
   };
 
   const handleFullReset = async () => {
-    if (onFactoryReset) {
-      await onFactoryReset(true);
-      return;
-    }
+    if (onFactoryReset) return onFactoryReset(true);
 
     try {
       if (isSupabaseConfigured && supabase) {
@@ -93,47 +76,11 @@ export function useProfileDataActions({
           const { data } = await supabase.auth.getUser();
           const userId = data?.user?.id || (user?.id !== 'local-user' ? user?.id : null);
           if (userId) {
-            // 1. Eliminar tablas secundarias/dependientes primero si existen
-            try {
-              await supabase.from('debt_payments').delete().eq('user_id', userId);
-            } catch (_) {}
-
-            try {
-              await supabase.from('transactions').delete().eq('user_id', userId);
-            } catch (_) {}
-
-            // 2. Purga explícita y secuencial de la tabla budgets filtrando por user_id
-            const { error: budgetError } = await supabase
-              .from('budgets')
-              .delete()
-              .eq('user_id', userId);
-
-            if (budgetError) {
-              console.error('Error al purgar la tabla budgets:', budgetError.message);
-              throw new Error(`Error en budgets: ${budgetError.message}`);
+            for (const table of ['debt_payments', 'transactions', 'budgets', 'recurring_payments', 'debts', 'investments', 'savings_goals', 'categories']) {
+              try { await supabase.from(table).delete().eq('user_id', userId); } catch (_) {}
             }
-
-            // 3. Purga explícita de pagos recurrentes antes de eliminar cuentas (para evitar violación de FK)
-            try {
-              await supabase.from('recurring_payments').delete().eq('user_id', userId);
-            } catch (recErr) {
-              console.warn('[useProfileDataActions] Error al eliminar recurring_payments:', recErr);
-            }
-
-            // 4. Purga del resto de tablas principales
-            await Promise.allSettled([
-              supabase.from('debts').delete().eq('user_id', userId),
-              supabase.from('recurring_payments').delete().eq('user_id', userId),
-              supabase.from('investments').delete().eq('user_id', userId),
-              supabase.from('savings_goals').delete().eq('user_id', userId),
-              supabase.from('categories').delete().eq('user_id', userId),
-              supabase.from('user_settings').update({ global_budget_limit: 0, updated_at: new Date().toISOString() }).eq('user_id', userId)
-            ]);
-
-            // 5. Purga final de cuentas
-            try {
-              await supabase.from('accounts').delete().eq('user_id', userId);
-            } catch {}
+            try { await supabase.from('user_settings').update({ global_budget_limit: 0, updated_at: new Date().toISOString() }).eq('user_id', userId); } catch (_) {}
+            try { await supabase.from('accounts').delete().eq('user_id', userId); } catch (_) {}
           }
         } catch (cloudErr) {
           console.error('Error al borrar datos en Supabase:', cloudErr);
@@ -141,78 +88,16 @@ export function useProfileDataActions({
         }
       }
 
-      // Preservar tokens de sesión de Supabase y banderas de tutorial/onboarding
       try {
-        const isPreservedKey = (key) => {
-          if (!key) return false;
-          // Tokens y sesiones de autenticación
-          if (key.startsWith('sb-') || key.includes('auth-token') || key.includes('supabase.auth')) return true;
-          // Banderas de tutorial y onboarding
-          if (
-            key === 'presu_tutorial_completed' ||
-            key === 'has_completed_tutorial' ||
-            key === 'tutorial_completed' ||
-            key === 'hasSeenTutorial' ||
-            key === 'tutorial_seen' ||
-            key === 'app_onboarding_completed' ||
-            key === 'has_completed_onboarding' ||
-            key === 'hasCompletedOnboarding' ||
-            key.startsWith('tutorial_completed_') ||
-            key.startsWith('presu_tutorial_completed_') ||
-            key.startsWith('has_completed_tutorial_') ||
-            key.startsWith('has_completed_onboarding_') ||
-            key.startsWith('hasCompletedOnboarding_')
-          ) {
-            return true;
-          }
-          return false;
-        };
-
-        const preservedData = {};
+        const isPreserved = (k = '') => k.startsWith('sb-') || k.includes('auth-token') || k.includes('supabase.auth') || /tutorial|onboarding/i.test(k);
+        const preserved = {};
         for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && isPreservedKey(key)) {
-            preservedData[key] = localStorage.getItem(key);
-          }
+          const k = localStorage.key(i);
+          if (k && isPreserved(k)) preserved[k] = localStorage.getItem(k);
         }
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && !isPreservedKey(key)) {
-            keysToRemove.push(key);
-          }
-        }
-        keysToRemove.forEach((k) => localStorage.removeItem(k));
-
-        // Purgar explícitamente cualquier clave residual de pagos recurrentes y suscripciones
-        [
-          'recurring_payments',
-          'app_recurring',
-          'presu_subscriptions_v1',
-          'subscriptions'
-        ].forEach((k) => localStorage.removeItem(k));
-
-        Object.entries(preservedData).forEach(([k, v]) => {
-          if (v !== null) localStorage.setItem(k, v);
-        });
-
-        // Asegurar que las banderas de tutorial y onboarding continúen en true
-        localStorage.setItem('presu_tutorial_completed', 'true');
-        localStorage.setItem('has_completed_tutorial', 'true');
-        localStorage.setItem('tutorial_completed', 'true');
-        localStorage.setItem('hasSeenTutorial', 'true');
-        localStorage.setItem('tutorial_seen', 'true');
-        localStorage.setItem('app_onboarding_completed', 'true');
-        localStorage.setItem('has_completed_onboarding', 'true');
-        localStorage.setItem('hasCompletedOnboarding', 'true');
-        const activeUserId = user?.id && user.id !== 'local-user' ? user.id : null;
-        if (activeUserId) {
-          localStorage.setItem(`presu_tutorial_completed_${activeUserId}`, 'true');
-          localStorage.setItem(`has_completed_tutorial_${activeUserId}`, 'true');
-          localStorage.setItem(`tutorial_completed_${activeUserId}`, 'true');
-          localStorage.setItem(`has_completed_onboarding_${activeUserId}`, 'true');
-          localStorage.setItem(`hasCompletedOnboarding_${activeUserId}`, 'true');
-        }
+        localStorage.clear();
+        Object.entries(preserved).forEach(([k, v]) => { if (v !== null) localStorage.setItem(k, v); });
+        setTutorialFlags(user?.id && user.id !== 'local-user' ? user.id : null);
       } catch (e) {
         console.warn('Error clearing localStorage:', e);
       }
@@ -222,35 +107,21 @@ export function useProfileDataActions({
   };
 
   const handleConfirmFactoryReset = async () => {
-    if (confirmDeleteText.trim().toUpperCase() !== 'BORRAR') {
-      return;
-    }
+    if (confirmDeleteText.trim().toUpperCase() !== 'BORRAR') return;
 
     try {
       setIsResetting(true);
-      if (onFactoryReset) {
-        await onFactoryReset(true);
-      } else {
-        await handleFullReset();
-      }
+      if (onFactoryReset) await onFactoryReset(true);
+      else await handleFullReset();
 
-      // Asegurar explícitamente persistencia del tutorial completado
-      localStorage.setItem('presu_tutorial_completed', 'true');
-      localStorage.setItem('has_completed_tutorial', 'true');
-      localStorage.setItem('tutorial_completed', 'true');
-      localStorage.setItem('hasSeenTutorial', 'true');
-      localStorage.setItem('tutorial_seen', 'true');
-      localStorage.setItem('app_onboarding_completed', 'true');
-      localStorage.setItem('has_completed_onboarding', 'true');
-      localStorage.setItem('hasCompletedOnboarding', 'true');
-
-      if (showToast) showToast('Todos los datos han sido restablecidos');
+      setTutorialFlags(user?.id && user.id !== 'local-user' ? user.id : null);
+      showToast?.('Todos los datos han sido restablecidos');
       setShowResetConfirm(false);
       setConfirmDeleteText('');
-      if (typeof onClose === 'function') onClose();
+      onClose?.();
     } catch (err) {
       console.error('Error al restablecer:', err);
-      if (showToast) showToast('Error al restablecer los datos', true);
+      showToast?.('Error al restablecer los datos', true);
     } finally {
       setIsResetting(false);
     }

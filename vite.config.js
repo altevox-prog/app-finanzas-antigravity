@@ -49,8 +49,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         skipWaiting: true,
         clientsClaim: true,
-        cleanupOutdatedCaches: true,
-        importScripts: ['/sw-notifications.js']
+        cleanupOutdatedCaches: true
       },
       // Solo incluir el manifest en producción
       manifest: mode === 'production' ? {

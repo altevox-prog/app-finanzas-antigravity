@@ -8,11 +8,16 @@ import {
   calculateNetWorth 
 } from '../utils/financeMath';
 
-/**
- * useDashboardMetrics
- * Custom hook centralizado para el cálculo y memorización (useMemo) de todas
- * las métricas financieras, patrimoniales, transaccionales y de flujo de caja del Dashboard.
- */
+const isTransferTx = (t) => Boolean(
+  t && (
+    t.isTransfer || t.is_transfer || t.isDebtCapital ||
+    t.subcategoryId === 'sub-amortizacion-deuda' ||
+    t.type === 'transfer' || t.type === 'transferencia' ||
+    t.categoryId === 'cat-transfer' || t.category_id === 'cat-transfer' ||
+    t.subcategoryId === 'sub-transfer-in' || t.subcategoryId === 'sub-transfer-out'
+  )
+);
+
 export function useDashboardMetrics({
   accounts = [],
   transactions = [],
@@ -23,153 +28,71 @@ export function useDashboardMetrics({
   monthlyStats = {},
   selectedDate = new Date(),
   selectedDay = null,
-  currentMonthLabel = '',
   trm = 4050,
-  onSelectDay = null,
   livePrices = {}
 } = {}) {
   const safeDebtsAndLoans = (debtsAndLoans && debtsAndLoans.length > 0) ? debtsAndLoans : (debts || []);
   const trmValue = toSafeNumber(trm) || 4050;
 
-  // 1. CÁLCULO ESTRICTO DE PATRIMONIO TOTAL (ECUACIÓN PATRIMONIAL)
-  const netWorthMetrics = useMemo(() => {
-    return calculateNetWorth({
-      accounts,
-      transactions,
-      investments,
-      debtsAndLoans: safeDebtsAndLoans,
-      trm: trmValue,
-      getAccountBalanceFn: getAccountNativeBalance,
-      livePrices
-    });
-  }, [accounts, transactions, investments, safeDebtsAndLoans, trmValue, livePrices]);
+  const netWorthMetrics = useMemo(() => calculateNetWorth({
+    accounts, transactions, investments, debtsAndLoans: safeDebtsAndLoans,
+    trm: trmValue, getAccountBalanceFn: getAccountNativeBalance, livePrices
+  }), [accounts, transactions, investments, safeDebtsAndLoans, trmValue, livePrices]);
 
-  // 2. MÉTRICAS DETALLADAS DE INVERSIONES
   const investmentsMetrics = useMemo(() => {
     const totalCurrentValueCOP = netWorthMetrics.totalInvestmentsValueCOP;
     const totalInvestedCostCOP = netWorthMetrics.totalInvestmentsCostCOP;
     const netProfitCOP = totalCurrentValueCOP - totalInvestedCostCOP;
-    const profitPercentage = totalInvestedCostCOP > 0 ? (netProfitCOP / totalInvestedCostCOP) * 100 : 0;
-
     return {
-      totalCurrentValueCOP,
-      totalInvestedCostCOP,
-      netProfitCOP,
-      profitPercentage,
+      totalCurrentValueCOP, totalInvestedCostCOP, netProfitCOP,
+      profitPercentage: totalInvestedCostCOP > 0 ? (netProfitCOP / totalInvestedCostCOP) * 100 : 0,
       isPositive: netProfitCOP >= 0
     };
   }, [netWorthMetrics]);
 
-  // 3. MÉTRICAS DETALLADAS DE PRÉSTAMOS Y DEUDAS
-  const debtsAndLoansMetrics = useMemo(() => {
-    return {
-      totalReceivableCOP: netWorthMetrics.totalReceivableCOP,
-      totalPayableCOP: netWorthMetrics.totalPayableCOP,
-      receivableCount: netWorthMetrics.receivableCount,
-      payableCount: netWorthMetrics.payableCount
-    };
-  }, [netWorthMetrics]);
+  const debtsAndLoansMetrics = useMemo(() => ({
+    totalReceivableCOP: netWorthMetrics.totalReceivableCOP,
+    totalPayableCOP: netWorthMetrics.totalPayableCOP,
+    receivableCount: netWorthMetrics.receivableCount,
+    payableCount: netWorthMetrics.payableCount
+  }), [netWorthMetrics]);
 
-  // 4. FILTRADO DE TRANSACCIONES PARA BALANCE Y LISTA RECIENTE
-  const currentYear = useMemo(() => {
-    if (selectedDate instanceof Date) return selectedDate.getFullYear();
-    if (typeof selectedDate === 'string' && selectedDate.includes('-')) {
-      return parseInt(selectedDate.split('-')[0], 10) || new Date().getFullYear();
-    }
-    return new Date().getFullYear();
-  }, [selectedDate]);
-
-  const currentMonth = useMemo(() => {
-    if (selectedDate instanceof Date) return selectedDate.getMonth();
-    if (typeof selectedDate === 'string' && selectedDate.includes('-')) {
-      return (parseInt(selectedDate.split('-')[1], 10) - 1) || new Date().getMonth();
-    }
-    return new Date().getMonth();
-  }, [selectedDate]);
+  const parsedDate = selectedDate instanceof Date ? selectedDate : new Date(selectedDate || Date.now());
+  const currentYear = parsedDate.getFullYear() || new Date().getFullYear();
+  const currentMonth = parsedDate.getMonth() ?? new Date().getMonth();
 
   const scopedTransactions = useMemo(() => {
-    if (monthlyTransactions && monthlyTransactions.length > 0 && !selectedDay) {
-      return monthlyTransactions;
-    }
-    const sourceList = (transactions && transactions.length > 0) ? transactions : (monthlyTransactions || []);
-    return sourceList.filter(t => {
+    if (monthlyTransactions && monthlyTransactions.length > 0 && !selectedDay) return monthlyTransactions;
+    const list = (transactions && transactions.length > 0) ? transactions : (monthlyTransactions || []);
+    return list.filter(t => {
       if (!t) return false;
       const rawDate = t.date ? String(t.date).split('T')[0] : (t.created_at ? String(t.created_at).split('T')[0] : '');
       if (!rawDate) return false;
-      const parts = rawDate.split('-');
-      if (parts.length >= 2) {
-        const y = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10) - 1;
-        if (!isNaN(y) && !isNaN(m)) {
-          if (y !== currentYear || m !== currentMonth) return false;
-        }
-      }
-      if (selectedDay && rawDate !== String(selectedDay).split('T')[0]) return false;
-      return true;
+      const [y, m] = rawDate.split('-').map(Number);
+      if (y && m !== undefined && (y !== currentYear || (m - 1) !== currentMonth)) return false;
+      return !selectedDay || rawDate === String(selectedDay).split('T')[0];
     });
   }, [transactions, monthlyTransactions, currentYear, currentMonth, selectedDay]);
 
   const displayTransactions = useMemo(() => {
     if (selectedDay) {
       const targetDay = String(selectedDay).split('T')[0];
-      return (transactions || []).filter(t => t && t.date && String(t.date).split('T')[0] === targetDay);
+      return (transactions || []).filter(t => t?.date && String(t.date).split('T')[0] === targetDay);
     }
     return monthlyTransactions || scopedTransactions;
   }, [transactions, monthlyTransactions, scopedTransactions, selectedDay]);
 
-  const isTransferTx = (t) => Boolean(
-    t && (
-      t.isTransfer ||
-      t.is_transfer ||
-      t.isDebtCapital ||
-      t.subcategoryId === 'sub-amortizacion-deuda' ||
-      t.type === 'transfer' ||
-      t.type === 'transferencia' ||
-      t.categoryId === 'cat-transfer' ||
-      t.category_id === 'cat-transfer' ||
-      t.subcategoryId === 'sub-transfer-in' ||
-      t.subcategoryId === 'sub-transfer-out'
-    )
-  );
+  const calcTotal = (type) => {
+    const sum = scopedTransactions.filter(t => (t?.type === type || t?.type === (type === 'income' ? 'ingreso' : 'gasto')) && !isTransferTx(t)).reduce((s, t) => s + safeNumber(t?.amount), 0);
+    return sum > 0 ? sum : (!selectedDay ? toSafeNumber(monthlyStats?.[type === 'income' ? 'totalIncome' : 'totalExpense']) : 0);
+  };
 
-  // 5. CÁLCULO DE INGRESOS, GASTOS, BALANCE Y TASA DE AHORRO
-  const totalIncome = useMemo(() => {
-    if (selectedDay) {
-      return scopedTransactions
-        .filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t))
-        .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
-    }
-    const listIncome = scopedTransactions
-      .filter(t => (t?.type === 'income' || t?.type === 'ingreso') && !isTransferTx(t))
-      .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
-    if (listIncome > 0) return listIncome;
-    const fromStats = toSafeNumber(monthlyStats?.totalIncome);
-    if (fromStats > 0) return fromStats;
-    return 0;
-  }, [selectedDay, scopedTransactions, monthlyStats?.totalIncome]);
-
-  const totalExpense = useMemo(() => {
-    if (selectedDay) {
-      return scopedTransactions
-        .filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t))
-        .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
-    }
-    const listExpense = scopedTransactions
-      .filter(t => (t?.type === 'expense' || t?.type === 'gasto') && !isTransferTx(t))
-      .reduce((sum, t) => sum + safeNumber(t?.amount), 0);
-    if (listExpense > 0) return listExpense;
-    const fromStats = toSafeNumber(monthlyStats?.totalExpense);
-    if (fromStats > 0) return fromStats;
-    return 0;
-  }, [selectedDay, scopedTransactions, monthlyStats?.totalExpense]);
-
-  const netBalance = (totalIncome > 0 || totalExpense > 0)
-    ? calculateNetFlow(totalIncome, totalExpense)
-    : (monthlyStats?.netBalance !== undefined ? toSafeNumber(monthlyStats.netBalance) : calculateNetFlow(totalIncome, totalExpense));
+  const totalIncome = useMemo(() => calcTotal('income'), [scopedTransactions, selectedDay, monthlyStats?.totalIncome]);
+  const totalExpense = useMemo(() => calcTotal('expense'), [scopedTransactions, selectedDay, monthlyStats?.totalExpense]);
+  const netBalance = (totalIncome > 0 || totalExpense > 0) ? calculateNetFlow(totalIncome, totalExpense) : toSafeNumber(monthlyStats?.netBalance ?? 0);
   const availableLiquidBalance = toSafeNumber(monthlyStats.availableLiquidBalance);
   const savingsRate = calculateSavingsRate(totalIncome, totalExpense);
 
-  // 6. FLUJO SEMANAL
   const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
 
   const weeklyCashFlow = useMemo(() => {
@@ -182,22 +105,8 @@ export function useDashboardMetrics({
     ];
 
     scopedTransactions.forEach((tx) => {
-      if (!tx || !tx.date) return;
+      if (!tx?.date || isTransferTx(tx)) return;
       const type = String(tx.type || '').toLowerCase();
-      const isTransfer = Boolean(
-        tx.isTransfer ||
-        tx.is_transfer ||
-        tx.isDebtCapital ||
-        tx.subcategoryId === 'sub-amortizacion-deuda' ||
-        type === 'transfer' ||
-        type === 'transferencia' ||
-        tx.categoryId === 'cat-transfer' ||
-        tx.category_id === 'cat-transfer' ||
-        tx.subcategoryId === 'sub-transfer-in' ||
-        tx.subcategoryId === 'sub-transfer-out'
-      );
-      if (isTransfer) return;
-
       const day = parseInt(tx.date.split('-')[2], 10);
       const amt = safeNumber(tx.amount);
       const targetWeek = weeks.find((w) => day >= w.start && day <= w.end);
@@ -207,12 +116,7 @@ export function useDashboardMetrics({
       }
     });
 
-    const maxVal = Math.max(
-      ...weeks.map((w) => Math.max(w.income, w.expense)),
-      100000
-    );
-
-    return { weeks, maxVal };
+    return { weeks, maxVal: Math.max(...weeks.map((w) => Math.max(w.income, w.expense)), 100000) };
   }, [scopedTransactions]);
 
   return {

@@ -1,81 +1,28 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  CreditCard, 
-  Plus, 
-  ArrowLeft,
-  Trash2,
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
-  Check
-} from 'lucide-react';
+import { CreditCard, Plus, ArrowLeft, Trash2, ArrowUpDown, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import CreditCardDetailModal from './modals/CreditCardDetailModal';
 import AddAccountModal from './modals/AddAccountModal';
 import EditAccountModal from './modals/EditAccountModal';
 import AccountCard from './components/AccountCard';
-import SwipeableRow from '../common/SwipeableRow';
-import { 
-  getAccountNativeBalance, 
-  safeNumber
-} from '../../utils/currencyUtils';
+import { getAccountNativeBalance, safeNumber } from '../../utils/currencyUtils';
 
 export default function AccountsAndCategories({ 
-  accounts = [], 
-  transactions = [],
-  onAddAccount, 
-  onUpdateAccount,
-  onDeleteAccount,
-  onReorderAccounts,
-  onAddTransaction,
-  onOpenCreditCardDetail,
-  onBack,
-  fromSettings = false,
-  previousView,
-  trm = 4050,
-  mode,
-  isReadOnly
+  accounts = [], transactions = [], onAddAccount, onUpdateAccount, onDeleteAccount,
+  onReorderAccounts, onAddTransaction, onOpenCreditCardDetail, onBack, fromSettings = false, trm = 4050, mode, isReadOnly
 }) {
   const { formatMoney, isPrivacyMode } = usePrivacy();
+  const readOnly = isReadOnly !== undefined ? Boolean(isReadOnly) : (mode !== undefined ? mode === 'view' : !fromSettings);
 
-  const readOnly = isReadOnly !== undefined 
-    ? Boolean(isReadOnly) 
-    : (mode !== undefined ? mode === 'view' : !fromSettings);
+  const [localAccounts, setLocalAccounts] = useState(accounts), localAccountsRef = useRef(accounts);
+  useEffect(() => { setLocalAccounts(accounts); localAccountsRef.current = accounts; }, [accounts]);
 
-  // Sincronización del orden local de cuentas
-  const [localAccounts, setLocalAccounts] = useState(accounts);
-  const localAccountsRef = useRef(accounts);
+  const [isReordering, setIsReordering] = useState(false), [draggingIndex, setDraggingIndex] = useState(null);
+  const [localSelectedCard, setLocalSelectedCard] = useState(null), [showAddAccount, setShowAddAccount] = useState(false);
+  const [editingAccount, setEditingAccount] = useState(null), [accountPendingDelete, setAccountPendingDelete] = useState(null);
+  const longPressTimerRef = useRef(null), draggedIndexRef = useRef(null), touchStartPosRef = useRef({ x: 0, y: 0 });
 
-  useEffect(() => {
-    setLocalAccounts(accounts);
-    localAccountsRef.current = accounts;
-  }, [accounts]);
-
-  // Estados y referencias para Long-Press & Drag-and-Drop
-  const [isReordering, setIsReordering] = useState(false);
-  const isReorderingRef = useRef(false);
-  const [draggingIndex, setDraggingIndex] = useState(null);
-  const isDraggingRef = useRef(false);
-  const justDraggedRef = useRef(false);
-  const longPressTimerRef = useRef(null);
-  const touchStartPosRef = useRef({ x: 0, y: 0 });
-  const draggedIndexRef = useRef(null);
-  const lastSwapTimeRef = useRef(0);
-
-  // Selected Credit Card for Detail Modal (local fallback if not controlled globally)
-  const [localSelectedCard, setLocalSelectedCard] = useState(null);
-
-  // Modal de Nueva Cuenta
-  const [showAddAccount, setShowAddAccount] = useState(false);
-
-  // Modal de Edición de Cuenta
-  const [editingAccount, setEditingAccount] = useState(null);
-
-  // Estado para Diálogo de Confirmación de Seguridad de Eliminación de Cuenta
-  const [accountPendingDelete, setAccountPendingDelete] = useState(null);
-
-  // Escuchar evento de TopAppBar para abrir modal de agregar cuenta (solo en modo gestión)
   useEffect(() => {
     if (readOnly) return;
     const handleOpenAdd = () => setShowAddAccount(true);
@@ -83,646 +30,130 @@ export default function AccountsAndCategories({
     return () => window.removeEventListener('monety:open-add-account', handleOpenAdd);
   }, [readOnly]);
 
-  // Live balance for accounts in their native currency and COP equivalent (defensivo)
   const accountsWithBalance = useMemo(() => {
-    try {
-      if (!Array.isArray(localAccounts)) return [];
-      return localAccounts.map((account) => {
-        try {
-          const currency = account?.currency || 'COP';
-          const currentBalance = getAccountNativeBalance(account, transactions, trm);
-          const balance = currentBalance;
-          const shares = Number(account?.shares || 0);
-          const unitPrice = Number(account?.unitPrice || 0);
-
-          const rate = currency === 'USD' ? Number(trm || 4000) : currency === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1;
-          const balanceInCop = currentBalance * rate;
-          const copEquivalent = balanceInCop;
-          const accTxs = Array.isArray(transactions) ? transactions.filter(t => t?.accountId === account?.id || t?.account === account?.name) : [];
-
-          return {
-            ...account,
-            currency,
-            balance,
-            shares,
-            unitPrice,
-            currentBalance,
-            copEquivalent,
-            balanceInCop,
-            txCount: accTxs.length
-          };
-        } catch (e) {
-          console.warn('Error mapeando cuenta:', account, e);
-          const rawBal = Number(account?.balance || account?.initialBalance || 0);
-          return {
-            ...account,
-            currency: account?.currency || 'COP',
-            balance: rawBal,
-            shares: 0,
-            unitPrice: 0,
-            currentBalance: rawBal,
-            copEquivalent: rawBal,
-            balanceInCop: rawBal,
-            txCount: 0
-          };
-        }
-      });
-    } catch (err) {
-      console.error('Error calculando balances de cuentas:', err);
-      return [];
-    }
+    return (Array.isArray(localAccounts) ? localAccounts : []).map((acc) => {
+      const cur = acc?.currency || 'COP', bal = getAccountNativeBalance(acc, transactions, trm);
+      const rate = cur === 'USD' ? Number(trm || 4000) : cur === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1;
+      const copEquivalent = bal * rate;
+      const txCount = Array.isArray(transactions) ? transactions.filter((t) => t?.accountId === acc?.id || t?.account === acc?.name).length : 0;
+      return { ...acc, currency: cur, balance: bal, shares: Number(acc?.shares || 0), unitPrice: Number(acc?.unitPrice || 0), currentBalance: bal, copEquivalent, balanceInCop: copEquivalent, txCount };
+    });
   }, [localAccounts, transactions, trm]);
 
   const totalAvailableWealth = accountsWithBalance
-    .filter(acc => acc?.type !== 'card' && acc?.type !== 'credit')
+    .filter((acc) => !['card', 'credit'].includes(acc?.type))
     .reduce((sum, acc) => sum + (safeNumber(acc?.copEquivalent) > 0 ? safeNumber(acc.copEquivalent) : 0), 0);
 
-  // Soporte de gesto de volver atrás en modales internos
   useBackHandler(Boolean(localSelectedCard), () => setLocalSelectedCard(null));
+  const handleGoBack = () => (onBack ? onBack() : (typeof window !== 'undefined' && window.history.length > 2 && window.history.back()));
 
-  const handleGoBack = () => {
-    if (onBack) {
-      onBack();
-    } else if (fromSettings || previousView === 'settings') {
-      if (typeof window !== 'undefined' && window.history.length > 2) {
-        window.history.back();
-      }
-    } else if (typeof window !== 'undefined' && window.history.length > 2) {
-      window.history.back();
-    }
+  const swapAccounts = (fromIdx, toIdx) => {
+    if (toIdx < 0 || toIdx >= localAccounts.length || fromIdx === toIdx) return;
+    setLocalAccounts((prev) => {
+      const updated = [...prev], [moved] = updated.splice(fromIdx, 1);
+      updated.splice(toIdx, 0, moved);
+      localAccountsRef.current = updated;
+      return updated;
+    });
+    draggedIndexRef.current = toIdx; setDraggingIndex(toIdx);
   };
-
-  // Open edit modal for an account
-  const handleOpenEditAccount = (acc) => {
-    setEditingAccount(acc);
-  };
-
-  // Save edited account
-  const handleSaveEditAccount = (updated) => {
-    if (onUpdateAccount) {
-      onUpdateAccount(updated);
-    }
-    setEditingAccount(null);
-  };
-
-  // Solicitar eliminación de cuenta abriendo diálogo de confirmación de seguridad
-  const handleRequestDelete = (acc) => {
-    const accObj = typeof acc === 'object' && acc !== null 
-      ? acc 
-      : (localAccounts.find(a => a.id === acc) || accounts.find(a => a.id === acc));
-    if (accObj) {
-      setAccountPendingDelete(accObj);
-    }
-  };
-
-  // Confirmar eliminación definitiva de cuenta
-  const handleConfirmDelete = () => {
-    if (!accountPendingDelete) return;
-    const accId = accountPendingDelete.id;
-    if (onDeleteAccount) {
-      onDeleteAccount(accId);
-    }
-    setAccountPendingDelete(null);
-  };
-
-  const handleCreateAccount = (newAcc) => {
-    if (onAddAccount) {
-      onAddAccount(newAcc);
-    }
-    setShowAddAccount(false);
-  };
-
-  // Clic en la tarjeta (abre detalle si es tarjeta de crédito, o edición si es cuenta regular)
-  const handleCardClick = (acc) => {
-    if (justDraggedRef.current || isReorderingRef.current || isDraggingRef.current || draggingIndex !== null) return;
-    if (acc.type === 'card' || acc.type === 'credit') {
-      if (onOpenCreditCardDetail) {
-        onOpenCreditCardDetail(acc);
-      } else {
-        setLocalSelectedCard(acc);
-      }
-    } else {
-      handleOpenEditAccount(acc);
-    }
-  };
-
-  /* ============================================================== */
-  /* GESTIÓN DE REORDENAMIENTO TÁCTIL (Móvil Long-Press ~400ms)    */
-  /* ============================================================== */
-  const handleTouchStart = (e, index) => {
-    const touch = e.touches[0];
-    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-    draggedIndexRef.current = index;
-
+  const finishDrag = () => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = setTimeout(() => {
-      try {
-        navigator.vibrate?.(40);
-      } catch (_) {}
-      isReorderingRef.current = true;
-      setIsReordering(true);
-      isDraggingRef.current = true;
-      setDraggingIndex(index);
-    }, 400);
+    setDraggingIndex(null); draggedIndexRef.current = null;
+    if (onReorderAccounts) onReorderAccounts(localAccountsRef.current);
   };
-
+  const handleTouchStart = (e, idx) => {
+    touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    draggedIndexRef.current = idx;
+    longPressTimerRef.current = setTimeout(() => { setIsReordering(true); setDraggingIndex(idx); }, 400);
+  };
   const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
-    const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
-
-    // Si aún no está en modo reordenar y el dedo se desplazó > 8px, cancelar timer inmediatamente
-    // Esto asegura que un swipe lateral rápido active el swipe de editar/eliminar sin demoras
-    if (!isReorderingRef.current) {
-      if (dx > 8 || dy > 8) {
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
-      }
-      return;
-    }
-
-    // Modo reordenar activo: prevenir scroll nativo del viewport
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-
-    const currentIdx = draggedIndexRef.current;
-    if (currentIdx === null || currentIdx === undefined) return;
-
-    // Throttling para fluidez
-    const now = Date.now();
-    if (now - lastSwapTimeRef.current < 60) return;
-
-    // Identificar la tarjeta destino calculando las coordenadas de las tarjetas
-    const allCards = document.querySelectorAll('[data-account-index]');
-    let targetIdx = null;
-
-    for (const card of allCards) {
-      const rect = card.getBoundingClientRect();
-      if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-        const idx = parseInt(card.getAttribute('data-account-index'), 10);
-        if (!isNaN(idx) && idx !== currentIdx) {
-          const midY = rect.top + rect.height / 2;
-          const isValidMove = currentIdx < idx 
-            ? touch.clientY > midY 
-            : touch.clientY < midY;
-          if (isValidMove) {
-            targetIdx = idx;
-            break;
-          }
-        }
-      }
-    }
-
-    if (targetIdx !== null && targetIdx !== currentIdx) {
-      lastSwapTimeRef.current = now;
-      setLocalAccounts((prev) => {
-        const updated = [...prev];
-        const [movedItem] = updated.splice(currentIdx, 1);
-        updated.splice(targetIdx, 0, movedItem);
-        localAccountsRef.current = updated;
-        return updated;
-      });
-      draggedIndexRef.current = targetIdx;
-      setDraggingIndex(targetIdx);
-      try {
-        navigator.vibrate?.(20);
-      } catch (_) {}
-    }
+    const t = e.touches[0];
+    if (!isReordering) { if (Math.hypot(t.clientX - touchStartPosRef.current.x, t.clientY - touchStartPosRef.current.y) > 10) clearTimeout(longPressTimerRef.current); return; }
+    if (e.cancelable) e.preventDefault();
+    const targetIdx = Number(document.elementFromPoint(t.clientX, t.clientY)?.closest('[data-account-index]')?.dataset?.accountIndex);
+    if (!isNaN(targetIdx) && targetIdx !== draggedIndexRef.current) swapAccounts(draggedIndexRef.current, targetIdx);
   };
-
-  const handleTouchEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    if (isReorderingRef.current) {
-      isReorderingRef.current = false;
-      setIsReordering(false);
-      isDraggingRef.current = false;
-      setDraggingIndex(null);
-      draggedIndexRef.current = null;
-      justDraggedRef.current = true;
-      setTimeout(() => {
-        justDraggedRef.current = false;
-      }, 300);
-
-      // Persistir nuevo orden
-      if (onReorderAccounts) {
-        onReorderAccounts(localAccountsRef.current);
-      }
-    }
-  };
-
-  const handleTouchCancel = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    if (isReorderingRef.current) {
-      isReorderingRef.current = false;
-      setIsReordering(false);
-      isDraggingRef.current = false;
-      setDraggingIndex(null);
-      draggedIndexRef.current = null;
-      justDraggedRef.current = true;
-      setTimeout(() => {
-        justDraggedRef.current = false;
-      }, 300);
-
-      if (onReorderAccounts) {
-        onReorderAccounts(localAccountsRef.current);
-      }
-    }
-  };
-
-  /* ============================================================== */
-  /* GESTIÓN DE REORDENAMIENTO EN ESCRITORIO (HTML5 Drag & Drop)    */
-  /* ============================================================== */
-  const handleDragStart = (e, index) => {
-    draggedIndexRef.current = index;
-    setDraggingIndex(index);
-    isDraggingRef.current = true;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
-    try {
-      navigator.vibrate?.(40);
-    } catch (_) {}
-  };
-
-  const handleDragOver = (e, targetIdx) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const currentIdx = draggedIndexRef.current;
-    if (currentIdx === null || currentIdx === undefined || currentIdx === targetIdx) return;
-
-    setLocalAccounts((prev) => {
-      const updated = [...prev];
-      const [movedItem] = updated.splice(currentIdx, 1);
-      updated.splice(targetIdx, 0, movedItem);
-      localAccountsRef.current = updated;
-      return updated;
-    });
-    draggedIndexRef.current = targetIdx;
-    setDraggingIndex(targetIdx);
-  };
-
-  const handleDragEnd = () => {
-    isDraggingRef.current = false;
-    setDraggingIndex(null);
-    draggedIndexRef.current = null;
-    justDraggedRef.current = true;
-    setTimeout(() => {
-      justDraggedRef.current = false;
-    }, 300);
-
-    if (onReorderAccounts) {
-      onReorderAccounts(localAccountsRef.current);
-    }
-  };
-
-  const handleMoveAccount = (fromIndex, direction) => {
-    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
-    if (toIndex < 0 || toIndex >= localAccounts.length) return;
-    setLocalAccounts((prev) => {
-      const updated = [...prev];
-      const [movedItem] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, movedItem);
-      localAccountsRef.current = updated;
-      if (onReorderAccounts) {
-        onReorderAccounts(updated);
-      }
-      return updated;
-    });
-    try {
-      navigator.vibrate?.(20);
-    } catch (_) {}
-  };
-
   const handleToggleReorder = () => {
-    const next = !isReordering;
-    setIsReordering(next);
-    isReorderingRef.current = next;
-    if (!next && onReorderAccounts) {
-      onReorderAccounts(localAccountsRef.current);
-    }
+    const next = !isReordering; setIsReordering(next);
+    if (!next && onReorderAccounts) onReorderAccounts(localAccountsRef.current);
   };
 
   return (
     <div className="space-y-3 pt-1">
-      {/* CABECERA VISTA DEDICADA (!fromSettings) */}
-      {!fromSettings && (
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-white/[0.08]">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            {onBack && (
-              <button
-                type="button"
-                onClick={handleGoBack}
-                className="p-2 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 opacity-75 hover:opacity-100 active:scale-90 transition-all cursor-pointer shrink-0"
-                title="Volver"
-                aria-label="Volver"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            )}
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base sm:text-lg font-bold truncate leading-tight text-slate-900 dark:text-white flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" />
-                <span>Cuentas y Métodos de Pago</span>
-              </h2>
-              <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">
-                Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Botón Reordenar Cuentas */}
-            {!readOnly && accounts.length > 1 && (
-              <button
-                type="button"
-                onClick={handleToggleReorder}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                  isReordering
-                    ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25 ring-2 ring-emerald-500/30'
-                    : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 border border-slate-200/60 dark:border-white/[0.06]'
-                }`}
-                title={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
-                aria-label={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
-              >
-                {isReordering ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>Listo</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowUpDown className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Reordenar</span>
-                  </>
-                )}
-              </button>
-            )}
-
-            {/* Botón + Nueva cuenta */}
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={() => setShowAddAccount(true)}
-                className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
-                title="Nueva Cuenta"
-                aria-label="Nueva Cuenta"
-              >
-                <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
-              </button>
-            )}
+      <div className={`flex items-center justify-between gap-3 ${fromSettings ? 'mt-2 mb-2 px-1' : 'pb-3 border-b border-slate-200/80 dark:border-white/[0.08]'}`}>
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          {!fromSettings && onBack && (
+            <button type="button" onClick={handleGoBack} className="p-2 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 opacity-75 hover:opacity-100 active:scale-90 transition-all cursor-pointer shrink-0" title="Volver"><ArrowLeft className="w-4 h-4" /></button>
+          )}
+          <div className="min-w-0 flex-1">
+            {!fromSettings && <h2 className="text-base sm:text-lg font-bold truncate leading-tight text-slate-900 dark:text-white flex items-center gap-2"><CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" /><span>Cuentas y Métodos de Pago</span></h2>}
+            <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}</p>
           </div>
         </div>
-      )}
-
-      {/* CUENTAS BANCARIAS Y EFECTIVO */}
-      <div>
-        {/* Métrica secundaria cuando está dentro de Settings (fromSettings === true) */}
-        {fromSettings && (
-          <div className="mt-2 mb-2 px-1 flex items-center justify-between">
-            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400">
-              Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}
-            </p>
-            {!readOnly && accounts.length > 1 && (
-              <button
-                type="button"
-                onClick={handleToggleReorder}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
-                  isReordering
-                    ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
-                    : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 border border-slate-200/60 dark:border-white/[0.06]'
-                }`}
-                title={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
-                aria-label={isReordering ? 'Finalizar reordenamiento' : 'Reordenar cuentas'}
-              >
-                {isReordering ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>Listo</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowUpDown className="w-3.5 h-3.5" />
-                    <span>Reordenar</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Banner informativo de modo reordenar activo */}
-        {isReordering && (
-          <div className="mb-3 p-2.5 px-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-between gap-2 animate-fadeIn">
-            <div className="flex items-center gap-2 min-w-0">
-              <ArrowUpDown className="w-4 h-4 shrink-0" />
-              <span className="truncate">Usa las flechas o arrastra las tarjetas para reorganizarlas.</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleToggleReorder}
-              className="px-2.5 py-1 rounded-lg bg-emerald-500 text-white font-bold text-[11px] shadow-sm hover:bg-emerald-600 transition-colors shrink-0 cursor-pointer"
-            >
-              Listo
+        <div className="flex items-center gap-2 shrink-0">
+          {!readOnly && accounts.length > 1 && (
+            <button type="button" onClick={handleToggleReorder} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${isReordering ? 'bg-emerald-500 text-white shadow-sm ring-2 ring-emerald-500/30' : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200/60 dark:border-white/[0.06]'}`}>
+              {isReordering ? <><Check className="w-3.5 h-3.5 stroke-[2.5]" /><span>Listo</span></> : <><ArrowUpDown className="w-3.5 h-3.5" /><span className="hidden sm:inline">Reordenar</span></>}
             </button>
-          </div>
-        )}
-
-        {/* Tarjetas de Cuenta Individuales en Grilla de 2 Columnas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 auto-rows-fr items-stretch">
-          {accountsWithBalance.map((acc, index) => {
-            const isDragging = draggingIndex === index;
-            return (
-              <div
-                key={acc?.id || `acc-${index}`}
-                data-account-index={index}
-                draggable={isReordering}
-                onDragStart={(e) => isReordering && handleDragStart(e, index)}
-                onDragOver={(e) => isReordering && handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                className={`relative w-full h-full flex flex-col transition-all rounded-2xl ${
-                  isReordering ? 'ring-2 ring-emerald-500/40' : ''
-                } ${isDragging ? 'opacity-40 scale-[0.98]' : ''}`}
-              >
-                {/* Controles visuales de reordenamiento explícito */}
-                {isReordering && (
-                  <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-sm p-1 rounded-xl shadow-md border border-slate-200 dark:border-white/10 animate-fadeIn">
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveAccount(index, 'up');
-                      }}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                        index === 0 
-                          ? 'text-slate-300 dark:text-zinc-600 cursor-not-allowed' 
-                          : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 cursor-pointer active:scale-95'
-                      }`}
-                      title="Mover arriba / anterior"
-                      aria-label="Mover arriba"
-                    >
-                      <ChevronUp className="w-4 h-4 stroke-[2.5]" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === accountsWithBalance.length - 1}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveAccount(index, 'down');
-                      }}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                        index === accountsWithBalance.length - 1
-                          ? 'text-slate-300 dark:text-zinc-600 cursor-not-allowed' 
-                          : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 cursor-pointer active:scale-95'
-                      }`}
-                      title="Mover abajo / siguiente"
-                      aria-label="Mover abajo"
-                    >
-                      <ChevronDown className="w-4 h-4 stroke-[2.5]" />
-                    </button>
-                  </div>
-                )}
-
-                <AccountCard
-                  account={acc}
-                  index={index}
-                  showBalance={!isPrivacyMode}
-                  transactions={transactions}
-                  trm={trm}
-                  isReadOnly={readOnly || isReordering}
-                  onEdit={!readOnly && !isReordering ? handleOpenEditAccount : undefined}
-                  onDelete={!readOnly && !isReordering ? handleRequestDelete : undefined}
-                  onSelectCard={!readOnly && !isReordering ? (card) => {
-                    if (onOpenCreditCardDetail) {
-                      onOpenCreditCardDetail(card);
-                    } else {
-                      setLocalSelectedCard(card);
-                    }
-                  } : undefined}
-                />
-              </div>
-            );
-          })}
-
-          {accounts.length === 0 && (
-            <div className="col-span-full text-center py-12 px-4 rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 text-slate-400 bg-slate-50/50 dark:bg-white/[0.02]">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400 flex items-center justify-center mx-auto mb-3">
-                <CreditCard className="w-6 h-6 opacity-80" />
-              </div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                No tienes cuentas registradas
-              </p>
-            </div>
+          )}
+          {!readOnly && !fromSettings && (
+            <button type="button" onClick={() => setShowAddAccount(true)} className="w-9 h-9 bg-[#007AFF] hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer" title="Nueva Cuenta"><Plus className="w-4.5 h-4.5 stroke-[2.5]" /></button>
           )}
         </div>
       </div>
 
-      {/* Modal de Creación de Nueva Cuenta (Exclusivo modo administrativo) */}
-      {!readOnly && showAddAccount && (
-        <AddAccountModal
-          isOpen={showAddAccount}
-          onClose={() => setShowAddAccount(false)}
-          onCreateAccount={handleCreateAccount}
-          trm={trm}
-        />
+      {isReordering && (
+        <div className="mb-3 p-2.5 px-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-between gap-2 animate-fadeIn">
+          <div className="flex items-center gap-2 min-w-0"><ArrowUpDown className="w-4 h-4 shrink-0" /><span className="truncate">Usa las flechas o arrastra las tarjetas para reorganizarlas.</span></div>
+          <button type="button" onClick={handleToggleReorder} className="px-2.5 py-1 rounded-lg bg-emerald-500 text-white font-bold text-[11px] shadow-sm hover:bg-emerald-600 cursor-pointer">Listo</button>
+        </div>
       )}
 
-      {/* Modal de Detalle de Tarjeta de Crédito (fallback local) */}
-      {!readOnly && localSelectedCard && (
-        <CreditCardDetailModal
-          isOpen={!!localSelectedCard}
-          onClose={() => setLocalSelectedCard(null)}
-          card={accounts.find(a => a.id === localSelectedCard.id) || localSelectedCard}
-          transactions={transactions}
-          accounts={accounts}
-          onAddTransaction={onAddTransaction}
-          onOpenEdit={(card) => handleOpenEditAccount(card)}
-        />
-      )}
-
-      {/* MODAL / SHEET iOS PARA EDITAR CUENTA O MÉTODO DE PAGO */}
-      {!readOnly && editingAccount && (
-        <EditAccountModal
-          account={editingAccount}
-          onClose={() => setEditingAccount(null)}
-          onSave={handleSaveEditAccount}
-          onDelete={onDeleteAccount}
-          trm={trm}
-        />
-      )}
-
-      {/* DIÁLOGO MODAL DE CONFIRMACIÓN DE SEGURIDAD PARA ELIMINACIÓN DE CUENTA */}
-      {accountPendingDelete && (
-        <div 
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
-          onClick={() => setAccountPendingDelete(null)}
-        >
-          <div 
-            className="w-full max-w-sm rounded-3xl bg-white dark:bg-zinc-900 p-5 border border-slate-200/80 dark:border-white/10 shadow-2xl space-y-4 animate-scaleUp"
-            onClick={(e) => e.stopPropagation()}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 auto-rows-fr items-stretch">
+        {accountsWithBalance.map((acc, index) => (
+          <div
+            key={acc?.id || `acc-${index}`} data-account-index={index} draggable={isReordering}
+            onDragStart={(e) => { draggedIndexRef.current = index; setDraggingIndex(index); e.dataTransfer.setData('text/plain', String(index)); }}
+            onDragOver={(e) => { e.preventDefault(); if (draggedIndexRef.current !== null && draggedIndexRef.current !== index) swapAccounts(draggedIndexRef.current, index); }}
+            onDragEnd={finishDrag} onTouchStart={(e) => !readOnly && handleTouchStart(e, index)} onTouchMove={handleTouchMove} onTouchEnd={() => { setIsReordering(false); finishDrag(); }}
+            className={`relative w-full h-full flex flex-col transition-all rounded-2xl ${isReordering ? 'ring-2 ring-emerald-500/40' : ''} ${draggingIndex === index ? 'opacity-40 scale-[0.98]' : ''}`}
           >
+            {isReordering && (
+              <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-sm p-1 rounded-xl shadow-md border border-slate-200 dark:border-white/10 animate-fadeIn">
+                <button type="button" disabled={index === 0} onClick={(e) => { e.stopPropagation(); swapAccounts(index, index - 1); onReorderAccounts?.(localAccountsRef.current); }} className={`w-7 h-7 rounded-lg flex items-center justify-center ${index === 0 ? 'text-slate-300 dark:text-zinc-600' : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 cursor-pointer'}`}><ChevronUp className="w-4 h-4 stroke-[2.5]" /></button>
+                <button type="button" disabled={index === accountsWithBalance.length - 1} onClick={(e) => { e.stopPropagation(); swapAccounts(index, index + 1); onReorderAccounts?.(localAccountsRef.current); }} className={`w-7 h-7 rounded-lg flex items-center justify-center ${index === accountsWithBalance.length - 1 ? 'text-slate-300 dark:text-zinc-600' : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 cursor-pointer'}`}><ChevronDown className="w-4 h-4 stroke-[2.5]" /></button>
+              </div>
+            )}
+            <AccountCard account={acc} index={index} showBalance={!isPrivacyMode} transactions={transactions} trm={trm} isReadOnly={readOnly || isReordering} onEdit={!readOnly && !isReordering ? setEditingAccount : undefined} onDelete={!readOnly && !isReordering ? ((a) => setAccountPendingDelete(typeof a === 'object' && a !== null ? a : localAccounts.find((x) => x.id === a))) : undefined} onSelectCard={!readOnly && !isReordering ? (card) => (onOpenCreditCardDetail ? onOpenCreditCardDetail(card) : setLocalSelectedCard(card)) : undefined} />
+          </div>
+        ))}
+        {accounts.length === 0 && (
+          <div className="col-span-full text-center py-10 px-4 rounded-2xl border border-dashed border-slate-200/80 dark:border-white/10 text-slate-400 bg-slate-50/50 dark:bg-white/[0.02]">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No tienes cuentas registradas</p>
+          </div>
+        )}
+      </div>
+
+      {!readOnly && showAddAccount && <AddAccountModal isOpen={showAddAccount} onClose={() => setShowAddAccount(false)} onCreateAccount={(newAcc) => { onAddAccount?.(newAcc); setShowAddAccount(false); }} trm={trm} />}
+      {!readOnly && localSelectedCard && <CreditCardDetailModal isOpen={Boolean(localSelectedCard)} onClose={() => setLocalSelectedCard(null)} card={accounts.find((a) => a.id === localSelectedCard.id) || localSelectedCard} transactions={transactions} accounts={accounts} onAddTransaction={onAddTransaction} onOpenEdit={setEditingAccount} />}
+      {!readOnly && editingAccount && <EditAccountModal account={editingAccount} onClose={() => setEditingAccount(null)} onSave={(upd) => { onUpdateAccount?.(upd); setEditingAccount(null); }} onDelete={onDeleteAccount} trm={trm} />}
+
+      {accountPendingDelete && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn" onClick={() => setAccountPendingDelete(null)}>
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-zinc-900 p-5 border border-slate-200/80 dark:border-white/10 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
-                  ¿Eliminar cuenta?
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Esta acción no se puede deshacer
-                </p>
-              </div>
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0"><Trash2 className="w-5 h-5" /></div>
+              <div><h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">¿Eliminar cuenta?</h3><p className="text-xs text-slate-500 dark:text-slate-400">Esta acción no se puede deshacer</p></div>
             </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-white/[0.06] text-xs space-y-2">
-              <p className="text-slate-700 dark:text-zinc-200 font-medium">
-                Vas a eliminar la cuenta <strong className="text-slate-900 dark:text-white font-bold">{accountPendingDelete.name}</strong>.
-              </p>
-              {(() => {
-                const accTxs = Array.isArray(transactions) 
-                  ? transactions.filter(t => t?.accountId === accountPendingDelete.id || t?.account === accountPendingDelete.name)
-                  : [];
-                const rawBal = Number(accountPendingDelete.balance ?? accountPendingDelete.currentBalance ?? 0);
-                if (accTxs.length > 0 || (!isNaN(rawBal) && rawBal !== 0)) {
-                  return (
-                    <p className="text-amber-600 dark:text-amber-400 font-medium text-[11px] pt-1.5 border-t border-slate-200/50 dark:border-white/[0.06] leading-relaxed">
-                      ⚠️ Atención: Esta cuenta tiene {accTxs.length > 0 ? `${accTxs.length} movimiento(s) vinculados` : ''} {accTxs.length > 0 && !isNaN(rawBal) && rawBal !== 0 ? 'y ' : ''}{!isNaN(rawBal) && rawBal !== 0 ? `saldo de ${formatMoney(rawBal)}` : ''}. Sus transacciones quedarán desvinculadas.
-                    </p>
-                  );
-                }
-                return null;
-              })()}
-            </div>
-
+            <p className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/60 dark:border-white/[0.06] text-xs text-slate-700 dark:text-zinc-200 font-medium">Vas a eliminar la cuenta <strong className="text-slate-900 dark:text-white font-bold">{accountPendingDelete.name}</strong>.</p>
             <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setAccountPendingDelete(null)}
-                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 transition-colors cursor-pointer text-center"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer text-center shadow-sm"
-              >
-                Eliminar cuenta
-              </button>
+              <button type="button" onClick={() => setAccountPendingDelete(null)} className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 cursor-pointer text-center">Cancelar</button>
+              <button type="button" onClick={() => { onDeleteAccount?.(accountPendingDelete.id); setAccountPendingDelete(null); }} className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer text-center shadow-sm">Eliminar cuenta</button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

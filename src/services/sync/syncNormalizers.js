@@ -1,527 +1,204 @@
 /**
- * syncNormalizers.js
- * Funciones puras de normalización y parsing defensivo para datos remotos de Supabase.
+ * syncNormalizers.js - Funciones puras de normalización y parsing defensivo para datos de Supabase.
  */
 
-/**
- * Normaliza los datos del perfil remoto de Supabase combinándolos con el perfil local previo.
- *
- * @param {Object|null} safeCloudProfile - Registro de profile descargado de la nube
- * @param {Object} [prevProfile={}] - Estado previo del perfil en React
- * @returns {Object} Perfil normalizado con name, photo, initials y propiedades previas
- */
-export function normalizeRemoteProfile(safeCloudProfile, prevProfile = {}) {
-  if (!safeCloudProfile) return prevProfile;
-  const displayName = safeCloudProfile.display_name || safeCloudProfile.name;
-  const photoUrl = safeCloudProfile.photo_url || safeCloudProfile.photo;
-  return {
-    ...prevProfile,
-    name: displayName || prevProfile?.name || 'Usuario',
-    photo: photoUrl || prevProfile?.photo || null,
-    initials: (displayName || prevProfile?.name || 'US')
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map(w => w[0].toUpperCase())
-      .join('') || 'US'
-  };
+const safeNum = (v, fb = 0) => { const n = Number(v); return isNaN(n) ? fb : n; };
+const pickNum = (...candidates) => {
+  for (const c of candidates) { const n = Number(c); if (!isNaN(n) && n > 0) return n; }
+  for (const c of candidates) { const n = Number(c); if (!isNaN(n) && c !== null && c !== undefined && c !== '') return n; }
+  return 0;
+};
+const safeJson = (val, fb = {}) => {
+  if (!val) return fb;
+  if (typeof val === 'object') return val;
+  try { return JSON.parse(val); } catch { return fb; }
+};
+const extractArray = (d, raw, meta, key) => [d, raw, meta].find((src) => Array.isArray(src?.[key]))?.[key] || [];
+
+export function normalizeRemoteProfile(cloud, prev = {}) {
+  if (!cloud) return prev;
+  const name = cloud.display_name || cloud.name || prev?.name || 'Usuario';
+  return { ...prev, name, photo: cloud.photo_url || cloud.photo || prev?.photo || null, initials: name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || 'US' };
 }
 
-/**
- * Normaliza una cuenta descargada de Supabase garantizando compatibilidad de nombres de balance.
- *
- * @param {Object} a - Registro de cuenta de Supabase
- * @returns {Object} Cuenta con initial_balance, initialBalance, balance, current_balance, currentBalance
- */
 export function normalizeRemoteAccount(a) {
   if (!a || typeof a !== 'object') return a;
-  const balanceVal = Number(a.balance ?? a.current_balance ?? a.initial_balance ?? a.initialBalance ?? 0);
-  const initBal = Number(a.initial_balance ?? a.initialBalance ?? a.balance ?? a.current_balance ?? 0);
-  return {
-    ...a,
-    order_index: a.order_index !== undefined && a.order_index !== null ? Number(a.order_index) : 0,
-    initial_balance: initBal,
-    initialBalance: initBal,
-    balance: balanceVal,
-    current_balance: balanceVal,
-    currentBalance: balanceVal
-  };
+  const bal = safeNum(a.balance ?? a.current_balance ?? a.initial_balance ?? a.initialBalance);
+  const initBal = safeNum(a.initial_balance ?? a.initialBalance ?? a.balance ?? a.current_balance);
+  return { ...a, order_index: a.order_index != null ? Number(a.order_index) : 0, initial_balance: initBal, initialBalance: initBal, balance: bal, current_balance: bal, currentBalance: bal };
 }
 
-/**
- * Normaliza una transacción descargada de Supabase:
- * - Resuelve fecha desde date, created_at, datetime o fallback ISO a la fecha actual.
- * - Resuelve nota/descripción de t o raw_data.
- * - Resuelve categoría (category, category_name, categoryName, etc.).
- * - Normaliza tipo ('gasto'/'expense' -> 'expense', 'ingreso'/'income' -> 'income').
- * - Preserva compatibilidad camelCase y snake_case para accountId, categoryId, subcategoryId.
- * - Convierte amount a Number y evalúa is_transfer / isTransfer.
- *
- * @param {Object} t - Registro de transacción de Supabase
- * @returns {Object} Transacción normalizada
- */
 export function normalizeRemoteTransaction(t) {
   if (!t || typeof t !== 'object') return t;
-  const rawData = t.raw_data && typeof t.raw_data === 'object' ? t.raw_data : {};
-  const resolvedDate = t.date 
-    ? String(t.date).split('T')[0] 
-    : (t.created_at ? String(t.created_at).split('T')[0] : (t.datetime ? String(t.datetime).split('T')[0] : new Date().toISOString().split('T')[0]));
-  const noteText = t.note ?? t.notes ?? t.description ?? rawData.note ?? rawData.description ?? '';
-  const catName = t.category ?? t.category_name ?? t.categoryName ?? rawData.category ?? rawData.categoryName ?? 'General';
-  const rawType = String(t.type || rawData.type || 'expense').toLowerCase();
-  const normalizedType = (rawType === 'gasto' || rawType === 'expense') ? 'expense' : ((rawType === 'ingreso' || rawType === 'income') ? 'income' : rawType);
+  const raw = safeJson(t.raw_data);
+  const resolvedDate = String(t.date || t.created_at || t.datetime || new Date().toISOString()).split('T')[0];
+  const note = t.note ?? t.notes ?? t.description ?? raw.note ?? raw.description ?? '';
+  const cat = t.category ?? t.category_name ?? t.categoryName ?? raw.category ?? raw.categoryName ?? 'General';
+  const rawType = String(t.type || raw.type || 'expense').toLowerCase();
+  const type = ['gasto', 'expense'].includes(rawType) ? 'expense' : (['ingreso', 'income'].includes(rawType) ? 'income' : rawType);
+  const accId = t.account_id || t.accountId || raw.account_id || raw.accountId || null;
+  const catId = t.category_id || t.categoryId || raw.category_id || raw.categoryId || null;
+  const isTransfer = Boolean(t.is_transfer || t.isTransfer || raw.is_transfer || false);
 
   return {
-    ...t,
-    date: resolvedDate,
-    note: noteText,
-    notes: noteText,
-    description: t.description || noteText || 'Movimiento',
-    type: normalizedType,
-    categoryName: catName,
-    category_name: catName,
-    category: catName,
-    accountId: t.account_id || t.accountId || rawData.account_id || rawData.accountId || null,
-    account_id: t.account_id || t.accountId || rawData.account_id || rawData.accountId || null,
-    categoryId: t.category_id || t.categoryId || rawData.category_id || rawData.categoryId || null,
-    category_id: t.category_id || t.categoryId || rawData.category_id || rawData.categoryId || null,
-    subcategoryId: t.subcategory_id || t.subcategoryId || rawData.subcategory_id || rawData.subcategoryId || null,
-    amount: Number(t.amount || 0),
-    is_transfer: Boolean(t.is_transfer || t.isTransfer || rawData.is_transfer || false),
-    isTransfer: Boolean(t.is_transfer || t.isTransfer || rawData.is_transfer || false)
+    ...t, date: resolvedDate, note, notes: note, description: t.description || note || 'Movimiento',
+    type, categoryName: cat, category_name: cat, category: cat, accountId: accId, account_id: accId,
+    categoryId: catId, category_id: catId, subcategoryId: t.subcategory_id || t.subcategoryId || raw.subcategory_id || raw.subcategoryId || null,
+    amount: safeNum(t.amount), is_transfer: isTransfer, isTransfer
   };
 }
 
-/**
- * Normaliza una deuda/préstamo descargada de Supabase:
- * - Resuelve nombre de la persona (person, person_name, name).
- * - Calcula totalAmount y remainingAmount con fallbacks cruzados.
- * - Extrae abonos desde d.payments, raw_data.payments, metadata.payments o 'PAYMENTS_JSON:' en d.notes.
- *
- * @param {Object} d - Registro de deuda de Supabase
- * @returns {Object} Deuda normalizada
- */
 export function normalizeRemoteDebt(d) {
   if (!d || typeof d !== 'object') return d;
-  const rawData = d.raw_data && typeof d.raw_data === 'object' ? d.raw_data : {};
-  const metadataObj = d.metadata && typeof d.metadata === 'object' ? d.metadata : {};
-  const personName = d.person || d.person_name || d.name || 'Sin nombre';
-  const parsedTotal = Number(d.total_amount ?? d.totalAmount ?? d.amount ?? d.principalAmount ?? d.remaining_amount ?? 0);
-  const parsedRemaining = d.remaining_amount !== null && d.remaining_amount !== undefined && Number(d.remaining_amount) > 0
-    ? Number(d.remaining_amount)
-    : (d.remainingAmount !== null && d.remainingAmount !== undefined && Number(d.remainingAmount) > 0 ? Number(d.remainingAmount) : parsedTotal);
+  const raw = safeJson(d.raw_data), meta = safeJson(d.metadata), person = d.person || d.person_name || d.name || 'Sin nombre';
+  const parsedTotal = pickNum(d.total_amount, d.totalAmount, d.amount, d.principalAmount, d.remaining_amount);
+  const parsedRemaining = (d.remaining_amount != null && Number(d.remaining_amount) > 0) ? Number(d.remaining_amount) : (d.remainingAmount != null && Number(d.remainingAmount) > 0 ? Number(d.remainingAmount) : parsedTotal);
 
-  // Recuperar abonos y desembolsos de d.payments/disbursements, raw_data, metadata o PAYMENTS_JSON en d.notes
-  let parsedPayments = [];
-  let parsedDisbursements = [];
-  let parsedInitialAmount = null;
-
-  if (Array.isArray(d.payments)) {
-    parsedPayments = d.payments;
-  } else if (Array.isArray(rawData.payments)) {
-    parsedPayments = rawData.payments;
-  } else if (Array.isArray(metadataObj.payments)) {
-    parsedPayments = metadataObj.payments;
-  }
-
-  if (Array.isArray(d.disbursements)) {
-    parsedDisbursements = d.disbursements;
-  } else if (Array.isArray(rawData.disbursements)) {
-    parsedDisbursements = rawData.disbursements;
-  } else if (Array.isArray(metadataObj.disbursements)) {
-    parsedDisbursements = metadataObj.disbursements;
-  }
-
+  let payments = extractArray(d, raw, meta, 'payments'), disbursements = extractArray(d, raw, meta, 'disbursements'), initialAmount = null;
   if (typeof d.notes === 'string' && d.notes.startsWith('PAYMENTS_JSON:')) {
     try {
       const parsed = JSON.parse(d.notes.replace('PAYMENTS_JSON:', ''));
-      if (Array.isArray(parsed)) {
-        if (parsedPayments.length === 0) parsedPayments = parsed;
-      } else if (parsed && typeof parsed === 'object') {
-        if (Array.isArray(parsed.payments) && parsedPayments.length === 0) {
-          parsedPayments = parsed.payments;
-        }
-        if (Array.isArray(parsed.disbursements) && parsedDisbursements.length === 0) {
-          parsedDisbursements = parsed.disbursements;
-        }
-        if (parsed.initialAmount) {
-          parsedInitialAmount = Number(parsed.initialAmount);
-        }
+      if (Array.isArray(parsed) && !payments.length) payments = parsed;
+      else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.payments) && !payments.length) payments = parsed.payments;
+        if (Array.isArray(parsed.disbursements) && !disbursements.length) disbursements = parsed.disbursements;
+        if (parsed.initialAmount) initialAmount = Number(parsed.initialAmount);
       }
     } catch {}
   }
 
-  const totalDisbursed = parsedDisbursements.reduce((sum, disb) => sum + Number(disb?.amount || 0), 0);
-  const totalCapPaid = parsedPayments.reduce(
-    (sum, p) => sum + (p.capitalAmount !== undefined ? Number(p.capitalAmount) : (p.mode === 'interest' ? 0 : Number(p.amount) || 0)), 
-    0
-  );
-
-  let initialAmount = parsedInitialAmount || Number(d.initialAmount ?? d.initial_amount);
-  let totalAmount = parsedTotal;
-
-  if (initialAmount > 0) {
-    totalAmount = initialAmount + totalDisbursed;
-  } else if (totalDisbursed > 0) {
-    if (parsedTotal > totalDisbursed) {
-      initialAmount = parsedTotal - totalDisbursed;
-      totalAmount = parsedTotal;
-    } else {
-      initialAmount = parsedTotal;
-      totalAmount = initialAmount + totalDisbursed;
-    }
-  } else {
-    initialAmount = parsedTotal;
-    totalAmount = parsedTotal;
-  }
-
-  // Fórmula reactiva: Saldo Pendiente = Monto Inicial + Total Prestado Adicional - Total Abonado
+  const totalDisbursed = disbursements.reduce((sum, disb) => sum + safeNum(disb?.amount), 0);
+  const totalCapPaid = payments.reduce((sum, p) => sum + (p.capitalAmount !== undefined ? safeNum(p.capitalAmount) : (p.mode === 'interest' ? 0 : safeNum(p.amount))), 0);
+  initialAmount = initialAmount || safeNum(d.initialAmount ?? d.initial_amount);
+  const totalAmount = initialAmount > 0 ? initialAmount + totalDisbursed : (totalDisbursed > 0 ? (parsedTotal > totalDisbursed ? parsedTotal - totalDisbursed : parsedTotal) + totalDisbursed : parsedTotal);
+  initialAmount = initialAmount || (totalDisbursed > 0 ? (parsedTotal > totalDisbursed ? parsedTotal - totalDisbursed : parsedTotal) : parsedTotal);
   const calculatedRemaining = Math.max(0, totalAmount - totalCapPaid);
-  const finalRemaining = (parsedPayments.length > 0 || totalDisbursed > 0)
-    ? calculatedRemaining
-    : (parsedRemaining || calculatedRemaining);
+  const finalRemaining = (payments.length > 0 || totalDisbursed > 0) ? calculatedRemaining : (parsedRemaining || calculatedRemaining);
 
   return {
-    ...d,
-    person: personName,
-    personName: personName,
-    name: personName,
-    initialAmount,
-    initial_amount: initialAmount,
-    total_amount: totalAmount,
-    totalAmount: totalAmount,
-    principalAmount: totalAmount,
-    amount: totalAmount,
-    remaining_amount: finalRemaining,
-    remainingAmount: finalRemaining,
-    remainingCapital: finalRemaining,
-    current_balance: finalRemaining,
-    payments: Array.isArray(parsedPayments) ? parsedPayments : [],
-    disbursements: Array.isArray(parsedDisbursements) ? parsedDisbursements : []
+    ...d, person, personName: person, name: person, initialAmount, initial_amount: initialAmount,
+    total_amount: totalAmount, totalAmount, principalAmount: totalAmount, amount: totalAmount,
+    remaining_amount: finalRemaining, remainingAmount: finalRemaining, remainingCapital: finalRemaining, current_balance: finalRemaining,
+    payments, disbursements
   };
 }
 
-/**
- * Normaliza una inversión descargada de Supabase garantizando compatibilidad de montos y tipos.
- *
- * @param {Object} inv - Registro de inversión de Supabase
- * @returns {Object} Inversión normalizada
- */
 export function normalizeRemoteInvestment(inv) {
   if (!inv || typeof inv !== 'object') return inv;
-
-  let rawData = {};
-  if (typeof inv.raw_data === 'string') {
-    try {
-      rawData = JSON.parse(inv.raw_data);
-    } catch {
-      rawData = {};
-    }
-  } else if (inv.raw_data && typeof inv.raw_data === 'object') {
-    rawData = inv.raw_data;
-  }
-
-  // Helper para extraer el primer número mayor a cero o el primer número definido
-  const pickValidNumber = (...candidates) => {
-    for (const c of candidates) {
-      const n = Number(c);
-      if (!isNaN(n) && n > 0) return n;
-    }
-    for (const c of candidates) {
-      const n = Number(c);
-      if (!isNaN(n) && c !== null && c !== undefined && c !== '') return n;
-    }
-    return 0;
-  };
-
-  const invAmount = pickValidNumber(
-    inv.investedAmount,
-    inv.invested_amount,
-    rawData.investedAmount,
-    rawData.invested_amount,
-    inv.amount,
-    rawData.amount,
-    inv.totalInvested,
-    rawData.totalInvested,
-    inv.buyPrice,
-    rawData.buyPrice
-  );
-
-  const currVal = pickValidNumber(
-    inv.currentAmount,
-    inv.currentValue,
-    inv.current_value,
-    rawData.currentAmount,
-    rawData.currentValue,
-    rawData.current_value,
-    invAmount
-  );
+  const raw = safeJson(inv.raw_data);
+  const invAmount = pickNum(inv.investedAmount, inv.invested_amount, raw.investedAmount, raw.invested_amount, inv.amount, raw.amount, inv.totalInvested, raw.totalInvested, inv.buyPrice, raw.buyPrice);
+  const currVal = pickNum(inv.currentAmount, inv.currentValue, inv.current_value, raw.currentAmount, raw.currentValue, raw.current_value, invAmount);
 
   return {
-    ...rawData,
-    ...inv,
-    amount: invAmount,
-    investedAmount: invAmount,
-    invested_amount: invAmount,
-    totalInvested: invAmount,
-    currentAmount: currVal,
-    currentValue: currVal,
-    current_value: currVal,
-    category: inv.category || rawData.category || 'fixed',
-    assetType: inv.assetType || inv.asset_type || rawData.assetType || (inv.category === 'fixed' ? 'cdt' : 'other'),
-    type: inv.subtype || inv.type || rawData.subtype || rawData.type || 'fixed_income',
-    subtype: inv.subtype || inv.type || rawData.subtype || rawData.type || 'cdt',
-    institution: inv.institution || rawData.institution || null,
-    interestRate: Number(inv.interestRate ?? rawData.interestRate ?? inv.rate ?? rawData.rate ?? 0),
-    rate: Number(inv.rate ?? rawData.rate ?? inv.interestRate ?? rawData.interestRate ?? 0),
-    dueDate: inv.dueDate || inv.due_date || rawData.dueDate || rawData.due_date || null,
-    startDate: inv.startDate || inv.start_date || rawData.startDate || rawData.start_date || null
+    ...raw, ...inv, amount: invAmount, investedAmount: invAmount, invested_amount: invAmount, totalInvested: invAmount,
+    currentAmount: currVal, currentValue: currVal, current_value: currVal, category: inv.category || raw.category || 'fixed',
+    assetType: inv.assetType || inv.asset_type || raw.assetType || (inv.category === 'fixed' ? 'cdt' : 'other'),
+    type: inv.subtype || inv.type || raw.subtype || raw.type || 'fixed_income', subtype: inv.subtype || inv.type || raw.subtype || raw.type || 'cdt',
+    institution: inv.institution || raw.institution || null, interestRate: safeNum(inv.interestRate ?? raw.interestRate ?? inv.rate ?? raw.rate),
+    rate: safeNum(inv.rate ?? raw.rate ?? inv.interestRate ?? raw.interestRate), dueDate: inv.dueDate || inv.due_date || raw.dueDate || raw.due_date || null,
+    startDate: inv.startDate || inv.start_date || raw.startDate || raw.start_date || null
   };
 }
 
-/**
- * Normaliza un pago recurrente/suscripción descargado de Supabase:
- * - Mapea propiedades de Supabase a camelCase:
- *   billing_day -> billingDay
- *   is_active -> isActive (default true)
- *   next_payment_date -> nextPaymentDate
- *   account_id -> accountId
- *   user_id -> userId
- * - Mantiene id, name, amount, category, frequency, type y updated_at.
- * - Si raw_data contiene datos adicionales, los combina asegurando que no se pierda ninguna propiedad.
- *
- * @param {Object} r - Registro de pago recurrente de Supabase
- * @returns {Object} Pago recurrente normalizado
- */
 export function normalizeRemoteRecurring(r) {
   if (!r || typeof r !== 'object') return r;
-  const rawData = (r.raw_data && typeof r.raw_data === 'object') ? r.raw_data : {};
-
-  const billingDayVal = Number(r.billing_day ?? r.billingDay ?? rawData.billing_day ?? rawData.billingDay ?? 1);
-  const isActiveVal = r.is_active !== undefined ? Boolean(r.is_active) : (r.isActive !== undefined ? Boolean(r.isActive) : (rawData.is_active !== undefined ? Boolean(rawData.is_active) : (rawData.isActive !== undefined ? Boolean(rawData.isActive) : true)));
-  const nextDateVal = r.next_payment_date || r.nextPaymentDate || r.next_date || r.nextDate || rawData.next_payment_date || rawData.nextPaymentDate || rawData.next_date || rawData.nextDate || null;
-  const accountIdVal = r.account_id || r.accountId || rawData.account_id || rawData.accountId || null;
-  const userIdVal = r.user_id || r.userId || rawData.user_id || rawData.userId || null;
-  const categoryVal = r.category || r.category_name || r.categoryName || rawData.category || rawData.categoryName || 'General';
-  const typeVal = r.type || rawData.type || 'expense';
-  const frequencyVal = r.frequency || rawData.frequency || 'monthly';
-  const amountVal = Number(r.amount ?? rawData.amount ?? 0);
+  const raw = safeJson(r.raw_data);
+  const billingDay = safeNum(r.billing_day ?? r.billingDay ?? raw.billing_day ?? raw.billingDay, 1);
+  const isActive = [r.is_active, r.isActive, raw.is_active, raw.isActive].find((v) => v !== undefined) ?? true;
+  const nextDate = r.next_payment_date || r.nextPaymentDate || r.next_date || r.nextDate || raw.next_payment_date || raw.nextPaymentDate || raw.next_date || raw.nextDate || null;
+  const accountId = r.account_id || r.accountId || raw.account_id || raw.accountId || null;
+  const userId = r.user_id || r.userId || raw.user_id || raw.userId || null;
+  const category = r.category || r.category_name || r.categoryName || raw.category || raw.categoryName || 'General';
+  const updatedAt = r.updated_at || r.updatedAt || raw.updated_at || raw.updatedAt || new Date().toISOString();
 
   return {
-    ...rawData,
-    ...r,
-    id: r.id || rawData.id,
-    userId: userIdVal,
-    user_id: userIdVal,
-    name: r.name || rawData.name || 'Suscripción',
-    amount: amountVal,
-    category: categoryVal,
-    categoryName: categoryVal,
-    type: typeVal,
-    frequency: frequencyVal,
-    billingDay: billingDayVal,
-    billing_day: billingDayVal,
-    isActive: isActiveVal,
-    is_active: isActiveVal,
-    active: isActiveVal,
-    accountId: accountIdVal,
-    account_id: accountIdVal,
-    nextPaymentDate: nextDateVal,
-    next_payment_date: nextDateVal,
-    nextDate: nextDateVal,
-    next_date: nextDateVal,
-    updatedAt: r.updated_at || r.updatedAt || rawData.updated_at || rawData.updatedAt || new Date().toISOString(),
-    updated_at: r.updated_at || r.updatedAt || rawData.updated_at || rawData.updatedAt || new Date().toISOString()
+    ...raw, ...r, id: r.id || raw.id, userId, user_id: userId, name: r.name || raw.name || 'Suscripción', amount: safeNum(r.amount ?? raw.amount),
+    category, categoryName: category, type: r.type || raw.type || 'expense', frequency: r.frequency || raw.frequency || 'monthly',
+    billingDay, billing_day: billingDay, isActive: Boolean(isActive), is_active: Boolean(isActive), active: Boolean(isActive),
+    accountId, account_id: accountId, nextPaymentDate: nextDate, next_payment_date: nextDate, nextDate, next_date: nextDate, updatedAt, updated_at: updatedAt
   };
 }
 
-/**
- * Resuelve y unifica los presupuestos remotos provenientes de la tabla budgets, user_settings y fallbacks locales.
- *
- * @param {Array|Object} remoteBudgetsOrRes - Lista de presupuestos de Supabase o respuesta settled de Promise
- * @param {Object|null} [userSettingsData=null] - Datos obtenidos de la tabla user_settings de Supabase
- * @returns {{ global: number, categories: Object }} Objeto de presupuestos normalizado
- */
 export function resolveRemoteBudgets(remoteBudgetsOrRes, userSettingsData = null) {
-  let remoteBudgetList = [];
-  if (Array.isArray(remoteBudgetsOrRes)) {
-    remoteBudgetList = remoteBudgetsOrRes;
-  } else if (remoteBudgetsOrRes?.status === 'fulfilled' && !remoteBudgetsOrRes.value?.error && Array.isArray(remoteBudgetsOrRes.value?.data)) {
-    remoteBudgetList = remoteBudgetsOrRes.value.data;
-  } else if (Array.isArray(remoteBudgetsOrRes?.data)) {
-    remoteBudgetList = remoteBudgetsOrRes.data;
-  }
+  const list = Array.isArray(remoteBudgetsOrRes) 
+    ? remoteBudgetsOrRes 
+    : (remoteBudgetsOrRes?.status === 'fulfilled' && !remoteBudgetsOrRes.value?.error && Array.isArray(remoteBudgetsOrRes.value?.data)) 
+      ? remoteBudgetsOrRes.value.data : (Array.isArray(remoteBudgetsOrRes?.data) ? remoteBudgetsOrRes.data : []);
 
-  let loadedGlobal = null;
-  let categoriesMap = {};
-
-  if (remoteBudgetList.length > 0) {
-    // Priorizar explícitamente registro con is_global: true
-    const globalRow = remoteBudgetList.find(b => b.is_global === true || b.is_global === 'true')
-      || remoteBudgetList.find(b => b.isGlobal === true || b.isGlobal === 'true')
-      || remoteBudgetList.find(b => b.name === 'Límite Global' || b.name === 'Presupuesto Global')
-      || remoteBudgetList.find(b => !b.category_id && (!b.category || b.category === 'General'));
-
+  let loadedGlobal = null, categoriesMap = {};
+  if (list.length > 0) {
+    const isGlobal = (b) => Boolean(b.is_global === true || b.is_global === 'true' || b.isGlobal === true || b.isGlobal === 'true' || ['Límite Global', 'Presupuesto Global'].includes(b.name) || (!b.category_id && (!b.category || b.category === 'General')));
+    const globalRow = list.find(isGlobal);
     if (globalRow) {
-      loadedGlobal = Number(globalRow.amount || 0);
-      if (globalRow.id && typeof localStorage !== 'undefined') {
-        try {
-          localStorage.setItem('global_budget_id', String(globalRow.id));
-        } catch {}
-      }
+      loadedGlobal = safeNum(globalRow.amount);
+      if (globalRow.id && typeof localStorage !== 'undefined') { try { localStorage.setItem('global_budget_id', String(globalRow.id)); } catch {} }
     }
-
-    remoteBudgetList.forEach(b => {
-      const isRowGlobal = b.is_global === true || b.is_global === 'true' 
-        || b.isGlobal === true || b.isGlobal === 'true' 
-        || b.name === 'Límite Global' || b.name === 'Presupuesto Global' 
-        || (!b.category_id && (!b.category || b.category === 'General'));
-
-      const catKey = (b.category && b.category !== 'General') ? b.category : b.category_id;
-      if (!isRowGlobal && catKey && catKey !== 'General') {
-        categoriesMap[catKey] = Number(b.amount || 0);
+    list.forEach((b) => {
+      if (!isGlobal(b)) {
+        const catKey = (b.category && b.category !== 'General') ? b.category : b.category_id;
+        if (catKey && catKey !== 'General') categoriesMap[catKey] = safeNum(b.amount);
       }
     });
   }
 
-  // Si no se obtuvo de la tabla budgets, consultar user_settings
   if (userSettingsData) {
     if (loadedGlobal === null) {
       const rawLimit = userSettingsData.global_budget_limit ?? userSettingsData.global_budget ?? userSettingsData.budgets?.global;
-      if (rawLimit !== undefined && rawLimit !== null) {
-        loadedGlobal = Number(rawLimit || 0);
-      }
+      if (rawLimit != null) loadedGlobal = safeNum(rawLimit);
     }
-    if (userSettingsData.budgets?.categories) {
-      categoriesMap = { ...userSettingsData.budgets.categories, ...categoriesMap };
-    }
+    if (userSettingsData.budgets?.categories) categoriesMap = { ...userSettingsData.budgets.categories, ...categoriesMap };
   }
 
-  // Fallback al almacenamiento local bajo global_budget_limit o user_settings si loadedGlobal sigue en null
-  if (typeof localStorage !== 'undefined') {
-    if (loadedGlobal === null) {
-      try {
-        const directLimit = localStorage.getItem('global_budget_limit');
-        if (directLimit !== null && directLimit !== undefined) {
-          loadedGlobal = Number(directLimit || 0);
+  if (typeof localStorage !== 'undefined' && loadedGlobal === null) {
+    try {
+      const direct = localStorage.getItem('global_budget_limit');
+      if (direct != null) loadedGlobal = safeNum(direct);
+      if (loadedGlobal === null) {
+        const ls = localStorage.getItem('user_settings');
+        if (ls) {
+          const raw = JSON.parse(ls).global_budget_limit ?? JSON.parse(ls).global_budget;
+          if (raw != null) loadedGlobal = safeNum(raw);
         }
-      } catch {}
-    }
-
-    if (loadedGlobal === null) {
-      try {
-        const localSettings = localStorage.getItem('user_settings');
-        if (localSettings) {
-          const parsed = JSON.parse(localSettings);
-          const rawLimit = parsed.global_budget_limit ?? parsed.global_budget ?? parsed.budgets?.global;
-          if (rawLimit !== undefined && rawLimit !== null) {
-            loadedGlobal = Number(rawLimit || 0);
-          }
-        }
-      } catch (e) {
-        console.warn('[useDataSync] Fallo al leer user_settings de localStorage:', e);
       }
-    }
-
-    if (loadedGlobal === null) {
-      try {
-        const localB = localStorage.getItem('presu_budgets_v1') || localStorage.getItem('budgets');
-        if (localB) {
-          const parsedB = JSON.parse(localB);
-          loadedGlobal = Number(parsedB.global || 0);
-          categoriesMap = { ...(parsedB.categories || {}), ...categoriesMap };
-        } else {
-          loadedGlobal = 0;
+      if (loadedGlobal === null) {
+        const lb = localStorage.getItem('presu_budgets_v1') || localStorage.getItem('budgets');
+        if (lb) {
+          const pb = JSON.parse(lb);
+          loadedGlobal = safeNum(pb.global);
+          categoriesMap = { ...(pb.categories || {}), ...categoriesMap };
         }
-      } catch {
-        loadedGlobal = 0;
       }
-    }
+    } catch {}
   }
-
-  if (loadedGlobal === null) {
-    loadedGlobal = 0;
-  }
-
-  return {
-    global: loadedGlobal,
-    categories: categoriesMap
-  };
+  return { global: loadedGlobal ?? 0, categories: categoriesMap };
 }
 
-/**
- * Normaliza una categoría descargada de Supabase garantizando que sus subcategorías no se pierdan.
- * Si raw_data.subcategories o subcategories no vienen poblados, no borra las subcategorías por defecto.
- *
- * @param {Object} c - Categoría proveniente de Supabase
- * @param {Array} [currentCategories=[]] - Lista actual de categorías en memoria/local
- * @returns {Object} Categoría normalizada con subcategorías protegidas
- */
 export function normalizeRemoteCategory(c, currentCategories = []) {
   if (!c || typeof c !== 'object') return c;
-
-  const rawData = c.raw_data && typeof c.raw_data === 'object' ? c.raw_data : {};
-  let subcategories = c.subcategories || rawData.subcategories;
-
-  if (!Array.isArray(subcategories) || subcategories.length === 0) {
-    const existing = (currentCategories || []).find(
-      (cat) => String(cat.id) === String(c.id) || cat.name?.trim().toLowerCase() === c.name?.trim().toLowerCase()
-    );
-    if (existing && Array.isArray(existing.subcategories) && existing.subcategories.length > 0) {
-      subcategories = existing.subcategories;
-    }
+  const raw = safeJson(c.raw_data);
+  let subcategories = c.subcategories || raw.subcategories;
+  if (!Array.isArray(subcategories) || !subcategories.length) {
+    const existing = (currentCategories || []).find((cat) => String(cat.id) === String(c.id) || cat.name?.trim().toLowerCase() === c.name?.trim().toLowerCase());
+    if (Array.isArray(existing?.subcategories) && existing.subcategories.length) subcategories = existing.subcategories;
   }
-
-  return {
-    ...c,
-    subcategories: Array.isArray(subcategories) ? subcategories : []
-  };
+  return { ...c, subcategories: Array.isArray(subcategories) ? subcategories : [] };
 }
 
-/**
- * Normaliza una meta de ahorro garantizando compatibilidad de nombres (camelCase y snake_case).
- *
- * @param {Object} g - Meta proveniente de Supabase o localStorage
- * @returns {Object|null} Meta normalizada con targetAmount/target_amount y currentAmount/current_amount
- */
 export function normalizeRemoteGoal(g) {
   if (!g || typeof g !== 'object') return null;
-
   const rawDate = g.deadline || g.target_date || g.dueDate || '';
   let safeDate = '';
-  if (rawDate) {
-    try {
-      safeDate = new Date(rawDate).toISOString().split('T')[0];
-    } catch {
-      safeDate = String(rawDate).split('T')[0];
-    }
-  }
+  if (rawDate) { try { safeDate = new Date(rawDate).toISOString().split('T')[0]; } catch { safeDate = String(rawDate).split('T')[0]; } }
 
-  const targetNum = Number(g.target_amount ?? g.targetAmount ?? 0);
-  const currentNum = Number(g.current_amount ?? g.currentAmount ?? 0);
+  const target = safeNum(g.target_amount ?? g.targetAmount), current = safeNum(g.current_amount ?? g.currentAmount);
+  const targetAccId = g.target_account_id || g.targetAccountId || null, notifDay = safeNum(g.notification_day ?? g.notificationDay, 15);
+  const notifyEnabled = Boolean(g.notify_enabled !== undefined ? g.notify_enabled : (g.notifyEnabled !== undefined ? g.notifyEnabled : true));
 
   return {
-    ...g,
-    id: String(g.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`)),
-    user_id: g.user_id,
-    name: (g.name || 'Nueva Meta').trim(),
-    target_amount: targetNum,
-    targetAmount: targetNum,
-    current_amount: currentNum,
-    currentAmount: currentNum,
-    deadline: safeDate,
-    target_date: safeDate,
-    dueDate: safeDate,
-    icon: g.icon || 'Target',
-    color: g.color || '#10B981',
-    target_account_id: g.target_account_id || g.targetAccountId || null,
-    targetAccountId: g.target_account_id || g.targetAccountId || null,
-    months: g.months ? Number(g.months) : 6,
-    notification_day: g.notification_day ? Number(g.notification_day) : (g.notificationDay ? Number(g.notificationDay) : 15),
-    notificationDay: g.notification_day ? Number(g.notification_day) : (g.notificationDay ? Number(g.notificationDay) : 15),
-    notify_enabled: g.notify_enabled !== undefined ? Boolean(g.notify_enabled) : (g.notifyEnabled !== undefined ? Boolean(g.notifyEnabled) : true),
-    notifyEnabled: g.notify_enabled !== undefined ? Boolean(g.notify_enabled) : (g.notifyEnabled !== undefined ? Boolean(g.notifyEnabled) : true),
-    created_at: g.created_at || new Date().toISOString(),
-    updated_at: g.updated_at || new Date().toISOString()
+    ...g, id: String(g.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`)),
+    user_id: g.user_id, name: (g.name || 'Nueva Meta').trim(), target_amount: target, targetAmount: target, current_amount: current, currentAmount: current,
+    deadline: safeDate, target_date: safeDate, dueDate: safeDate, icon: g.icon || 'Target', color: g.color || '#10B981',
+    target_account_id: targetAccId, targetAccountId: targetAccId, months: safeNum(g.months, 6), notification_day: notifDay, notificationDay: notifDay,
+    notify_enabled: notifyEnabled, notifyEnabled, created_at: g.created_at || new Date().toISOString(), updated_at: g.updated_at || new Date().toISOString()
   };
 }

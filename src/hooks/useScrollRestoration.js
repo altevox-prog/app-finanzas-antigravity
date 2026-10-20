@@ -112,5 +112,3 @@ export function useScrollRestoration(activeKey, containerRef = null) {
     resetScrollPosition
   };
 }
-
-export default useScrollRestoration;

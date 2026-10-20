@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Check } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import AmountInput from '../../common/AmountInput';
-import { 
-  formatNativeCurrency 
-} from '../../../utils/currencyUtils';
+import { formatNativeCurrency } from '../../../utils/currencyUtils';
 import { normalizeAccountType } from '../../../services/syncEngine';
 import { useBackHandler } from '../../../hooks/useBackHandler';
 
@@ -14,499 +12,174 @@ const PRESET_BRANDS = [
   { name: 'Nequi', label: 'Nequi', brandKey: 'nequi', type: 'savings' },
   { name: 'Davivienda', label: 'Davivienda', brandKey: 'davivienda', type: 'bank' },
   { name: 'Nu', label: 'Nu', brandKey: 'nu', type: 'bank' },
-  { 
-    name: 'BBVA', 
-    label: 'BBVA', 
-    brandKey: 'bbva', 
-    type: 'bank',
-    fallback: (
-      <div className="w-6 h-6 rounded bg-[#004481] text-white font-black text-[9px] flex items-center justify-center tracking-tighter">
-        BBVA
-      </div>
-    )
-  },
+  { name: 'BBVA', label: 'BBVA', brandKey: 'bbva', type: 'bank', fallback: <div className="w-6 h-6 rounded bg-[#004481] text-white font-black text-[9px] flex items-center justify-center">BBVA</div> },
   { name: 'Efectivo', label: 'Efectivo', brandKey: 'efectivo', type: 'cash' },
   { name: 'Tarjeta Crédito', label: 'Tarjeta', brandKey: 'mastercard', type: 'credit' },
-  { name: 'Inversiones', label: 'Inversión', brandKey: 'dinero', type: 'investment' },
+  { name: 'Inversiones', label: 'Inversión', brandKey: 'dinero', type: 'investment' }
 ];
 
-const isBBVA = (str) => typeof str === 'string' && str.toLowerCase().includes('bbva');
+const parseDecNum = (val) => { const n = parseFloat(String(val ?? '').replace(/,/g, '.')); return isNaN(n) ? 0 : n; };
+const TYPE_ICONS = { cash: 'Wallet', card: 'CreditCard', credit: 'CreditCard', savings: 'Smartphone', investment: 'TrendingUp', bank: 'Building2' };
+const INPUT_CLS = "w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-medium";
+const LABEL_CLS = "block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5";
+const DEFAULT_FORM = { name: '', type: 'bank', currency: 'COP', balance: '', ticker: '', shares: '', unitPrice: '', creditLimit: '5000000', paymentDueDate: '17', closingDate: '17', color: '#007AFF', icon: 'Building2' };
 
-/**
- * AddAccountModal
- * Modal/Sheet flotante para crear nuevas cuentas o métodos de pago
- * (bancos, efectivo, tarjeta de crédito, ahorros o inversiones).
- */
-export default function AddAccountModal({
-  isOpen = false,
-  onClose,
-  onCreateAccount,
-  trm = 4050
-}) {
-  // Estados internos del formulario de creación
-  const [newAccName, setNewAccName] = useState('');
+export default function AddAccountModal({ isOpen = false, onClose, onCreateAccount, trm = 4050 }) {
+  const [form, setForm] = useState(DEFAULT_FORM);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const iconPickerRef = useRef(null);
-  const [newAccType, setNewAccType] = useState('bank');
-  const [newAccCurrency, setNewAccCurrency] = useState('COP');
-  const [newAccBalance, setNewAccBalance] = useState('');
-  const [newAccTicker, setNewAccTicker] = useState('');
-  const [newAccShares, setNewAccShares] = useState('');
-  const [newAccUnitPrice, setNewAccUnitPrice] = useState('');
-  const [newAccCreditLimit, setNewAccCreditLimit] = useState('5000000');
-  const [newAccPaymentDueDate, setNewAccPaymentDueDate] = useState('17');
-  const [newAccClosingDate, setNewAccClosingDate] = useState('17');
-  const [newAccColor, setNewAccColor] = useState('#007AFF');
-  const [newAccIcon, setNewAccIcon] = useState('Building2');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const submittingRef = useRef(false);
+  const iconPickerRef = useRef(null);
 
-  const resetForm = () => {
-    setNewAccName('');
-    setSelectedBrand(null);
-    setShowIconPicker(false);
-    setNewAccType('bank');
-    setNewAccCurrency('COP');
-    setNewAccBalance('');
-    setNewAccTicker('');
-    setNewAccShares('');
-    setNewAccUnitPrice('');
-    setNewAccCreditLimit('5000000');
-    setNewAccPaymentDueDate('17');
-    setNewAccClosingDate('17');
-    setNewAccColor('#007AFF');
-    setNewAccIcon('Building2');
-  };
+  const setF = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const resetForm = () => { setForm(DEFAULT_FORM); setSelectedBrand(null); setShowIconPicker(false); };
 
   useEffect(() => {
     if (!showIconPicker) return;
-    const handleClickOutside = (e) => {
-      if (iconPickerRef.current && !iconPickerRef.current.contains(e.target)) {
-        setShowIconPicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
+    const clickOut = (e) => { if (iconPickerRef.current && !iconPickerRef.current.contains(e.target)) setShowIconPicker(false); };
+    ['mousedown', 'touchstart'].forEach((ev) => document.addEventListener(ev, clickOut));
+    return () => ['mousedown', 'touchstart'].forEach((ev) => document.removeEventListener(ev, clickOut));
   }, [showIconPicker]);
 
   const handleSelectPreset = (item) => {
     setSelectedBrand(item.brandKey || item.name);
-    setNewAccName(item.name);
-    if (item.type) {
-      setNewAccType(item.type);
-    }
+    setForm((p) => ({ ...p, name: item.name, ...(item.type ? { type: item.type, icon: TYPE_ICONS[item.type] || 'Building2' } : {}) }));
     setShowIconPicker(false);
   };
 
-  const handleClose = () => {
-    resetForm();
-    if (onClose) onClose();
+  const handleInvestmentChange = (field, val) => {
+    setForm((p) => {
+      const next = { ...p, [field]: val };
+      const sh = parseFloat(field === 'shares' ? val : p.shares) || 0, up = parseFloat(field === 'unitPrice' ? val : p.unitPrice) || 0;
+      if (sh > 0 && up > 0) next.balance = String((sh * up).toFixed(2));
+      return next;
+    });
   };
 
-  // Soporte para botón físico/gesto de atrás en Android/PWA
+  const handleClose = () => { resetForm(); onClose?.(); };
   useBackHandler(isOpen, handleClose);
-
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
-    if (e?.preventDefault) e.preventDefault();
-    if (e?.stopPropagation) e.stopPropagation();
-    if (submittingRef.current || isSubmitting) return;
-    if (!newAccName.trim()) return;
-
-    submittingRef.current = true;
+    e?.preventDefault?.();
+    if (isSubmitting || !form.name.trim()) return;
     setIsSubmitting(true);
-
     try {
-      let iconName = newAccIcon;
-      if (!iconName) {
-        if (newAccType === 'cash') iconName = 'Wallet';
-        else if (newAccType === 'card' || newAccType === 'credit') iconName = 'CreditCard';
-        else if (newAccType === 'savings') iconName = 'Smartphone';
-        else if (newAccType === 'investment') iconName = 'TrendingUp';
-        else iconName = 'Building2';
-      }
+      const isInv = form.type === 'investment', isCredit = normalizeAccountType(form.type) === 'credit' || form.type === 'card';
+      const shNum = isInv && form.shares ? parseDecNum(form.shares) : undefined, upNum = isInv && form.unitPrice ? parseDecNum(form.unitPrice) : undefined;
+      let initBal = parseDecNum(form.balance);
+      if (isInv && shNum && upNum && (!form.balance || parseDecNum(form.balance) === 0)) initBal = shNum * upNum;
+      if (isCredit && initBal > 0) initBal = -Math.abs(initBal);
 
-      const isInvestment = newAccType === 'investment';
-      const isCreditNew = normalizeAccountType(newAccType) === 'credit';
-      const parseDecNum = (val) => {
-        if (typeof val === 'number') return isNaN(val) ? 0 : val;
-        if (!val) return 0;
-        const cleaned = String(val).replace(/,/g, '.');
-        const num = parseFloat(cleaned);
-        return isNaN(num) ? 0 : num;
-      };
-
-      const sharesNum = isInvestment && newAccShares ? parseDecNum(newAccShares) : undefined;
-      const unitPriceNum = isInvestment && newAccUnitPrice ? parseDecNum(newAccUnitPrice) : undefined;
-      let initBal = parseDecNum(newAccBalance);
-      if (isInvestment && sharesNum && unitPriceNum && (!newAccBalance || parseDecNum(newAccBalance) === 0)) {
-        initBal = sharesNum * unitPriceNum;
-      }
-      // Las tarjetas de crédito almacenan el saldo como deuda (negativo)
-      if (isCreditNew && initBal > 0) {
-        initBal = -Math.abs(initBal);
-      }
-
-      const normalizedType = normalizeAccountType(newAccType);
-      const numericNewBalance = Number(initBal) || 0;
+      const normType = normalizeAccountType(form.type), numBal = Number(initBal) || 0;
       const newAcc = {
         id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('acc-' + Date.now()),
-        name: newAccName.trim(),
-        type: normalizedType,
-        currency: newAccCurrency || 'COP',
-        balance: numericNewBalance,
-        initial_balance: numericNewBalance,
-        current_balance: numericNewBalance,
-        initialBalance: numericNewBalance,
-        currentBalance: numericNewBalance,
-        color: newAccColor,
-        icon: iconName,
-        ...(normalizedType === 'credit' || newAccType === 'card' ? {
-          creditLimit: parseFloat(newAccCreditLimit) || 5000000,
-          paymentDueDate: parseInt(newAccPaymentDueDate, 10) || 17,
-          closingDate: newAccClosingDate ? parseInt(newAccClosingDate, 10) : undefined
-        } : {}),
-        ...(isInvestment ? {
-          ticker: newAccTicker.trim().toUpperCase(),
-          shares: sharesNum,
-          unitPrice: unitPriceNum
-        } : {})
+        name: form.name.trim(), type: normType, currency: form.currency || 'COP',
+        balance: numBal, initial_balance: numBal, current_balance: numBal, initialBalance: numBal, currentBalance: numBal,
+        color: form.color, icon: form.icon || TYPE_ICONS[form.type] || 'Building2',
+        ...(normType === 'credit' || form.type === 'card' ? { creditLimit: parseFloat(form.creditLimit) || 5000000, paymentDueDate: parseInt(form.paymentDueDate, 10) || 17, closingDate: form.closingDate ? parseInt(form.closingDate, 10) : undefined } : {}),
+        ...(isInv ? { ticker: form.ticker.trim().toUpperCase(), shares: shNum, unitPrice: upNum } : {})
       };
-
-      if (onCreateAccount) {
-        const res = onCreateAccount(newAcc);
-        if (res && typeof res.catch === 'function') {
-          res.catch((err) => {
-            console.warn('[Offline/Sync] Advertencia al persistir cuenta:', err);
-          });
-        }
-      }
-      resetForm();
-      if (onClose) onClose();
-    } catch (err) {
-      console.error('Error al guardar la cuenta:', err);
-    } finally {
-      setIsSubmitting(false);
-      submittingRef.current = false;
-    }
+      if (onCreateAccount) { const res = onCreateAccount(newAcc); if (res?.catch) res.catch((err) => console.warn('[Sync] Add account:', err)); }
+      resetForm(); onClose?.();
+    } finally { setIsSubmitting(false); }
   };
 
   const modalContent = (
-    <div 
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 transition-opacity animate-fadeIn" 
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-    >
-      <div 
-        className="relative z-10 w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-white/[0.08] flex flex-col max-h-[85vh] sm:max-h-[90vh] overflow-hidden animate-slide-up" 
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Cabecera FIJA */}
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 animate-fadeIn" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="relative z-10 w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-white/[0.08] flex flex-col max-h-[85vh] sm:max-h-[90vh] overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
         <div className="shrink-0 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-          <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
-            Nueva cuenta
-          </h3>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            ✕
-          </button>
+          <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">Nueva cuenta</h3>
+          <button type="button" onClick={handleClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">✕</button>
         </div>
 
-        {/* Formulario */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* Cuerpo con SCROLL interno automático */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 overscroll-contain">
-            {/* Selector de Divisa Compacto y Sutil (Tabs superiores) */}
             <div className="flex items-center justify-between pb-1">
-              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                Divisa principal
-              </span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Divisa principal</span>
               <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.06]">
                 {['COP', 'USD', 'EUR'].map((code) => (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => setNewAccCurrency(code)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      newAccCurrency === code
-                        ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                        : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {code}
-                  </button>
+                  <button key={code} type="button" onClick={() => setF('currency', code)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${form.currency === code ? 'bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>{code}</button>
                 ))}
               </div>
             </div>
 
-            {/* Fila 1: Nombre de la cuenta (Ancho completo 100%) con avatar interactivo */}
             <div className="relative">
-              <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                Nombre de la cuenta *
-              </label>
+              <label className={LABEL_CLS}>Nombre de la cuenta *</label>
               <div className="flex items-center gap-2.5 w-full">
-                {/* Avatar / Icono interactivo de entidad bancaria */}
                 <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowIconPicker((prev) => !prev)}
-                    title="Seleccionar icono o entidad"
-                    className="w-11 h-11 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
-                  >
-                    <BrandIcon 
-                      name={selectedBrand || newAccName || 'Cuenta'} 
-                      type={newAccType} 
-                      size={26}
-                      fallback={
-                        isBBVA(selectedBrand || newAccName) ? (
-                          <div className="w-6 h-6 rounded bg-[#004481] text-white font-extrabold text-[9px] flex items-center justify-center tracking-tighter">
-                            BBVA
-                          </div>
-                        ) : null
-                      }
-                    />
+                  <button type="button" onClick={() => setShowIconPicker((p) => !p)} title="Seleccionar entidad" className="w-11 h-11 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 hover:bg-slate-100 flex items-center justify-center shrink-0 cursor-pointer shadow-sm">
+                    <BrandIcon name={selectedBrand || form.name || 'Cuenta'} type={form.type} size={26} />
                   </button>
-
-                  {/* Popover / Menú desplegable para selección manual */}
                   {showIconPicker && (
-                    <div 
-                      ref={iconPickerRef}
-                      className="absolute left-0 top-full mt-2 z-50 w-64 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl animate-fadeIn"
-                    >
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
-                        Entidades y Logos
-                      </div>
+                    <div ref={iconPickerRef} className="absolute left-0 top-full mt-2 z-50 w-64 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl animate-fadeIn">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">Entidades y Logos</div>
                       <div className="grid grid-cols-4 gap-2">
                         {PRESET_BRANDS.map((item) => (
-                          <button
-                            key={item.name}
-                            type="button"
-                            onClick={() => handleSelectPreset(item)}
-                            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-center cursor-pointer group"
-                            title={item.name}
-                          >
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80 group-hover:scale-110 transition-transform">
-                              <BrandIcon 
-                                name={item.brandKey || item.name} 
-                                size={22} 
-                                fallback={item.fallback || null}
-                              />
-                            </div>
-                            <span className="text-[10px] font-medium text-slate-600 dark:text-zinc-300 truncate w-full">
-                              {item.label}
-                            </span>
+                          <button key={item.name} type="button" onClick={() => handleSelectPreset(item)} className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer" title={item.name}>
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-zinc-800/80"><BrandIcon name={item.brandKey || item.name} size={22} fallback={item.fallback || null} /></div>
+                            <span className="text-[10px] font-medium text-slate-600 dark:text-zinc-300 truncate w-full">{item.label}</span>
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
-
-                {/* Input de texto a ancho completo 100% restante */}
-                <input
-                  type="text"
-                  required
-                  placeholder="ej: Bancolombia, Nequi, Davivienda, BBVA..."
-                  value={newAccName}
-                  onChange={(e) => {
-                    setNewAccName(e.target.value);
-                    if (selectedBrand) setSelectedBrand(null);
-                  }}
-                  className="flex-1 min-w-0 w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-medium"
-                />
+                <input type="text" required placeholder="ej: Bancolombia, Nequi, Davivienda..." value={form.name} onChange={(e) => { setF('name', e.target.value); if (selectedBrand) setSelectedBrand(null); }} className={`${INPUT_CLS} flex-1 min-w-0`} />
               </div>
             </div>
 
-            {/* Fila 2: Dividida en 2 columnas (grid grid-cols-1 sm:grid-cols-2 gap-4) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                  Tipo de método / cuenta *
-                </label>
-                <select
-                  value={newAccType}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setNewAccType(val);
-                    if (val === 'cash') setNewAccIcon('Wallet');
-                    else if (val === 'card' || val === 'credit') setNewAccIcon('CreditCard');
-                    else if (val === 'savings') setNewAccIcon('Smartphone');
-                    else if (val === 'investment') setNewAccIcon('TrendingUp');
-                    else setNewAccIcon('Building2');
-                  }}
-                  className="w-full h-11 text-xs sm:text-sm px-3 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-medium cursor-pointer"
-                >
-                  <option value="bank">Banco / débito</option>
-                  <option value="cash">Efectivo</option>
-                  <option value="credit">Tarjeta de crédito</option>
-                  <option value="savings">Ahorros / billetera digital</option>
-                  <option value="investment">Inversión / acciones</option>
+                <label className={LABEL_CLS}>Tipo de método / cuenta *</label>
+                <select value={form.type} onChange={(e) => { const val = e.target.value; setForm((p) => ({ ...p, type: val, icon: TYPE_ICONS[val] || 'Building2' })); }} className={`${INPUT_CLS} cursor-pointer`}>
+                  <option value="bank">Banco / débito</option><option value="cash">Efectivo</option><option value="credit">Tarjeta de crédito</option><option value="savings">Ahorros / billetera digital</option><option value="investment">Inversión / acciones</option>
                 </select>
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                  {(newAccType === 'card' || newAccType === 'credit')
-                    ? 'Deuda actual / Saldo utilizado (opcional)'
-                    : `Saldo inicial (${newAccCurrency}) *`
-                  }
-                </label>
-                <AmountInput
-                  value={newAccBalance}
-                  onChange={(cleanVal) => setNewAccBalance(cleanVal)}
-                  allowDecimals={true}
-                  placeholder="0"
-                  onFocus={(e) => e.target.select()}
-                  className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold"
-                />
+                <label className={LABEL_CLS}>{(form.type === 'card' || form.type === 'credit') ? 'Deuda actual / Saldo utilizado (opcional)' : `Saldo inicial (${form.currency}) *`}</label>
+                <AmountInput value={form.balance} onChange={(v) => setF('balance', v)} allowDecimals placeholder="0" onFocus={(e) => e.target.select()} className={`${INPUT_CLS} font-mono font-bold`} />
               </div>
             </div>
 
-            {/* Campos específicos si es Inversión / Acciones */}
-            {newAccType === 'investment' && (
+            {form.type === 'investment' && (
               <div className="p-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-3 animate-fadeIn">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Detalles de Acciones / Títulos (Opcional)</span>
-                </div>
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold"><TrendingUp className="w-4 h-4" /><span>Detalles de Acciones / Títulos (Opcional)</span></div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                      Ticker / Activo
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="ej: CSPX, VOO, Apple"
-                      value={newAccTicker}
-                      onChange={(e) => setNewAccTicker(e.target.value.toUpperCase())}
-                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white uppercase"
-                    />
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Ticker / Activo</label>
+                    <input type="text" placeholder="ej: CSPX, VOO" value={form.ticker} onChange={(e) => setF('ticker', e.target.value.toUpperCase())} className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 uppercase" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                      Nº Acciones / Títulos
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      placeholder="ej: 15.5"
-                      value={newAccShares}
-                      onChange={(e) => {
-                        const sh = e.target.value;
-                        setNewAccShares(sh);
-                        const p = parseFloat(newAccUnitPrice) || 0;
-                        if (parseFloat(sh) > 0 && p > 0) {
-                          setNewAccBalance(String((parseFloat(sh) * p).toFixed(2)));
-                        }
-                      }}
-                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white"
-                    />
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Nº Acciones</label>
+                    <input type="number" step="any" min="0" placeholder="15.5" value={form.shares} onChange={(e) => handleInvestmentChange('shares', e.target.value)} className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                      Precio Unitario ({newAccCurrency})
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      placeholder="ej: 450.00"
-                      value={newAccUnitPrice}
-                      onChange={(e) => {
-                        const p = e.target.value;
-                        setNewAccUnitPrice(p);
-                        const sh = parseFloat(newAccShares) || 0;
-                        if (sh > 0 && parseFloat(p) > 0) {
-                          setNewAccBalance(String((sh * parseFloat(p)).toFixed(2)));
-                        }
-                      }}
-                      className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white"
-                    />
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Precio Unitario ({form.currency})</label>
+                    <input type="number" step="any" min="0" placeholder="450.00" value={form.unitPrice} onChange={(e) => handleInvestmentChange('unitPrice', e.target.value)} className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-black/50" />
                   </div>
                 </div>
-                {parseFloat(newAccShares) > 0 && parseFloat(newAccUnitPrice) > 0 && (
+                {parseFloat(form.shares) > 0 && parseFloat(form.unitPrice) > 0 && (
                   <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-white/80 dark:bg-black/40 px-3 py-1.5 rounded-lg border border-emerald-500/20 flex items-center justify-between">
-                    <span>Valor Posición ({newAccShares} × {formatNativeCurrency(parseFloat(newAccUnitPrice), newAccCurrency)}):</span>
-                    <strong className="font-bold tabular-nums">
-                      {formatNativeCurrency(parseFloat(newAccShares) * parseFloat(newAccUnitPrice), newAccCurrency)}
-                    </strong>
+                    <span>Valor Posición:</span><strong className="font-bold tabular-nums">{formatNativeCurrency(parseFloat(form.shares) * parseFloat(form.unitPrice), form.currency)}</strong>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Campos especiales si es Tarjeta de Crédito */}
-            {(newAccType === 'card' || newAccType === 'credit') && (
+            {(form.type === 'card' || form.type === 'credit') && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-800/40 animate-fadeIn">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Cupo Total ({newAccCurrency}) *</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="any"
-                    min="1"
-                    required
-                    placeholder="5000000"
-                    value={newAccCreditLimit}
-                    onChange={(e) => setNewAccCreditLimit(e.target.value)}
-                    className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono font-bold tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Día Límite de Pago *</label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    max="31"
-                    required
-                    placeholder="ej: 17"
-                    value={newAccPaymentDueDate}
-                    onChange={(e) => setNewAccPaymentDueDate(e.target.value)}
-                    className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Día de Corte (Opcional)</label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    max="31"
-                    placeholder="ej: 25"
-                    value={newAccClosingDate}
-                    onChange={(e) => setNewAccClosingDate(e.target.value)}
-                    className="w-full h-11 text-xs sm:text-sm px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-mono tabular-nums"
-                  />
-                </div>
+                <div><label className={LABEL_CLS}>Cupo Total ({form.currency}) *</label><input type="number" inputMode="decimal" step="any" min="1" required placeholder="5000000" value={form.creditLimit} onChange={(e) => setF('creditLimit', e.target.value)} className={`${INPUT_CLS} bg-white dark:bg-zinc-900 font-mono font-bold tabular-nums`} /></div>
+                <div><label className={LABEL_CLS}>Día Límite de Pago *</label><input type="number" inputMode="numeric" min="1" max="31" required placeholder="17" value={form.paymentDueDate} onChange={(e) => setF('paymentDueDate', e.target.value)} className={`${INPUT_CLS} bg-white dark:bg-zinc-900 font-mono tabular-nums`} /></div>
+                <div><label className={LABEL_CLS}>Día de Corte</label><input type="number" inputMode="numeric" min="1" max="31" placeholder="25" value={form.closingDate} onChange={(e) => setF('closingDate', e.target.value)} className={`${INPUT_CLS} bg-white dark:bg-zinc-900 font-mono tabular-nums`} /></div>
               </div>
             )}
           </div>
 
-          {/* Pie de página FIJO SIEMPRE VISIBLE */}
           <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-zinc-900 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2.5 h-11 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`flex-1 sm:flex-initial px-6 py-2.5 h-11 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm active:scale-95 transition-all flex items-center justify-center cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
-            >
-              {isSubmitting ? 'Guardando...' : 'Guardar cuenta'}
+            <button type="button" onClick={handleClose} className="px-4 py-2.5 h-11 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 cursor-pointer">Cancelar</button>
+            <button type="submit" disabled={isSubmitting} className={`flex-1 sm:flex-initial px-6 py-2.5 h-11 text-xs font-bold bg-[#007AFF] hover:bg-blue-600 text-white rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+              <Check className="w-3.5 h-3.5" /><span>{isSubmitting ? 'Guardando...' : 'Guardar cuenta'}</span>
             </button>
           </div>
         </form>

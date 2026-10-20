@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 
 /**
- * SwipeableRow
- * Componente unificado y ligero para acciones de deslizamiento horizontal (Swipe Actions).
- * Compatible con Mobile, Tablet (Touch/Stylus) y Desktop (Mouse/Trackpad).
+ * SwipeableRow: Componente unificado y ligero para acciones de deslizamiento horizontal (Swipe Actions).
+ * Soporta Mobile, Tablet y Desktop con Pointer Events.
  */
 export default function SwipeableRow({
   children,
@@ -22,80 +21,54 @@ export default function SwipeableRow({
   const containerRef = useRef(null);
   const dragStartRef = useRef(null);
   const isDraggingRef = useRef(false);
-  const axisLockRef = useRef(null); // 'x' | 'y' | null
+  const axisLockRef = useRef(null);
   const hasDraggedRef = useRef(false);
   const activePointerIdRef = useRef(null);
 
-  // Cerrar fila si se hace pointerdown fuera mientras está abierta
   useEffect(() => {
     if (offset === 0) return;
-
     const handleGlobalPointerDown = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOffset(0);
-      }
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOffset(0);
     };
-
     window.addEventListener('pointerdown', handleGlobalPointerDown);
     return () => window.removeEventListener('pointerdown', handleGlobalPointerDown);
   }, [offset]);
 
   const handlePointerDown = (e) => {
-    if (disabled) return;
-    // Solo clic principal (botón izquierdo) o toque táctil
-    if (e.button !== undefined && e.button !== 0) return;
-
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      initialOffset: offset,
-      time: Date.now()
-    };
+    if (disabled || (e.button !== undefined && e.button !== 0)) return;
+    dragStartRef.current = { x: e.clientX, y: e.clientY, initialOffset: offset, time: Date.now() };
     activePointerIdRef.current = e.pointerId;
     isDraggingRef.current = false;
     axisLockRef.current = null;
   };
 
   const handlePointerMove = (e) => {
-    if (!dragStartRef.current) return;
-    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
-    if (axisLockRef.current === 'y') return;
+    if (!dragStartRef.current || (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) || axisLockRef.current === 'y') return;
 
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
 
     if (axisLockRef.current === null) {
       if (Math.hypot(dx, dy) < 6) return;
-
       if (Math.abs(dy) >= Math.abs(dx)) {
         axisLockRef.current = 'y';
         return;
-      } else {
-        axisLockRef.current = 'x';
-        isDraggingRef.current = true;
-        hasDraggedRef.current = true;
-        setIsInteracting(true);
-        // Capturar puntero para no perder el gesto en pantallas de tablet
-        if (e.target && e.target.setPointerCapture) {
-          try {
-            e.target.setPointerCapture(e.pointerId);
-          } catch (_) {}
-        }
       }
+      axisLockRef.current = 'x';
+      isDraggingRef.current = true;
+      hasDraggedRef.current = true;
+      setIsInteracting(true);
+      try { e.target?.setPointerCapture?.(e.pointerId); } catch (_) {}
     }
 
     if (axisLockRef.current === 'x') {
       let nextOffset = dragStartRef.current.initialOffset + dx;
-
       if (!onEdit && nextOffset > 0) nextOffset = 0;
       if (!onDelete && nextOffset < 0) nextOffset = 0;
 
       const maxLimit = actionWidth + 24;
-      if (nextOffset > maxLimit) {
-        nextOffset = maxLimit + (nextOffset - maxLimit) * 0.2;
-      } else if (nextOffset < -maxLimit) {
-        nextOffset = -maxLimit + (nextOffset + maxLimit) * 0.2;
-      }
+      if (nextOffset > maxLimit) nextOffset = maxLimit + (nextOffset - maxLimit) * 0.2;
+      else if (nextOffset < -maxLimit) nextOffset = -maxLimit + (nextOffset + maxLimit) * 0.2;
 
       setOffset(nextOffset);
     }
@@ -103,16 +76,13 @@ export default function SwipeableRow({
 
   const handlePointerUp = (e) => {
     if (!dragStartRef.current) return;
-
     const wasDragging = isDraggingRef.current;
     const dx = e.clientX - dragStartRef.current.x;
     const dt = Date.now() - dragStartRef.current.time;
 
-    if (e.target && e.target.releasePointerCapture && activePointerIdRef.current !== null) {
-      try {
-        e.target.releasePointerCapture(activePointerIdRef.current);
-      } catch (_) {}
-    }
+    try {
+      if (activePointerIdRef.current !== null) e.target?.releasePointerCapture?.(activePointerIdRef.current);
+    } catch (_) {}
 
     dragStartRef.current = null;
     activePointerIdRef.current = null;
@@ -122,14 +92,9 @@ export default function SwipeableRow({
 
     if (wasDragging) {
       const isQuickFlick = dt < 300 && Math.abs(dx) > 20;
-
-      if ((offset > threshold || (isQuickFlick && dx > 0)) && onEdit) {
-        setOffset(actionWidth);
-      } else if ((offset < -threshold || (isQuickFlick && dx < 0)) && onDelete) {
-        setOffset(-actionWidth);
-      } else {
-        setOffset(0);
-      }
+      if ((offset > threshold || (isQuickFlick && dx > 0)) && onEdit) setOffset(actionWidth);
+      else if ((offset < -threshold || (isQuickFlick && dx < 0)) && onDelete) setOffset(-actionWidth);
+      else setOffset(0);
     }
   };
 
@@ -140,7 +105,6 @@ export default function SwipeableRow({
       hasDraggedRef.current = false;
       return;
     }
-
     if (offset !== 0) {
       e.stopPropagation();
       e.preventDefault();
@@ -148,77 +112,56 @@ export default function SwipeableRow({
     }
   };
 
-  const handleExecuteEdit = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleAction = (callback) => (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setOffset(0);
-    if (onEdit) onEdit();
-  };
-
-  const handleExecuteDelete = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    setOffset(0);
-    if (onDelete) onDelete();
+    if (callback) callback();
   };
 
   return (
-    <div
-      ref={containerRef}
-      className={`relative overflow-hidden group select-none ${className}`}
-      style={{ touchAction: 'pan-y' }}
-    >
-      {/* Acción Izquierda: EDITAR (deslizar ->) */}
+    <div ref={containerRef} className={`relative overflow-hidden group select-none ${className}`} style={{ touchAction: 'pan-y' }}>
+      {/* Acción Izquierda: Editar */}
       {onEdit && (
         <div
           className="absolute inset-y-0 left-0 bg-blue-600 dark:bg-blue-500 text-white flex items-center justify-start z-0 transition-opacity"
-          style={{
-            width: `${Math.max(actionWidth + 10, offset)}px`,
-            opacity: offset > 5 ? 1 : 0
-          }}
+          style={{ width: `${Math.max(actionWidth + 10, offset)}px`, opacity: offset > 5 ? 1 : 0 }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
-            onClick={handleExecuteEdit}
+            onClick={handleAction(onEdit)}
             className="h-full px-4 sm:px-5 flex flex-col items-center justify-center gap-1 text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer font-bold select-none"
             title="Editar"
             aria-label="Editar"
           >
-            <Pencil className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+            <Pencil className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             <span className="text-[10px] uppercase tracking-wider font-bold">Editar</span>
           </button>
         </div>
       )}
 
-      {/* Acción Derecha: ELIMINAR (deslizar <-) */}
+      {/* Acción Derecha: Eliminar */}
       {onDelete && (
         <div
           className="absolute inset-y-0 right-0 bg-rose-600 dark:bg-rose-500 text-white flex items-center justify-end z-0 transition-opacity"
-          style={{
-            width: `${Math.max(actionWidth + 10, -offset)}px`,
-            opacity: offset < -5 ? 1 : 0
-          }}
+          style={{ width: `${Math.max(actionWidth + 10, -offset)}px`, opacity: offset < -5 ? 1 : 0 }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
-            onClick={handleExecuteDelete}
+            onClick={handleAction(onDelete)}
             className="h-full px-4 sm:px-5 flex flex-col items-center justify-center gap-1 text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer font-bold select-none"
             title="Eliminar"
             aria-label="Eliminar"
           >
-            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0"/>
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             <span className="text-[10px] uppercase tracking-wider font-bold">Borrar</span>
           </button>
         </div>
       )}
 
-      {/* Contenido Deslizable con Pointer Events unificados */}
+      {/* Contenido Deslizable */}
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

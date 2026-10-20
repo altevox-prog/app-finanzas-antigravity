@@ -30,22 +30,14 @@ export default function DebtScheduleFields({
   const numInstallments = parseInt(installments, 10);
   const isMultiInstallment = !isNaN(numInstallments) && numInstallments > 1;
 
-  // Si cuotas > 1, excluir la opción "Único (Fecha Límite Fija)"
   const availableOptions = useMemo(() => {
-    if (isMultiInstallment) {
-      return FREQUENCY_OPTIONS.filter((opt) => opt.value !== 'Único');
-    }
-    return FREQUENCY_OPTIONS;
+    return isMultiInstallment ? FREQUENCY_OPTIONS.filter((opt) => opt.value !== 'Único') : FREQUENCY_OPTIONS;
   }, [isMultiInstallment]);
 
-  // Si cuotas > 1 y la frecuencia actual es Único, cambiar automáticamente a Mensual
   useEffect(() => {
-    if (isMultiInstallment && frequency === 'Único') {
-      setFrequency('Mensual');
-    }
+    if (isMultiInstallment && frequency === 'Único') setFrequency('Mensual');
   }, [isMultiInstallment, frequency, setFrequency]);
 
-  // Asegurar regla estándar de cortes quincenales (días 15 y 30)
   useEffect(() => {
     if (frequency === 'Quincenal') {
       if (setBiweeklyDay1 && biweeklyDay1 !== 15) setBiweeklyDay1(15);
@@ -53,12 +45,9 @@ export default function DebtScheduleFields({
     }
   }, [frequency, biweeklyDay1, biweeklyDay2, setBiweeklyDay1, setBiweeklyDay2]);
 
-  // Cerrar dropdown al hacer click fuera
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
     };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
@@ -72,22 +61,27 @@ export default function DebtScheduleFields({
 
   const currentOption = availableOptions.find((opt) => opt.value === frequency) || availableOptions[0] || FREQUENCY_OPTIONS[0];
 
+  const PreviewCard = () => (
+    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mt-2 animate-fadeIn">
+      <div className="flex items-center">
+        <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mr-2 shrink-0" />
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Próximo vencimiento calculado:</span>
+      </div>
+      <span className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap capitalize">
+        {formattedPreviewDate}
+      </span>
+    </div>
+  );
+
   return (
-    <div 
-      className="p-3.5 rounded-2xl border space-y-3"
-      style={{ 
-        backgroundColor: 'var(--bg-card-sub)', 
-        borderColor: 'var(--border-color)' 
-      }}
-    >
-      {/* Dropdown Moderno de Frecuencia de Pago */}
+    <div className="p-3.5 rounded-2xl border space-y-3" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
+      {/* Dropdown de Frecuencia */}
       <div className="relative" ref={dropdownRef}>
         <label className="block text-[11px] font-bold uppercase tracking-wider opacity-75 mb-1.5 flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
           <Repeat className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
           Frecuencia de Pago
         </label>
 
-        {/* Botón activador redondeado */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
@@ -97,7 +91,6 @@ export default function DebtScheduleFields({
           <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-emerald-500' : ''}`} />
         </button>
 
-        {/* Menú flotante desplegado */}
         {isOpen && (
           <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 p-1.5 z-30 space-y-1 animate-fadeIn">
             {availableOptions.map((opt) => {
@@ -116,9 +109,7 @@ export default function DebtScheduleFields({
                     setIsOpen(false);
                   }}
                   className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer ${
-                    isSelected
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-slate-800'
+                    isSelected ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-slate-800'
                   }`}
                 >
                   <span>{opt.label}</span>
@@ -130,28 +121,13 @@ export default function DebtScheduleFields({
         )}
       </div>
 
-      {/* 1. CASO QUINCENAL: Regla estándar automática (Días 15 y 30 / fin de mes) */}
-      {frequency === 'Quincenal' && (
-        <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mt-2 animate-fadeIn">
-          <div className="flex items-center">
-            <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mr-2 shrink-0" />
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Próximo vencimiento calculado:
-            </span>
-          </div>
-          <span className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap capitalize">
-            {formattedPreviewDate}
-          </span>
-        </div>
-      )}
+      {/* Casos según frecuencia */}
+      {frequency === 'Quincenal' && <PreviewCard />}
 
-      {/* 2. CASO MENSUAL: Selector del día del mes (1 al 31) */}
       {frequency === 'Mensual' && (
         <div className="space-y-2.5 pt-1 animate-fadeIn">
           <div>
-            <label className="block text-[11px] font-semibold opacity-80 mb-1">
-              Día del mes para cobro o pago:
-            </label>
+            <label className="block text-[11px] font-semibold opacity-80 mb-1">Día del mes para cobro o pago:</label>
             <select
               value={dueDay}
               onChange={(e) => setDueDay(parseInt(e.target.value, 10))}
@@ -159,58 +135,26 @@ export default function DebtScheduleFields({
               style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
             >
               {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                <option key={`m-${d}`} value={d}>
-                  Día {d} de cada mes
-                </option>
+                <option key={`m-${d}`} value={d}>Día {d} de cada mes</option>
               ))}
             </select>
           </div>
-
-          {/* Previsualización del Próximo Vencimiento */}
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mt-2">
-            <div className="flex items-center">
-              <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mr-2 shrink-0" />
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Próximo vencimiento calculado:
-              </span>
-            </div>
-            <span className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap capitalize">
-              {formattedPreviewDate}
-            </span>
-          </div>
+          <PreviewCard />
         </div>
       )}
 
-      {/* 3. CASO SEMANAL: Cálculo desde fecha de inicio */}
-      {frequency === 'Semanal' && (
-        <div className="pt-1 animate-fadeIn">
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 mt-2">
-            <div className="flex items-center">
-              <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mr-2 shrink-0" />
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Próximo vencimiento calculado:
-              </span>
-            </div>
-            <span className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 whitespace-nowrap capitalize">
-              {formattedPreviewDate}
-            </span>
-          </div>
-        </div>
-      )}
+      {frequency === 'Semanal' && <PreviewCard />}
 
-      {/* 4. CASO ÚNICO: Selector de fecha fija explícita */}
       {frequency === 'Único' && (
         <div className="pt-1 animate-fadeIn">
-          <label className="block text-[11px] font-semibold opacity-70 mb-1">
-            Fecha Límite / Vencimiento Fijo *
-          </label>
+          <label className="block text-[11px] font-semibold opacity-70 mb-1">Fecha Límite / Vencimiento Fijo *</label>
           <input
             type="date"
             required
             value={dueDate}
-            onChange={(e) => { 
-              setDueDate(e.target.value); 
-              if (setError) setError(''); 
+            onChange={(e) => {
+              setDueDate(e.target.value);
+              if (setError) setError('');
             }}
             className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF] font-bold"
             style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}

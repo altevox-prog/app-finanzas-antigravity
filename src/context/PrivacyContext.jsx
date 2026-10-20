@@ -3,66 +3,47 @@ import { formatCurrency as baseFormatCurrency, formatUSD as baseFormatUSD } from
 
 const PrivacyContext = createContext();
 
+const getStorageItem = (key, fallback = null) => {
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+};
+
+const setStorageItem = (key, val) => {
+  try { localStorage.setItem(key, String(val)); } catch {}
+};
+
 export function PrivacyProvider({ children }) {
   const [isPrivacyMode, setIsPrivacyMode] = useState(() => {
-    try {
-      if (localStorage.getItem('security_hide_balances_on_start') === 'true') {
-        return true;
-      }
-      return localStorage.getItem('presu_privacy_mode') === 'true';
-    } catch {
-      return false;
-    }
+    return getStorageItem('security_hide_balances_on_start') === 'true' || getStorageItem('presu_privacy_mode') === 'true';
   });
 
   const [enableDecimals, setEnableDecimalsState] = useState(() => {
+    const direct = getStorageItem('app_enable_decimals');
+    if (direct !== null) return direct === 'true';
     try {
-      if (localStorage.getItem('app_enable_decimals') !== null) {
-        return localStorage.getItem('app_enable_decimals') === 'true';
-      }
-      const userSettingsRaw = localStorage.getItem('user_settings');
-      if (userSettingsRaw) {
-        const parsed = JSON.parse(userSettingsRaw);
-        const val = parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals;
-        if (val !== undefined && val !== null) return Boolean(val);
-      }
-      return false;
+      const parsed = JSON.parse(getStorageItem('user_settings', '{}'));
+      const val = parsed?.enable_decimals ?? parsed?.enableDecimals ?? parsed?.showDecimals ?? parsed?.allowDecimals;
+      return val != null ? Boolean(val) : false;
     } catch {
       return false;
     }
   });
 
-  // Estado de seguridad y PIN local: NUNCA asignar '1234' por defecto
   const [pin, setPinState] = useState(() => {
-    try {
-      const p = localStorage.getItem('security_pin_code') || '';
-      return (p && String(p).trim().length >= 4) ? String(p).trim() : '';
-    } catch {
-      return '';
-    }
+    const p = String(getStorageItem('security_pin_code', '')).trim();
+    return p.length >= 4 ? p : '';
   });
 
   const [isPinEnabled, setIsPinEnabledState] = useState(() => {
-    try {
-      const p = localStorage.getItem('security_pin_code') || '';
-      const enabled = localStorage.getItem('security_pin_enabled') === 'true';
-      return enabled && Boolean(p && String(p).trim().length >= 4);
-    } catch {
-      return false;
-    }
+    const p = String(getStorageItem('security_pin_code', '')).trim();
+    return getStorageItem('security_pin_enabled') === 'true' && p.length >= 4;
   });
 
   const isSecurityEnabled = Boolean(isPinEnabled && pin && pin.length >= 4);
 
   useEffect(() => {
     const handleDecimalsChange = (e) => {
-      if (e?.detail?.enableDecimals !== undefined) {
-        setEnableDecimalsState(Boolean(e.detail.enableDecimals));
-      } else {
-        try {
-          setEnableDecimalsState(localStorage.getItem('app_enable_decimals') === 'true');
-        } catch {}
-      }
+      if (e?.detail?.enableDecimals !== undefined) setEnableDecimalsState(Boolean(e.detail.enableDecimals));
+      else setEnableDecimalsState(getStorageItem('app_enable_decimals') === 'true');
     };
     window.addEventListener('app_decimals_changed', handleDecimalsChange);
     return () => window.removeEventListener('app_decimals_changed', handleDecimalsChange);
@@ -71,9 +52,7 @@ export function PrivacyProvider({ children }) {
   const togglePrivacyMode = () => {
     setIsPrivacyMode((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem('presu_privacy_mode', String(next));
-      } catch {}
+      setStorageItem('presu_privacy_mode', next);
       return next;
     });
   };
@@ -81,27 +60,25 @@ export function PrivacyProvider({ children }) {
   const setPrivacyMode = (val) => {
     setIsPrivacyMode((prev) => {
       const next = typeof val === 'function' ? val(prev) : Boolean(val);
-      try {
-        localStorage.setItem('presu_privacy_mode', String(next));
-      } catch {}
+      setStorageItem('presu_privacy_mode', next);
       return next;
     });
+  };
+
+  const persistDecimals = (next) => {
+    setStorageItem('app_enable_decimals', next);
+    try {
+      const current = JSON.parse(getStorageItem('user_settings', '{}')) || {};
+      current.enable_decimals = current.enableDecimals = current.showDecimals = current.allowDecimals = next;
+      setStorageItem('user_settings', JSON.stringify(current));
+    } catch {}
+    window.dispatchEvent(new CustomEvent('app_decimals_changed', { detail: { enableDecimals: next } }));
   };
 
   const toggleEnableDecimals = () => {
     setEnableDecimalsState((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem('app_enable_decimals', String(next));
-        const userSettingsRaw = localStorage.getItem('user_settings');
-        const current = userSettingsRaw ? JSON.parse(userSettingsRaw) : {};
-        current.enable_decimals = next;
-        current.enableDecimals = next;
-        current.showDecimals = next;
-        current.allowDecimals = next;
-        localStorage.setItem('user_settings', JSON.stringify(current));
-      } catch {}
-      window.dispatchEvent(new CustomEvent('app_decimals_changed', { detail: { enableDecimals: next } }));
+      persistDecimals(next);
       return next;
     });
   };
@@ -109,67 +86,36 @@ export function PrivacyProvider({ children }) {
   const setEnableDecimals = (val) => {
     const next = Boolean(val);
     setEnableDecimalsState(next);
-    try {
-      localStorage.setItem('app_enable_decimals', String(next));
-      const userSettingsRaw = localStorage.getItem('user_settings');
-      const current = userSettingsRaw ? JSON.parse(userSettingsRaw) : {};
-      current.enable_decimals = next;
-      current.enableDecimals = next;
-      current.showDecimals = next;
-      current.allowDecimals = next;
-      localStorage.setItem('user_settings', JSON.stringify(current));
-    } catch {}
-    window.dispatchEvent(new CustomEvent('app_decimals_changed', { detail: { enableDecimals: next } }));
+    persistDecimals(next);
   };
 
   const updatePin = (newPin) => {
     const cleanPin = (newPin || '').replace(/\D/g, '').slice(0, 6);
-    if (cleanPin.length >= 4) {
-      setPinState(cleanPin);
-      setIsPinEnabledState(true);
-      try {
-        localStorage.setItem('security_pin_code', cleanPin);
-        localStorage.setItem('security_pin_enabled', 'true');
-      } catch {}
-    } else {
-      setPinState('');
-      setIsPinEnabledState(false);
-      try {
-        localStorage.setItem('security_pin_code', '');
-        localStorage.setItem('security_pin_enabled', 'false');
-      } catch {}
-    }
+    const valid = cleanPin.length >= 4;
+    setPinState(valid ? cleanPin : '');
+    setIsPinEnabledState(valid);
+    setStorageItem('security_pin_code', valid ? cleanPin : '');
+    setStorageItem('security_pin_enabled', valid ? 'true' : 'false');
   };
 
   const disablePin = () => {
     setPinState('');
     setIsPinEnabledState(false);
-    try {
-      localStorage.setItem('security_pin_code', '');
-      localStorage.setItem('security_pin_enabled', 'false');
-      localStorage.setItem('presu_app_locked', 'false');
-    } catch {}
+    setStorageItem('security_pin_code', '');
+    setStorageItem('security_pin_enabled', 'false');
+    setStorageItem('presu_app_locked', 'false');
   };
 
   const formatMoney = (amount, currency = 'COP') => {
     if (currency === 'EUR') {
-      if (isPrivacyMode) {
-        const num = Number(amount) || 0;
-        return num < 0 ? '-€ ••••••' : '€ ••••••';
-      }
       const num = Number(amount) || 0;
+      if (isPrivacyMode) return num < 0 ? '-€ ••••••' : '€ ••••••';
       const isNeg = num < 0;
-      const absNum = Math.abs(num);
-      if (!enableDecimals) {
-        const rounded = Math.round(absNum);
-        return `${isNeg ? '-' : ''}€ ${rounded.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-      }
-      return `${isNeg ? '-' : ''}€ ${absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const abs = Math.abs(num);
+      const digits = enableDecimals ? 2 : 0;
+      return `${isNeg ? '-' : ''}€ ${abs.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
     }
-    if (currency === 'USD') {
-      return baseFormatUSD(amount, isPrivacyMode, enableDecimals);
-    }
-    return baseFormatCurrency(amount, isPrivacyMode, enableDecimals);
+    return currency === 'USD' ? baseFormatUSD(amount, isPrivacyMode, enableDecimals) : baseFormatCurrency(amount, isPrivacyMode, enableDecimals);
   };
 
   return (

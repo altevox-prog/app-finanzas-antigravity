@@ -67,5 +67,3 @@ export function useViewMode() {
     mobileOnlyClass
   };
 }
-
-export default useViewMode;

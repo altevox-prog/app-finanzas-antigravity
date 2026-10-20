@@ -3,21 +3,10 @@
  * Soporte para Personas Naturales: Calendario oficial, semáforo de topes UVT y checklist.
  */
 
-import { 
-  toSafeNumber, 
-  safeNumber,
-  calculateUVTThreshold, 
-  calculateTaxProgressPercentage 
-} from './financeMath';
+import { toSafeNumber, safeNumber, calculateUVTThreshold, calculateTaxProgressPercentage } from './financeMath';
 
-// Valores oficiales y proyectados de la UVT (Unidad de Valor Tributario) en Colombia
-export const UVT_VALUES = {
-  2024: 47065,
-  2025: 49799,
-  2026: 52500
-};
+export const UVT_VALUES = { 2024: 47065, 2025: 49799, 2026: 52500 };
 
-// Topes legales en UVT según el Estatuto Tributario colombiano (Art. 592 y ss.)
 export const TAX_THRESHOLDS_UVT = {
   GROSS_INCOME: 1400,     // Ingresos brutos acumulados
   TOTAL_EXPENSES: 1400,   // Compras y consumos totales
@@ -27,57 +16,33 @@ export const TAX_THRESHOLDS_UVT = {
 };
 
 const SPANISH_DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const SPANISH_MONTHS = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-];
+const SPANISH_MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-/**
- * Festivos nacionales colombianos fijos y por Ley Emiliani (Agosto - Octubre)
- */
 function isColombianHoliday(date) {
-  const month = date.getMonth(); // 0-indexed: 7=Agosto, 8=Septiembre, 9=Octubre
-  const day = date.getDate();
-  const dayOfWeek = date.getDay(); // 1 = Lunes
-
-  // 7 de agosto: Batalla de Boyacá
-  if (month === 7 && day === 7) return true;
-
-  // Asunción de la Virgen (Lunes siguiente al 15 de agosto)
-  if (month === 7 && day >= 15 && day <= 21 && dayOfWeek === 1) return true;
-
-  // Día de la Raza (Lunes siguiente al 12 de octubre)
-  if (month === 9 && day >= 12 && day <= 18 && dayOfWeek === 1) return true;
-
-  return false;
+  const m = date.getMonth();
+  const d = date.getDate();
+  const dow = date.getDay();
+  return (m === 7 && d === 7) || (m === 7 && d >= 15 && d <= 21 && dow === 1) || (m === 9 && d >= 12 && d <= 18 && dow === 1);
 }
 
 /**
  * Genera el calendario de 50 días hábiles de la DIAN para personas naturales
- * desde mediados de agosto hasta finales de octubre.
  */
 export function generateDianCalendar(year = new Date().getFullYear()) {
   const calendar = {};
-  
-  // La DIAN suele iniciar el segundo martes o lunes de agosto
-  let currentDate = new Date(year, 7, 11); // 11 de agosto
-  if (currentDate.getDay() === 0) currentDate.setDate(currentDate.getDate() + 1); // Si es domingo -> lunes
-  if (currentDate.getDay() === 6) currentDate.setDate(currentDate.getDate() + 2); // Si es sábado -> lunes
+  let currentDate = new Date(year, 7, 11);
+  if (currentDate.getDay() === 0) currentDate.setDate(currentDate.getDate() + 1);
+  if (currentDate.getDay() === 6) currentDate.setDate(currentDate.getDate() + 2);
 
-  let pairIndex = 1; // 1 = 01-02, 2 = 03-04, ..., 50 = 99-00
+  let pairIndex = 1;
 
   while (pairIndex <= 50) {
-    const dayOfWeek = currentDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const isHoliday = isColombianHoliday(currentDate);
-
-    if (!isWeekend && !isHoliday) {
-      const firstDigit = (pairIndex * 2 - 1) % 100;
-      const secondDigit = (pairIndex * 2) % 100;
-
-      const d1Str = String(firstDigit).padStart(2, '0');
-      const d2Str = String(secondDigit).padStart(2, '0');
-      const pairKey = `${d1Str}-${d2Str}`;
+    const dow = currentDate.getDay();
+    if (dow !== 0 && dow !== 6 && !isColombianHoliday(currentDate)) {
+      const d1 = (pairIndex * 2 - 1) % 100;
+      const d2 = (pairIndex * 2) % 100;
+      const d1Str = String(d1).padStart(2, '0');
+      const d2Str = String(d2).padStart(2, '0');
 
       const dateObj = new Date(currentDate);
       const dayName = SPANISH_DAYS[dateObj.getDay()];
@@ -86,8 +51,8 @@ export function generateDianCalendar(year = new Date().getFullYear()) {
 
       const entry = {
         pairIndex,
-        pairKey,
-        digits: [firstDigit, secondDigit],
+        pairKey: `${d1Str}-${d2Str}`,
+        digits: [d1, d2],
         digitsFormatted: `${d1Str} y ${d2Str}`,
         date: dateObj,
         dateString: dateObj.toISOString().split('T')[0],
@@ -97,12 +62,10 @@ export function generateDianCalendar(year = new Date().getFullYear()) {
         dayNumber
       };
 
-      calendar[firstDigit] = entry;
-      calendar[secondDigit] = entry;
-
+      calendar[d1] = entry;
+      calendar[d2] = entry;
       pairIndex++;
     }
-
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
@@ -115,106 +78,52 @@ export function generateDianCalendar(year = new Date().getFullYear()) {
 export function getDueDateForDigits(twoDigits, year = new Date().getFullYear()) {
   const cleanDigits = String(twoDigits).replace(/\D/g, '').slice(-2);
   if (!cleanDigits) return null;
-
   const num = parseInt(cleanDigits, 10);
   if (isNaN(num)) return null;
 
-  const calendar = generateDianCalendar(year);
-  const entry = calendar[num];
+  const entry = generateDianCalendar(year)[num];
   if (!entry) return null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const due = new Date(entry.date);
   due.setHours(0, 0, 0, 0);
 
-  const diffTime = due.getTime() - today.getTime();
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const status = diffDays === 0 ? 'today' : diffDays < 0 ? 'passed' : 'upcoming';
+  const statusText = diffDays === 0 ? '¡Vence hoy!' : diffDays === 1 ? 'Vence mañana' : diffDays < 0 ? `Venció hace ${Math.abs(diffDays)} días` : `Faltan ${diffDays} días`;
 
-  let status = 'upcoming'; // 'upcoming' | 'today' | 'passed'
-  let statusText = `Faltan ${diffDays} días`;
-
-  if (diffDays === 0) {
-    status = 'today';
-    statusText = '¡Vence hoy!';
-  } else if (diffDays === 1) {
-    status = 'upcoming';
-    statusText = 'Vence mañana';
-  } else if (diffDays < 0) {
-    status = 'passed';
-    statusText = `Venció hace ${Math.abs(diffDays)} días`;
-  }
-
-  return {
-    ...entry,
-    inputDigits: cleanDigits.padStart(2, '0'),
-    daysRemaining: diffDays,
-    status,
-    statusText
-  };
+  return { ...entry, inputDigits: cleanDigits.padStart(2, '0'), daysRemaining: diffDays, status, statusText };
 }
 
 /**
- * Calcula el estado de los topes DIAN UVT usando las transacciones y cuentas del usuario
+ * Calcula el estado de los topes DIAN UVT usando transacciones y cuentas
  */
 export function calculateTaxMetrics({
   transactions = [],
   accounts = [],
   investments = [],
-  fiscalYear = new Date().getFullYear() - 1, // Por defecto año gravable inmediatamente anterior
+  fiscalYear = new Date().getFullYear() - 1,
   uvtValue = UVT_VALUES[2024] || 47065
 }) {
-  // Transacciones del año fiscal correspondiente
-  const fiscalTxs = transactions.filter(t => {
-    if (!t.date) return false;
-    const y = parseInt(t.date.split('-')[0], 10);
-    return y === fiscalYear;
-  });
+  const fiscalTxs = transactions.filter(t => t.date && parseInt(t.date.split('-')[0], 10) === fiscalYear);
 
-  const isTransferTx = (t) => Boolean(
-    t && (
-      t.isTransfer ||
-      t.is_transfer ||
-      t.type === 'transfer' ||
-      t.type === 'transferencia' ||
-      t.categoryId === 'cat-transfer' ||
-      t.category_id === 'cat-transfer' ||
-      t.subcategoryId === 'sub-transfer-in' ||
-      t.subcategoryId === 'sub-transfer-out'
-    )
+  const isTransfer = (t) => Boolean(
+    t && (t.isTransfer || t.is_transfer || ['transfer', 'transferencia'].includes(t.type) || ['cat-transfer'].includes(t.categoryId || t.category_id) || ['sub-transfer-in', 'sub-transfer-out'].includes(t.subcategoryId))
   );
 
-  // 1. Ingresos brutos acumulados (excluye transferencias internas)
-  const grossIncome = fiscalTxs
-    .filter(t => (t.type === 'income' || t.type === 'ingreso') && !isTransferTx(t))
-    .reduce((sum, t) => sum + safeNumber(t.amount), 0);
+  const grossIncome = fiscalTxs.filter(t => ['income', 'ingreso'].includes(t.type) && !isTransfer(t)).reduce((s, t) => s + safeNumber(t.amount), 0);
+  const totalExpenses = fiscalTxs.filter(t => ['expense', 'gasto'].includes(t.type) && !isTransfer(t)).reduce((s, t) => s + safeNumber(t.amount), 0);
 
-  // 2. Compras y consumos totales (excluye transferencias internas)
-  const totalExpenses = fiscalTxs
-    .filter(t => (t.type === 'expense' || t.type === 'gasto') && !isTransferTx(t))
-    .reduce((sum, t) => sum + safeNumber(t.amount), 0);
+  const creditCardAccountIds = new Set(accounts.filter(a => a.type === 'card' || a.type === 'credit').map(a => a.id));
+  const cardExpenses = fiscalTxs.filter(t => ['expense', 'gasto'].includes(t.type) && !isTransfer(t) && (creditCardAccountIds.has(t.accountId) || ['card', 'credit'].includes(t.accountType))).reduce((s, t) => s + safeNumber(t.amount), 0);
 
-  // 3. Consumos con tarjeta de crédito
-  const creditCardAccountIds = new Set(
-    accounts.filter(a => a.type === 'card' || a.type === 'credit').map(a => a.id)
-  );
-
-  const cardExpenses = fiscalTxs
-    .filter(t => (t.type === 'expense' || t.type === 'gasto') && !isTransferTx(t) && (creditCardAccountIds.has(t.accountId) || t.accountType === 'card' || t.accountType === 'credit'))
-    .reduce((sum, t) => sum + safeNumber(t.amount), 0);
-
-  // 4. Consignaciones bancarias y depósitos acumulados
-  // (Suma de ingresos a cuentas bancarias más abonos)
   const bankDeposits = grossIncome;
 
-  // 5. Patrimonio bruto estimado (Cuentas líquidas positivas + saldo total de inversiones)
-  const totalLiquidAccounts = accounts
-    .filter(a => a.type !== 'card')
-    .reduce((sum, a) => {
-      const bal = toSafeNumber(a.initialBalance ?? a.balance ?? a.saldo ?? 0);
-      return sum + (bal > 0 ? bal : 0);
-    }, 0);
+  const totalLiquidAccounts = accounts.filter(a => a.type !== 'card').reduce((sum, a) => {
+    const bal = toSafeNumber(a.initialBalance ?? a.balance ?? a.saldo);
+    return sum + (bal > 0 ? bal : 0);
+  }, 0);
 
   const totalInvestments = investments.reduce((sum, inv) => {
     const shares = toSafeNumber(inv.shares || inv.quantity);
@@ -225,118 +134,43 @@ export function calculateTaxMetrics({
 
   const estimatedGrossWealth = totalLiquidAccounts + totalInvestments;
 
-  // Evaluaciones de topes usando fórmulas normalizadas
   const evaluateItem = (amount, thresholdUVT, title, description, iconName) => {
     const limitAmount = calculateUVTThreshold(thresholdUVT, uvtValue);
     const percentage = calculateTaxProgressPercentage(amount, limitAmount);
-    
-    let level = 'safe'; // 'safe' | 'warning' | 'danger'
-    let levelText = 'Por debajo del tope';
-
-    if (percentage >= 100) {
-      level = 'danger';
-      levelText = 'Superaste el tope';
-    } else if (percentage >= 75) {
-      level = 'warning';
-      levelText = 'Cerca del límite';
-    }
+    const level = percentage >= 100 ? 'danger' : percentage >= 75 ? 'warning' : 'safe';
+    const levelText = percentage >= 100 ? 'Superaste el tope' : percentage >= 75 ? 'Cerca del límite' : 'Por debajo del tope';
 
     return {
-      title,
-      description,
-      iconName,
-      amount: toSafeNumber(amount),
-      thresholdUVT,
-      limitAmount,
-      percentage,
-      level,
-      levelText,
-      isExceeded: percentage >= 100
+      title, description, iconName, amount: toSafeNumber(amount),
+      thresholdUVT, limitAmount, percentage, level, levelText, isExceeded: percentage >= 100
     };
   };
 
-  const items = [
-    evaluateItem(
-      grossIncome,
-      TAX_THRESHOLDS_UVT.GROSS_INCOME,
-      'Ingresos brutos acumulados',
-      'Salarios, honorarios, ventas o ingresos totales recibidos en el año.',
-      'TrendingUp'
-    ),
-    evaluateItem(
-      totalExpenses,
-      TAX_THRESHOLDS_UVT.TOTAL_EXPENSES,
-      'Compras y consumos totales',
-      'Pagos en efectivo, transferencias y tarjetas de débito/crédito.',
-      'ShoppingBag'
-    ),
-    evaluateItem(
-      cardExpenses,
-      TAX_THRESHOLDS_UVT.CARD_EXPENSES,
-      'Consumos con tarjetas de crédito',
-      'Total de compras y avances realizados con plásticos de crédito.',
-      'CreditCard'
-    ),
-    evaluateItem(
-      bankDeposits,
-      TAX_THRESHOLDS_UVT.BANK_DEPOSITS,
-      'Consignaciones y transferencias bancarias',
-      'Total acumulado de transferencias y depósitos bancarios recibidos.',
-      'Landmark'
-    ),
-    evaluateItem(
-      estimatedGrossWealth,
-      TAX_THRESHOLDS_UVT.GROSS_WEALTH,
-      'Patrimonio bruto total',
-      'Valor total de tus cuentas bancarias, inmuebles, vehículos e inversiones.',
-      'Building2'
-    )
+  const METRIC_CONFIGS = [
+    { amt: grossIncome, uvt: TAX_THRESHOLDS_UVT.GROSS_INCOME, title: 'Ingresos brutos acumulados', desc: 'Salarios, honorarios, ventas o ingresos totales recibidos en el año.', icon: 'TrendingUp' },
+    { amt: totalExpenses, uvt: TAX_THRESHOLDS_UVT.TOTAL_EXPENSES, title: 'Compras y consumos totales', desc: 'Pagos en efectivo, transferencias y tarjetas de débito/crédito.', icon: 'ShoppingBag' },
+    { amt: cardExpenses, uvt: TAX_THRESHOLDS_UVT.CARD_EXPENSES, title: 'Consumos con tarjetas de crédito', desc: 'Total de compras y avances realizados con plásticos de crédito.', icon: 'CreditCard' },
+    { amt: bankDeposits, uvt: TAX_THRESHOLDS_UVT.BANK_DEPOSITS, title: 'Consignaciones y transferencias bancarias', desc: 'Total acumulado de transferencias y depósitos bancarios recibidos.', icon: 'Landmark' },
+    { amt: estimatedGrossWealth, uvt: TAX_THRESHOLDS_UVT.GROSS_WEALTH, title: 'Patrimonio bruto total', desc: 'Valor total de tus cuentas bancarias, inmuebles, vehículos e inversiones.', icon: 'Building2' }
   ];
 
-  const mustDeclare = items.some(item => item.isExceeded);
-  const exceededCount = items.filter(item => item.isExceeded).length;
-  const warningCount = items.filter(item => item.level === 'warning').length;
+  const items = METRIC_CONFIGS.map(c => evaluateItem(c.amt, c.uvt, c.title, c.desc, c.icon));
 
   return {
     fiscalYear,
     uvtValue,
     items,
-    mustDeclare,
-    exceededCount,
-    warningCount,
+    mustDeclare: items.some(item => item.isExceeded),
+    exceededCount: items.filter(item => item.isExceeded).length,
+    warningCount: items.filter(item => item.level === 'warning').length,
     hasTransactions: fiscalTxs.length > 0
   };
 }
 
 export const DEFAULT_CHECKLIST_ITEMS = [
-  {
-    id: 'step_consultar',
-    title: 'Consultar si te corresponde declarar',
-    description: 'Verifica tus topes UVT en la app o consulta en el portal oficial de la DIAN.',
-    completed: false
-  },
-  {
-    id: 'step_certificados',
-    title: 'Descargar certificados bancarios y extractos',
-    description: 'Bancolombia, Davivienda, Nequi, etc. Descarga el certificado tributario del año gravable.',
-    completed: false
-  },
-  {
-    id: 'step_rut',
-    title: 'Obtener o actualizar el RUT',
-    description: 'Asegúrate de que tu Registro Único Tributario tenga tu dirección y actividad económica al día.',
-    completed: false
-  },
-  {
-    id: 'step_deducciones',
-    title: 'Recopilar soportes de deducciones',
-    description: 'Medicina prepagada, dependientes económicos, intereses de crédito de vivienda y aportes voluntarios.',
-    completed: false
-  },
-  {
-    id: 'step_presentar',
-    title: 'Presentar y pagar antes de la fecha límite',
-    description: 'Diligencia el Formulario 210 en los servicios en línea de la DIAN y firma electrónicamente.',
-    completed: false
-  }
+  { id: 'step_consultar', title: 'Consultar si te corresponde declarar', description: 'Verifica tus topes UVT en la app o consulta en el portal oficial de la DIAN.', completed: false },
+  { id: 'step_certificados', title: 'Descargar certificados bancarios y extractos', description: 'Bancolombia, Davivienda, Nequi, etc. Descarga el certificado tributario del año gravable.', completed: false },
+  { id: 'step_rut', title: 'Obtener o actualizar el RUT', description: 'Asegúrate de que tu Registro Único Tributario tenga tu dirección y actividad económica al día.', completed: false },
+  { id: 'step_deducciones', title: 'Recopilar soportes de deducciones', description: 'Medicina prepagada, dependientes económicos, intereses de crédito de vivienda y aportes voluntarios.', completed: false },
+  { id: 'step_presentar', title: 'Presentar y pagar antes de la fecha límite', description: 'Diligencia el Formulario 210 en los servicios en línea de la DIAN y firma electrónicamente.', completed: false }
 ];

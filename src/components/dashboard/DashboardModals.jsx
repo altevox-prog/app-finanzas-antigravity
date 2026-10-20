@@ -9,10 +9,7 @@ import EditTransactionModal from '../transactions/modals/EditTransactionModal';
 import ReceiptModal from '../transactions/modals/ReceiptModal';
 
 /**
- * DashboardModals
- * Subcomponente para el renderizado condicional de los modales secundarios del Dashboard
- * y gestión de creación rápida (transacciones, deudas, pagos recurrentes, cuentas y categorías)
- * así como detalle y edición de movimientos seleccionados.
+ * DashboardModals: Renderizado condicional centralizado de los modales secundarios del Dashboard
  */
 export default function DashboardModals({
   modalsState = {},
@@ -54,27 +51,18 @@ export default function DashboardModals({
       icon: newCatIcon,
       subcategories: newCatInitialSub.trim() ? [newCatInitialSub.trim()] : []
     };
-    if (typeof onAddCategory === 'function') {
-      onAddCategory(catPayload);
-    }
-    if (typeof onClose === 'function') {
-      onClose('category');
-    }
+    if (typeof onAddCategory === 'function') onAddCategory(catPayload);
+    if (typeof onClose === 'function') onClose('category');
     setNewCatName('');
   };
 
   const handleCreateAccount = (acc) => {
-    if (typeof onAddAccount === 'function') {
-      onAddAccount(acc);
-    }
-    if (typeof onClose === 'function') {
-      onClose('account');
-    }
+    if (typeof onAddAccount === 'function') onAddAccount(acc);
+    if (typeof onClose === 'function') onClose('account');
   };
 
   return (
     <>
-      {/* 1. Modal de Transacción Rápida */}
       {modalsState.isTxModalOpen && (
         <AddTransactionModal
           isOpen={true}
@@ -87,7 +75,6 @@ export default function DashboardModals({
         />
       )}
 
-      {/* 2. Modal de Deuda / Préstamo */}
       {modalsState.isDebtModalOpen && (
         <DebtFormModal
           isOpen={true}
@@ -99,7 +86,6 @@ export default function DashboardModals({
         />
       )}
 
-      {/* 3. Modal de Pago Recurrente */}
       {modalsState.isRecurringModalOpen && (
         <AddRecurringModal
           isOpen={true}
@@ -111,7 +97,6 @@ export default function DashboardModals({
         />
       )}
 
-      {/* 4. Modal de Cuenta */}
       {modalsState.isAccountModalOpen && (
         <AddAccountModal
           isOpen={true}
@@ -121,7 +106,6 @@ export default function DashboardModals({
         />
       )}
 
-      {/* 5. Modal de Categoría */}
       {modalsState.isCategoryModalOpen && (
         <AddCategoryModal
           isOpen={true}
@@ -140,45 +124,25 @@ export default function DashboardModals({
         />
       )}
 
-      {/* 6. Modal de Detalle de Transacción */}
       {selectedTxForDetail && (
         <TransactionDetailModal
           transaction={selectedTxForDetail}
           categories={categories}
           onClose={() => setSelectedTxForDetail(null)}
-          onEdit={(tx) => {
-            setSelectedTxForDetail(null);
-            setSelectedTxForEdit(tx);
-          }}
-          onDelete={(id) => {
-            if (typeof onDeleteTransaction === 'function') {
-              onDeleteTransaction(id);
-            }
-            setSelectedTxForDetail(null);
-          }}
+          onEdit={(tx) => { setSelectedTxForDetail(null); setSelectedTxForEdit(tx); }}
+          onDelete={(id) => { onDeleteTransaction?.(id); setSelectedTxForDetail(null); }}
           onViewReceipt={(tx) => setSelectedTxForReceipt(tx)}
         />
       )}
 
-      {/* 7. Modal de Edición de Transacción */}
       {selectedTxForEdit && (
         <EditTransactionModal
           transaction={selectedTxForEdit}
           accounts={accounts}
           categories={categories}
           onClose={() => setSelectedTxForEdit(null)}
-          onSave={(updated) => {
-            if (typeof onUpdateTransaction === 'function') {
-              onUpdateTransaction(updated);
-            }
-            setSelectedTxForEdit(null);
-          }}
-          onDelete={(id) => {
-            if (typeof onDeleteTransaction === 'function') {
-              onDeleteTransaction(id);
-            }
-            setSelectedTxForEdit(null);
-          }}
+          onSave={(updated) => { onUpdateTransaction?.(updated); setSelectedTxForEdit(null); }}
+          onDelete={(id) => { onDeleteTransaction?.(id); setSelectedTxForEdit(null); }}
           onAddCategory={onAddCategory}
           onAddSubcategory={onAddSubcategory}
           onUpdateSubcategory={onUpdateSubcategory}
@@ -188,7 +152,6 @@ export default function DashboardModals({
         />
       )}
 
-      {/* 8. Modal de Comprobante / Recibo */}
       {selectedTxForReceipt && (
         <ReceiptModal
           transaction={selectedTxForReceipt}

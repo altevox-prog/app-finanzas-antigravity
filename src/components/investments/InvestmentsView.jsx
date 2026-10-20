@@ -1,11 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, Plus } from 'lucide-react';
-import { 
-  INVESTMENT_CATEGORIES, 
-  formatCurrency, 
-  formatUSD 
-} from '../../data/initialData';
-import { usePrivacy } from '../../context/PrivacyContext';
+import { INVESTMENT_CATEGORIES } from '../../data/initialData';
 import InvestmentFormModal from './modals/InvestmentFormModal';
 import PortfolioSummaryHeader from './components/PortfolioSummaryHeader';
 import InvestmentFilterBar from './components/InvestmentFilterBar';
@@ -25,16 +20,11 @@ export default function InvestmentsView({
   onDeleteInvestment,
   onAddTransaction,
   trm = 4050,
-  onBack = null,
   livePrices: propLivePrices = null,
   handleRefreshQuotes: propRefreshQuotes = null,
   isRefreshing: propIsRefreshing = null
 }) {
-  const { formatMoney, isPrivacyMode, enableDecimals } = usePrivacy();
-  const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
-
-  // Multi-currency view state: 'COP' | 'USD'
-  const [viewCurrency, setViewCurrency] = useState(() => {
+  const [viewCurrency] = useState(() => {
     try {
       return localStorage.getItem('presu_investment_view_currency') || 'COP';
     } catch {
@@ -42,115 +32,53 @@ export default function InvestmentsView({
     }
   });
 
-  const formatInvestMoney = (amount, currency = viewCurrency) => {
-    if (currency === 'USD') {
-      return formatUSD(amount, isPrivacyMode, showDecimals);
-    }
-    return formatCurrency(amount, isPrivacyMode, showDecimals);
-  };
-
-  const handleSetViewCurrency = (curr) => {
-    setViewCurrency(curr);
-    try {
-      localStorage.setItem('presu_investment_view_currency', curr);
-    } catch {}
-  };
-
-  // Category filter: 'all' | categoryId
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
-
-  // Vista agrupada por Entidad / Banco o lista plana (por defecto 'flat' - Todas las inversiones)
-  const [viewGrouping, setViewGrouping] = useState('flat'); // 'flat' | 'by_institution'
-  const [expandedBanks, setExpandedBanks] = useState(() => ({}));
+  const [viewGrouping, setViewGrouping] = useState('flat');
+  const [expandedBanks, setExpandedBanks] = useState({});
 
   const toggleBankExpand = (bankName) => {
-    setExpandedBanks(prev => ({
-      ...prev,
-      [bankName]: prev[bankName] === undefined ? false : !prev[bankName]
-    }));
+    setExpandedBanks(prev => ({ ...prev, [bankName]: prev[bankName] === undefined ? false : !prev[bankName] }));
   };
 
-  // Cotizaciones en vivo en tiempo real (Custom Hook con soporte para props externas de useAppOrchestrator)
-  const internalQuotes = useInvestmentQuotes({
-    investments: propLivePrices ? [] : investments
-  });
-
+  const internalQuotes = useInvestmentQuotes({ investments: propLivePrices ? [] : investments });
   const livePrices = propLivePrices || internalQuotes.livePrices;
-  const isRefreshing = propIsRefreshing !== null && propIsRefreshing !== undefined
-    ? propIsRefreshing
-    : internalQuotes.isRefreshing;
-  const lastRefreshedAt = internalQuotes.lastRefreshedAt;
+  const isRefreshing = propIsRefreshing !== null && propIsRefreshing !== undefined ? propIsRefreshing : internalQuotes.isRefreshing;
   const handleRefreshQuotes = propRefreshQuotes || internalQuotes.handleRefreshQuotes;
-  const setLivePrices = internalQuotes.setLivePrices;
 
-  // Notificar estado de refresco a TopAppBar
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('monety:investment-quotes-status', {
-      detail: { isRefreshing }
-    }));
+    window.dispatchEvent(new CustomEvent('monety:investment-quotes-status', { detail: { isRefreshing } }));
   }, [isRefreshing]);
 
-  // Escuchar eventos globales de TopAppBar (añadir inversión y refrescar cotizaciones)
   useEffect(() => {
-    const handleOpenAdd = () => {
-      setEditingInvestment(null);
-      setIsFormModalOpen(true);
-    };
-    const handleRefresh = () => {
-      handleRefreshQuotes();
-    };
+    const handleOpenAdd = () => { setEditingInvestment(null); setIsFormModalOpen(true); };
+    const handleRefresh = () => handleRefreshQuotes();
 
     window.addEventListener('monety:open-add-investment', handleOpenAdd);
     window.addEventListener('monety:refresh-investment-quotes', handleRefresh);
-
     return () => {
       window.removeEventListener('monety:open-add-investment', handleOpenAdd);
       window.removeEventListener('monety:refresh-investment-quotes', handleRefresh);
     };
   }, [handleRefreshQuotes]);
 
-  // Modal State for Add / Edit Investment
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState(null);
-
-  // Quick Update Market Value Modal State
   const [quickUpdateItem, setQuickUpdateItem] = useState(null);
   const [quickUpdateValue, setQuickUpdateValue] = useState('');
 
-  // Liquidación de CDT (Custom Hook)
   const {
-    liquidatingCDT,
-    liquidationAccountId,
-    setLiquidationAccountId,
-    liquidationDate,
-    setLiquidationDate,
-    isSubmittingLiquidation,
-    handleOpenLiquidation,
-    handleCloseLiquidation,
-    handleConfirmLiquidation
-  } = useInvestmentLiquidation({
-    accounts,
-    onAddTransaction,
-    onUpdateInvestment
-  });
+    liquidatingCDT, liquidationAccountId, setLiquidationAccountId,
+    liquidationDate, setLiquidationDate, isSubmittingLiquidation,
+    handleOpenLiquidation, handleCloseLiquidation, handleConfirmLiquidation
+  } = useInvestmentLiquidation({ accounts, onAddTransaction, onUpdateInvestment });
 
-
-  // Cálculos consolidados, filtros y agrupaciones (Custom Hook)
   const {
-    portfolioMetrics,
-    filteredInvestments,
-    groupedInvestments,
-    allocationByCategory,
-    calculatePositionMetrics
+    portfolioMetrics, filteredInvestments, groupedInvestments,
+    allocationByCategory, calculatePositionMetrics
   } = useInvestmentCalculations({
-    investments,
-    livePrices,
-    selectedCategoryFilter,
-    viewCurrency,
-    trm
+    investments, livePrices, selectedCategoryFilter, viewCurrency, trm
   });
 
-  // Guardar valor manual rápido
   const handleSaveQuickValue = (e) => {
     e.preventDefault();
     if (!quickUpdateItem) return;
@@ -171,30 +99,19 @@ export default function InvestmentsView({
   };
 
   const handleDeleteInvestmentClick = (inv) => {
-    if (confirm(`¿Eliminar la inversión "${inv.name}"?`)) {
-      onDeleteInvestment(inv.id);
-    }
-  };
-
-  const handleQuickUpdateClick = (inv, val) => {
-    setQuickUpdateItem(inv);
-    setQuickUpdateValue(val);
+    if (confirm(`¿Eliminar la inversión "${inv.name}"?`)) onDeleteInvestment(inv.id);
   };
 
   return (
     <div className="space-y-2.5 pb-36 animate-fadeIn">
-      {/* ============================================================== */}
-      {/* 1. RESUMEN TOTAL DEL PORTAFOLIO DE INVERSIONES (HERO CARD 3 EN 1) */}
-      {/* ============================================================== */}
+      {/* 1. Resumen Portfolio */}
       <PortfolioSummaryHeader
         portfolioMetrics={portfolioMetrics}
         allocationByCategory={allocationByCategory}
         trm={trm}
       />
 
-      {/* ============================================================== */}
-      {/* 2. BARRA DE FILTROS POR CATEGORÍA Y SELECTOR DE VISTA         */}
-      {/* ============================================================== */}
+      {/* 2. Filtros */}
       <InvestmentFilterBar
         categories={INVESTMENT_CATEGORIES}
         selectedCategory={selectedCategoryFilter}
@@ -206,9 +123,7 @@ export default function InvestmentsView({
         investments={investments}
       />
 
-      {/* ============================================================== */}
-      {/* 3. LISTADO DE ACTIVOS CON ALINEACIÓN SIMÉTRICA CONSTANTE      */}
-      {/* ============================================================== */}
+      {/* 3. Listado */}
       <div className="flex flex-col gap-2.5">
         {filteredInvestments.length === 0 ? (
           <div 
@@ -217,9 +132,7 @@ export default function InvestmentsView({
           >
             <TrendingUp className="w-7 h-7 opacity-35 mx-auto mb-2 text-emerald-500" />
             <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-              {investments.length === 0 
-                ? 'No tienes inversiones registradas' 
-                : 'No hay inversiones en esta categoría'}
+              {investments.length === 0 ? 'No tienes inversiones registradas' : 'No hay inversiones en esta categoría'}
             </p>
             <p className="text-[11px] opacity-60 mt-1 max-w-sm text-center">
               {investments.length === 0 
@@ -228,20 +141,14 @@ export default function InvestmentsView({
             </p>
             {investments.length === 0 ? (
               <button
-                type="button"
-                onClick={() => {
-                  setEditingInvestment(null);
-                  setIsFormModalOpen(true);
-                }}
+                type="button" onClick={() => { setEditingInvestment(null); setIsFormModalOpen(true); }}
                 className="mt-3.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Registrar primera inversión</span>
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" /><span>Registrar primera inversión</span>
               </button>
             ) : (
               <button
-                type="button"
-                onClick={() => setSelectedCategoryFilter('all')}
+                type="button" onClick={() => setSelectedCategoryFilter('all')}
                 className="mt-3 px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-700/80 transition-all cursor-pointer active:scale-95"
               >
                 Ver todas las inversiones
@@ -249,78 +156,48 @@ export default function InvestmentsView({
             )}
           </div>
         ) : viewGrouping === 'flat' ? (
-          /* ============================================================== */
-          /* VISTA PLANA DE TODOS LOS ACTIVOS (ACTIVA POR DEFECTO)          */
           filteredInvestments.map(inv => (
             <InvestmentCard
-              key={inv.id}
-              investment={inv}
-              metrics={calculatePositionMetrics(inv)}
-              viewCurrency={viewCurrency}
-              livePrices={livePrices}
-              trm={trm}
-              onEdit={handleEditInvestment}
-              onDelete={handleDeleteInvestmentClick}
-              onQuickUpdate={handleQuickUpdateClick}
+              key={inv.id} investment={inv} metrics={calculatePositionMetrics(inv)}
+              viewCurrency={viewCurrency} livePrices={livePrices} trm={trm}
+              onEdit={handleEditInvestment} onDelete={handleDeleteInvestmentClick}
+              onQuickUpdate={(item, val) => { setQuickUpdateItem(item); setQuickUpdateValue(val); }}
               onOpenLiquidation={handleOpenLiquidation}
             />
           ))
         ) : (
-          /* ============================================================== */
-          /* VISTA AGRUPADA POR BANCO / ENTIDAD (ACORDEÓN CONSOLIDADO)       */
-          /* ============================================================== */
           <InvestmentBankGroup
-            groupedInvestments={groupedInvestments}
-            viewCurrency={viewCurrency}
-            livePrices={livePrices}
-            trm={trm}
-            expandedBanks={expandedBanks}
-            onToggleBank={toggleBankExpand}
-            onEditInvestment={handleEditInvestment}
+            groupedInvestments={groupedInvestments} viewCurrency={viewCurrency}
+            livePrices={livePrices} trm={trm} expandedBanks={expandedBanks}
+            onToggleBank={toggleBankExpand} onEditInvestment={handleEditInvestment}
             onDeleteInvestment={handleDeleteInvestmentClick}
-            onQuickUpdate={handleQuickUpdateClick}
+            onQuickUpdate={(item, val) => { setQuickUpdateItem(item); setQuickUpdateValue(val); }}
             onOpenLiquidation={handleOpenLiquidation}
           />
         )}
       </div>
 
-      {/* ============================================================== */}
-      {/* 4. MODALES */}
-      {/* ============================================================== */}
-      {/* MODAL 1: Formulario Dinámico Añadir / Editar Inversión */}
+      {/* Modales */}
       <InvestmentFormModal
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)}
         initialInvestment={editingInvestment}
         onSave={(data) => {
-          if (editingInvestment) {
-            onUpdateInvestment(data);
-          } else {
-            onAddInvestment(data);
-          }
+          if (editingInvestment) onUpdateInvestment(data);
+          else onAddInvestment(data);
         }}
         onDelete={onDeleteInvestment}
       />
 
-      {/* MODAL 2: Actualización Rápida de Valor de Mercado */}
       <InvestmentQuickUpdateModal
-        item={quickUpdateItem}
-        value={quickUpdateValue}
-        onChangeValue={setQuickUpdateValue}
-        onClose={() => setQuickUpdateItem(null)}
-        onConfirm={handleSaveQuickValue}
+        item={quickUpdateItem} value={quickUpdateValue} onChangeValue={setQuickUpdateValue}
+        onClose={() => setQuickUpdateItem(null)} onConfirm={handleSaveQuickValue}
       />
 
-      {/* MODAL 3: Confirmación y Liquidación de CDT a Cuenta */}
       <CDTLiquidationModal
-        liquidatingCDT={liquidatingCDT}
-        accounts={accounts}
-        liquidationAccountId={liquidationAccountId}
-        setLiquidationAccountId={setLiquidationAccountId}
-        liquidationDate={liquidationDate}
-        setLiquidationDate={setLiquidationDate}
-        isSubmittingLiquidation={isSubmittingLiquidation}
-        onClose={handleCloseLiquidation}
+        liquidatingCDT={liquidatingCDT} accounts={accounts}
+        liquidationAccountId={liquidationAccountId} setLiquidationAccountId={setLiquidationAccountId}
+        liquidationDate={liquidationDate} setLiquidationDate={setLiquidationDate}
+        isSubmittingLiquidation={isSubmittingLiquidation} onClose={handleCloseLiquidation}
         onConfirm={handleConfirmLiquidation}
       />
     </div>

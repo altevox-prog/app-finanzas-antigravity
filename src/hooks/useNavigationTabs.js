@@ -29,13 +29,12 @@ export function useNavigationTabs({
   // Claves de reseteo para forzar estado inicial limpio al seleccionar cualquier pestaña
   const [tabResetKeys, setTabResetKeys] = useState({
     dashboard: 0,
-    inicio: 0,
     transactions: 0,
-    movements: 0,
-    investments: 0,
-    debts: 0,
     accounts: 0,
+    debts: 0,
+    investments: 0,
     recurring: 0,
+    tax: 0,
     net_worth: 0
   });
 
@@ -189,5 +188,3 @@ export function useNavigationTabs({
     scrollToTop
   };
 }
-
-export default useNavigationTabs;

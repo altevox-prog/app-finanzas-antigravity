@@ -1,9 +1,10 @@
+/**
+ * recurringAutoProcessor.js
+ * Detección, procesamiento y avance de pagos recurrentes vencidos.
+ */
+
 import { generateUUID } from '../../utils/recordMerger';
 
-/**
- * getTodayLocalString
- * Retorna la fecha local actual en formato YYYY-MM-DD evitando desfases por UTC.
- */
 export function getTodayLocalString() {
   const now = new Date();
   const y = now.getFullYear();
@@ -12,14 +13,6 @@ export function getTodayLocalString() {
   return `${y}-${m}-${d}`;
 }
 
-/**
- * normalizeDateToYYYYMMDD
- * Normaliza cualquier formato de fecha (ISO con tiempo, timestamp, cadena con barras o guiones)
- * a formato estricto YYYY-MM-DD para comparaciones lexicográficas seguras.
- *
- * @param {string|number|Date} rawDate
- * @returns {string} Fecha en formato YYYY-MM-DD
- */
 export function normalizeDateToYYYYMMDD(rawDate) {
   if (!rawDate) return '';
   if (typeof rawDate === 'string') {
@@ -27,129 +20,68 @@ export function normalizeDateToYYYYMMDD(rawDate) {
     if (trimmed.includes('T')) return trimmed.split('T')[0];
     if (trimmed.includes(' ')) return trimmed.split(' ')[0];
     if (trimmed.includes('/')) {
-      const parts = trimmed.split('/');
-      if (parts.length === 3 && parts[2].length === 4) {
-        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-      }
+      const p = trimmed.split('/');
+      if (p.length === 3 && p[2].length === 4) return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
     }
     return trimmed;
   }
   try {
     const d = new Date(rawDate);
     if (isNaN(d.getTime())) return '';
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   } catch {
     return '';
   }
 }
 
-/**
- * advanceNextDate
- * Avanza una fecha YYYY-MM-DD según la frecuencia especificada preservando el día de corte.
- *
- * @param {string} currentDateStr Fecha actual en formato YYYY-MM-DD
- * @param {string} frequency 'weekly' | 'biweekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly'
- * @param {number|string} targetBillingDay Día del mes preferido (1-31)
- * @returns {string} Nueva fecha en formato YYYY-MM-DD
- */
 export function advanceNextDate(currentDateStr, frequency = 'monthly', targetBillingDay = null) {
-  if (!currentDateStr) {
-    return getTodayLocalString();
+  if (!currentDateStr) return getTodayLocalString();
+
+  const [y, m, d] = currentDateStr.split('-').map(n => parseInt(n, 10));
+  const date = new Date(y, m - 1, d);
+
+  if (frequency === 'weekly') date.setDate(date.getDate() + 7);
+  else if (frequency === 'biweekly') date.setDate(date.getDate() + 14);
+  else if (frequency === 'bimonthly') date.setMonth(date.getMonth() + 2);
+  else if (frequency === 'quarterly') date.setMonth(date.getMonth() + 3);
+  else if (frequency === 'semiannual') date.setMonth(date.getMonth() + 6);
+  else if (frequency === 'yearly') date.setFullYear(date.getFullYear() + 1);
+  else {
+    // monthly default
+    const origDay = targetBillingDay ? parseInt(targetBillingDay, 10) : d;
+    date.setDate(1);
+    date.setMonth(date.getMonth() + 1);
+    const maxDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    date.setDate(Math.min(origDay, maxDays));
   }
 
-  const parts = currentDateStr.split('-');
-  const y = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10) - 1;
-  const d = parseInt(parts[2], 10);
-  const date = new Date(y, m, d);
-
-  switch (frequency) {
-    case 'weekly':
-      date.setDate(date.getDate() + 7);
-      break;
-    case 'biweekly':
-      date.setDate(date.getDate() + 14);
-      break;
-    case 'bimonthly':
-      date.setMonth(date.getMonth() + 2);
-      break;
-    case 'quarterly':
-      date.setMonth(date.getMonth() + 3);
-      break;
-    case 'semiannual':
-      date.setMonth(date.getMonth() + 6);
-      break;
-    case 'yearly':
-      date.setFullYear(date.getFullYear() + 1);
-      break;
-    case 'monthly':
-    default: {
-      const origDay = targetBillingDay ? parseInt(targetBillingDay, 10) : d;
-      date.setDate(1); // Evitar salto indeseado por meses con menos de 31 días
-      date.setMonth(date.getMonth() + 1);
-      const daysInNewMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-      date.setDate(Math.min(origDay, daysInNewMonth));
-      break;
-    }
-  }
-
-  const newY = date.getFullYear();
-  const newM = String(date.getMonth() + 1).padStart(2, '0');
-  const newD = String(date.getDate()).padStart(2, '0');
-  return `${newY}-${newM}-${newD}`;
+  const ny = date.getFullYear();
+  const nm = String(date.getMonth() + 1).padStart(2, '0');
+  const nd = String(date.getDate()).padStart(2, '0');
+  return `${ny}-${nm}-${nd}`;
 }
 
-// Bloqueo en memoria para prevenir ejecuciones concurrentes simultáneas
 let isProcessingDue = false;
 const processedKeySet = new Set();
 
-/**
- * processDueRecurringPayments
- * Evalúa los ítems donde `active !== false` y `nextPaymentDate <= fechaActual`:
- *  - Genera la transacción automática en `transactions`.
- *  - Avanza la `nextPaymentDate` del recurrente según su frecuencia para evitar duplicados.
- *  - Persiste los cambios tanto en el estado local como en la sincronización remota habitual.
- *
- * @param {Object} options
- * @param {Array} options.recurringPayments Lista de pagos recurrentes
- * @param {Function} options.onAddTransaction Callback para insertar la transacción
- * @param {Function} options.onUpdateRecurring Callback para actualizar el recurrente
- * @returns {Promise<{ processedCount: number, generatedTransactions: Array }>}
- */
 export async function processDueRecurringPayments({
   recurringPayments = [],
   onAddTransaction,
   onUpdateRecurring
 }) {
-  if (isProcessingDue || !onAddTransaction || !onUpdateRecurring) {
-    return { processedCount: 0, generatedTransactions: [] };
-  }
-
-  if (!Array.isArray(recurringPayments) || recurringPayments.length === 0) {
+  if (isProcessingDue || !onAddTransaction || !onUpdateRecurring || !Array.isArray(recurringPayments) || recurringPayments.length === 0) {
     return { processedCount: 0, generatedTransactions: [] };
   }
 
   const todayStr = getTodayLocalString();
   const dueItems = recurringPayments.filter((item) => {
-    if (!item) return false;
-    const isActive = item.isActive !== false && item.active !== false;
-    if (!isActive) return false;
-    // Solo automáticos si el modo está configurado; si no hay modo, por defecto es auto
-    if (item.mode === 'manual') return false;
-
+    if (!item || item.isActive === false || item.active === false || item.mode === 'manual') return false;
     const rawNextDate = item.nextPaymentDate || item.nextDate || item.next_date;
     const nextDate = normalizeDateToYYYYMMDD(rawNextDate);
-    if (!nextDate) return false;
-
-    return nextDate <= todayStr;
+    return nextDate && nextDate <= todayStr;
   });
 
-  if (dueItems.length === 0) {
-    return { processedCount: 0, generatedTransactions: [] };
-  }
+  if (dueItems.length === 0) return { processedCount: 0, generatedTransactions: [] };
 
   isProcessingDue = true;
   const generatedTransactions = [];
@@ -158,10 +90,7 @@ export async function processDueRecurringPayments({
     for (const item of dueItems) {
       const nextDate = item.nextPaymentDate || item.nextDate || item.next_date;
       const dedupeKey = `${item.id}_${nextDate}`;
-
-      if (processedKeySet.has(dedupeKey)) {
-        continue;
-      }
+      if (processedKeySet.has(dedupeKey)) continue;
       processedKeySet.add(dedupeKey);
 
       const type = item.type === 'income' ? 'income' : 'expense';
@@ -204,7 +133,6 @@ export async function processDueRecurringPayments({
 
       await onAddTransaction(newTx);
       await onUpdateRecurring(updatedItem);
-
       generatedTransactions.push(newTx);
     }
   } catch (err) {
@@ -213,8 +141,5 @@ export async function processDueRecurringPayments({
     isProcessingDue = false;
   }
 
-  return {
-    processedCount: generatedTransactions.length,
-    generatedTransactions
-  };
+  return { processedCount: generatedTransactions.length, generatedTransactions };
 }
