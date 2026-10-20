@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { 
   toSafeNumber, 
@@ -7,7 +7,6 @@ import {
   calculateNetFlow, 
   calculateNetWorth 
 } from '../utils/financeMath';
-import { MONTH_NAMES } from '../data/initialData';
 
 /**
  * useDashboardMetrics
@@ -44,12 +43,6 @@ export function useDashboardMetrics({
       livePrices
     });
   }, [accounts, transactions, investments, safeDebtsAndLoans, trmValue, livePrices]);
-
-  const totalAccountsBalanceCOP = netWorthMetrics.totalAccountsBalanceCOP;
-  const totalAssetsCOP = netWorthMetrics.totalAssetsCOP;
-  const totalLiabilitiesCOP = netWorthMetrics.totalLiabilitiesCOP;
-  const netWorthCOP = netWorthMetrics.netWorthCOP;
-  const isNetWorthPositive = netWorthMetrics.isNetWorthPositive;
 
   // 2. MÉTRICAS DETALLADAS DE INVERSIONES
   const investmentsMetrics = useMemo(() => {
@@ -175,39 +168,9 @@ export function useDashboardMetrics({
     : (monthlyStats?.netBalance !== undefined ? toSafeNumber(monthlyStats.netBalance) : calculateNetFlow(totalIncome, totalExpense));
   const availableLiquidBalance = toSafeNumber(monthlyStats.availableLiquidBalance);
   const savingsRate = calculateSavingsRate(totalIncome, totalExpense);
-  const freeCash = Math.max(0, netBalance);
 
-  const bentoPeriodLabel = selectedDay
-    ? `Día ${parseInt(selectedDay.split('-')[2], 10)} · ${(MONTH_NAMES?.[currentMonth] || '').slice(0, 3)}`
-    : (currentMonthLabel || (MONTH_NAMES?.[currentMonth] ? `${MONTH_NAMES[currentMonth]} ${currentYear}` : 'Mes en curso'));
-
-  // 6. FLUJO SEMANAL Y GESTIÓN DE PERÍODOS
+  // 6. FLUJO SEMANAL
   const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
-  const [currentPeriod, setCurrentPeriod] = useState(selectedDay ? 'day' : 'month');
-
-  useEffect(() => {
-    if (selectedDay && currentPeriod !== 'day') {
-      setCurrentPeriod('day');
-    } else if (!selectedDay && currentPeriod === 'day') {
-      setCurrentPeriod('month');
-    }
-  }, [selectedDay]);
-
-  const periodOptions = useMemo(() => [
-    { id: 'month', label: 'Mensual' },
-    { id: 'week', label: 'Semanal' },
-    { id: 'day', label: 'Diario' }
-  ], []);
-
-  const handlePeriodChange = (newPeriod) => {
-    setCurrentPeriod(newPeriod);
-    if (newPeriod === 'month') {
-      if (typeof onSelectDay === 'function') onSelectDay(null);
-    } else if (newPeriod === 'day') {
-      const today = new Date().toISOString().split('T')[0];
-      if (typeof onSelectDay === 'function') onSelectDay(selectedDay || today);
-    }
-  };
 
   const weeklyCashFlow = useMemo(() => {
     const weeks = [
@@ -255,11 +218,6 @@ export function useDashboardMetrics({
   return {
     trmValue,
     netWorthMetrics,
-    totalAccountsBalanceCOP,
-    totalAssetsCOP,
-    totalLiabilitiesCOP,
-    netWorthCOP,
-    isNetWorthPositive,
     investmentsMetrics,
     debtsAndLoansMetrics,
     currentYear,
@@ -272,15 +230,9 @@ export function useDashboardMetrics({
     netBalance,
     availableLiquidBalance,
     savingsRate,
-    freeCash,
-    bentoPeriodLabel,
     weeklyCashFlow,
     hoveredWeekIndex,
-    setHoveredWeekIndex,
-    currentPeriod,
-    setCurrentPeriod,
-    periodOptions,
-    handlePeriodChange
+    setHoveredWeekIndex
   };
 }
 
