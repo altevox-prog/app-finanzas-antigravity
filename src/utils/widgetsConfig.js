@@ -5,87 +5,82 @@ export const WIDGETS_ORDER_STORAGE_KEY_V2 = 'monety_widgets_order_v2';
  * Arreglo centralizado y fuente única de verdad para el orden y visibilidad de los widgets
  */
 export const DEFAULT_WIDGETS_CONFIG = [
-  { 
-    id: 'weekly_cashflow', 
-    label: 'Actividad de gastos', 
-    name: 'Actividad de gastos', 
-    description: 'Evolución y comparación semanal de gastos', 
-    icon: 'Activity', 
-    visible: true 
+  {
+    id: 'weekly_cashflow',
+    label: 'Actividad de gastos',
+    name: 'Actividad de gastos',
+    description: 'Evolución y comparación semanal de gastos',
+    icon: 'Activity',
+    visible: true
   },
-  { 
-    id: 'expenses_category', 
-    label: 'Tus gastos', 
-    name: 'Tus gastos', 
-    description: 'Distribución y desglose de gastos por categoría', 
-    icon: 'PieChart', 
-    visible: true 
+  {
+    id: 'expenses_category',
+    label: 'Tus gastos',
+    name: 'Tus gastos',
+    description: 'Distribución y desglose de gastos por categoría',
+    icon: 'PieChart',
+    visible: true
   },
-  { 
-    id: 'debts_loans', 
-    label: 'Préstamos y deudas', 
-    name: 'Préstamos y deudas', 
-    description: 'Montos por cobrar y compromisos por pagar', 
-    icon: 'HandCoins', 
-    visible: true 
+  {
+    id: 'debts_loans',
+    label: 'Préstamos y deudas',
+    name: 'Préstamos y deudas',
+    description: 'Montos por cobrar y compromisos por pagar',
+    icon: 'HandCoins',
+    visible: true
   },
-  { 
-    id: 'investments', 
-    label: 'Inversiones', 
-    name: 'Inversiones', 
-    description: 'Portafolio por banco, capital aportado y rentabilidad neta', 
-    icon: 'TrendingUp', 
-    visible: true 
+  {
+    id: 'investments',
+    label: 'Inversiones',
+    name: 'Inversiones',
+    description: 'Portafolio por banco, capital aportado y rentabilidad neta',
+    icon: 'TrendingUp',
+    visible: true
   },
-  { 
-    id: 'recent_movements', 
-    label: 'Movimientos recientes', 
-    name: 'Movimientos recientes', 
-    description: 'Últimos movimientos con acceso rápido', 
-    icon: 'Receipt', 
-    visible: true 
+  {
+    id: 'recent_movements',
+    label: 'Movimientos recientes',
+    name: 'Movimientos recientes',
+    description: 'Últimos movimientos con acceso rápido',
+    icon: 'Receipt',
+    visible: true
   },
-  { 
-    id: 'recurring_payments', 
-    label: 'Pagos recurrentes', 
-    name: 'Pagos recurrentes', 
-    description: 'Suscripciones y gastos fijos al mes', 
-    icon: 'CalendarSync', 
-    visible: false 
+  {
+    id: 'recurring_payments',
+    label: 'Pagos recurrentes',
+    name: 'Pagos recurrentes',
+    description: 'Suscripciones y gastos fijos al mes',
+    icon: 'CalendarSync',
+    visible: true
   },
-  { 
-    id: 'savings_rate', 
-    label: 'Tasa de ahorro / Superávit', 
-    name: 'Tasa de ahorro / Superávit', 
-    description: 'Porcentaje de ahorro y excedente de liquidez libre', 
-    icon: 'PiggyBank', 
-    visible: false 
+  {
+    id: 'savings_rate',
+    label: 'Tasa de ahorro / Superávit',
+    name: 'Tasa de ahorro / Superávit',
+    description: 'Porcentaje de ahorro y excedente de liquidez libre',
+    icon: 'PiggyBank',
+    visible: true
   },
-  { 
-    id: 'budget', 
-    label: 'Presupuesto mensual', 
-    name: 'Presupuesto mensual', 
-    description: 'Progreso y límites del presupuesto mensual y categorías', 
-    icon: 'Target', 
-    visible: false 
+  {
+    id: 'budget',
+    label: 'Presupuesto mensual',
+    name: 'Presupuesto mensual',
+    description: 'Progreso y límites del presupuesto mensual y categorías',
+    icon: 'Target',
+    visible: true
   }
 ];
 
 export const normalizeWidgetId = (id) => {
   if (!id) return '';
-  if (id === 'patrimonio' || id === 'patrimonio_total') return 'net_worth';
   if (id === 'inversiones') return 'investments';
   if (id === 'prestamos' || id === 'prestamos_deudas' || id === 'debts') return 'debts_loans';
-  if (id === 'balance') return 'balance_general';
-  if (id === 'mis_cuentas' || id === 'my_accounts') return 'accounts';
-  if (id === 'saldo_disponible' || id === 'available_balance' || id === 'liquid_balance' || id === 'balance_summary') return 'liquid_balance';
-  if (id === 'gastos_categoria' || id === 'charts' || id === 'expenses') return 'expenses_category';
-  if (id === 'movimientos_recientes' || id === 'recent_transactions' || id === 'recent') return 'recent_movements';
+  if (id === 'gastos_categoria' || id === 'charts' || id === 'expenses' || id === 'tus_gastos' || id === 'donut') return 'expenses_category';
+  if (id === 'movimientos_recientes' || id === 'recent_transactions' || id === 'recent' || id === 'transactions') return 'recent_movements';
   if (id === 'pagos_recurrentes' || id === 'recurring') return 'recurring_payments';
-  if (id === 'presupuesto_metas') return 'budget';
-  if (id === 'hero_net' || id === 'net_month') return 'monthly_net';
-  if (id === 'bento') return 'bento_metrics';
-  if (id === 'pill_bar_chart') return 'weekly_cashflow';
+  if (id === 'tasa_ahorro' || id === 'superavit' || id === 'savings') return 'savings_rate';
+  if (id === 'presupuesto' || id === 'presupuesto_metas') return 'budget';
+  if (id === 'pill_bar_chart' || id === 'weekly_cashflow_classic') return 'weekly_cashflow';
   return id;
 };
 
