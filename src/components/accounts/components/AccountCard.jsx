@@ -5,20 +5,9 @@ import BrandIcon from '../../ui/BrandIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatNativeCurrency, safeNumber } from '../../../utils/currencyUtils';
 
-/**
- * AccountCard: Tarjeta individual de cuenta, efectivo, inversión o tarjeta de crédito.
- */
 export default function AccountCard({
-  account,
-  onEdit,
-  onDelete,
-  onSelectCard,
-  transactions = [],
-  trm = 4050,
-  showBalance,
-  showBalances,
-  isMasked,
-  isReadOnly = false
+  account, onEdit, onDelete, onSelectCard, transactions = [],
+  trm = 4050, showBalance, showBalances, isMasked, isReadOnly = false
 }) {
   const { formatMoney, isPrivacyMode } = usePrivacy();
   const isVisible = showBalance !== undefined ? Boolean(showBalance)
@@ -29,8 +18,7 @@ export default function AccountCard({
 
   const currency = account?.currency || 'COP';
   const balance = Number(account?.currentBalance ?? (account?.balance ?? (account?.initialBalance ?? 0)));
-  const shares = Number(account?.shares || 0);
-  const unitPrice = Number(account?.unitPrice || 0);
+  const shares = Number(account?.shares || 0), unitPrice = Number(account?.unitPrice || 0);
   const rate = currency === 'USD' ? Number(trm || 4000) : currency === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1;
   const balanceInCop = Number(account?.copEquivalent) || (balance * rate);
 
@@ -57,8 +45,7 @@ export default function AccountCard({
       return true;
     });
     const rawInit = safeNumber(account?.initialBalance ?? account?.initial_balance ?? 0);
-    const initialDebt = rawInit < 0 ? Math.abs(rawInit) : 0;
-    const initialCredit = rawInit > 0 ? rawInit : 0;
+    const initialDebt = rawInit < 0 ? Math.abs(rawInit) : 0, initialCredit = rawInit > 0 ? rawInit : 0;
     const totalExpenses = cardTxs.filter(t => t?.type === 'expense').reduce((s, t) => s + safeNumber(t?.amount), 0);
     const totalPayments = cardTxs.filter(t => t?.type === 'income').reduce((s, t) => s + safeNumber(t?.amount), 0);
     saldoRestante = Math.max(0, (initialDebt + totalExpenses) - (initialCredit + totalPayments));
@@ -66,10 +53,8 @@ export default function AccountCard({
   }
 
   const x = useMotionValue(0);
-  const editOpacity = useTransform(x, [10, 60], [0, 1]);
-  const editScale = useTransform(x, [10, 60], [0.85, 1]);
-  const deleteOpacity = useTransform(x, [-10, -60], [0, 1]);
-  const deleteScale = useTransform(x, [-10, -60], [0.85, 1]);
+  const editOpacity = useTransform(x, [10, 60], [0, 1]), editScale = useTransform(x, [10, 60], [0.85, 1]);
+  const deleteOpacity = useTransform(x, [-10, -60], [0, 1]), deleteScale = useTransform(x, [-10, -60], [0.85, 1]);
 
   const vibrate = (ms) => { try { navigator?.vibrate?.(ms); } catch (_) {} };
 
@@ -118,19 +103,10 @@ export default function AccountCard({
               <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-zinc-500 truncate leading-none mt-0.5">{typeLabel}</p>
             </div>
           </div>
-
           {!isReadOnly && (
             <div className="hidden md:flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {onEdit && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(account); }} className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer" title="Editar cuenta" aria-label="Editar cuenta">
-                  <Pencil className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                </button>
-              )}
-              {onDelete && (
-                <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(account.id || account); }} className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer" title="Eliminar cuenta" aria-label="Eliminar cuenta">
-                  <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                </button>
-              )}
+              {onEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(account); }} className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer" title="Editar cuenta" aria-label="Editar cuenta"><Pencil className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></button>}
+              {onDelete && <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(account.id || account); }} className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer" title="Eliminar cuenta" aria-label="Eliminar cuenta"><Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /></button>}
             </div>
           )}
         </div>
