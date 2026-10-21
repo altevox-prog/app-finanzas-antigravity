@@ -3,6 +3,7 @@ import { Printer, RotateCcw, FileCheck2 } from 'lucide-react';
 import InvoiceHeaderPreview from './InvoiceHeaderPreview';
 import InvoiceBodyPreview from './InvoiceBodyPreview';
 import InvoiceFooterPreview from './InvoiceFooterPreview';
+import InvoiceShareActions from './InvoiceShareActions';
 
 export default function InvoiceLivePreview({
   invoice = {},
@@ -18,15 +19,18 @@ export default function InvoiceLivePreview({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm print:hidden">
+      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm print:hidden">
         <div className="flex items-center gap-2">
-          <FileCheck2 className="w-5 h-5 text-emerald-500" />
+          <FileCheck2 className="w-5 h-5 text-emerald-500 shrink-0" />
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-white">Vista Previa del Documento</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">Diseño listo para impresión o exportación PDF</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <InvoiceShareActions invoice={invoice} total={total} />
+
           {onReset && (
             <button
               type="button"
@@ -37,6 +41,7 @@ export default function InvoiceLivePreview({
               <span>Restablecer</span>
             </button>
           )}
+
           <button
             type="button"
             onClick={handlePrint}
@@ -62,23 +67,28 @@ export default function InvoiceLivePreview({
 
       <style>{`
         @media print {
-          body * {
+          body {
             visibility: hidden;
+            background: white !important;
           }
           #invoice-printable-sheet, #invoice-printable-sheet * {
-            visibility: visible;
+            visibility: visible !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
           }
           #invoice-printable-sheet {
             position: absolute;
             left: 0;
             top: 0;
             width: 100% !important;
-            max-width: 100% !important;
             margin: 0 !important;
-            padding: 20px !important;
-            border: none !important;
+            padding: 1.5rem !important;
             box-shadow: none !important;
+            border: none !important;
             background: #ffffff !important;
+          }
+          .no-print {
+            display: none !important;
           }
         }
       `}</style>
