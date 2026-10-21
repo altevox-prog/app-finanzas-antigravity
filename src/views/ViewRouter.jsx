@@ -9,10 +9,12 @@ const InvestmentsView = lazy(() => import('./InvestmentsView'));
 const RecurringView = lazy(() => import('./RecurringView'));
 const TaxView = lazy(() => import('./TaxView'));
 const NetWorthView = lazy(() => import('./NetWorthView'));
+const InvoicingView = lazy(() => import('../components/invoicing/InvoicingView'));
 
 const TAB_ALIAS = {
   inicio: 'dashboard', movements: 'transactions', movimientos: 'transactions',
-  loans: 'debts', taxes: 'tax', impuestos: 'tax', networth: 'net_worth', patrimonio: 'net_worth'
+  loans: 'debts', taxes: 'tax', impuestos: 'tax', networth: 'net_worth', patrimonio: 'net_worth',
+  facturacion: 'invoicing', facturas: 'invoicing', invoice: 'invoicing'
 };
 
 export default function ViewRouter({
@@ -115,6 +117,8 @@ export default function ViewRouter({
         );
       case 'tax':
         return <TaxView transactions={transactions} accounts={accounts} investments={investments} onBack={handleBack} onClose={handleBack} fromSettings={fromSettings} />;
+      case 'invoicing':
+        return <InvoicingView onBack={handleBack} />;
       case 'net_worth':
         return (
           <NetWorthView

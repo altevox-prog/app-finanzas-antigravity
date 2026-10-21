@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   LayoutDashboard, ArrowLeftRight, CreditCard, CalendarSync, HandCoins,
-  TrendingUp, Plus, Settings, PanelLeftClose, PanelLeftOpen
+  TrendingUp, Plus, Settings, PanelLeftClose, PanelLeftOpen, FileText
 } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 
@@ -11,7 +11,8 @@ const NAV_ITEMS = [
   { id: 'accounts', label: 'Cuentas y métodos', icon: CreditCard },
   { id: 'recurring', label: 'Pagos recurrentes', icon: CalendarSync },
   { id: 'debts', label: 'Préstamos y deudas', icon: HandCoins },
-  { id: 'investments', label: 'Inversiones y activos', icon: TrendingUp }
+  { id: 'investments', label: 'Inversiones y activos', icon: TrendingUp },
+  { id: 'invoicing', label: 'Facturación', icon: FileText, className: 'hidden md:flex' }
 ];
 
 export default function DesktopSidebar({
@@ -70,12 +71,12 @@ export default function DesktopSidebar({
       </div>
 
       <nav className={`w-full flex-1 flex flex-col justify-center items-center my-auto ${isCollapsed ? 'gap-6 py-4' : 'gap-1.5 px-3 py-4'}`}>
-        {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ id, label, icon: Icon, className: itemClass }) => {
           const isActive = activeTab === id;
           return (
             <button
               key={id} type="button" onClick={() => handleTab(id)}
-              className={`${isCollapsed ? 'w-11 h-11 rounded-2xl justify-center' : 'w-full px-3 py-2.5 rounded-xl justify-start gap-3'} flex items-center transition-all cursor-pointer relative ${
+              className={`${isCollapsed ? 'w-11 h-11 rounded-2xl justify-center' : 'w-full px-3 py-2.5 rounded-xl justify-start gap-3'} ${itemClass || 'flex'} items-center transition-all cursor-pointer relative ${
                 isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold shadow-[0_0_20px_rgba(16,185,129,0.28)]' : 'text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-white/[0.04]'
               }`}
               title={label}
