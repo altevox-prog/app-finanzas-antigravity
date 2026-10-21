@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Pencil, Trash2 } from 'lucide-react';
+import { Camera, Pencil, Trash2, ArrowRightLeft } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import CategoryIcon from '../../categories/components/CategoryIcon';
 import SwipeableRow from '../../common/SwipeableRow';
@@ -29,15 +29,20 @@ export default function TransactionItem({
   const type = String(tx?.type || '').toLowerCase();
   const amt = Number(tx?.amount) || 0;
   const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer);
-  const isExpense = !isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0);
-  const isIncome = !isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0));
+  const isNeutral = tx?.isConsolidatedTransfer || (isTransfer && (!tx?.displayType || tx?.displayType === 'transfer'));
+  const isExpense = !isNeutral && (tx?.displayType === 'expense' || (!isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0)));
+  const isIncome = !isNeutral && (tx?.displayType === 'income' || (!isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0))));
+
   const inv = parseInvoiceTx(tx);
   const invoiceTitle = inv.consecutive ? (/^factura\b/i.test(inv.consecutive) ? inv.consecutive : `Factura ${inv.consecutive}`) : 'Factura';
-  const displayName = inv.isInvoice ? invoiceTitle : (tx.note || tx.categoryName);
+  const displayName = tx?.displayName || (inv.isInvoice ? invoiceTitle : (tx?.note || tx?.categoryName || 'Movimiento'));
 
   const handleDelete = () => {
     const txLabel = displayName || 'este movimiento';
-    if (window.confirm(`¿Eliminar permanentemente "${txLabel}"?`)) onDelete?.(tx.id || tx);
+    const msg = tx.isConsolidatedTransfer
+      ? `¿Eliminar permanentemente la transferencia "${txLabel}"? Se revertirá en ambas cuentas.`
+      : `¿Eliminar permanentemente "${txLabel}"?`;
+    if (window.confirm(msg)) onDelete?.(tx.linkedIds || tx.id || tx);
   };
 
   return (
@@ -51,10 +56,16 @@ export default function TransactionItem({
       >
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/10 shadow-xs">
-            <BrandIcon
-              name={displayName || ''} size={18}
-              fallback={<CategoryIcon category={inv.isInvoice ? 'Facturación' : (category || tx.categoryName)} status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'} size={16} withBadge={false} />}
-            />
+            {isTransfer ? (
+              <div className="w-full h-full flex items-center justify-center bg-blue-500/10 text-blue-500 dark:text-blue-400">
+                <ArrowRightLeft className="w-4 h-4" />
+              </div>
+            ) : (
+              <BrandIcon
+                name={displayName || ''} size={18}
+                fallback={<CategoryIcon category={inv.isInvoice ? 'Facturación' : (category || tx.categoryName)} status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'} size={16} withBadge={false} />}
+              />
+            )}
           </div>
 
           <div className="min-w-0 flex-1">
@@ -72,6 +83,8 @@ export default function TransactionItem({
                   <span className="truncate">{tx.accountName || 'Principal'}</span>
                   {inv.clientName && <span className="truncate">· {inv.clientName}</span>}
                 </>
+              ) : isTransfer ? (
+                <span className="truncate">{tx.displaySubtitle || `Transferencia interna · ${formatTxDateClean(tx)}`}</span>
               ) : (
                 <>
                   {tx.categoryName && tx.note && <span>{tx.categoryName} · </span>}
@@ -84,7 +97,7 @@ export default function TransactionItem({
         </div>
 
         <div className="flex flex-col items-end shrink-0 pl-2">
-          <span className={`text-sm font-black font-mono tracking-tight tabular-nums whitespace-nowrap ${isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-600 dark:text-zinc-300'}`}>
+          <span className={`text-sm font-black font-mono tracking-tight tabular-nums whitespace-nowrap ${isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'}`}>
             {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
           </span>
           <div className="flex items-center gap-1 mt-0.5">

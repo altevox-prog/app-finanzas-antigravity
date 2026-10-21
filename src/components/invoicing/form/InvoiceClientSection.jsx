@@ -1,24 +1,45 @@
 import React from 'react';
-import { UserCheck, Calendar, AlertCircle } from 'lucide-react';
+import { UserCheck, Calendar, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function InvoiceClientSection({
   client = {},
   meta = {},
   updateClient,
   updateMeta,
-  isDateValid = true
+  isDateValid = true,
+  isOpen = false,
+  onToggle
 }) {
   return (
-    <div className="bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
-      <div className="border-b border-slate-100 dark:border-white/5 pb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Paso 2</span>
-        <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <UserCheck className="w-4 h-4 text-emerald-500" />
-          Datos del Cliente y Fechas
-        </h3>
+    <div className={`bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm transition-all ${
+      isOpen ? 'p-5 sm:p-6 space-y-5' : 'p-4 sm:p-5 hover:border-slate-300 dark:hover:border-white/20'
+    }`}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle?.(); }}
+        className="w-full flex items-center justify-between text-left cursor-pointer select-none group"
+      >
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Paso 2</span>
+          <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-emerald-500" />
+            Datos del Cliente y Fechas
+          </h3>
+        </div>
+        <div className="flex items-center gap-2.5">
+          {!isOpen && client?.name && (
+            <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-lg truncate max-w-[160px] sm:max-w-[240px]">
+              {client.name}
+            </span>
+          )}
+          {isOpen ? <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" /> : <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" />}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {isOpen && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 border-t border-slate-100 dark:border-white/5 pt-4">
         <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Nombre o Razón Social del Cliente</label>
@@ -109,6 +130,7 @@ export default function InvoiceClientSection({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

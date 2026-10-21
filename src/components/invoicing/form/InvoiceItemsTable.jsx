@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2, Layers } from 'lucide-react';
+import { Plus, Trash2, Layers, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatCOP } from '../../../utils/currencyUtils';
 
 export default function InvoiceItemsTable({
@@ -7,29 +7,33 @@ export default function InvoiceItemsTable({
   addItem,
   removeItem,
   updateItem,
-  subtotal = 0
+  subtotal = 0,
+  isOpen = false,
+  onToggle
 }) {
   const handleQuantityChange = (id, rawVal) => {
-    if (rawVal === '') {
-      updateItem(id, { quantity: '' });
-      return;
-    }
+    if (rawVal === '') return updateItem(id, { quantity: '' });
     const parsed = Number(rawVal);
     updateItem(id, { quantity: Number.isNaN(parsed) ? '' : Math.max(0, parsed) });
   };
 
   const handlePriceChange = (id, rawVal) => {
-    if (rawVal === '') {
-      updateItem(id, { unitPrice: '' });
-      return;
-    }
+    if (rawVal === '') return updateItem(id, { unitPrice: '' });
     const parsed = Number(rawVal);
     updateItem(id, { unitPrice: Number.isNaN(parsed) ? '' : Math.max(0, parsed) });
   };
 
   return (
-    <div className="bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
+    <div className={`bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm transition-all ${
+      isOpen ? 'p-5 sm:p-6 space-y-4' : 'p-4 sm:p-5 hover:border-slate-300 dark:hover:border-white/20'
+    }`}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle?.(); }}
+        className="w-full flex items-center justify-between text-left cursor-pointer select-none group"
+      >
         <div>
           <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Paso 3</span>
           <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -37,17 +41,33 @@ export default function InvoiceItemsTable({
             Conceptos e Ítems a Facturar
           </h3>
         </div>
-        <button
-          type="button"
-          onClick={addItem}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-all active:scale-95 cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Agregar Ítem</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          {isOpen ? (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); addItem(); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Agregar Ítem</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
+                {items.length} {items.length === 1 ? 'ítem' : 'ítems'}
+              </span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden sm:inline">
+                {formatCOP(subtotal)}
+              </span>
+            </div>
+          )}
+          {isOpen ? <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" /> : <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" />}
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {isOpen && (
+        <>
+          <div className="overflow-x-auto border-t border-slate-100 dark:border-white/5 pt-3">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-slate-200/60 dark:border-white/10 text-slate-400 font-semibold uppercase tracking-wider">
@@ -67,8 +87,7 @@ export default function InvoiceItemsTable({
                 <tr key={item.id || idx} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
                   <td className="py-2 px-2">
                     <input
-                      type="text"
-                      value={item.description || ''}
+                      type="text" value={item.description || ''}
                       onChange={(e) => updateItem(item.id, { description: e.target.value })}
                       placeholder="Descripción del servicio o producto..."
                       className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -76,9 +95,7 @@ export default function InvoiceItemsTable({
                   </td>
                   <td className="py-2 px-2 text-center">
                     <input
-                      type="number"
-                      min="0"
-                      step="any"
+                      type="number" min="0" step="any"
                       value={item.quantity === 0 ? 0 : item.quantity ?? ''}
                       onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                       className="w-full text-center px-2 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -86,9 +103,7 @@ export default function InvoiceItemsTable({
                   </td>
                   <td className="py-2 px-2 text-right">
                     <input
-                      type="number"
-                      min="0"
-                      step="1000"
+                      type="number" min="0" step="1000"
                       value={item.unitPrice === 0 ? 0 : item.unitPrice ?? ''}
                       onChange={(e) => handlePriceChange(item.id, e.target.value)}
                       className="w-full text-right px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -119,6 +134,8 @@ export default function InvoiceItemsTable({
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Subtotal Ítems:</span>
         <span className="text-sm font-bold text-slate-900 dark:text-white">{formatCOP(subtotal)}</span>
       </div>
+        </>
+      )}
     </div>
   );
 }

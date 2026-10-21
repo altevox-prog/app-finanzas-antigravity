@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDownRight, ArrowUpRight, X } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft, X } from 'lucide-react';
 import BrandIcon from '../../ui/BrandIcon';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { useBackHandler } from '../../../hooks/useBackHandler';
@@ -40,12 +40,12 @@ export default function TransactionDetailModal({ transaction, categories = [], o
         </div>
 
         <div className="text-center py-4 px-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 space-y-1">
-          <BrandIcon name={inv.isInvoice ? inv.displayName : (transaction.note || transaction.categoryName || '')} size={30} wrapperClassName="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-center shadow-xs overflow-hidden mx-auto mb-2" fallback={null} />
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold mb-1 ${isExpense ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400' : isIncome ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400' : 'bg-slate-500/10 text-slate-600 dark:text-slate-300'}`}>
-            {isExpense ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-            <span>{inv.isInvoice ? 'Ingreso por Facturación' : isExpense ? 'Gasto' : isIncome ? 'Ingreso' : 'Transferencia'}</span>
+          <BrandIcon name={inv.isInvoice ? inv.displayName : (transaction.displayName || transaction.note || transaction.categoryName || '')} size={30} wrapperClassName="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-center shadow-xs overflow-hidden mx-auto mb-2" fallback={null} />
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold mb-1 ${isTransfer ? 'bg-blue-500/10 text-blue-500 dark:text-blue-400' : isExpense ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400' : isIncome ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400' : 'bg-slate-500/10 text-slate-600 dark:text-slate-300'}`}>
+            {isTransfer ? <ArrowRightLeft className="w-3.5 h-3.5" /> : isExpense ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+            <span>{inv.isInvoice ? 'Ingreso por Facturación' : isTransfer ? 'Transferencia interna' : isExpense ? 'Gasto' : 'Ingreso'}</span>
           </div>
-          <div className={`text-3xl font-black tabular-nums tracking-tight ${isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'}`}>
+          <div className={`text-3xl font-black tabular-nums tracking-tight ${isTransfer ? 'text-slate-700 dark:text-slate-200' : isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'}`}>
             {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
           </div>
           {transaction.originalCurrency && transaction.originalCurrency !== 'COP' && (
@@ -54,7 +54,7 @@ export default function TransactionDetailModal({ transaction, categories = [], o
             </p>
           )}
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-            {inv.isInvoice ? inv.clientName : (transaction.note || transaction.categoryName)}
+            {inv.isInvoice ? inv.clientName : (transaction.displayName || transaction.note || transaction.categoryName)}
           </p>
         </div>
 
@@ -81,6 +81,16 @@ export default function TransactionDetailModal({ transaction, categories = [], o
                 <span className="flex items-center gap-1.5 justify-end"><BrandIcon name={transaction.accountName || 'Principal'} size={18} /><span>{transaction.accountName || 'Principal'}</span></span>
               </DetailRow>
               <DetailRow label="Fecha de cobro"><span className="tabular-nums font-semibold">{formatTxDateTime(transaction)}</span></DetailRow>
+            </>
+          ) : isTransfer ? (
+            <>
+              <DetailRow label="Tipo"><span className="text-blue-500 font-semibold">Transferencia interna</span></DetailRow>
+              {(transaction.fromAccountName || transaction.from_account_name) && <DetailRow label="Cuenta Origen">{transaction.fromAccountName || transaction.from_account_name}</DetailRow>}
+              {(transaction.toAccountName || transaction.to_account_name) && <DetailRow label="Cuenta Destino">{transaction.toAccountName || transaction.to_account_name}</DetailRow>}
+              {!transaction.fromAccountName && !transaction.toAccountName && (
+                <DetailRow label="Cuenta"><span className="flex items-center gap-1.5 justify-end"><BrandIcon name={transaction.accountName || 'Principal'} size={18} /><span>{transaction.accountName || 'Principal'}</span></span></DetailRow>
+              )}
+              <DetailRow label="Fecha"><span className="tabular-nums font-semibold">{formatTxDateTime(transaction)}</span></DetailRow>
             </>
           ) : (
             <>

@@ -10,7 +10,7 @@ const CACHE_TTL_MS = 20 * 60 * 1000;
 const FALLBACK_PRICES = {
   BTC: 64500, ETH: 3450, SOL: 148, USDT: 1.0, USDC: 1.0, BNB: 580, ADA: 0.42, XRP: 0.58,
   DOGE: 0.12, VOO: 512.4, SPY: 558.2, QQQ: 485.6, AAPL: 228.5, MSFT: 445.2, NVDA: 122.8,
-  TSLA: 242.0, AMZN: 186.4, GOOGL: 168.3, META: 560.0
+  TSLA: 242.0, AMZN: 186.4, GOOGL: 168.3, META: 560.0, NU: 15.20
 };
 
 const memoryCache = new Map();
@@ -97,11 +97,7 @@ async function executeFetchPrice(symbol, assetType) {
   try {
     const baseUrl = import.meta.env?.DEV ? '/api/yahoo' : 'https://query1.finance.yahoo.com';
     const res = await fetchWithTimeout(`${baseUrl}/v8/finance/chart/${symbol}?interval=1d&range=1d`, 3000);
-
-    if (res.status === 429) {
-      return getCachedPrice(symbol, true) || FALLBACK_PRICES[symbol] || null;
-    }
-
+    if (res.status === 429) return getCachedPrice(symbol, true) || FALLBACK_PRICES[symbol] || null;
     if (res.ok) {
       const data = await res.json();
       const price = parseFloat(data?.chart?.result?.[0]?.meta?.regularMarketPrice);
@@ -110,7 +106,7 @@ async function executeFetchPrice(symbol, assetType) {
         return price;
       }
     }
-  } catch (error) {
+  } catch {
     const stale = getCachedPrice(symbol, true);
     if (stale) return stale;
     if (FALLBACK_PRICES[symbol]) {

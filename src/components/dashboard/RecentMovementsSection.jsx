@@ -1,28 +1,22 @@
 import React from 'react';
-import { Activity, Inbox } from 'lucide-react';
+import { Activity, Inbox, ArrowRightLeft } from 'lucide-react';
 import CategoryIcon from '../categories/components/CategoryIcon';
 import { parseInvoiceTx } from '../../utils/invoiceTxUtils';
+import { consolidateTransfers } from '../../utils/transferTxUtils';
 
 /**
  * RecentMovementsSection
  * Componente modular para el widget de "Movimientos Recientes" en el Dashboard.
  */
 export default function RecentMovementsSection({
-  transactions = [],
-  onViewAll = null,
-  setActiveTab = null,
-  onNavigateToTab = null,
-  onNavigateToMovements = null,
-  onSelectTransaction = null,
-  formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
-  limit = 4,
-  className = '',
-  compactMode = false,
-  isReordering = false
+  transactions = [], onViewAll = null, setActiveTab = null, onNavigateToTab = null,
+  onNavigateToMovements = null, onSelectTransaction = null, formatMoney = (val) => `$${Number(val || 0).toLocaleString('es-CO')}`,
+  limit = 4, className = '', compactMode = false, isReordering = false
 }) {
   const safeList = Array.isArray(transactions) ? transactions : [];
-  const count = safeList.length;
-  const recentTransactions = safeList.slice(0, limit);
+  const consolidatedList = consolidateTransfers(safeList, 'all');
+  const count = consolidatedList.length;
+  const recentTransactions = consolidatedList.slice(0, limit);
 
   const handleViewAll = (e) => {
     if (isReordering) return;
@@ -77,8 +71,8 @@ export default function RecentMovementsSection({
                 const invoiceTitle = inv.consecutive
                   ? (/^factura\b/i.test(inv.consecutive) ? inv.consecutive : `Factura ${inv.consecutive}`)
                   : 'Factura';
-                const title = inv.isInvoice ? invoiceTitle : (tx?.note || tx?.categoryName || tx?.category || 'Movimiento');
-                const subtitle = inv.isInvoice ? (dateLabel || 'Reciente') : `${accountLabel ? `${accountLabel} • ` : ''}${dateLabel || 'Reciente'}`;
+                const title = inv.isInvoice ? invoiceTitle : (tx?.displayName || tx?.note || tx?.categoryName || tx?.category || 'Movimiento');
+                const subtitle = inv.isInvoice ? (dateLabel || 'Reciente') : (isTransfer ? (tx?.displaySubtitle || `Transferencia interna · ${dateLabel || 'Reciente'}`) : `${accountLabel ? `${accountLabel} • ` : ''}${dateLabel || 'Reciente'}`);
 
                 return (
                   <div
@@ -94,13 +88,19 @@ export default function RecentMovementsSection({
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-white/10 shadow-xs">
-                        <CategoryIcon
-                          category={inv.isInvoice ? 'Facturación' : (tx?.categoryName || tx?.category || tx?.category_id)}
-                          icon={tx?.category?.icon || tx?.icon}
-                          status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
-                          size={16}
-                          withBadge={false}
-                        />
+                        {isTransfer ? (
+                          <div className="w-full h-full flex items-center justify-center text-blue-500 dark:text-blue-400">
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                          </div>
+                        ) : (
+                          <CategoryIcon
+                            category={inv.isInvoice ? 'Facturación' : (tx?.categoryName || tx?.category || tx?.category_id)}
+                            icon={tx?.category?.icon || tx?.icon}
+                            status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'}
+                            size={16}
+                            withBadge={false}
+                          />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 truncate group-hover/item:text-emerald-500 transition-colors">
@@ -114,7 +114,7 @@ export default function RecentMovementsSection({
 
                     <div className="text-right shrink-0">
                       <span className={`text-xs sm:text-sm font-semibold font-mono tracking-tight tabular-nums whitespace-nowrap ${
-                        isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'
+                        isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'
                       }`}>
                         {isExpense ? '-' : isIncome ? '+' : ''}
                         {formatMoney(Math.abs(amt))}

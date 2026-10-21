@@ -94,6 +94,16 @@ export function useInvoiceForm() {
     return new Date(dueDateStr) >= new Date(issueDateStr);
   }, [issueDateStr, dueDateStr]);
 
+  const resetForm = () => {
+    const today = new Date().toISOString().split('T')[0];
+    setInvoice((prev) => ({
+      ...prev,
+      client: { name: '', contactPerson: '', city: '', email: '' },
+      items: [{ id: String(Date.now()), description: '', quantity: 1, unitPrice: 0 }],
+      meta: { ...prev.meta, issueDate: today, dueDate: '' }
+    }));
+  };
+
   const resetInvoice = () => {
     setInvoice(INITIAL_INVOICE_STATE);
     try {
@@ -105,7 +115,7 @@ export function useInvoiceForm() {
     invoice, setInvoice, setTemplate,
     updateEmitter, updateClient, updateMeta, updateBanking, updateTax,
     addItem, removeItem, updateItem, handleLogoUpload, removeLogo,
-    subtotal, ivaAmount, total, isDateValid, resetInvoice
+    subtotal, ivaAmount, total, isDateValid, resetInvoice, resetForm
   };
 }
 

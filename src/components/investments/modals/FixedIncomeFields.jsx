@@ -1,164 +1,74 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
-import { formatCurrency, formatUSD } from '../../../data/initialData';
-import { toSafeNumber, calculateCDTMaturityReturn } from '../../../utils/financeMath';
+import SegmentedControl from '../../common/SegmentedControl';
+import { calculateCDTMaturityReturn } from '../../../utils/financeMath';
 import { parseFormattedAmount } from '../../../utils/currencyFormatter';
 
+const INPUT_STYLE = { backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' };
+const INPUT_CLS = "w-full text-xs font-semibold px-3 py-2 rounded-xl border border-transparent focus:outline-none";
+
 export default function FixedIncomeFields({
-  subType,
-  setSubType,
-  interestRate,
-  setInterestRate,
-  startDate,
-  setStartDate,
-  dueDate,
-  setDueDate,
-  investedAmount,
-  currency = 'COP',
-  cdtTotalDays: propTotalDays,
-  cdtDaysRemaining: propDaysRemaining,
-  cdtEstimatedGain: propEstimatedGain,
-  isMatured: propIsMatured
+  subType = 'cdt', setSubType, interestRate, setInterestRate,
+  startDate, setStartDate, dueDate, setDueDate, investedAmount = '0', currency = 'COP'
 }) {
-  let totalDays = propTotalDays;
-  let daysRemaining = propDaysRemaining;
-  let isMatured = propIsMatured ?? false;
-  let estimatedGain = propEstimatedGain;
+  const numInvested = parseFormattedAmount(investedAmount);
+  const numRate = parseFloat(interestRate) || 0;
 
-  if (totalDays === undefined && startDate && dueDate) {
-    const start = new Date(startDate + 'T00:00:00');
-    const due = new Date(dueDate + 'T00:00:00');
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+  const daysTerm = (startDate && dueDate)
+    ? Math.max(1, Math.round((new Date(dueDate + 'T00:00:00') - new Date(startDate + 'T00:00:00')) / 86400000))
+    : 180;
 
-    const msPerDay = 1000 * 60 * 60 * 24;
-    totalDays = Math.max(1, Math.round((due - start) / msPerDay));
-    const diffToDue = Math.round((due - now) / msPerDay);
-    daysRemaining = diffToDue;
-    isMatured = diffToDue <= 0;
-
-    const rateNum = toSafeNumber(interestRate);
-    const invNum = typeof investedAmount === 'number' ? investedAmount : parseFormattedAmount(investedAmount) || 0;
-
-    if (invNum > 0 && rateNum > 0 && totalDays > 0) {
-      const { grossReturn } = calculateCDTMaturityReturn(invNum, rateNum, totalDays);
-      estimatedGain = grossReturn;
-    }
-  }
-
-  const handleQuickDuration = (days) => {
-    const baseStr = startDate || new Date().toISOString().split('T')[0];
-    if (!startDate) setStartDate(baseStr);
-    const baseDate = new Date(baseStr + 'T00:00:00');
-    baseDate.setDate(baseDate.getDate() + days);
-    setDueDate(baseDate.toISOString().split('T')[0]);
-  };
+  const stats = (numInvested > 0 && numRate > 0)
+    ? calculateCDTMaturityReturn(numInvested, numRate, daysTerm, 0.04)
+    : null;
 
   return (
-    <div className="space-y-3 animate-fadeIn">
-      {/* Selector de Subtipo */}
+    <div className="space-y-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5">
       <div>
-        <label className="block text-[11px] font-bold opacity-70 mb-1.5">Subtipo de Renta Fija *</label>
-        <div className="grid grid-cols-2 gap-2">
-          {[{ id: 'cdt', label: '🏛️ CDT Bancario' }, { id: 'bond', label: '📜 Bono / General' }].map((tab) => {
-            const isSelected = subType === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setSubType(tab.id)}
-                className={`p-2 rounded-xl text-center text-xs font-bold transition-all border active:scale-95 cursor-pointer ${
-                  isSelected ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'border-slate-200/80 dark:border-white/10 opacity-70 hover:opacity-100'
-                }`}
-                style={{ backgroundColor: isSelected ? undefined : 'var(--bg-input)', color: isSelected ? undefined : 'var(--text-main)' }}
-              >
-                <span className="truncate block leading-tight">{tab.label}</span>
-              </button>
-            );
-          })}
+        <label className="block text-[11px] font-bold opacity-70 mb-1">Tipo de Renta Fija</label>
+        <SegmentedControl
+          options={[{ id: 'cdt', label: 'CDT Bancario' }, { id: 'bond', label: 'Bono' }]}
+          value={subType} onChange={setSubType} size="sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-[10px] font-bold opacity-70 mb-1">Tasa de Interés (% E.A.) *</label>
+        <input
+          type="number" step="0.01" min="0" placeholder="ej. 11.5"
+          value={interestRate} onChange={(e) => setInterestRate(e.target.value)}
+          className={INPUT_CLS} style={INPUT_STYLE} required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5">
+        <div>
+          <label className="block text-[10px] font-bold opacity-70 mb-1">Fecha de Inicio *</label>
+          <input
+            type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+            className={INPUT_CLS} style={INPUT_STYLE} required
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold opacity-70 mb-1">Fecha de Vencimiento *</label>
+          <input
+            type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+            className={INPUT_CLS} style={INPUT_STYLE} required
+          />
         </div>
       </div>
 
-      {/* Detalles Renta Fija */}
-      <div className="p-3.5 rounded-2xl border space-y-2.5 animate-fadeIn" style={{ backgroundColor: 'var(--bg-card-sub)', borderColor: 'var(--border-color)' }}>
-        <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#34C759]">
-          <ShieldCheck className="w-4 h-4" />
-          <span>{subType === 'bond' ? 'Detalles del Bono / Renta Fija' : 'Detalles del CDT'}</span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="block text-[10px] font-semibold opacity-60 mb-0.5">Tasa (% E.A.)</label>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="10.5"
-              value={interestRate}
-              onChange={(e) => setInterestRate(e.target.value)}
-              className="w-full text-xs font-bold px-2 py-1.5 rounded-lg border border-transparent focus:outline-none"
-              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-            />
+      {stats && (
+        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1">
+          <div className="flex justify-between text-emerald-800 dark:text-emerald-300 font-semibold">
+            <span>Rendimiento proyectado ({daysTerm} días):</span>
+            <span className="font-mono font-bold">+${Math.round(stats.netReturn).toLocaleString('es-CO')} {currency}</span>
           </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold opacity-60 mb-0.5">Apertura</label>
-            <input
-              type="date"
-              value={startDate || new Date().toISOString().split('T')[0]}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
-              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold opacity-60 mb-0.5">Vencimiento</label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full text-[11px] px-1.5 py-1.5 rounded-lg border border-transparent focus:outline-none"
-              style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-main)' }}
-            />
+          <div className="flex justify-between text-[11px] text-emerald-700 dark:text-emerald-400">
+            <span>Total al vencimiento:</span>
+            <span className="font-mono font-bold">${Math.round(stats.maturityTotal).toLocaleString('es-CO')} {currency}</span>
           </div>
         </div>
-
-        {/* Atajos de plazo */}
-        <div className="flex items-center gap-1.5 pt-0.5">
-          <span className="text-[10px] opacity-60 font-medium">Plazo sugerido:</span>
-          {[{ label: '90 días', days: 90 }, { label: '180 días', days: 180 }, { label: '360 días', days: 360 }].map((item) => (
-            <button
-              key={item.days}
-              type="button"
-              onClick={() => handleQuickDuration(item.days)}
-              className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all border border-emerald-500/20 cursor-pointer"
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Cálculo en tiempo real */}
-        {totalDays && (
-          <div className="pt-2 border-t flex items-center justify-between text-[11px]" style={{ borderColor: 'var(--border-color)' }}>
-            <div>
-              <span className="opacity-60 block text-[9px] uppercase font-bold">Plazo</span>
-              <span className={`font-black ${isMatured ? 'text-[#FF3B30]' : 'text-[#007AFF]'}`}>
-                {isMatured ? 'Vencido' : `Vence en ${daysRemaining} días (${totalDays}d totales)`}
-              </span>
-            </div>
-
-            {estimatedGain != null && (
-              <div className="text-right">
-                <span className="opacity-60 block text-[9px] uppercase font-bold">Ganancia pactada</span>
-                <span className="font-black text-[#34C759]">
-                  +{currency === 'USD' ? formatUSD(estimatedGain) : formatCurrency(estimatedGain)}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

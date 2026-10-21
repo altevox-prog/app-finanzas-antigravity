@@ -20,7 +20,7 @@ export const calculateNetWorth = ({
     if (!inv) return;
     const rate = getRate(String(inv.currency || 'USD').toUpperCase(), trmValue);
     const ticker = (inv.ticker || inv.symbol || (inv.name && inv.name.length <= 6 ? inv.name : '')).toUpperCase().trim();
-    const livePrice = safeNumber(livePrices[ticker]), shares = safeNumber(inv.shares);
+    const livePrice = safeNumber(livePrices[ticker]), shares = safeNumber(inv.shares ?? inv.quantity);
     const rawInvested = safeNumber(inv.investedAmount ?? inv.invested_amount ?? inv.total_invested ?? inv.totalInvested ?? inv.amount);
     const rawCurrent = safeNumber(inv.currentAmount ?? inv.currentValue ?? inv.current_value);
 

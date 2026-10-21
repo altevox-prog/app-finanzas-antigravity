@@ -8,6 +8,7 @@ import InvestmentCategoryHeader from '../InvestmentCategoryHeader';
 import MarketAssetFields from './parts/MarketAssetFields';
 import NonMarketAssetFields from './parts/NonMarketAssetFields';
 import { toSafeNumber, calculateCDTAccruedReturn } from '../../../utils/financeMath';
+import { parseStrictNumber } from '../utils/investmentConsolidation';
 
 const calcFutureDate = (baseDateStr, days = 180) => {
   const d = baseDateStr ? new Date(baseDateStr + 'T00:00:00') : new Date();
@@ -15,9 +16,7 @@ const calcFutureDate = (baseDateStr, days = 180) => {
   return d.toISOString().split('T')[0];
 };
 
-export default function InvestmentFormModal({
-  isOpen, onClose, onSave, initialInvestment = null, initialData = null
-}) {
+export default function InvestmentFormModal({ isOpen, onClose, onSave, initialInvestment = null, initialData = null }) {
   useBackHandler(isOpen, onClose);
   const { enableDecimals: privacyEnableDecimals } = usePrivacy();
   const enableDecimals = privacyEnableDecimals ?? getEnableDecimals();
@@ -44,7 +43,7 @@ export default function InvestmentFormModal({
       const rawCurr = c.currentAmount ?? c.currentValue ?? c.current_value;
       setCurrentAmount(rawCurr && Number(rawCurr) !== 0 ? formatCurrencyInput(rawCurr, true) : '');
       setInterestRate(c.interestRate !== undefined ? String(c.interestRate) : (c.rate !== undefined ? String(c.rate) : ''));
-      const sDate = c.startDate || c.start_date || c.issueDate || c.issue_date || (cat === 'fixed' ? new Date().toISOString().split('T')[0] : '');
+      const sDate = c.startDate || c.start_date || c.issueDate || (cat === 'fixed' ? new Date().toISOString().split('T')[0] : '');
       setStartDate(sDate); setDueDate(c.dueDate || c.due_date || (cat === 'fixed' ? calcFutureDate(sDate) : ''));
       setSubType(c.subType === 'bond' ? 'bond' : 'cdt');
     } else {
@@ -54,10 +53,6 @@ export default function InvestmentFormModal({
       setStartDate(today); setDueDate(calcFutureDate(today));
     }
   }, [initialInvestment, initialData, isOpen, enableDecimals]);
-
-  useEffect(() => {
-    if (['fixed', 'liquidity'].includes(category) && currency !== 'COP') setCurrency('COP');
-  }, [category, currency]);
 
   const isMarketAsset = ['crypto', 'variable'].includes(category);
 
@@ -84,54 +79,45 @@ export default function InvestmentFormModal({
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
-    e?.preventDefault?.(); e?.stopPropagation?.();
-    if (submittingRef.current || isSubmitting) return;
-    const finalName = name.trim();
-    if (!finalName) return;
+    e?.preventDefault?.();
+    if (submittingRef.current || isSubmitting || !name.trim()) return;
     submittingRef.current = true; setIsSubmitting(true);
     try {
-      const sNum = isMarketAsset ? (parseFloat(shares) || 0) : undefined;
-      const bNum = isMarketAsset ? (parseFormattedAmount(buyPrice) || 0) : undefined;
+      const sNum = isMarketAsset ? parseStrictNumber(shares, 0) : undefined;
+      const bNum = isMarketAsset ? parseFormattedAmount(buyPrice) : undefined;
       const cNum = isMarketAsset ? (parseFormattedAmount(currentPrice) || bNum || 0) : undefined;
       const invNum = isMarketAsset ? Math.round((sNum || 0) * (bNum || 0) * 100) / 100 : (parseFormattedAmount(investedAmount) || 0);
-      const rawCurrentStr = String(currentAmount ?? '').trim();
-      const currNum = isMarketAsset ? Math.round((sNum || 0) * (cNum || 0) * 100) / 100 : (rawCurrentStr !== '' ? parseFormattedAmount(rawCurrentStr) : invNum);
+      const currNum = isMarketAsset ? Math.round((sNum || 0) * (cNum || 0) * 100) / 100 : (currentAmount ? parseFormattedAmount(currentAmount) : invNum);
       const isFixed = category === 'fixed', fixedStart = isFixed ? (startDate || new Date().toISOString().split('T')[0]) : undefined;
       const fixedDue = isFixed ? (dueDate || calcFutureDate(fixedStart)) : undefined;
+      const lots = isMarketAsset && sNum > 0 ? [{ id: `lot-${Date.now()}`, date: startDate || new Date().toISOString().split('T')[0], shares_count: sNum, purchase_price_per_share: bNum || 0, broker_fee: 0 }] : [];
 
       const payload = {
         id: currentInitial?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `inv-${Date.now()}`),
-        name: finalName, ticker: isMarketAsset && ticker ? ticker.toUpperCase().trim() : '',
+        name: name.trim(), ticker: isMarketAsset && ticker ? ticker.toUpperCase().trim() : '',
         assetType: isFixed ? (subType === 'bond' ? 'bond' : 'cdt') : (category === 'crypto' ? 'crypto' : category === 'variable' ? (assetType || 'stock') : (category === 'liquidity' ? 'fund' : 'other')),
         type: isFixed ? 'fixed_income' : undefined, category, subType: isFixed ? subType : undefined, currency,
         institution: institution.trim() || undefined, shares: sNum > 0 ? sNum : undefined, quantity: sNum > 0 ? sNum : undefined,
         buyPrice: bNum > 0 ? bNum : undefined, currentPrice: cNum > 0 ? cNum : undefined,
-        investedAmount: invNum, invested_amount: invNum, amount: invNum, currentAmount: currNum, currentValue: currNum, current_value: currNum,
-        notes: currentInitial?.notes || '', interestRate: interestRate ? parseFloat(interestRate) : undefined, rate: interestRate ? parseFloat(interestRate) : undefined,
-        startDate: fixedStart, start_date: fixedStart, dueDate: fixedDue, due_date: fixedDue, issueDate: fixedStart, isImmediateLiquidity: category === 'liquidity'
+        investedAmount: invNum, amount: invNum, currentAmount: currNum, currentValue: currNum, lots,
+        interestRate: interestRate ? parseFloat(interestRate) : undefined, rate: interestRate ? parseFloat(interestRate) : undefined,
+        startDate: fixedStart, dueDate: fixedDue
       };
 
-      if (onSave) {
-        const res = onSave(payload);
-        if (res?.catch) res.catch((err) => console.warn('[Offline/Sync] Advertencia inversión:', err));
-      }
+      if (onSave) await onSave(payload);
       onClose();
-    } catch (err) { console.error('Error al guardar inversión:', err); }
-    finally { setIsSubmitting(false); submittingRef.current = false; }
+    } finally { setIsSubmitting(false); submittingRef.current = false; }
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-fadeIn" onClick={onClose}>
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[85vh] sm:max-h-[90vh] overflow-hidden animate-slideUp" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[85vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5" /></div>
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">{isEditing ? 'Editar inversión' : 'Nueva inversión'}</h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Gestiona tus activos y calcula rendimientos</p>
-            </div>
+            <div><h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">{isEditing ? 'Editar inversión' : 'Nueva inversión'}</h3><p className="text-[11px] text-slate-500">Gestiona tus activos y calcula rendimientos</p></div>
           </div>
-          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer" title="Cerrar"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -143,9 +129,8 @@ export default function InvestmentFormModal({
               <NonMarketAssetFields category={category} name={name} setName={setName} investedAmount={investedAmount} setInvestedAmount={setInvestedAmount} currentAmount={currentAmount} setCurrentAmount={setCurrentAmount} startDate={startDate} setStartDate={setStartDate} dueDate={dueDate} setDueDate={setDueDate} interestRate={interestRate} setInterestRate={setInterestRate} subType={subType} setSubType={setSubType} handleEstimateCurrentCDT={handleEstimateCurrentCDT} />
             )}
           </div>
-
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 rounded-b-3xl">
-            <button type="submit" disabled={isSubmitting} className={`w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer active:scale-98 flex items-center justify-center text-xs sm:text-sm ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+            <button type="submit" disabled={isSubmitting} className={`w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg transition-all cursor-pointer active:scale-98 flex items-center justify-center text-xs sm:text-sm ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
               {isSubmitting ? 'Guardando...' : (isEditing ? 'Guardar cambios' : 'Añadir inversión')}
             </button>
           </div>
