@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { id: 'recurring', label: 'Pagos recurrentes', icon: CalendarSync },
   { id: 'debts', label: 'Préstamos y deudas', icon: HandCoins },
   { id: 'investments', label: 'Inversiones y activos', icon: TrendingUp },
-  { id: 'invoicing', label: 'Facturación', icon: FileText, className: 'hidden md:flex' }
+  { id: 'invoicing', label: 'Facturación', icon: FileText }
 ];
 
 export default function DesktopSidebar({
