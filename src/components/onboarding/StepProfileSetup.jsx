@@ -3,31 +3,15 @@ import { User, Lock, Eye, EyeOff, Check, Fingerprint, Coins, ArrowRight, Loader2
 import AppLogo from '../ui/AppLogo';
 
 export default function StepProfileSetup({
-  name,
-  setName,
-  pin,
-  setPin,
-  confirmPin,
-  setConfirmPin,
-  showPin,
-  setShowPin,
-  enableBiometrics,
-  isBiometricSupported,
-  biometricLoading,
-  biometricMessage,
-  onToggleBiometrics,
-  restoring,
-  restoreError,
-  onRestoreBackup,
-  onNextStep
+  name, setName, pin, setPin, confirmPin, setConfirmPin, showPin, setShowPin,
+  enableBiometrics, isBiometricSupported, biometricLoading, biometricMessage,
+  onToggleBiometrics, restoring, restoreError, onRestoreBackup, onNextStep
 }) {
   const isNameValid = name.trim().length >= 2;
-  const isPinLengthValid = pin.length >= 4 && pin.length <= 6;
-  const isPinMatching = isPinLengthValid && pin === confirmPin;
+  const isPinMatching = pin.length >= 4 && pin.length <= 6 && pin === confirmPin;
   const isFormValid = isNameValid && isPinMatching;
 
   const handleCleanPin = (setter) => (e) => setter(e.target.value.replace(/\D/g, '').slice(0, 6));
-
   const inputBase = "w-full pl-10 pr-3.5 py-3 rounded-2xl border bg-slate-50 dark:bg-black/40 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2";
 
   return (
@@ -46,56 +30,38 @@ export default function StepProfileSetup({
       </div>
 
       <div className="space-y-4">
-        {/* Nombre */}
         <div>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">¿Cómo te llamas? *</label>
           <div className="relative">
-            <input
-              type="text" required autoFocus placeholder="Tu nombre" value={name} onChange={(e) => setName(e.target.value)}
-              className={`${inputBase} font-semibold border-slate-200 dark:border-white/10 focus:ring-emerald-500`}
-            />
+            <input type="text" required autoFocus placeholder="Tu nombre" value={name} onChange={(e) => setName(e.target.value)} className={`${inputBase} font-semibold border-slate-200 dark:border-white/10 focus:ring-emerald-500`} />
             <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
-        {/* PIN */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">PIN de seguridad (4 a 6 dígitos) *</label>
-            <button
-              type="button" onClick={() => setShowPin(!showPin)}
-              className="text-[11px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
-            >
+            <button type="button" onClick={() => setShowPin(!showPin)} className="text-[11px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer">
               {showPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               <span>{showPin ? 'Ocultar' : 'Ver'}</span>
             </button>
           </div>
           <div className="relative">
-            <input
-              type={showPin ? 'text' : 'password'} inputMode="numeric" pattern="[0-9]*" maxLength={6} required
-              placeholder="••••" value={pin} onChange={handleCleanPin(setPin)}
-              className={`${inputBase} font-bold tracking-widest border-slate-200 dark:border-white/10 focus:ring-emerald-500`}
-            />
+            <input type={showPin ? 'text' : 'password'} inputMode="numeric" pattern="[0-9]*" maxLength={6} required placeholder="••••" value={pin} onChange={handleCleanPin(setPin)} className={`${inputBase} font-bold tracking-widest border-slate-200 dark:border-white/10 focus:ring-emerald-500`} />
             <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
-        {/* Confirmar PIN */}
         <div>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Confirma tu PIN *</label>
           <div className="relative">
             <input
               type={showPin ? 'text' : 'password'} inputMode="numeric" pattern="[0-9]*" maxLength={6} required
               placeholder="••••" value={confirmPin} onChange={handleCleanPin(setConfirmPin)}
-              className={`${inputBase} font-bold tracking-widest ${
-                confirmPin.length >= 4
-                  ? isPinMatching ? 'border-emerald-500 focus:ring-emerald-500' : 'border-rose-500 focus:ring-rose-500'
-                  : 'border-slate-200 dark:border-white/10 focus:ring-emerald-500'
-              }`}
+              className={`${inputBase} font-bold tracking-widest ${confirmPin.length >= 4 ? (isPinMatching ? 'border-emerald-500 focus:ring-emerald-500' : 'border-rose-500 focus:ring-rose-500') : 'border-slate-200 dark:border-white/10 focus:ring-emerald-500'}`}
             />
             <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
-
           <div className="mt-1.5 px-1 min-h-[18px]">
             {pin.length > 0 && pin.length < 4 && <span className="text-[11px] font-medium text-amber-500 dark:text-amber-400">El PIN debe tener al menos 4 números</span>}
             {pin.length >= 4 && confirmPin.length > 0 && !isPinMatching && <span className="text-[11px] font-medium text-rose-500 dark:text-rose-400">Los PINs no coinciden</span>}
@@ -103,7 +69,6 @@ export default function StepProfileSetup({
           </div>
         </div>
 
-        {/* Biometría */}
         {isBiometricSupported && (
           <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30 transition-all">
             <div className="flex items-center justify-between gap-3">
@@ -116,32 +81,22 @@ export default function StepProfileSetup({
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">Accede rápidamente sin tener que digitar tu PIN</p>
                 </div>
               </div>
-
-              <button
-                type="button" onClick={onToggleBiometrics} disabled={biometricLoading}
-                className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 disabled:opacity-50 ${enableBiometrics ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                title="Activar o desactivar biometría"
-              >
+              <button type="button" onClick={onToggleBiometrics} disabled={biometricLoading} className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 disabled:opacity-50 ${enableBiometrics ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`} title="Activar o desactivar biometría">
                 <div className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform ${enableBiometrics ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
-
             {biometricLoading && (
               <p className="text-[11px] text-blue-500 font-medium mt-2 flex items-center gap-1.5 animate-pulse">
                 <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-ping" />
                 Verificando sensor biométrico... Confirma en tu dispositivo.
               </p>
             )}
-
             {biometricMessage && !biometricLoading && (
-              <p className={`text-[11px] font-medium mt-2 ${enableBiometrics ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'}`}>
-                {biometricMessage}
-              </p>
+              <p className={`text-[11px] font-medium mt-2 ${enableBiometrics ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'}`}>{biometricMessage}</p>
             )}
           </div>
         )}
 
-        {/* Moneda */}
         <div>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Moneda predeterminada</label>
           <div className="flex items-center justify-between p-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/30">
@@ -157,10 +112,7 @@ export default function StepProfileSetup({
       </div>
 
       <div className="mt-8 space-y-4">
-        <button
-          type="button" onClick={onNextStep} disabled={!isFormValid}
-          className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-2xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-        >
+        <button type="button" onClick={onNextStep} disabled={!isFormValid} className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-2xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
           <span>Continuar al tutorial</span>
           <ArrowRight className="w-4 h-4" />
         </button>
@@ -170,15 +122,8 @@ export default function StepProfileSetup({
           <span className="bg-white dark:bg-[#12141C] px-3 text-[11px] font-bold text-slate-400 tracking-wider uppercase absolute">O TAMBIÉN</span>
         </div>
 
-        <button
-          type="button" onClick={onRestoreBackup} disabled={restoring}
-          className="w-full py-3 px-4 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
-        >
-          {restoring ? (
-            <><Loader2 className="w-4 h-4 animate-spin text-emerald-600" /><span>Restaurando datos...</span></>
-          ) : (
-            <><FileJson className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /><span>¿Ya tienes una copia de seguridad? <strong className="underline text-emerald-600 dark:text-emerald-400">Restaurar datos</strong></span></>
-          )}
+        <button type="button" onClick={onRestoreBackup} disabled={restoring} className="w-full py-3 px-4 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
+          {restoring ? <><Loader2 className="w-4 h-4 animate-spin text-emerald-600" /><span>Restaurando datos...</span></> : <><FileJson className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /><span>¿Ya tienes una copia de seguridad? <strong className="underline text-emerald-600 dark:text-emerald-400">Restaurar datos</strong></span></>}
         </button>
 
         {restoreError && (
