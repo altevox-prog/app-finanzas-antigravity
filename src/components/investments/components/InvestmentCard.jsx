@@ -6,62 +6,43 @@ import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatCurrency, formatUSD } from '../../../data/initialData';
 import { toSafeNumber, convertUSDtoCOP, convertCOPtoUSD, calculateCDTMaturityReturn, calculateMonthlyLoanReturn } from '../../../utils/financeMath';
 
-export default function InvestmentCard({
-  investment, inv: invProp, metrics: metricsProp, viewCurrency = 'COP',
-  livePrices = {}, trm = 4050, onEdit, onDelete, onQuickUpdate, onOpenLiquidation
-}) {
+export default function InvestmentCard({ investment, inv: invProp, metrics: metricsProp, viewCurrency = 'COP', livePrices = {}, trm = 4050, onEdit, onDelete, onQuickUpdate, onOpenLiquidation }) {
   const inv = investment || invProp;
   const [isExpanded, setIsExpanded] = useState(false);
   const { isPrivacyMode, enableDecimals } = usePrivacy();
   const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
 
-  const formatInvestMoney = (amount, cur = viewCurrency) => cur === 'USD' 
-    ? formatUSD(amount, isPrivacyMode, showDecimals) 
-    : formatCurrency(amount, isPrivacyMode, showDecimals);
+  const formatInvestMoney = (amt, cur = viewCurrency) => cur === 'USD' ? formatUSD(amt, isPrivacyMode, showDecimals) : formatCurrency(amt, isPrivacyMode, showDecimals);
 
   const m = metricsProp || (() => {
     if (!inv) return {};
     const ticker = (inv.ticker || inv.symbol || (inv.name && inv.name.length <= 6 ? inv.name : '')).toUpperCase().trim();
-    const livePrice = livePrices[ticker];
-    const rawInvested = toSafeNumber(inv.investedAmount ?? inv.invested_amount ?? inv.amount ?? inv.totalInvested);
-    const rawCurrent = toSafeNumber(inv.currentAmount ?? inv.currentValue ?? inv.current_value);
-    const shares = inv.shares && Number(inv.shares) > 0 ? toSafeNumber(inv.shares) : 0;
+    const livePrice = livePrices[ticker], rawInvested = toSafeNumber(inv.investedAmount ?? inv.invested_amount ?? inv.amount ?? inv.totalInvested);
+    const rawCurrent = toSafeNumber(inv.currentAmount ?? inv.currentValue ?? inv.current_value), shares = inv.shares && Number(inv.shares) > 0 ? toSafeNumber(inv.shares) : 0;
     const buyPrice = toSafeNumber(inv.buyPrice || inv.purchasePrice) || (shares > 0 && rawInvested > 0 ? rawInvested / shares : 0);
     const currentPrice = toSafeNumber(livePrice || inv.currentPrice || inv.unitPrice) || (shares > 0 && rawCurrent > 0 ? rawCurrent / shares : buyPrice);
-    const currency = inv.currency || 'USD';
-    const trmVal = toSafeNumber(trm) || 4050;
+    const currency = inv.currency || 'USD', trmVal = toSafeNumber(trm) || 4050;
     const totalCostOrigin = rawInvested > 0 ? rawInvested : (shares > 0 && buyPrice > 0 ? (shares * buyPrice) : 0);
     const currentValueOrigin = (livePrice && shares > 0) ? shares * livePrice : (rawCurrent > 0 ? rawCurrent : (shares > 0 && currentPrice > 0 ? shares * currentPrice : totalCostOrigin));
-    const totalCostUSD = currency === 'USD' ? totalCostOrigin : convertCOPtoUSD(totalCostOrigin, trmVal);
-    const currentValueUSD = currency === 'USD' ? currentValueOrigin : convertCOPtoUSD(currentValueOrigin, trmVal);
-    const totalCostCOP = currency === 'COP' ? totalCostOrigin : convertUSDtoCOP(totalCostOrigin, trmVal);
-    const currentValueCOP = currency === 'COP' ? currentValueOrigin : convertUSDtoCOP(currentValueOrigin, trmVal);
+    const totalCostUSD = currency === 'USD' ? totalCostOrigin : convertCOPtoUSD(totalCostOrigin, trmVal), currentValueUSD = currency === 'USD' ? currentValueOrigin : convertCOPtoUSD(currentValueOrigin, trmVal);
+    const totalCostCOP = currency === 'COP' ? totalCostOrigin : convertUSDtoCOP(totalCostOrigin, trmVal), currentValueCOP = currency === 'COP' ? currentValueOrigin : convertUSDtoCOP(currentValueOrigin, trmVal);
     const pnlPercentage = totalCostOrigin > 0 ? ((currentValueOrigin - totalCostOrigin) / totalCostOrigin) * 100 : 0;
-
-    return {
-      ticker, shares, buyPrice, currentPrice, currency,
-      totalCostOrigin, currentValueOrigin, totalCostUSD, currentValueUSD,
-      pnlUSD: currentValueUSD - totalCostUSD, totalCostCOP, currentValueCOP,
-      pnlCOP: currentValueCOP - totalCostCOP, pnlPercentage, isPositive: pnlPercentage >= 0
-    };
+    return { ticker, shares, buyPrice, currentPrice, currency, totalCostOrigin, currentValueOrigin, totalCostUSD, currentValueUSD, pnlUSD: currentValueUSD - totalCostUSD, totalCostCOP, currentValueCOP, pnlCOP: currentValueCOP - totalCostCOP, pnlPercentage, isPositive: pnlPercentage >= 0 };
   })();
 
   if (!inv) return null;
 
   const isPrivateLoan = inv.subType === 'private_loan' || inv.assetType === 'loan';
   const isCDT = !isPrivateLoan && (inv.assetType === 'cdt' || inv.assetType === 'fixed_income' || inv.category === 'CDT' || inv.category === 'fixed' || inv.subType === 'cdt');
-  const todayStr = new Date().toISOString().split('T')[0];
-  const isMatured = isCDT && Boolean(inv.dueDate) && todayStr >= inv.dueDate;
+  const todayStr = new Date().toISOString().split('T')[0], isMatured = isCDT && Boolean(inv.dueDate) && todayStr >= inv.dueDate;
 
-  let cdtTermDays = 0;
-  let cdtStats = null;
+  let cdtTermDays = 0, cdtStats = null;
   if (isCDT) {
-    const invested = Number(inv.investedAmount || inv.buyPrice || inv.currentAmount || 0);
-    const rate = Number(inv.interestRate || 0);
+    const invested = Number(inv.investedAmount || inv.buyPrice || inv.currentAmount || 0), rate = Number(inv.interestRate || 0);
     if (inv.startDate && inv.dueDate) cdtTermDays = Math.max(1, Math.round((new Date(inv.dueDate + 'T00:00:00') - new Date(inv.startDate + 'T00:00:00')) / 86400000));
     else if (inv.termDays) cdtTermDays = Number(inv.termDays);
     else if (inv.dueDate) cdtTermDays = Math.max(1, Math.round((new Date(inv.dueDate + 'T00:00:00') - new Date(inv.created_at || inv.createdAt || Date.now())) / 86400000));
-    if (!cdtTermDays || cdtTermDays <= 0) cdtTermDays = 180;
+    cdtTermDays = (!cdtTermDays || cdtTermDays <= 0) ? 180 : cdtTermDays;
     cdtStats = calculateCDTMaturityReturn(invested, rate, cdtTermDays, 0.04);
   }
 
@@ -118,31 +99,18 @@ export default function InvestmentCard({
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-              <div>
-                <span className="block text-[10px] tracking-wider text-slate-400 font-semibold uppercase">CAPITAL INVERTIDO</span>
-                <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums block mt-0.5 text-xs sm:text-sm">{m.currency === 'USD' ? `${formatInvestMoney(m.totalCostUSD, 'USD')} USD` : `${formatInvestMoney(m.totalCostCOP, 'COP')} COP`}</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums block mt-0.5">{m.currency === 'USD' ? `≈ ${formatInvestMoney(m.totalCostCOP, 'COP')} COP` : `≈ ${formatInvestMoney(m.totalCostUSD, 'USD')} USD`}</span>
-              </div>
-              <div>
-                <span className="block text-[10px] tracking-wider text-slate-400 font-semibold uppercase">RENDIMIENTO TOTAL</span>
-                <span className={`font-bold font-mono tracking-tight tabular-nums block mt-0.5 text-xs sm:text-sm ${m.isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-                  {m.currency === 'USD' ? `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD` : `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP`}
-                  <span className="text-[11px] font-bold ml-1">({m.pnlPercentage >= 0 ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%)</span>
-                </span>
-                <span className={`text-[10px] font-mono tracking-tight tabular-nums block mt-0.5 ${m.isPositive ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-rose-600/80 dark:text-rose-400/80'}`}>
-                  ≈ {m.currency === 'USD' ? `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP` : `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD`}
-                </span>
-              </div>
-              <div className="pt-2 border-t border-slate-200/60 dark:border-white/5">
-                <span className="block text-[10px] tracking-wider text-slate-400 font-semibold uppercase">PRECIO ACTUAL</span>
-                <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums block mt-0.5 text-xs sm:text-sm">{m.shares > 0 ? formatInvestMoney(m.currentPrice, m.currency) : formatInvestMoney(m.currency === 'USD' ? m.currentValueUSD : m.currentValueCOP, m.currency)}</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums block mt-0.5">{m.shares > 0 ? `${m.shares.toLocaleString('es-CO', { maximumFractionDigits: 6 })} ${m.ticker || 'uds'}` : '1 posición'}</span>
-              </div>
-              <div className="pt-2 border-t border-slate-200/60 dark:border-white/5">
-                <span className="block text-[10px] tracking-wider text-slate-400 font-semibold uppercase">PRECIO DE COMPRA</span>
-                <span className="font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums block mt-0.5 text-xs sm:text-sm">{m.shares > 0 ? formatInvestMoney(m.buyPrice, m.currency) : formatInvestMoney(m.currency === 'USD' ? m.totalCostUSD : m.totalCostCOP, m.currency)}</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-tight tabular-nums block mt-0.5">{m.shares > 0 ? 'Promedio compra' : 'Costo inicial'}</span>
-              </div>
+              {[
+                { title: 'CAPITAL INVERTIDO', val: m.currency === 'USD' ? `${formatInvestMoney(m.totalCostUSD, 'USD')} USD` : `${formatInvestMoney(m.totalCostCOP, 'COP')} COP`, sub: m.currency === 'USD' ? `≈ ${formatInvestMoney(m.totalCostCOP, 'COP')} COP` : `≈ ${formatInvestMoney(m.totalCostUSD, 'USD')} USD` },
+                { title: 'RENDIMIENTO TOTAL', val: `${m.currency === 'USD' ? `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD` : `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP`} (${m.pnlPercentage >= 0 ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%)`, sub: `≈ ${m.currency === 'USD' ? `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP` : `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD`}`, isPnl: true },
+                { title: 'PRECIO ACTUAL', val: m.shares > 0 ? formatInvestMoney(m.currentPrice, m.currency) : formatInvestMoney(m.currency === 'USD' ? m.currentValueUSD : m.currentValueCOP, m.currency), sub: m.shares > 0 ? `${m.shares.toLocaleString('es-CO', { maximumFractionDigits: 6 })} ${m.ticker || 'uds'}` : '1 posición', border: true },
+                { title: 'PRECIO DE COMPRA', val: m.shares > 0 ? formatInvestMoney(m.buyPrice, m.currency) : formatInvestMoney(m.currency === 'USD' ? m.totalCostUSD : m.totalCostCOP, m.currency), sub: m.shares > 0 ? 'Promedio compra' : 'Costo inicial', border: true }
+              ].map((it, i) => (
+                <div key={i} className={it.border ? "pt-2 border-t border-slate-200/60 dark:border-white/5" : ""}>
+                  <span className="block text-[10px] tracking-wider text-slate-400 font-semibold uppercase">{it.title}</span>
+                  <span className={`font-bold font-mono tracking-tight tabular-nums block mt-0.5 text-xs sm:text-sm ${it.isPnl ? (m.isPositive ? 'text-emerald-500' : 'text-rose-500') : 'text-slate-900 dark:text-white'}`}>{it.val}</span>
+                  <span className={`text-[10px] font-mono tracking-tight tabular-nums block mt-0.5 ${it.isPnl ? (m.isPositive ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-rose-600/80 dark:text-rose-400/80') : 'text-slate-500 dark:text-slate-400'}`}>{it.sub}</span>
+                </div>
+              ))}
             </div>
 
             {isCDT && cdtStats && (

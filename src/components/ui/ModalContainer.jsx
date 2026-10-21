@@ -27,49 +27,24 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
   const closeTx = () => {
     (m.closeAddTransaction || m.closeTx || m.closeTransactionModal || m.handleCloseTransaction)?.();
     m.setIsAddTxOpen?.(false); m.setIsAddTransactionOpen?.(false); m.setIsNewTxModalOpen?.(false);
-    (m.closeTransfer || m.closeTransferModal || m.handleCloseTransfer)?.();
-    m.setIsTransferModalOpen?.(false);
+    (m.closeTransfer || m.closeTransferModal || m.handleCloseTransfer)?.(); m.setIsTransferModalOpen?.(false);
   };
-
-  const closeLoan = () => {
-    (m.closeAddLoan || m.closeLoan || m.closeAddDebt || m.closeDebtModal || m.handleCloseLoan)?.();
-    m.setIsAddLoanOpen?.(false); m.setIsNewDebtModalOpen?.(false);
-  };
-
-  const closeRecurring = () => {
-    (m.closeAddRecurring || m.closeRecurring || m.closeRecurringModal || m.handleCloseRecurring)?.();
-    m.setIsAddRecurringOpen?.(false); m.setIsNewRecurringModalOpen?.(false);
-  };
-
-  const closeInvestment = () => {
-    (m.closeInvestment || m.closeInvestmentModal || m.handleCloseInvestment)?.();
-    m.setIsAddInvestmentOpen?.(false); m.setIsNewInvestmentModalOpen?.(false);
-  };
-
-  const closeProfile = () => {
-    m.setIsSettingsOpen?.(false);
-    m.setIsProfileOpen?.(false);
-  };
-
-  const navigateFromSettings = (tab) => {
-    closeProfile();
-    m.setFromSettings?.(true);
-    m.handleTabChange?.(tab, 'settings');
-  };
-
+  const closeLoan = () => { (m.closeAddLoan || m.closeLoan || m.closeAddDebt || m.closeDebtModal || m.handleCloseLoan)?.(); m.setIsAddLoanOpen?.(false); m.setIsNewDebtModalOpen?.(false); };
+  const closeRecurring = () => { (m.closeAddRecurring || m.closeRecurring || m.closeRecurringModal || m.handleCloseRecurring)?.(); m.setIsAddRecurringOpen?.(false); m.setIsNewRecurringModalOpen?.(false); };
+  const closeInvestment = () => { (m.closeInvestment || m.closeInvestmentModal || m.handleCloseInvestment)?.(); m.setIsAddInvestmentOpen?.(false); m.setIsNewInvestmentModalOpen?.(false); };
+  const closeProfile = () => { m.setIsSettingsOpen?.(false); m.setIsProfileOpen?.(false); };
+  const navigateFromSettings = (tab) => { closeProfile(); m.setFromSettings?.(true); m.handleTabChange?.(tab, 'settings'); };
   const activeSubscriptions = (m.recurringPayments?.length > 0) ? m.recurringPayments : (m.subscriptions || []);
 
   return (
     <Suspense fallback={null}>
-      {/* 1. Modal Transacción */}
       <AnimatePresence>
         {isTxOpen && (
           <AddTransactionModal
             key="global-add-transaction-modal" isOpen={isTxOpen}
             onClose={m.closeAddTransaction || m.closeTx || m.closeTransactionModal || closeTx}
             onSave={m.handleSaveTransaction} onAddTransaction={m.handleAddTransaction}
-            onTransfer={m.onTransfer || m.handleExecuteTransfer}
-            accounts={m.accounts || []} categories={m.categories || []}
+            onTransfer={m.onTransfer || m.handleExecuteTransfer} accounts={m.accounts || []} categories={m.categories || []}
             onAddCategory={m.handleAddCategory} onAddSubcategory={m.handleAddSubcategory}
             onUpdateSubcategory={m.handleUpdateSubcategory} onDeleteSubcategory={m.handleDeleteSubcategory}
             onAddAccount={m.handleAddAccount} defaultDate={m.selectedDay || new Date().toLocaleDateString('en-CA')}
@@ -79,18 +54,15 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         )}
       </AnimatePresence>
 
-      {/* 2. Modal Inversión */}
       <AnimatePresence mode="wait">
         {isInvestmentOpen && (
           <AddInvestmentModal
-            isOpen={isInvestmentOpen}
-            onClose={m.closeInvestment || m.closeInvestmentModal || closeInvestment}
+            isOpen={isInvestmentOpen} onClose={m.closeInvestment || m.closeInvestmentModal || closeInvestment}
             onSave={(newInv) => { m.handleAddInvestment?.(newInv); closeInvestment(); m.handleTabChange?.('investments'); }}
           />
         )}
       </AnimatePresence>
 
-      {/* 3. Modal Préstamo / Deuda */}
       <AnimatePresence mode="wait">
         {isLoanOpen && (
           <AddLoanModal
@@ -101,18 +73,15 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         )}
       </AnimatePresence>
 
-      {/* 4. Modal Recurrente */}
       {isRecurringOpen && (
         <AddRecurringModal
-          isOpen={isRecurringOpen}
-          onClose={m.closeAddRecurring || m.closeRecurring || m.closeRecurringModal || closeRecurring}
+          isOpen={isRecurringOpen} onClose={m.closeAddRecurring || m.closeRecurring || m.closeRecurringModal || closeRecurring}
           onSave={(newItem) => { m.handleAddRecurring?.(newItem); closeRecurring(); m.handleTabChange?.('recurring'); }}
           accounts={m.accounts || []} categories={m.categories || []}
           onAddCategory={m.handleAddCategory} onAddSubcategory={m.handleAddSubcategory} trm={m.trm || 4050}
         />
       )}
 
-      {/* 5. Modal Cuenta */}
       {Boolean(m.isAccountModalOpen || m.isAddAccountOpen) && (
         <AddAccountModal
           isOpen={Boolean(m.isAccountModalOpen || m.isAddAccountOpen)}
@@ -121,7 +90,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         />
       )}
 
-      {/* 6. Selector de Mes */}
       {m.showMonthPicker && (
         <DesktopMonthPicker
           isOpen={m.showMonthPicker} onClose={() => m.setShowMonthPicker?.(false)}
@@ -131,7 +99,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         />
       )}
 
-      {/* 7. Dropdown Calendario */}
       {m.isCalendarOpen && (
         <CalendarDropdown
           isOpen={m.isCalendarOpen} onClose={() => m.setIsCalendarOpen?.(false)}
@@ -140,7 +107,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         />
       )}
 
-      {/* 8. Tarjeta de Crédito Detalle */}
       {Boolean(m.selectedCreditCardDetail) && (
         <CreditCardDetailModal
           isOpen={Boolean(m.selectedCreditCardDetail)} onClose={() => m.setSelectedCreditCardDetail?.(null)}
@@ -150,7 +116,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         />
       )}
 
-      {/* 9. Widgets Modal */}
       {Boolean(m.isEditWidgetsModalOpen) && (
         <EditWidgetsModal
           isOpen={m.isEditWidgetsModalOpen} onClose={() => m.setIsEditWidgetsModalOpen?.(false)}
@@ -159,7 +124,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         />
       )}
 
-      {/* 10. Perfil y Ajustes */}
       {Boolean(m.isSettingsOpen || m.isProfileOpen) && (
         <ProfileModal
           key={`profile-modal-${m.profileResetKey || 0}`} isOpen={true} onClose={closeProfile}
@@ -185,10 +149,8 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
         />
       )}
 
-      {/* 11. Tutorial */}
       {Boolean(m.showTutorial) && <OnboardingFlow tutorialOnly onClose={() => m.setShowTutorial?.(false)} />}
 
-      {/* 12. Bloqueo */}
       {m.isLocked && Boolean(m.securitySettings?.pinEnabled) && Boolean(m.securitySettings?.pin && String(m.securitySettings.pin).trim().length >= 4) && (
         <LockScreen
           userProfile={m.userProfile} expectedPin={m.securitySettings?.pin || ''}
