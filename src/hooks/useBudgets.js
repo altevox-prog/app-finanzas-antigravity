@@ -43,7 +43,6 @@ export function useBudgets(isResettingRef, options = {}) {
     };
   }, [explicitUser]);
 
-  // Helper para obtener ID de usuario
   const getUid = useCallback(async () => activeUserRef.current?.id || (await getSupabaseUser())?.id, []);
 
   // 2. Consulta y carga inicial desde Supabase
@@ -69,11 +68,8 @@ export function useBudgets(isResettingRef, options = {}) {
   }, [getUid]);
 
   useEffect(() => {
-    if (!resetRef?.current && isSupabaseConfigured && supabase && activeUser?.id) {
-      fetchBudgets(activeUser.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeUser?.id]);
+    if (!resetRef?.current && isSupabaseConfigured && supabase && activeUser?.id) fetchBudgets(activeUser.id);
+  }, [activeUser?.id, fetchBudgets, resetRef]);
 
   // 3. Suscripción en Tiempo Real (Realtime WebSockets)
   useEffect(() => {
@@ -114,13 +110,11 @@ export function useBudgets(isResettingRef, options = {}) {
   const updateGlobalBudget = useCallback(async (amount) => {
     const val = Math.max(0, Number(amount) || 0);
     setBudgets((prev) => ({ ...prev, global: val }));
-
     if (!isSupabaseConfigured || !supabase) return;
     try {
       const uid = await getUid();
       if (!uid) return;
-      const nowIso = new Date().toISOString();
-      const globalId = ensureUUID(`${uid}-global-budget`);
+      const nowIso = new Date().toISOString(), globalId = ensureUUID(`${uid}-global-budget`);
       const baseRec = { id: globalId, user_id: uid, name: 'Límite Global', category: 'General', period: 'monthly', amount: val, updated_at: nowIso };
 
       const { error: bErr } = await supabase.from('budgets').upsert([{ ...baseRec, is_global: true }], { onConflict: 'id' });
@@ -135,21 +129,13 @@ export function useBudgets(isResettingRef, options = {}) {
   const updateCategoryBudget = useCallback(async (categoryId, amount) => {
     const val = Math.max(0, Number(amount) || 0);
     setBudgets((prev) => ({ ...prev, categories: { ...(prev?.categories || {}), [categoryId]: val } }));
-
     if (!isSupabaseConfigured || !supabase || !categoryId) return;
     try {
       const uid = await getUid();
       if (!uid) return;
       await supabase.from('budgets').upsert([{
-        id: ensureUUID(`${uid}-budget-${categoryId}`),
-        user_id: uid,
-        name: `Presupuesto ${categoryId}`,
-        category: categoryId,
-        category_id: categoryId,
-        period: 'monthly',
-        amount: val,
-        is_global: false,
-        updated_at: new Date().toISOString()
+        id: ensureUUID(`${uid}-budget-${categoryId}`), user_id: uid, name: `Presupuesto ${categoryId}`,
+        category: categoryId, category_id: categoryId, period: 'monthly', amount: val, is_global: false, updated_at: new Date().toISOString()
       }], { onConflict: 'id' });
     } catch (err) {
       console.error('[useBudgets] Error al guardar presupuesto de categoría:', err);
@@ -167,9 +153,7 @@ export function useBudgets(isResettingRef, options = {}) {
     if (!isSupabaseConfigured || !supabase) return;
     try {
       const uid = await getUid();
-      if (uid) {
-        await supabase.from('budgets').delete().eq('id', ensureUUID(`${uid}-budget-${categoryId}`)).eq('user_id', uid);
-      }
+      if (uid) await supabase.from('budgets').delete().eq('id', ensureUUID(`${uid}-budget-${categoryId}`)).eq('user_id', uid);
     } catch (err) {
       console.error('[useBudgets] Error al eliminar presupuesto de categoría:', err);
     }
@@ -178,13 +162,7 @@ export function useBudgets(isResettingRef, options = {}) {
   const resetBudgets = useCallback(() => setBudgets({ ...INITIAL_BUDGETS }), []);
 
   return {
-    budgets,
-    setBudgets,
-    updateGlobalBudget,
-    handleSetGlobalBudget: updateGlobalBudget,
-    updateCategoryBudget,
-    removeCategoryBudget,
-    fetchBudgets,
-    resetBudgets
+    budgets, setBudgets, updateGlobalBudget, handleSetGlobalBudget: updateGlobalBudget,
+    updateCategoryBudget, removeCategoryBudget, fetchBudgets, resetBudgets
   };
 }

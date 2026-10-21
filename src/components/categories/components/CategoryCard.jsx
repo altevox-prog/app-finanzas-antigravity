@@ -10,27 +10,10 @@ const actBtnClass = "p-2 opacity-50 hover:opacity-100 text-slate-600 dark:text-z
  * Tarjeta individual de categoría con contador de subcategorías, gestión de etiquetas y paleta de colores.
  */
 export default function CategoryCard({
-  category,
-  isExpanded,
-  onToggleExpand,
-  onEditCategory,
-  onDeleteCategory,
-  canDeleteCategory = true,
-  subInput = '',
-  setSubInput,
-  isActiveSubInput = false,
-  onOpenSubInput,
-  onCloseSubInput,
-  onSubmitSubcategory,
-  editingSubId,
-  editSubName = '',
-  setEditSubName,
-  editSubColor = '#007AFF',
-  setEditSubColor,
-  onStartEditSub,
-  onCancelEditSub,
-  onSaveEditSub,
-  onDeleteSubcategory
+  category, isExpanded, onToggleExpand, onEditCategory, onDeleteCategory, canDeleteCategory = true,
+  subInput = '', setSubInput, isActiveSubInput = false, onOpenSubInput, onCloseSubInput, onSubmitSubcategory,
+  editingSubId, editSubName = '', setEditSubName, editSubColor = '#007AFF', setEditSubColor,
+  onStartEditSub, onCancelEditSub, onSaveEditSub, onDeleteSubcategory
 }) {
   const subcats = category.subcategories || [];
 
@@ -91,9 +74,7 @@ export default function CategoryCard({
                     <div key={sub.id} className="flex flex-col gap-1.5 p-2 rounded-xl border border-[#34C759] w-full sm:w-auto bg-slate-100 dark:bg-zinc-800">
                       <div className="flex items-center gap-1">
                         <input
-                          type="text"
-                          autoFocus
-                          value={editSubName}
+                          type="text" autoFocus value={editSubName}
                           onChange={(e) => setEditSubName(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') onSaveEditSub(category.id, sub.id);
@@ -112,9 +93,7 @@ export default function CategoryCard({
                         <span className="text-[10px] opacity-60">Color:</span>
                         {PRESET_COLORS.slice(0, 6).map((c) => (
                           <button
-                            key={c}
-                            type="button"
-                            onClick={() => setEditSubColor(c)}
+                            key={c} type="button" onClick={() => setEditSubColor(c)}
                             className={`w-3.5 h-3.5 rounded-full transition-transform cursor-pointer ${editSubColor === c ? 'scale-125 ring-1 ring-[#34C759]' : 'opacity-80 hover:scale-110'}`}
                             style={{ backgroundColor: c }}
                           />
@@ -150,10 +129,7 @@ export default function CategoryCard({
             <div className="pt-2 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center gap-1.5 animate-slide-up">
               <CornerDownRight className="w-3.5 h-3.5 text-[#34C759] shrink-0" />
               <input
-                type="text"
-                autoFocus
-                placeholder="Nueva subcategoría..."
-                value={subInput}
+                type="text" autoFocus placeholder="Nueva subcategoría..." value={subInput}
                 onChange={(e) => setSubInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') onSubmitSubcategory(category.id); }}
                 className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#34C759]"

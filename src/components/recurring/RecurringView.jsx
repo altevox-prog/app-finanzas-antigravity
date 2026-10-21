@@ -8,17 +8,16 @@ import SwipeableRow from '../common/SwipeableRow';
 import { safeNumber } from '../../utils/financeMath';
 import { processDueRecurringPayments, advanceNextDate, getTodayLocalString, normalizeDateToYYYYMMDD } from '../../services/recurring/recurringAutoProcessor';
 import { generateUUID } from '../../utils/recordMerger';
-const FREQ_FACTORS = { weekly: 4.33, biweekly: 2, monthly: 1, bimonthly: 0.5, quarterly: 1/3, semiannual: 1/6, yearly: 1/12 };
-const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+const FREQ_FACTORS = { weekly: 4.33, biweekly: 2, monthly: 1, bimonthly: 0.5, quarterly: 1/3, semiannual: 1/6, yearly: 1/12 }, DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
 export default function RecurringView({
-  recurringPayments = [], onAddRecurring, onUpdateRecurring, onDeleteRecurring,
-  onBack, fromSettings = false, previousView, accounts = [], categories = [],
-  onAddCategory, onAddSubcategory, trm = 4000, onAddTransaction = null
+  recurringPayments = [], onAddRecurring, onUpdateRecurring, onDeleteRecurring, onBack,
+  fromSettings = false, previousView, accounts = [], categories = [], onAddCategory, onAddSubcategory, trm = 4000, onAddTransaction = null
 }) {
   const { formatMoney } = usePrivacy();
   const [isModalOpen, setIsModalOpen] = useState(false), [editingItem, setEditingItem] = useState(null);
-  const [filterType, setFilterType] = useState('all'), [processingId, setProcessingId] = useState(null);
-  const todayStr = getTodayLocalString();
+  const [filterType, setFilterType] = useState('all'), [processingId, setProcessingId] = useState(null), todayStr = getTodayLocalString();
   const accountMap = useMemo(() => new Map((accounts || []).map((a) => [a.id, a])), [accounts]);
   const categoryMap = useMemo(() => new Map((categories || []).map((c) => [c.id, c])), [categories]);
   const getItemNextDate = (item) => normalizeDateToYYYYMMDD(item?.nextPaymentDate || item?.nextDate || item?.next_date || '');
@@ -36,12 +35,9 @@ export default function RecurringView({
         const desc = item.name || item.description || item.note || 'Movimiento recurrente', amount = Number(item.amount) || 0;
         await onAddTransaction({
           id: generateUUID(), description: desc, note: desc, amount, originalAmount: Number(item.originalAmount || item.amount) || amount,
-          currency: item.currency || item.originalCurrency || 'COP', originalCurrency: item.originalCurrency || item.currency || 'COP',
-          exchangeRate: Number(item.exchangeRate) || 1, type: item.type === 'income' ? 'income' : 'expense',
-          category: item.categoryName || item.category || 'Recurrentes', categoryName: item.categoryName || item.category || 'Recurrentes',
-          categoryId: item.categoryId || item.category_id || '', subcategoryId: item.subcategoryId || item.subcategory_id || null,
-          subcategoryName: item.subcategoryName || null, accountId: item.accountId || item.account_id || '', accountName: item.accountName || 'Principal',
-          date: nextDate, createdAt: new Date().toISOString(), isRecurring: true, recurringId: item.id
+          currency: item.currency || item.originalCurrency || 'COP', originalCurrency: item.originalCurrency || item.currency || 'COP', exchangeRate: Number(item.exchangeRate) || 1, type: item.type === 'income' ? 'income' : 'expense',
+          category: item.categoryName || item.category || 'Recurrentes', categoryName: item.categoryName || item.category || 'Recurrentes', categoryId: item.categoryId || item.category_id || '', subcategoryId: item.subcategoryId || item.subcategory_id || null,
+          subcategoryName: item.subcategoryName || null, accountId: item.accountId || item.account_id || '', accountName: item.accountName || 'Principal', date: nextDate, createdAt: new Date().toISOString(), isRecurring: true, recurringId: item.id
         });
       }
       await onUpdateRecurring?.(updatedItem);
@@ -75,8 +71,8 @@ export default function RecurringView({
                 </div>
                 <div className="flex items-center gap-1.5 pt-0.5 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
                   <span className="font-medium text-slate-600 dark:text-slate-300">{formatFreq(item)}</span>
-                  {nextDate && (<><span className="opacity-40">•</span><span className={`text-[11px] font-semibold ${isPending ? (isOverdue ? 'text-rose-600' : 'text-amber-600') : 'text-emerald-600 dark:text-emerald-400'}`}>{isPending ? (isOverdue ? 'Venció: ' : 'Vence hoy: ') : 'Próx: '}{new Date(nextDate + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}</span></>)}
-                  {item.accountName && (<><span className="opacity-40">•</span><span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 inline-flex items-center gap-1 truncate max-w-[130px]"><BrandIcon name={item.accountName} type={accountMap.get(item.accountId)?.type} size={11} fallback={null} /><span className="truncate">{item.accountName}</span></span></>)}
+                  {nextDate && <><span className="opacity-40">•</span><span className={`text-[11px] font-semibold ${isPending ? (isOverdue ? 'text-rose-600' : 'text-amber-600') : 'text-emerald-600 dark:text-emerald-400'}`}>{isPending ? (isOverdue ? 'Venció: ' : 'Vence hoy: ') : 'Próx: '}{new Date(nextDate + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}</span></>}
+                  {item.accountName && <><span className="opacity-40">•</span><span className="px-2 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 inline-flex items-center gap-1 truncate max-w-[130px]"><BrandIcon name={item.accountName} type={accountMap.get(item.accountId)?.type} size={11} fallback={null} /><span className="truncate">{item.accountName}</span></span></>}
                 </div>
               </div>
             </div>
@@ -86,8 +82,7 @@ export default function RecurringView({
                 {item.originalCurrency && item.originalCurrency !== 'COP' && <span className="text-[10px] text-slate-400 font-mono tracking-tight tabular-nums">({Number(item.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} {item.originalCurrency})</span>}
               </div>
               <div className="hidden md:flex items-center justify-end w-14 shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button type="button" onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button>
-                <button type="button" onClick={(e) => { e.stopPropagation(); if (confirm(`¿Eliminar "${item.name}"?`)) onDeleteRecurring?.(item.id); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button><button type="button" onClick={(e) => { e.stopPropagation(); if (confirm(`¿Eliminar "${item.name}"?`)) onDeleteRecurring?.(item.id); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>
               </div>
             </div>
           </div>
@@ -95,8 +90,7 @@ export default function RecurringView({
             <div onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} className="flex items-center justify-between pt-2.5 mt-1 border-t border-slate-100 dark:border-white/5 gap-2">
               <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">¿Deseas registrar este movimiento?</span>
               <div className="flex items-center gap-2 ml-auto">
-                <button type="button" disabled={processingId === item.id} onClick={(e) => { e.stopPropagation(); processRecurringCycle(item, false); }} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/80 disabled:opacity-50">Omitir</button>
-                <button type="button" disabled={processingId === item.id} onClick={(e) => { e.stopPropagation(); processRecurringCycle(item, true); }} className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"><Check className="w-3.5 h-3.5" /><span>Aprobar</span></button>
+                <button type="button" disabled={processingId === item.id} onClick={(e) => { e.stopPropagation(); processRecurringCycle(item, false); }} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 transition-all cursor-pointer border border-slate-200/80 disabled:opacity-50">Omitir</button><button type="button" disabled={processingId === item.id} onClick={(e) => { e.stopPropagation(); processRecurringCycle(item, true); }} className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"><Check className="w-3.5 h-3.5" /><span>Aprobar</span></button>
               </div>
             </div>
           )}
@@ -107,25 +101,20 @@ export default function RecurringView({
   return (
     <div className="space-y-4 animate-fadeIn pb-12">
       <div className="flex items-center gap-3 min-w-0 mb-2">
-        {Boolean(onBack || fromSettings || previousView === 'settings') && (
-          <button type="button" onClick={handleGoBack} className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 cursor-pointer border border-slate-200/60 bg-white dark:bg-zinc-900 shadow-sm shrink-0" title="Volver"><ArrowLeft className="w-5 h-5" /></button>
-        )}
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate">Pagos recurrentes</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Control de gastos fijos y suscripciones automáticas</p>
-        </div>
+        {Boolean(onBack || fromSettings || previousView === 'settings') && <button type="button" onClick={handleGoBack} className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 cursor-pointer border border-slate-200/60 bg-white dark:bg-zinc-900 shadow-sm shrink-0" title="Volver"><ArrowLeft className="w-5 h-5" /></button>}
+        <div className="min-w-0"><h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate">Pagos recurrentes</h1><p className="text-xs text-slate-500 dark:text-slate-400 truncate">Control de gastos fijos y suscripciones automáticas</p></div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-        {[
-          { label: 'Gastos comprometidos', icon: <TrendingDown className="w-3.5 h-3.5 text-rose-500"/>, dot: 'bg-rose-500', val: `-${formatMoney(totalExpenseProjected)}`, sub: 'Proyección mensual fija', valCls: 'text-rose-500 dark:text-rose-400' },
-          { label: 'Servicios activos', icon: <Repeat className="w-3.5 h-3.5 text-indigo-500"/>, dot: 'bg-indigo-500', val: activeItems.length, sub: `${activeItems.filter(i => (i.mode || 'auto') !== 'manual').length} automáticos • ${activeItems.filter(i => i.mode === 'manual').length} manuales`, valCls: 'text-slate-800 dark:text-white' }
-        ].map((m, idx) => (
-          <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-            <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">{m.icon} {m.label}</span><span className={`w-2 h-2 rounded-full ${m.dot} shrink-0`} /></div>
-            <div className={`text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums ${m.valCls}`}>{m.val}</div>
-            <p className="text-[11px] text-slate-400 mt-1 font-medium">{m.sub}</p>
-          </div>
-        ))}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><TrendingDown className="w-3.5 h-3.5 text-rose-500"/> Gastos comprometidos</span><span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" /></div>
+          <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-rose-500 dark:text-rose-400">-{formatMoney(totalExpenseProjected)}</div>
+          <p className="text-[11px] text-slate-400 mt-1 font-medium">Proyección mensual fija</p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Repeat className="w-3.5 h-3.5 text-indigo-500"/> Servicios activos</span><span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" /></div>
+          <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-slate-800 dark:text-white">{activeItems.length}</div>
+          <p className="text-[11px] text-slate-400 mt-1 font-medium">{activeItems.filter(i => (i.mode || 'auto') !== 'manual').length} automáticos • {activeItems.filter(i => i.mode === 'manual').length} manuales</p>
+        </div>
       </div>
       {safeRecurring.length > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
@@ -145,11 +134,7 @@ export default function RecurringView({
         </div>
       ) : (
         <div className="space-y-6">
-          {[
-            { title: 'Pendientes por confirmar', badge: `${pendingItems.length} pendientes`, badgeCls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25', sub: 'Requiere tu aprobación', items: pendingItems, pending: true },
-            { title: 'Anotación automática', badge: 'Auto', badgeCls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25', sub: `${autoItems.length} servicios`, items: autoItems, pending: false },
-            { title: 'Programados por confirmar', badge: 'Manual', badgeCls: 'bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-400', sub: `${regularManualItems.length} recordatorios`, items: regularManualItems, pending: false }
-          ].filter((s) => s.items?.length > 0).map((s) => (
+          {[{ title: 'Pendientes por confirmar', badge: `${pendingItems.length} pendientes`, badgeCls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25', sub: 'Requiere tu aprobación', items: pendingItems, pending: true }, { title: 'Anotación automática', badge: 'Auto', badgeCls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25', sub: `${autoItems.length} servicios`, items: autoItems, pending: false }, { title: 'Programados por confirmar', badge: 'Manual', badgeCls: 'bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-400', sub: `${regularManualItems.length} recordatorios`, items: regularManualItems, pending: false }].filter((s) => s.items?.length > 0).map((s) => (
             <div key={s.title} className="space-y-3">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2"><h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">{s.title}</h2><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badgeCls}`}>{s.badge}</span></div>
