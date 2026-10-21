@@ -80,7 +80,8 @@ export default function InvestmentFormModal({ isOpen, onClose, onSave, initialIn
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
-    if (submittingRef.current || isSubmitting || !name.trim()) return;
+    const resolvedName = (name || ticker || '').trim();
+    if (submittingRef.current || isSubmitting || !resolvedName) return;
     submittingRef.current = true; setIsSubmitting(true);
     try {
       const sNum = isMarketAsset ? parseStrictNumber(shares, 0) : undefined;
@@ -94,7 +95,7 @@ export default function InvestmentFormModal({ isOpen, onClose, onSave, initialIn
 
       const payload = {
         id: currentInitial?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `inv-${Date.now()}`),
-        name: name.trim(), ticker: isMarketAsset && ticker ? ticker.toUpperCase().trim() : '',
+        name: resolvedName, ticker: isMarketAsset && ticker ? ticker.toUpperCase().trim() : '',
         assetType: isFixed ? (subType === 'bond' ? 'bond' : 'cdt') : (category === 'crypto' ? 'crypto' : category === 'variable' ? (assetType || 'stock') : (category === 'liquidity' ? 'fund' : 'other')),
         type: isFixed ? 'fixed_income' : undefined, category, subType: isFixed ? subType : undefined, currency,
         institution: institution.trim() || undefined, shares: sNum > 0 ? sNum : undefined, quantity: sNum > 0 ? sNum : undefined,

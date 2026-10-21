@@ -15,7 +15,7 @@ const CRYPTO_PRESETS = [
 ];
 
 const VARIABLE_PRESETS = [
-  { sym: 'NU', name: 'Nu Holdings Ltd.', type: 'stock', cat: 'variable' },
+  { sym: 'NU', name: 'Nu Holdings Ltd. (Nubank)', type: 'stock', cat: 'variable' },
   { sym: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'etf', cat: 'variable' },
   { sym: 'SPY', name: 'SPDR S&P 500 ETF', type: 'etf', cat: 'variable' },
   { sym: 'QQQ', name: 'Invesco QQQ (Nasdaq 100)', type: 'etf', cat: 'variable' },
@@ -33,6 +33,7 @@ export default function MarketAssetFields({
 }) {
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [isManualPrice, setIsManualPrice] = useState(false);
+  const [isManualAsset, setIsManualAsset] = useState(false);
   const activePresets = category === 'crypto' ? CRYPTO_PRESETS : VARIABLE_PRESETS;
 
   const handleFetchQuote = async (symbolToFetch) => {
@@ -52,8 +53,13 @@ export default function MarketAssetFields({
   const handleSelectSuggestedTicker = (item) => {
     const sym = item.symbol.toUpperCase().trim();
     setTicker(sym);
-    if (item.name) setName(item.name);
+    setName(item.name || sym);
     handleFetchQuote(sym);
+  };
+
+  const handleClearSelectedTicker = () => {
+    setTicker('');
+    setName('');
   };
 
   const handleSelectPreset = (item) => {
@@ -67,26 +73,44 @@ export default function MarketAssetFields({
 
   return (
     <div className="space-y-3.5 animate-fadeIn">
-      <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5">
-        <label className="text-[11px] font-bold opacity-70 block">Buscador de Activo (Ticker o Nombre)</label>
-        <TickerSearchInput value={ticker} onChange={setTicker} onSelect={handleSelectSuggestedTicker} placeholder={category === 'crypto' ? 'ej. BTC, ETH, SOL' : 'ej. Nubank, AAPL, VOO'} inputStyle={INPUT_STYLE} className="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none uppercase" />
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5">
-          <span className="text-[10px] opacity-40 font-semibold mr-0.5">Top:</span>
-          {activePresets.map((item) => (
-            <button key={item.sym} type="button" onClick={() => handleSelectPreset(item)} className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer shrink-0 ${ticker === item.sym ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-200/60 dark:bg-white/5 opacity-70 hover:opacity-100 text-slate-700 dark:text-slate-300'}`}>
-              {item.sym}
-            </button>
-          ))}
+      {isManualAsset ? (
+        <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold opacity-70">Activo manual / no listado</label>
+            <button type="button" onClick={() => setIsManualAsset(false)} className="text-xs text-emerald-500 hover:underline cursor-pointer">Volver al buscador</button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input type="text" placeholder="Ticker (ej. MI-ACTIVO)" value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} className={INPUT_CLS} style={INPUT_STYLE} />
+            <input type="text" required placeholder="Nombre del activo *" value={name} onChange={(e) => setName(e.target.value)} className={INPUT_CLS} style={INPUT_STYLE} />
+          </div>
         </div>
-      </div>
-      <div>
-        <label className="block text-[11px] font-bold opacity-70 mb-1">Nombre del Activo *</label>
-        <input type="text" required placeholder={category === 'crypto' ? 'ej. Bitcoin' : 'ej. Nu Holdings Ltd.'} value={name} onChange={(e) => setName(e.target.value)} className={INPUT_CLS} style={INPUT_STYLE} />
-      </div>
+      ) : (
+        <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5">
+          <label className="text-[11px] font-bold opacity-70 block">Activo de Inversión</label>
+          <TickerSearchInput ticker={ticker} name={name} onSelect={handleSelectSuggestedTicker} onClear={handleClearSelectedTicker} placeholder={category === 'crypto' ? 'Buscar cripto (ej. BTC, ETH)' : 'Buscar acción o ETF (ej. Nubank, AAPL)'} inputStyle={INPUT_STYLE} className="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl border border-transparent focus:outline-none uppercase" />
+          {!ticker && (
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5">
+              <span className="text-[10px] opacity-40 font-semibold mr-0.5">Top:</span>
+              {activePresets.map((item) => (
+                <button key={item.sym} type="button" onClick={() => handleSelectPreset(item)} className="px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer shrink-0 bg-slate-200/60 dark:bg-white/5 opacity-70 hover:opacity-100 text-slate-700 dark:text-slate-300">
+                  {item.sym}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="pt-0.5">
+            <button type="button" onClick={() => setIsManualAsset(true)} className="text-[11px] text-slate-400 hover:text-slate-600 dark:text-neutral-500 dark:hover:text-white underline cursor-pointer">
+              ¿Activo privado o no listado en bolsa? Registrar manualmente
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="block text-[11px] font-bold opacity-70 mb-1">Moneda de origen *</label>
         <SegmentedControl options={[{ id: 'COP', label: 'COP ($)' }, { id: 'USD', label: 'USD ($)' }]} value={currency} onChange={setCurrency} size="sm" />
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <div>
           <label className="block text-[10px] font-bold opacity-70 mb-1">Cantidad *</label>
@@ -112,6 +136,7 @@ export default function MarketAssetFields({
           <AmountInput value={currentPrice} onChange={(cleanVal) => setCurrentPrice(cleanVal)} allowDecimals readOnly={!isManualPrice} placeholder={isFetchingPrice ? 'Cargando...' : '0.00'} className={`${NUM_INPUT_CLS} ${isManualPrice ? 'text-amber-500' : 'text-emerald-500'} font-mono`} style={{ backgroundColor: 'var(--bg-input)' }} />
         </div>
       </div>
+
       <InvestmentProfitSummary shares={shares} buyPrice={buyPrice} currentPrice={currentPrice} currency={currency} />
     </div>
   );
