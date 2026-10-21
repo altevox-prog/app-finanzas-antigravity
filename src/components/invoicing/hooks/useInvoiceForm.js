@@ -23,11 +23,9 @@ export function useInvoiceForm() {
   }, [invoiceSerialized]);
 
   const setTemplate = (template) => {
-    const defaultTitle = template === 'servicios' ? 'FACTURA DE SERVICIOS' : 'DOCUMENTO SOPORTE EN ADQUISICIONES EFECTUADAS A NO OBLIGADOS A FACTURAR';
+    const defaultTitle = template === 'servicios' ? 'FACTURA DE SERVICIOS' : 'SOPORTE EN ADQUISICIONES EFECTUADAS, NO OBLIGADOS A FACTURAR';
     setInvoice((prev) => ({ ...prev, template, docTitle: defaultTitle }));
   };
-
-  const setDocTitle = (docTitle) => setInvoice((prev) => ({ ...prev, docTitle }));
 
   const updateEmitter = (patch) => setInvoice((prev) => ({ ...prev, emitter: { ...prev.emitter, ...patch } }));
   const updateClient = (patch) => setInvoice((prev) => ({ ...prev, client: { ...prev.client, ...patch } }));
@@ -104,7 +102,7 @@ export function useInvoiceForm() {
   };
 
   return {
-    invoice, setInvoice, setTemplate, setDocTitle,
+    invoice, setInvoice, setTemplate,
     updateEmitter, updateClient, updateMeta, updateBanking, updateTax,
     addItem, removeItem, updateItem, handleLogoUpload, removeLogo,
     subtotal, ivaAmount, total, isDateValid, resetInvoice

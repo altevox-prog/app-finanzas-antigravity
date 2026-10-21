@@ -6,7 +6,7 @@ export default function InvoiceBodyPreview({ items = [] }) {
   const emptyRowsCount = Math.max(0, minRows - items.length);
 
   return (
-    <div className="py-2">
+    <div className="pt-1 pb-2">
       <table className="w-full text-left text-xs border-collapse">
         <thead>
           <tr className="bg-slate-800 text-white font-semibold">

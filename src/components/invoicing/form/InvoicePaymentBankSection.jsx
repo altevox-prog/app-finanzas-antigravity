@@ -103,7 +103,7 @@ export default function InvoicePaymentBankSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-blue-500" />
-            <span className="text-xs font-bold text-slate-800 dark:text-white">Cuenta Internacional (ACH & Wire) / PayPal</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-white">Cuenta Internacional (ACH & Wire)</span>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" checked={Boolean(achWire.enabled)} onChange={(e) => updateBanking('achWire', { enabled: e.target.checked })} className="sr-only peer" />
@@ -112,7 +112,7 @@ export default function InvoicePaymentBankSection({
         </div>
 
         {achWire.enabled && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <div>
               <label className="block text-[11px] text-slate-400 mb-1">Banco Internacional</label>
               <input type="text" value={achWire.bank || ''} onChange={(e) => updateBanking('achWire', { bank: e.target.value })} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white" />
@@ -121,11 +121,7 @@ export default function InvoicePaymentBankSection({
               <label className="block text-[11px] text-slate-400 mb-1">N° Cuenta / Routing (ABA)</label>
               <input type="text" value={achWire.accountNumber || ''} onChange={(e) => updateBanking('achWire', { accountNumber: e.target.value })} placeholder="Cuenta / ABA" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white" />
             </div>
-            <div>
-              <label className="block text-[11px] text-slate-400 mb-1">PayPal</label>
-              <input type="email" value={banking.paypal || ''} onChange={(e) => updateBanking('paypal', e.target.value)} placeholder="email@paypal.com" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white" />
-            </div>
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-2">
               <label className="block text-[11px] text-slate-400 mb-1">Dirección del Banco</label>
               <input type="text" value={achWire.bankAddress || ''} onChange={(e) => updateBanking('achWire', { bankAddress: e.target.value })} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white" />
             </div>

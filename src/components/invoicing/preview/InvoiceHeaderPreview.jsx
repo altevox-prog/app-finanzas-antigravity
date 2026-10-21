@@ -1,6 +1,23 @@
 import React from 'react';
 import { formatCOP } from '../../../utils/currencyUtils';
 
+function cleanPhone(phone = '') {
+  if (!phone) return '';
+  return phone.replace(/^\(\+57\)\s*|\+57\s*/i, '').trim();
+}
+
+function EmitterDetails({ emitter = {} }) {
+  const phoneClean = cleanPhone(emitter.phone);
+  return (
+    <div className="space-y-0.5 text-xs text-slate-600">
+      <p><span className="font-semibold text-slate-800">{emitter.docType || 'CC'}:</span> {emitter.docNumber || '---'}</p>
+      <p><span className="font-semibold text-slate-800">Dirección:</span> {emitter.address || '---'}</p>
+      <p><span className="font-semibold text-slate-800">Correo:</span> {emitter.email || '---'}</p>
+      {phoneClean && <p><span className="font-semibold text-slate-800">Cel:</span> {phoneClean}</p>}
+    </div>
+  );
+}
+
 export default function InvoiceHeaderPreview({ invoice = {}, total = 0 }) {
   const { template = 'soporte', emitter = {}, client = {}, meta = {}, docTitle } = invoice;
   const isSoporte = template === 'soporte';
@@ -11,9 +28,7 @@ export default function InvoiceHeaderPreview({ invoice = {}, total = 0 }) {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-xl font-bold tracking-tight text-slate-900">{emitter.name || 'Emisor'}</h1>
-            <p className="text-xs text-slate-600">{emitter.docType || 'CC'}: {emitter.docNumber || '---'}</p>
-            <p className="text-xs text-slate-600">{emitter.address || ''} {emitter.phone ? `• Tel: ${emitter.phone}` : ''}</p>
-            <p className="text-xs text-slate-600">{emitter.email || ''}</p>
+            <EmitterDetails emitter={emitter} />
           </div>
           {emitter.logo && <img src={emitter.logo} alt="Logo" className="max-h-16 max-w-[140px] object-contain" />}
         </div>
@@ -33,8 +48,6 @@ export default function InvoiceHeaderPreview({ invoice = {}, total = 0 }) {
           <div className="space-y-1 text-right">
             <p><span className="text-slate-500">Fecha Emisión:</span> <span className="font-medium">{meta.issueDate || '---'}</span></p>
             <p><span className="text-slate-500">Fecha Vencimiento:</span> <span className="font-medium">{meta.dueDate || '---'}</span></p>
-            <p><span className="text-slate-500">Términos:</span> <span className="font-medium">{meta.paymentTerms || '---'}</span></p>
-            {client.serviceDates && <p><span className="text-slate-500">Período:</span> <span className="font-medium">{client.serviceDates}</span></p>}
           </div>
         </div>
       </div>
@@ -45,27 +58,23 @@ export default function InvoiceHeaderPreview({ invoice = {}, total = 0 }) {
     <div className="space-y-3 pb-3 border-b border-slate-300 text-slate-800">
       <div className="text-center pb-2 border-b border-slate-200">
         <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900 leading-tight">
-          {docTitle || 'DOCUMENTO SOPORTE EN ADQUISICIONES EFECTUADAS A NO OBLIGADOS A FACTURAR'}
+          {docTitle || 'SOPORTE EN ADQUISICIONES EFECTUADAS, NO OBLIGADOS A FACTURAR'}
         </h2>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start">
         <div className="sm:col-span-7 space-y-2">
           {emitter.logo && <img src={emitter.logo} alt="Logo" className="max-h-14 max-w-[130px] object-contain mb-1" />}
-          <div>
+          <div className="space-y-0.5">
             <h1 className="text-base font-bold text-slate-900 leading-tight">{emitter.name || 'Emisor'}</h1>
-            <p className="text-xs text-slate-600">{emitter.docType || 'CC'} {emitter.docNumber || '---'}</p>
-            <p className="text-xs text-slate-600">{emitter.address || ''}</p>
-            <p className="text-xs text-slate-600">{emitter.email} {emitter.phone ? `• ${emitter.phone}` : ''}</p>
+            <EmitterDetails emitter={emitter} />
           </div>
         </div>
 
         <div className="sm:col-span-5 space-y-2 text-right">
           <div className="text-xs space-y-1 text-slate-600">
-            {client.serviceDates && <p><span className="text-slate-500">Período:</span> {client.serviceDates}</p>}
             <p><span className="text-slate-500">Emisión:</span> <span className="font-medium">{meta.issueDate || '---'}</span></p>
             <p><span className="text-slate-500">Vence:</span> <span className="font-medium">{meta.dueDate || '---'}</span></p>
-            <p><span className="text-slate-500">O.C.:</span> <span className="font-medium">{meta.paymentTerms || '---'}</span></p>
           </div>
           <div className="p-2.5 rounded-lg border border-emerald-500/30 bg-emerald-50/60 text-right">
             <span className="block text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Total a Pagar (COP)</span>

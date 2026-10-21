@@ -32,7 +32,7 @@ export const CATEGORY_DEFAULT_EMOJIS = {
   'Entretenimiento': '🍿', 'Ocio': '🍿', 'Salud / Cuidado': '💊', 'Salud': '💊',
   'Salud y Bienestar': '💊', 'Educación': '📚', 'Compras / Ropa': '🛍️', 'Compras': '🛍️',
   'Ropa': '🛍️', 'Ingresos': '💰', 'Salario': '💼', 'Inversiones': '📈',
-  'Servicios': '💡', 'Viajes': '✈️', 'Otros Gastos': '🏷️', 'Otros Ingresos': '💰', 'Negocio': '📈'
+  'Servicios': '💡', 'Viajes': '✈️', 'Otros Gastos': '🏷️', 'Otros Ingresos': '💰', 'Negocio': '📈', 'Facturación': '🧾', 'Cobro': '🧾'
 };
 
 export const CATEGORY_DEFAULT_ICONS = { ...CATEGORY_DEFAULT_EMOJIS };

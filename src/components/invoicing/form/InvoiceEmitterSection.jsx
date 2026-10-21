@@ -3,17 +3,13 @@ import { Upload, Trash2, FileText } from 'lucide-react';
 import { INVOICE_TEMPLATES } from '../constants/invoiceDefaults';
 
 export default function InvoiceEmitterSection({
-  invoice, updateEmitter, handleLogoUpload, removeLogo, setInvoiceField, setTemplate
+  invoice, updateEmitter, handleLogoUpload, removeLogo, setTemplate
 }) {
   const fileInputRef = useRef(null);
   const emitter = invoice?.emitter || {};
 
   const handleTemplateChange = (tplId) => {
-    if (setTemplate) setTemplate(tplId);
-    else if (setInvoiceField) {
-      setInvoiceField('template', tplId);
-      setInvoiceField('docTitle', tplId === 'servicios' ? 'FACTURA DE SERVICIOS' : 'DOCUMENTO SOPORTE EN ADQUISICIONES EFECTUADAS A NO OBLIGADOS A FACTURAR');
-    }
+    setTemplate?.(tplId);
   };
 
   return (
@@ -69,11 +65,11 @@ export default function InvoiceEmitterSection({
             <input type="text" value={emitter.name || ''} onChange={(e) => updateEmitter({ name: e.target.value })} placeholder="Nombre del emisor" className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Documento (Tipo y N°)</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Documento</label>
             <div className="flex gap-1.5">
-              <select value={emitter.docType || 'CC'} onChange={(e) => updateEmitter({ docType: e.target.value })} className="px-2 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white">
-                <option value="CC">CC</option><option value="NIT">NIT</option><option value="CE">CE</option><option value="PP">PP</option>
-              </select>
+              <div className="px-2.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 flex items-center justify-center select-none shrink-0 min-w-[42px]">
+                {emitter.docType || 'CC'}
+              </div>
               <input type="text" value={emitter.docNumber || ''} onChange={(e) => updateEmitter({ docNumber: e.target.value })} placeholder="1037588061-9" className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white" />
             </div>
           </div>

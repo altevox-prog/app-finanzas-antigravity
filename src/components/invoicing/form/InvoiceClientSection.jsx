@@ -50,23 +50,13 @@ export default function InvoiceClientSection({
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white"
             />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email del Cliente</label>
             <input
               type="email"
               value={client.email || ''}
               onChange={(e) => updateClient({ email: e.target.value })}
               placeholder="cliente@correo.com"
-              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Fechas / Período del Servicio</label>
-            <input
-              type="text"
-              value={client.serviceDates || ''}
-              onChange={(e) => updateClient({ serviceDates: e.target.value })}
-              placeholder="Ej. Octubre 1 - Octubre 31, 2026"
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white"
             />
           </div>
@@ -77,9 +67,9 @@ export default function InvoiceClientSection({
             <Calendar className="w-3.5 h-3.5 text-emerald-500" />
             Vigencia y Términos de Pago
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Fecha Emisión</label>
+          <div className="grid grid-cols-2 gap-3 items-end">
+            <div className="flex flex-col justify-end">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 min-h-[2rem] flex items-end">Fecha Emisión</label>
               <input
                 type="date"
                 value={meta.issueDate || ''}
@@ -87,8 +77,8 @@ export default function InvoiceClientSection({
                 className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Fecha Vencimiento</label>
+            <div className="flex flex-col justify-end">
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 min-h-[2rem] flex items-end">Fecha Vencimiento</label>
               <input
                 type="date"
                 value={meta.dueDate || ''}

@@ -118,7 +118,15 @@ export default function ViewRouter({
       case 'tax':
         return <TaxView transactions={transactions} accounts={accounts} investments={investments} onBack={handleBack} onClose={handleBack} fromSettings={fromSettings} />;
       case 'invoicing':
-        return <InvoicingView onBack={handleBack} />;
+        return (
+          <InvoicingView
+            onBack={handleBack}
+            accounts={accounts}
+            transactions={transactions}
+            onAddTransaction={handleAddTransaction}
+            onDeleteTransaction={handleDeleteTransaction}
+          />
+        );
       case 'net_worth':
         return (
           <NetWorthView

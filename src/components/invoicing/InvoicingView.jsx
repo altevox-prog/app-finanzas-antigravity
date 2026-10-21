@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { BookmarkCheck, Check } from 'lucide-react';
+import { BookmarkCheck, Check, History, PenSquare } from 'lucide-react';
 import { useInvoiceForm } from './hooks/useInvoiceForm';
-import { useInvoiceHistory } from './hooks/useInvoiceHistory';
+import { useInvoicesHistory } from '../../hooks/useInvoicesHistory';
 import InvoiceEmitterSection from './form/InvoiceEmitterSection';
 import InvoiceClientSection from './form/InvoiceClientSection';
 import InvoiceItemsTable from './form/InvoiceItemsTable';
 import InvoicePaymentBankSection from './form/InvoicePaymentBankSection';
 import InvoiceLivePreview from './preview/InvoiceLivePreview';
-import InvoiceMobileListView from './mobile/InvoiceMobileListView';
+import InvoiceHistoryList from './history/InvoiceHistoryList';
 
-export default function InvoicingView() {
+export default function InvoicingView({ accounts = [], transactions = [], onAddTransaction, onDeleteTransaction }) {
   const {
     invoice, updateEmitter, handleLogoUpload, removeLogo, setTemplate,
     updateClient, updateMeta, isDateValid,
@@ -18,68 +18,119 @@ export default function InvoicingView() {
     subtotal, ivaAmount, total, resetInvoice
   } = useInvoiceForm();
 
-  const { invoicesList, saveInvoice, deleteInvoice } = useInvoiceHistory();
+  const {
+    invoices, loading, pendingTotal,
+    saveInvoice, markAsPaid, deleteInvoice
+  } = useInvoicesHistory({ accounts, transactions, onAddTransaction, onDeleteTransaction });
+
+  const [activeSubTab, setActiveSubTab] = useState('editor'); // 'editor' | 'history'
   const [savedFeedback, setSavedFeedback] = useState(false);
 
-  const handleSaveToHistory = () => {
-    saveInvoice(invoice, total);
-    setSavedFeedback(true);
-    setTimeout(() => setSavedFeedback(false), 2500);
+  const handleSaveToHistory = async () => {
+    const targetAccount = invoice.banking?.colombia?.bank || '';
+    const saved = await saveInvoice(invoice, total, targetAccount);
+    if (saved) {
+      setSavedFeedback(true);
+      setTimeout(() => setSavedFeedback(false), 2500);
+    }
   };
 
   return (
     <div className="w-full flex-1 flex flex-col overflow-hidden animate-fadeIn">
-      {/* Vista Móvil */}
-      <div className="block md:hidden h-full overflow-y-auto custom-scrollbar">
-        <InvoiceMobileListView invoicesList={invoicesList} onDeleteInvoice={deleteInvoice} />
+      {/* Selector superior de pestañas del módulo */}
+      <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-white/60 dark:bg-[#0c0e14]/60 backdrop-blur-md">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('editor')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'editor'
+                ? 'bg-white dark:bg-emerald-600 text-slate-800 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <PenSquare className="w-3.5 h-3.5" />
+            <span>Editor & Previsualización</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('history')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'history'
+                ? 'bg-white dark:bg-emerald-600 text-slate-800 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Cuentas por Cobrar</span>
+            {invoices.filter((i) => i.status === 'pending').length > 0 && (
+              <span className="w-4 h-4 text-[10px] rounded-full bg-amber-500 text-white font-bold flex items-center justify-center">
+                {invoices.filter((i) => i.status === 'pending').length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Vista Tablet y PC */}
-      <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6 max-w-[1600px] mx-auto w-full h-[calc(100vh-4.5rem)] overflow-hidden">
-        {/* Panel izquierdo: Formulario editable y Guardar en Historial */}
-        <div className="h-full overflow-y-auto pr-2 space-y-6 custom-scrollbar pb-16">
-          <InvoiceEmitterSection
-            invoice={invoice} updateEmitter={updateEmitter}
-            handleLogoUpload={handleLogoUpload} removeLogo={removeLogo} setTemplate={setTemplate}
+      {/* Contenido condicional según la pestaña */}
+      {activeSubTab === 'history' ? (
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 max-w-4xl mx-auto w-full custom-scrollbar pb-24">
+          <InvoiceHistoryList
+            invoices={invoices}
+            pendingTotal={pendingTotal}
+            accounts={accounts}
+            onMarkAsPaid={markAsPaid}
+            onDelete={deleteInvoice}
+            loading={loading}
           />
-          <InvoiceClientSection
-            client={invoice.client} meta={invoice.meta}
-            updateClient={updateClient} updateMeta={updateMeta} isDateValid={isDateValid}
-          />
-          <InvoiceItemsTable
-            items={invoice.items} addItem={addItem}
-            removeItem={removeItem} updateItem={updateItem} subtotal={subtotal}
-          />
-          <InvoicePaymentBankSection
-            banking={invoice.banking} tax={invoice.tax}
-            updateBanking={updateBanking} updateTax={updateTax}
-            subtotal={subtotal} ivaAmount={ivaAmount} total={total}
-          />
+        </div>
+      ) : (
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6 max-w-[1600px] mx-auto w-full overflow-hidden">
+          {/* Panel izquierdo: Formulario editable */}
+          <div className="h-full overflow-y-auto pr-2 space-y-6 custom-scrollbar pb-20">
+            <InvoiceEmitterSection
+              invoice={invoice} updateEmitter={updateEmitter}
+              handleLogoUpload={handleLogoUpload} removeLogo={removeLogo} setTemplate={setTemplate}
+            />
+            <InvoiceClientSection
+              client={invoice.client} meta={invoice.meta}
+              updateClient={updateClient} updateMeta={updateMeta} isDateValid={isDateValid}
+            />
+            <InvoiceItemsTable
+              items={invoice.items} addItem={addItem}
+              removeItem={removeItem} updateItem={updateItem} subtotal={subtotal}
+            />
+            <InvoicePaymentBankSection
+              banking={invoice.banking} tax={invoice.tax}
+              updateBanking={updateBanking} updateTax={updateTax}
+              subtotal={subtotal} ivaAmount={ivaAmount} total={total}
+            />
 
-          <div className="flex justify-end pt-2 pb-6">
-            <button
-              type="button"
-              onClick={handleSaveToHistory}
-              className={`px-4 py-2.5 text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
-                savedFeedback
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-800 hover:bg-slate-900 text-white dark:bg-white/10 dark:hover:bg-white/20'
-              }`}
-            >
-              {savedFeedback ? <Check className="w-4 h-4 text-emerald-200" /> : <BookmarkCheck className="w-4 h-4" />}
-              <span>{savedFeedback ? '¡Guardada en el Historial!' : 'Guardar en Historial'}</span>
-            </button>
+            <div className="flex justify-end pt-2 pb-6">
+              <button
+                type="button"
+                onClick={handleSaveToHistory}
+                className={`px-4 py-2.5 text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
+                  savedFeedback
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-800 hover:bg-slate-900 text-white dark:bg-white/10 dark:hover:bg-white/20'
+                }`}
+              >
+                {savedFeedback ? <Check className="w-4 h-4 text-emerald-200" /> : <BookmarkCheck className="w-4 h-4" />}
+                <span>{savedFeedback ? '¡Guardada en Cuentas por Cobrar!' : 'Guardar en Historial'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Panel derecho: Live Preview */}
+          <div className="h-full overflow-y-auto pl-2 custom-scrollbar pb-20">
+            <InvoiceLivePreview
+              invoice={invoice} subtotal={subtotal} ivaAmount={ivaAmount}
+              total={total} isDateValid={isDateValid} onReset={resetInvoice}
+            />
           </div>
         </div>
-
-        {/* Panel derecho: Live Preview */}
-        <div className="h-full overflow-y-auto pl-2 custom-scrollbar pb-16">
-          <InvoiceLivePreview
-            invoice={invoice} subtotal={subtotal} ivaAmount={ivaAmount}
-            total={total} isDateValid={isDateValid} onReset={resetInvoice}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,13 +1,11 @@
 export const INVOICE_TEMPLATES = [
-  { id: 'soporte', label: 'Documento Soporte (Modelo 1)', defaultTitle: 'DOCUMENTO SOPORTE EN ADQUISICIONES EFECTUADAS A NO OBLIGADOS A FACTURAR' },
+  { id: 'soporte', label: 'Documento Soporte (Modelo 1)', defaultTitle: 'SOPORTE EN ADQUISICIONES EFECTUADAS, NO OBLIGADOS A FACTURAR' },
   { id: 'servicios', label: 'Factura de Servicios (Modelo 2)', defaultTitle: 'FACTURA DE SERVICIOS' }
 ];
 
-export const IVA_OPTIONS = [0, 19];
-
 export const INITIAL_INVOICE_STATE = {
   template: 'soporte',
-  docTitle: 'DOCUMENTO SOPORTE EN ADQUISICIONES EFECTUADAS A NO OBLIGADOS A FACTURAR',
+  docTitle: 'SOPORTE EN ADQUISICIONES EFECTUADAS, NO OBLIGADOS A FACTURAR',
   emitter: {
     logo: '',
     name: 'Esteban Osorio Pabón',
@@ -21,8 +19,7 @@ export const INITIAL_INVOICE_STATE = {
     name: '',
     contactPerson: '',
     city: '',
-    email: '',
-    serviceDates: ''
+    email: ''
   },
   meta: {
     issueDate: '',
@@ -53,7 +50,6 @@ export const INITIAL_INVOICE_STATE = {
       accountNumber: '215068446205',
       routing: '101019644',
       bankAddress: '1801 MAIN ST Kansas City, Missouri 64108 EE.UU.'
-    },
-    paypal: 'estebanosorio101@gmail.com'
+    }
   }
 };

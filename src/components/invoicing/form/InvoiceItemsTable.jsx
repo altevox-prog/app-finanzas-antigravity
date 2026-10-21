@@ -9,6 +9,24 @@ export default function InvoiceItemsTable({
   updateItem,
   subtotal = 0
 }) {
+  const handleQuantityChange = (id, rawVal) => {
+    if (rawVal === '') {
+      updateItem(id, { quantity: '' });
+      return;
+    }
+    const parsed = Number(rawVal);
+    updateItem(id, { quantity: Number.isNaN(parsed) ? '' : Math.max(0, parsed) });
+  };
+
+  const handlePriceChange = (id, rawVal) => {
+    if (rawVal === '') {
+      updateItem(id, { unitPrice: '' });
+      return;
+    }
+    const parsed = Number(rawVal);
+    updateItem(id, { unitPrice: Number.isNaN(parsed) ? '' : Math.max(0, parsed) });
+  };
+
   return (
     <div className="bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
@@ -59,10 +77,10 @@ export default function InvoiceItemsTable({
                   <td className="py-2 px-2 text-center">
                     <input
                       type="number"
-                      min="1"
-                      step="1"
-                      value={item.quantity ?? 1}
-                      onChange={(e) => updateItem(item.id, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                      min="0"
+                      step="any"
+                      value={item.quantity === 0 ? 0 : item.quantity ?? ''}
+                      onChange={(e) => handleQuantityChange(item.id, e.target.value)}
                       className="w-full text-center px-2 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>
@@ -71,8 +89,8 @@ export default function InvoiceItemsTable({
                       type="number"
                       min="0"
                       step="1000"
-                      value={item.unitPrice ?? 0}
-                      onChange={(e) => updateItem(item.id, { unitPrice: Math.max(0, Number(e.target.value) || 0) })}
+                      value={item.unitPrice === 0 ? 0 : item.unitPrice ?? ''}
+                      onChange={(e) => handlePriceChange(item.id, e.target.value)}
                       className="w-full text-right px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                   </td>

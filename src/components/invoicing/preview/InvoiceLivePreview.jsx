@@ -29,7 +29,7 @@ export default function InvoiceLivePreview({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <InvoiceShareActions invoice={invoice} total={total} />
+          <InvoiceShareActions invoice={invoice} />
 
           <button
             type="button"
@@ -46,7 +46,7 @@ export default function InvoiceLivePreview({
       <div className="flex justify-center overflow-x-auto p-2 sm:p-4 bg-slate-100/70 dark:bg-black/30 rounded-2xl">
         <div
           id="invoice-printable-sheet"
-          className="w-full max-w-[800px] bg-white text-slate-900 p-6 sm:p-10 rounded-xl shadow-xl border border-slate-200/80 space-y-5"
+          className="w-full max-w-[800px] bg-white text-slate-900 p-6 sm:p-10 rounded-xl shadow-xl border border-slate-200/80 space-y-3.5"
         >
           <InvoiceHeaderPreview invoice={invoice} total={total} />
           <InvoiceBodyPreview items={invoice.items || []} />
