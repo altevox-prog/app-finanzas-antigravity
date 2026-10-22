@@ -6,6 +6,8 @@ import { getSupabaseUser } from '../services/supabaseClient';
 import { normalizeRemoteRecurring } from '../services/sync/syncNormalizers';
 import { toSafeNumber } from '../utils/financeMath';
 
+const sortRecurring = (list) => [...list].sort((a, b) => (new Date(b.created_at || 0) - new Date(a.created_at || 0)) || String(a.id).localeCompare(String(b.id)));
+
 function sanitizeRecurringItem(item) {
   if (!item || typeof item !== 'object') return item;
   const norm = normalizeRemoteRecurring(item), raw = item.raw_data && typeof item.raw_data === 'object' ? item.raw_data : {};
@@ -29,12 +31,7 @@ function sanitizeRecurringItem(item) {
 function mapRecurringToSupabasePayload(item, userId) {
   const cleanId = ensureUUID(item.id), nowIso = new Date().toISOString(), cleanAmount = toSafeNumber(item.amount), rawAcc = item.accountId || item.account_id;
   return {
-    id: cleanId, user_id: userId, name: item.name || 'Suscripción', amount: cleanAmount,
-    type: item.type || 'expense', category: item.category || item.categoryName || 'General',
-    frequency: item.frequency || 'monthly', billing_day: Number(item.billingDay || item.billing_day || 1),
-    is_active: item.isActive !== false && item.active !== false && item.is_active !== false,
-    account_id: rawAcc ? ensureUUID(rawAcc) : null, next_payment_date: item.nextPaymentDate || item.next_payment_date || null,
-    raw_data: { ...item, amount: cleanAmount, updated_at: nowIso }, updated_at: nowIso
+    id: cleanId, user_id: userId, name: item.name || 'Suscripción', amount: cleanAmount, type: item.type || 'expense', category: item.category || item.categoryName || 'General', frequency: item.frequency || 'monthly', billing_day: Number(item.billingDay || item.billing_day || 1), is_active: item.isActive !== false && item.active !== false && item.is_active !== false, account_id: rawAcc ? ensureUUID(rawAcc) : null, next_payment_date: item.nextPaymentDate || item.next_payment_date || null, raw_data: { ...item, amount: cleanAmount, updated_at: nowIso }, updated_at: nowIso
   };
 }
 
@@ -72,7 +69,7 @@ export function useRecurringPayments(isResettingRef, options = {}) {
       if (!uid) return [];
       const { data, error } = await supabase.from('recurring_payments').select('*').eq('user_id', uid).order('created_at', { ascending: false });
       if (error || !Array.isArray(data)) return [];
-      const mapped = data.map(sanitizeRecurringItem);
+      const mapped = sortRecurring(data.map(sanitizeRecurringItem));
       setRecurringPayments(mapped);
       return mapped;
     } catch { return []; }
@@ -91,7 +88,7 @@ export function useRecurringPayments(isResettingRef, options = {}) {
           setRecurringPayments((p) => p.filter((r) => r.id !== payload.old.id && ensureUUID(r.id) !== ensureUUID(payload.old.id)));
         } else {
           const item = sanitizeRecurringItem(payload.new);
-          setRecurringPayments((p) => [item, ...p.filter((r) => r.id !== item.id && ensureUUID(r.id) !== ensureUUID(item.id))]);
+          setRecurringPayments((p) => sortRecurring([item, ...p.filter((r) => r.id !== item.id && ensureUUID(r.id) !== ensureUUID(item.id))]));
         }
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -112,28 +109,23 @@ export function useRecurringPayments(isResettingRef, options = {}) {
     }
     if (action === 'toggle') {
       let updatedItem = null;
-      setRecurringPayments((prev) => prev.map((r) => {
+      setRecurringPayments((prev) => sortRecurring(prev.map((r) => {
         if (r.id === itemOrId || ensureUUID(r.id) === ensureUUID(itemOrId)) {
           const nextActive = r.isActive === false;
           updatedItem = { ...r, isActive: nextActive, is_active: nextActive, active: nextActive };
           return updatedItem;
         }
         return r;
-      }));
+      })));
       if (updatedItem && user?.id) await upsertRecurringSafe(mapRecurringToSupabasePayload(updatedItem, user.id));
       return updatedItem;
     }
     const sanitized = sanitizeRecurringItem(itemOrId);
-    setRecurringPayments((prev) => [sanitized, ...prev.filter((r) => r.id !== sanitized.id && ensureUUID(r.id) !== ensureUUID(sanitized.id))]);
+    setRecurringPayments((prev) => sortRecurring([sanitized, ...prev.filter((r) => r.id !== sanitized.id && ensureUUID(r.id) !== ensureUUID(sanitized.id))]));
     if (user?.id) await upsertRecurringSafe(mapRecurringToSupabasePayload(sanitized, user.id));
     toast.success(action === 'add' ? '✓ Pago recurrente guardado con éxito' : '✓ Pago recurrente actualizado con éxito');
     return sanitized;
   }, []);
-
-  const handleAddRecurring = useCallback((item) => dispatchMutation('add', item), [dispatchMutation]);
-  const handleUpdateRecurring = useCallback((item) => dispatchMutation('update', item), [dispatchMutation]);
-  const handleDeleteRecurring = useCallback((id) => dispatchMutation('delete', id), [dispatchMutation]);
-  const handleToggleActiveRecurring = useCallback((id) => dispatchMutation('toggle', id), [dispatchMutation]);
 
   const projectedMonthlyTotal = useMemo(() => recurringPayments.reduce((acc, r) => {
     if (r.isActive === false || r.active === false || r.is_active === false) return acc;
@@ -143,10 +135,10 @@ export function useRecurringPayments(isResettingRef, options = {}) {
 
   return {
     recurringPayments, setRecurringPayments, subscriptions: recurringPayments, setSubscriptions: setRecurringPayments,
-    handleAddRecurring, handleSaveRecurring: handleAddRecurring, addRecurringPayment: handleAddRecurring,
-    handleUpdateRecurring, updateRecurringPayment: handleUpdateRecurring,
-    handleDeleteRecurring, deleteRecurringPayment: handleDeleteRecurring,
-    handleToggleActiveRecurring, toggleStatus: handleToggleActiveRecurring,
+    handleAddRecurring: (i) => dispatchMutation('add', i), handleSaveRecurring: (i) => dispatchMutation('add', i), addRecurringPayment: (i) => dispatchMutation('add', i),
+    handleUpdateRecurring: (i) => dispatchMutation('update', i), updateRecurringPayment: (i) => dispatchMutation('update', i),
+    handleDeleteRecurring: (id) => dispatchMutation('delete', id), deleteRecurringPayment: (id) => dispatchMutation('delete', id),
+    handleToggleActiveRecurring: (id) => dispatchMutation('toggle', id), toggleStatus: (id) => dispatchMutation('toggle', id),
     projectedMonthlyTotal, fetchRecurringPayments, resetRecurringPayments: useCallback(() => setRecurringPayments([]), [])
   };
 }

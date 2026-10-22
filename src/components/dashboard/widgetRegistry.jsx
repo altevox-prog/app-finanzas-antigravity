@@ -42,13 +42,14 @@ export function createWidgetRegistry({
   handleSelectTransaction = () => {},
   onOpenCalendar = () => {},
   financeActions = {},
-  formatMoney = (val) => val
+  formatMoney = (val) => val,
+  budgets = {}
 } = {}) {
   return {
     investments: <InvestmentsWidget investmentsMetrics={investmentsMetrics} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} formatMoney={formatMoney} />,
     debts: <DebtsWidget debtsAndLoansMetrics={debtsAndLoansMetrics} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} formatMoney={formatMoney} />,
     savings_rate: <SavingsRateWidget savingsRate={savingsRate} freeCash={freeCash !== undefined ? freeCash : Math.max(0, netBalance || 0)} formatMoney={formatMoney} />,
-    budget: <BudgetWidget monthlyStats={monthlyStats} totalIncome={totalIncome} totalExpense={totalExpense} formatMoney={formatMoney} />,
+    budget: <BudgetWidget budgets={budgets} monthlyStats={monthlyStats} totalIncome={totalIncome} totalExpense={totalExpense} formatMoney={formatMoney} />,
     weekly_cashflow: <WeeklyExpensesChart transactions={transactions} selectedDate={selectedDate} selectedDay={selectedDay} currentMonthLabel={currentMonthLabel} formatMoney={formatMoney} />,
     expenses_category: <ReportsAndCharts transactions={transactions} categories={categories} selectedDate={selectedDate} selectedDay={selectedDay} onOpenCalendar={onOpenCalendar} financeActions={financeActions} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} />,
     recent_movements: <RecentMovementsSection transactions={displayTransactions} onViewAll={() => navigateToTab('transactions')} setActiveTab={navigateToTab} onNavigateToTab={navigateToTab} onSelectTransaction={handleSelectTransaction} onOpenTransaction={handleSelectTransaction} formatMoney={formatMoney} />,
@@ -79,6 +80,7 @@ export function useWidgetRegistry(params = {}) {
     params.trm, params.weeklyCashFlow, params.hoveredWeekIndex, params.setHoveredWeekIndex,
     params.navigateToTab, params.handleOpenDebtModal, params.handleOpenTxModal,
     params.handleOpenRecurringModal, params.handleSelectTransaction, params.onOpenCalendar,
-    params.onSelectDay, params.onSelectCreditCardDetail, params.financeActions, params.formatMoney
+    params.onSelectDay, params.onSelectCreditCardDetail, params.financeActions, params.formatMoney,
+    params.budgets
   ]);
 }

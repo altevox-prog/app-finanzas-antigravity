@@ -9,23 +9,34 @@ export function mapDebtToSupabasePayload(item, userId) {
   const cleanId = ensureUUID(item.id), nowIso = new Date().toISOString();
   const base = toSafeNumber(item.totalAmount || item.amount || item.principalAmount || item.initialAmount);
   const rem = toSafeNumber(item.remainingAmount ?? item.remaining_amount ?? base);
+  const installments = Number(item.installments ?? item.total_installments ?? item.raw_data?.installments) || 1;
+  const frequency = item.frequency || item.raw_data?.frequency || 'Único';
+  const dueDay = item.dueDay != null ? Number(item.dueDay) : (item.due_day != null ? Number(item.due_day) : (item.raw_data?.dueDay != null ? Number(item.raw_data.dueDay) : (item.raw_data?.due_day != null ? Number(item.raw_data.due_day) : null)));
+  const biweeklyDays = Array.isArray(item.biweeklyDays) ? item.biweeklyDays : (Array.isArray(item.biweekly_days) ? item.biweekly_days : (Array.isArray(item.raw_data?.biweeklyDays) ? item.raw_data.biweeklyDays : (Array.isArray(item.raw_data?.biweekly_days) ? item.raw_data.biweekly_days : null)));
+  const dueDate = item.dueDate || item.due_date || item.computedDueDate || item.raw_data?.dueDate || item.raw_data?.due_date || null;
+  const startDate = item.startDate || item.start_date || item.raw_data?.startDate || item.raw_data?.start_date || null;
+
   const raw = {
+    ...(item.raw_data || {}),
     payments: Array.isArray(item.payments) ? item.payments : [],
     disbursements: Array.isArray(item.disbursements) ? item.disbursements : [],
     initialAmount: toSafeNumber(item.initialAmount ?? item.initial_amount ?? base),
-    totalAmount: base,
-    dueDate: item.dueDate || item.due_date || item.computedDueDate || null,
+    totalAmount: base, dueDate, due_date: dueDate, startDate, start_date: startDate,
+    installments, total_installments: installments, frequency,
+    dueDay, due_day: dueDay, biweeklyDays, biweekly_days: biweeklyDays,
     interestRate: toSafeNumber(item.interestRate || item.interest_rate || 0),
-    startDate: item.startDate || item.start_date || null,
-    notes: item.notes || item.note || '',
-    updated_at: nowIso
+    insuranceFee: toSafeNumber(item.insuranceFee || item.insurance_fee || 0),
+    notes: item.notes || item.note || '', updated_at: nowIso
   };
   const person = item.personName || item.name || 'Deuda';
   return {
     id: cleanId, user_id: userId, name: person, person, person_name: person,
     type: item.type || 'payable', amount: base, total_amount: base, remaining_amount: rem,
     status: item.status || (rem <= 0.01 ? 'paid' : 'active'),
-    due_date: raw.dueDate, notes: `PAYMENTS_JSON:${JSON.stringify(raw)}`, raw_data: raw, updated_at: nowIso
+    due_date: dueDate, start_date: startDate,
+    interest_rate: toSafeNumber(item.interestRate || item.interest_rate || 0),
+    installments, frequency, due_day: dueDay, biweekly_days: biweeklyDays,
+    notes: `PAYMENTS_JSON:${JSON.stringify(raw)}`, raw_data: raw, updated_at: nowIso
   };
 }
 

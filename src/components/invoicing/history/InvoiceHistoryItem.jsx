@@ -13,7 +13,7 @@ export default function InvoiceHistoryItem({ item = {}, onMarkAsPaid, onDelete, 
   };
 
   return (
-    <div className="p-4 bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm space-y-3 transition-all hover:border-slate-300 dark:hover:border-white/20">
+    <div className="p-3.5 sm:p-4 bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-xs space-y-3 transition-all hover:border-slate-300 dark:hover:border-white/20 w-full overflow-hidden">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200">
@@ -28,7 +28,7 @@ export default function InvoiceHistoryItem({ item = {}, onMarkAsPaid, onDelete, 
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {!isPaid && (
             <button
               type="button"
@@ -52,28 +52,28 @@ export default function InvoiceHistoryItem({ item = {}, onMarkAsPaid, onDelete, 
       </div>
 
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+        <div className="min-w-0 flex-1">
+          <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight break-words">
             {item.client_name}
           </h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
             Cuenta {isPaid ? 'acreditada' : 'destino'}: <span className={`font-medium ${isPaid ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-700 dark:text-slate-300'}`}>{item.account_target || 'Por definir al cobrar'}</span>
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right shrink-0">
           <span className="text-xs text-slate-400 uppercase tracking-wider block text-[10px]">Total</span>
-          <span className="text-base font-extrabold text-slate-900 dark:text-white">
+          <span className="text-base font-extrabold text-slate-900 dark:text-white font-mono">
             {formatCOP(item.total_amount)}
           </span>
         </div>
       </div>
 
       <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-        <div className="flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Emisión: {item.issue_date || '---'}</span>
+        <div className="flex items-center gap-1.5 truncate">
+          <Calendar className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">Emisión: {item.issue_date || '---'}</span>
         </div>
-        {item.due_date && <span>Vence: {item.due_date}</span>}
+        {item.due_date && <span className="shrink-0 text-[11px]">Vence: {item.due_date}</span>}
       </div>
     </div>
   );

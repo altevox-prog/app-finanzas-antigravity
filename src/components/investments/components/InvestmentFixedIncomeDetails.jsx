@@ -3,9 +3,17 @@ import { AlertCircle, CheckCircle2, HandCoins } from 'lucide-react';
 import { calculateMonthlyLoanReturn } from '../../../utils/financeMath';
 
 export default function InvestmentFixedIncomeDetails({
-  inv, isCDT, isPrivateLoan, isMatured, cdtStats, cdtTermDays, formatInvestMoney, onOpenLiquidation
+  inv, isCDT, isPrivateLoan, isMatured, cdtStats, accruedStats, maturityStats,
+  cdtTermDays, formatInvestMoney, onOpenLiquidation
 }) {
-  if (isCDT && cdtStats) {
+  const stats = maturityStats || cdtStats;
+  if (isCDT && stats) {
+    const cur = inv.currency || 'COP';
+    const initialCapital = Number(inv.investedAmount || inv.buyPrice || 0);
+    const accruedNet = accruedStats?.netReturn ?? 0;
+    const maturityNet = stats?.netReturn ?? 0;
+    const totalLiquidable = isMatured ? (initialCapital + (accruedNet || maturityNet)) : (stats?.maturityTotal ?? (initialCapital + maturityNet));
+
     return (
       <div className={`p-3.5 rounded-xl border space-y-2.5 ${isMatured ? 'bg-amber-500/10 border-amber-500/25' : 'bg-emerald-500/10 border-emerald-500/25'}`}>
         <div className="flex items-center justify-between">
@@ -17,12 +25,25 @@ export default function InvestmentFixedIncomeDetails({
             {cdtTermDays} días ({inv.interestRate || 0}% E.A.)
           </span>
         </div>
-        <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-1 border-t ${isMatured ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
-          <div><span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Capital inicial</span><span className="font-bold text-slate-900 dark:text-white font-mono tabular-nums">{formatInvestMoney(Number(inv.investedAmount || inv.buyPrice || 0), inv.currency || 'COP')}</span></div>
-          <div><span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">{isMatured ? 'Ganancia neta (4% rete)' : 'Rendimiento proyectado'}</span><span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">+{formatInvestMoney(cdtStats.netReturn, inv.currency || 'COP')}</span></div>
-          <div><span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">{isMatured ? 'Total liquidable' : 'Total proyectado'}</span><span className={`font-extrabold font-mono tabular-nums ${isMatured ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{formatInvestMoney(cdtStats.maturityTotal, inv.currency || 'COP')}</span></div>
+        <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1 border-t ${isMatured ? 'border-amber-500/20' : 'border-emerald-500/20'}`}>
+          <div>
+            <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Capital inicial</span>
+            <span className="font-bold text-slate-900 dark:text-white font-mono tabular-nums">{formatInvestMoney(initialCapital, cur)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Ganado a hoy</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">+{formatInvestMoney(accruedNet, cur)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">{isMatured ? 'Rendimiento final' : 'Al vencimiento (4% rete)'}</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">+{formatInvestMoney(maturityNet, cur)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-medium">Total liquidable</span>
+            <span className={`font-extrabold font-mono tabular-nums ${isMatured ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{formatInvestMoney(totalLiquidable, cur)}</span>
+          </div>
         </div>
-        <button type="button" onClick={(e) => { e.stopPropagation(); onOpenLiquidation?.(inv, cdtStats); }} className={`w-full mt-1.5 py-2 px-3 rounded-xl active:scale-98 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer ${isMatured ? 'bg-amber-500 hover:bg-amber-600 text-slate-950' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}>
+        <button type="button" onClick={(e) => { e.stopPropagation(); onOpenLiquidation?.(inv, stats); }} className={`w-full mt-1.5 py-2 px-3 rounded-xl active:scale-98 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer ${isMatured ? 'bg-amber-500 hover:bg-amber-600 text-slate-950' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}>
           <CheckCircle2 className="w-4 h-4" /><span>Liquidar CDT a cuenta</span>
         </button>
       </div>

@@ -37,17 +37,17 @@ export default function InvoiceHeaderPreview({ invoice = {}, total = 0 }) {
           <h2 className="text-sm font-bold tracking-wider uppercase text-slate-800">{docTitle || 'FACTURA DE SERVICIOS'}</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <div className="space-y-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <div className="space-y-1 min-w-0">
             <p className="font-semibold text-slate-500 uppercase text-[10px]">Facturar a:</p>
-            <p className="font-bold text-slate-900">{client.name || '---'}</p>
-            {client.contactPerson && <p className="text-slate-600">Attn: {client.contactPerson}</p>}
-            {client.city && <p className="text-slate-600">{client.city}</p>}
-            {client.email && <p className="text-slate-600">{client.email}</p>}
+            <p className="font-bold text-slate-900 break-words">{client.name || '---'}</p>
+            {client.contactPerson && <p className="text-slate-600 break-words">Attn: {client.contactPerson}</p>}
+            {client.city && <p className="text-slate-600 break-words">{client.city}</p>}
+            {client.email && <p className="text-slate-600 break-words">{client.email}</p>}
           </div>
-          <div className="space-y-1 text-right">
-            <p><span className="text-slate-500">Fecha Emisión:</span> <span className="font-medium">{meta.issueDate || '---'}</span></p>
-            <p><span className="text-slate-500">Fecha Vencimiento:</span> <span className="font-medium">{meta.dueDate || '---'}</span></p>
+          <div className="space-y-1 text-left sm:text-right min-w-0">
+            <p><span className="text-slate-500">Fecha Emisión:</span> <span className="font-medium break-words">{meta.issueDate || '---'}</span></p>
+            <p><span className="text-slate-500">Fecha Vencimiento:</span> <span className="font-medium break-words">{meta.dueDate || '---'}</span></p>
           </div>
         </div>
       </div>
@@ -83,11 +83,11 @@ export default function InvoiceHeaderPreview({ invoice = {}, total = 0 }) {
         </div>
       </div>
 
-      <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div><span className="text-[10px] uppercase text-slate-500 block">Cliente</span><span className="font-semibold text-slate-900">{client.name || '---'}</span></div>
-        <div><span className="text-[10px] uppercase text-slate-500 block">Contacto</span><span className="text-slate-800">{client.contactPerson || '---'}</span></div>
-        <div><span className="text-[10px] uppercase text-slate-500 block">Ciudad</span><span className="text-slate-800">{client.city || '---'}</span></div>
-        <div><span className="text-[10px] uppercase text-slate-500 block">Email</span><span className="text-slate-800">{client.email || '---'}</span></div>
+      <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-2">
+        <div className="min-w-0"><span className="text-[10px] uppercase text-slate-500 block">Cliente</span><span className="font-semibold text-slate-900 block break-words">{client.name || '---'}</span></div>
+        <div className="min-w-0"><span className="text-[10px] uppercase text-slate-500 block">Contacto</span><span className="text-slate-800 block break-words">{client.contactPerson || '---'}</span></div>
+        <div className="min-w-0"><span className="text-[10px] uppercase text-slate-500 block">Ciudad</span><span className="text-slate-800 block break-words">{client.city || '---'}</span></div>
+        <div className="min-w-0"><span className="text-[10px] uppercase text-slate-500 block">Email</span><span className="text-slate-800 block break-words">{client.email || '---'}</span></div>
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import InvoicePaymentBankSection from './form/InvoicePaymentBankSection';
 import InvoiceLivePreview from './preview/InvoiceLivePreview';
 import InvoiceHistoryList from './history/InvoiceHistoryList';
 
-export default function InvoicingView({ accounts = [], transactions = [], onAddTransaction, onDeleteTransaction }) {
+export default function InvoicingView({ accounts = [], transactions = [], onAddTransaction, onDeleteTransaction, onBack }) {
   const {
     invoice, updateEmitter, handleLogoUpload, removeLogo, setTemplate,
     updateClient, updateMeta, isDateValid, addItem, removeItem, updateItem,

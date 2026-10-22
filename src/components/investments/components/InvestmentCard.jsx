@@ -4,7 +4,8 @@ import BrandIcon from '../../ui/BrandIcon';
 import SwipeableRow from '../../common/SwipeableRow';
 import { usePrivacy } from '../../../context/PrivacyContext';
 import { formatCurrency, formatUSD } from '../../../data/initialData';
-import { calculateCDTMaturityReturn } from '../../../utils/financeMath';
+import { convertUSDtoCOP, convertCOPtoUSD } from '../../../utils/financeMath';
+import { calculateCDTAccruedReturn, calculateCDTMaturityReturn } from '../../../utils/math/investmentMath';
 import { calculateAssetMetrics } from '../utils/investmentConsolidation';
 import InvestmentLotHistory from './InvestmentLotHistory';
 import InvestmentFixedIncomeDetails from './InvestmentFixedIncomeDetails';
@@ -22,22 +23,47 @@ export default function InvestmentCard({
     cur === 'USD' ? formatUSD(amt, isPrivacyMode, showDecimals) : formatCurrency(amt, isPrivacyMode, showDecimals)
   );
 
-  const m = metricsProp || (inv ? calculateAssetMetrics(inv, livePrices, trm) : {});
   if (!inv) return null;
 
   const isPrivateLoan = inv.subType === 'private_loan' || inv.assetType === 'loan';
-  const isCDT = !isPrivateLoan && (inv.assetType === 'cdt' || inv.assetType === 'fixed_income' || inv.category === 'CDT' || inv.category === 'fixed' || inv.subType === 'cdt');
-  const todayStr = new Date().toISOString().split('T')[0], isMatured = isCDT && Boolean(inv.dueDate) && todayStr >= inv.dueDate;
+  const isCDT = !isPrivateLoan && (
+    inv.assetType === 'cdt' || inv.assetType === 'fixed_income' ||
+    inv.category === 'fixed' || inv.category === 'CDT' ||
+    inv.subType === 'cdt' || inv.subtype === 'cdt'
+  );
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isMatured = isCDT && Boolean(inv.dueDate) && todayStr >= inv.dueDate;
 
-  let cdtTermDays = 0, cdtStats = null;
+  let cdtTermDays = 0, accruedStats = null, maturityStats = null;
   if (isCDT) {
-    const invested = Number(inv.investedAmount || inv.buyPrice || inv.currentAmount || 0), rate = Number(inv.interestRate || 0);
-    if (inv.startDate && inv.dueDate) cdtTermDays = Math.max(1, Math.round((new Date(inv.dueDate + 'T00:00:00') - new Date(inv.startDate + 'T00:00:00')) / 86400000));
+    const invested = Number(inv.investedAmount || inv.buyPrice || inv.currentAmount || 0);
+    const rate = Number(inv.interestRate || 0);
+    const startDate = inv.startDate || inv.start_date;
+    const dueDate = inv.dueDate || inv.due_date;
+    if (startDate && dueDate) cdtTermDays = Math.max(1, Math.round((new Date(dueDate + 'T00:00:00') - new Date(startDate + 'T00:00:00')) / 86400000));
     else if (inv.termDays) cdtTermDays = Number(inv.termDays);
-    else if (inv.dueDate) cdtTermDays = Math.max(1, Math.round((new Date(inv.dueDate + 'T00:00:00') - new Date(inv.created_at || inv.createdAt || Date.now())) / 86400000));
+    else if (dueDate) cdtTermDays = Math.max(1, Math.round((new Date(dueDate + 'T00:00:00') - new Date(inv.created_at || inv.createdAt || Date.now())) / 86400000));
     cdtTermDays = (!cdtTermDays || cdtTermDays <= 0) ? 180 : cdtTermDays;
-    cdtStats = calculateCDTMaturityReturn(invested, rate, cdtTermDays, 0.04);
+    accruedStats = calculateCDTAccruedReturn(invested, rate, startDate, new Date(), 0.04);
+    maturityStats = calculateCDTMaturityReturn(invested, rate, cdtTermDays, 0.04);
   }
+
+  const baseMetrics = metricsProp || calculateAssetMetrics(inv, livePrices, trm);
+  const investedAmount = Number(inv.investedAmount || inv.buyPrice || inv.currentAmount || 0);
+  const cdtPnl = isMatured ? (maturityStats?.netReturn || 0) : (accruedStats?.netReturn || maturityStats?.netReturn || 0);
+  const cdtCurrentVal = investedAmount + (accruedStats?.netReturn || 0);
+  const cdtPnlPct = investedAmount > 0 ? ((cdtPnl / investedAmount) * 100) : 0;
+
+  const m = isCDT ? {
+    ...baseMetrics, currency: inv.currency || 'COP',
+    currentValueCOP: inv.currency === 'USD' ? convertUSDtoCOP(cdtCurrentVal, trm) : cdtCurrentVal,
+    currentValueUSD: inv.currency === 'USD' ? cdtCurrentVal : convertCOPtoUSD(cdtCurrentVal, trm),
+    totalCostCOP: inv.currency === 'USD' ? convertUSDtoCOP(investedAmount, trm) : investedAmount,
+    totalCostUSD: inv.currency === 'USD' ? investedAmount : convertCOPtoUSD(investedAmount, trm),
+    pnlCOP: inv.currency === 'USD' ? convertUSDtoCOP(cdtPnl, trm) : cdtPnl,
+    pnlUSD: inv.currency === 'USD' ? cdtPnl : convertCOPtoUSD(cdtPnl, trm),
+    pnlPercentage: cdtPnlPct, isPositive: true
+  } : baseMetrics;
 
   const assetTypeLabel = isPrivateLoan ? 'Préstamo' : inv.subType === 'bond' || inv.assetType === 'bond' ? 'Bono' : inv.assetType === 'crypto' || inv.category === 'crypto' ? 'Cripto' : inv.assetType === 'stock' || inv.category === 'variable' ? 'Acción' : inv.assetType === 'etf' ? 'ETF' : isCDT ? 'CDT' : 'Fondo';
   const badgeColor = isPrivateLoan || (!isCDT && m.isPositive) || (isCDT && !isMatured) ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : isMatured ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' : 'bg-rose-500/10 text-rose-500 border-rose-500/20';
@@ -49,7 +75,7 @@ export default function InvestmentCard({
         <div onClick={() => setIsExpanded(p => !p)} className="p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50/60 dark:hover:bg-white/[0.02]">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center p-1 bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 shrink-0">
-              {isPrivateLoan ? <div className="text-emerald-500"><HandCoins className="w-6 h-6" /></div> : <BrandIcon name={m.ticker || inv.name} type={inv.assetType || inv.category} size={28} />}
+              {isPrivateLoan ? <div className="text-emerald-500"><HandCoins className="w-6 h-6" /></div> : <BrandIcon name={m.ticker || inv.name} institution={inv.institution || inv.broker} type={inv.assetType || inv.category} size={28} />}
             </div>
             <div className="min-w-0 flex-1 truncate">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -75,9 +101,7 @@ export default function InvestmentCard({
               </div>
             </div>
             {isMarket && onOpenAddLot && (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onOpenAddLot(inv); }} className="p-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors" title="Añadir compra / Lote">
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-              </button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onOpenAddLot(inv); }} className="p-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors" title="Añadir compra / Lote"><Plus className="w-4 h-4 stroke-[2.5]" /></button>
             )}
             <div className="hidden md:flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               {onEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(inv); }} className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button>}
@@ -110,7 +134,11 @@ export default function InvestmentCard({
               ))}
             </div>
 
-            <InvestmentFixedIncomeDetails inv={inv} isCDT={isCDT} isPrivateLoan={isPrivateLoan} isMatured={isMatured} cdtStats={cdtStats} cdtTermDays={cdtTermDays} formatInvestMoney={formatInvestMoney} onOpenLiquidation={onOpenLiquidation} />
+            <InvestmentFixedIncomeDetails
+              inv={inv} isCDT={isCDT} isPrivateLoan={isPrivateLoan} isMatured={isMatured}
+              cdtStats={maturityStats} accruedStats={accruedStats} maturityStats={maturityStats}
+              cdtTermDays={cdtTermDays} formatInvestMoney={formatInvestMoney} onOpenLiquidation={onOpenLiquidation}
+            />
             <InvestmentLotHistory asset={inv} lots={m.lots || []} currency={m.currency} onOpenAddLot={onOpenAddLot} onDeleteLot={onDeleteLot} />
           </div>
         </div>

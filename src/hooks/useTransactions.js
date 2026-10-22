@@ -7,6 +7,8 @@ import { toast } from '../utils/toast';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
 import { mapSupabaseRowToTransaction, mapTransactionToSupabasePayload } from '../services/sync/txMappers';
+import { processTransactionUpdate } from '../services/transactions/transferMutationService';
+import { buildTransferPair } from '../services/transactions/transferCreationService';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -60,28 +62,38 @@ export function useTransactions({ isResettingRef, accounts = [], setAccounts, tr
     return () => { supabase.removeChannel(channel); };
   }, [activeUser?.id, recalculateAccountsBalance]);
 
-  const syncTxToCloud = useCallback(async (tx) => {
-    if (!isSupabaseConfigured || !supabase) return;
-    try {
-      const user = activeUserRef.current || (await getSupabaseUser());
-      if (user?.id) {
-        const { error } = await supabase.from('transactions').upsert(mapTransactionToSupabasePayload(tx, user.id), { onConflict: 'id' });
-        if (error) toast.error('Error al sincronizar con la nube');
-      }
-    } catch {}
-  }, []);
-
-  const saveTx = useCallback(async (tx, isUpdate = false) => {
-    const sanitized = { ...tx, id: (isUpdate && tx.id) || ((tx.id && UUID_REGEX.test(tx.id)) ? tx.id : generateUUID()), amount: toSafeNumber(tx.amount), originalAmount: toSafeNumber(tx.originalAmount ?? tx.amount), exchangeRate: toSafeNumber(tx.exchangeRate || 1), updated_at: new Date().toISOString() };
-    setTransactions((prev) => {
-      const next = isUpdate ? prev.map((t) => t.id === sanitized.id ? { ...t, ...sanitized } : t) : [sanitized, ...prev.filter((t) => t.id !== sanitized.id)];
-      recalculateAccountsBalance(next);
-      return next;
-    });
-    await syncTxToCloud(sanitized);
-    toast.success(isUpdate ? 'Movimiento actualizado con éxito' : 'Movimiento registrado con éxito');
+  const saveTx = useCallback(async (tx) => {
+    const sanitized = { ...tx, id: ((tx.id && UUID_REGEX.test(tx.id)) ? tx.id : generateUUID()), amount: toSafeNumber(tx.amount), originalAmount: toSafeNumber(tx.originalAmount ?? tx.amount), exchangeRate: toSafeNumber(tx.exchangeRate || 1), updated_at: new Date().toISOString() };
+    setTransactions((prev) => { const next = [sanitized, ...prev.filter((t) => t.id !== sanitized.id)]; recalculateAccountsBalance(next); return next; });
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        if (user?.id) await supabase.from('transactions').upsert(mapTransactionToSupabasePayload(sanitized, user.id), { onConflict: 'id' });
+      } catch {}
+    }
+    toast.success('Movimiento registrado con éxito');
     return sanitized;
-  }, [recalculateAccountsBalance, syncTxToCloud]);
+  }, [recalculateAccountsBalance]);
+
+  const handleUpdateTransaction = useCallback(async (tx) => {
+    const { nextTransactions, toUpsert, toDelete, updatedTx } = processTransactionUpdate(tx, transactions, accountsRef.current || []);
+    setTransactions(nextTransactions);
+    recalculateAccountsBalance(nextTransactions);
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const user = activeUserRef.current || (await getSupabaseUser());
+        if (user?.id) {
+          if (toDelete.length > 0) {
+            const uuidDelete = toDelete.map((id) => ensureUUID(id)).filter(Boolean);
+            if (uuidDelete.length > 0) await supabase.from('transactions').delete().in('id', uuidDelete).eq('user_id', user.id);
+          }
+          if (toUpsert.length > 0) await supabase.from('transactions').upsert(toUpsert.map((t) => mapTransactionToSupabasePayload(t, user.id)), { onConflict: 'id' });
+        }
+      } catch (err) { console.error('[useTransactions] Error update sync:', err); }
+    }
+    toast.success('Movimiento actualizado con éxito');
+    return updatedTx;
+  }, [transactions, recalculateAccountsBalance]);
 
   const handleDeleteTransaction = useCallback(async (txIdOrIds) => {
     if (!txIdOrIds) return false;
@@ -98,11 +110,7 @@ export function useTransactions({ isResettingRef, accounts = [], setAccounts, tr
       if (cp?.id) idsToDelete.push(cp.id);
     }
     const uuidList = idsToDelete.map((id) => ensureUUID(id)).filter(Boolean);
-    setTransactions((prev) => {
-      const next = prev.filter((t) => !idsToDelete.includes(t.id) && !uuidList.includes(ensureUUID(t.id)));
-      recalculateAccountsBalance(next);
-      return next;
-    });
+    setTransactions((prev) => { const next = prev.filter((t) => !idsToDelete.includes(t.id) && !uuidList.includes(ensureUUID(t.id))); recalculateAccountsBalance(next); return next; });
     if (isSupabaseConfigured && supabase) {
       try {
         const user = activeUserRef.current || (await getSupabaseUser());
@@ -115,32 +123,23 @@ export function useTransactions({ isResettingRef, accounts = [], setAccounts, tr
     return true;
   }, [transactions, recalculateAccountsBalance]);
 
-  const handleExecuteTransfer = useCallback(async ({ fromAcc, toAcc, amount, destAmount, fromCurrency, toCurrency, date, note }) => {
-    if (!fromAcc?.id || !toAcc?.id || fromAcc.id === toAcc.id) { toast.error('Selecciona cuentas de origen y destino válidas y diferentes'); return null; }
-    const transferAmount = toSafeNumber(amount);
-    if (transferAmount <= 0) { toast.error('El monto a transferir debe ser mayor a 0'); return null; }
-    const cleanDest = destAmount !== undefined ? toSafeNumber(destAmount) : transferAmount;
-    const getRate = (c) => c === 'USD' ? (Number(trm) || 4050) : c === 'EUR' ? Math.round((Number(trm) || 4050) * 1.08) : 1;
-    const rate = getRate(fromCurrency), inRate = getRate(toCurrency), copAmount = fromCurrency === 'COP' ? transferAmount : Math.round(transferAmount * rate);
-    const nowIso = new Date().toISOString(), txDate = date || nowIso.split('T')[0], transferId = generateUUID();
-    const outDesc = `Transferencia a ${toAcc.name}${note ? `: ${note}` : ''}`, inDesc = `Transferencia desde ${fromAcc.name}${note ? `: ${note}` : ''}`;
-    const base = { date: txDate, categoryId: 'cat-transfer', categoryName: 'Transferencias', category: 'Transferencias', isTransfer: true, transferId, transfer_id: transferId, updated_at: nowIso, fromAccountId: fromAcc.id, toAccountId: toAcc.id, fromAccountName: fromAcc.name, toAccountName: toAcc.name };
-    const outTx = { ...base, id: generateUUID(), type: 'expense', amount: copAmount, originalAmount: transferAmount, originalCurrency: fromCurrency, exchangeRate: rate, subcategoryId: 'sub-transfer-out', subcategoryName: 'Transferencia Enviada', accountId: fromAcc.id, accountName: fromAcc.name, note: outDesc, notes: outDesc, description: outDesc };
-    const inTx = { ...base, id: generateUUID(), type: 'income', amount: copAmount, originalAmount: cleanDest, originalCurrency: toCurrency, exchangeRate: inRate, subcategoryId: 'sub-transfer-in', subcategoryName: 'Transferencia Recibida', accountId: toAcc.id, accountName: toAcc.name, note: inDesc, notes: inDesc, description: inDesc };
-    setTransactions((prev) => { const next = [inTx, outTx, ...prev]; recalculateAccountsBalance(next); return next; });
+  const handleExecuteTransfer = useCallback(async (params) => {
+    const pair = buildTransferPair({ ...params, trm });
+    if (!pair) { toast.error('Selecciona cuentas de origen y destino válidas y diferentes'); return null; }
+    setTransactions((prev) => { const next = [pair.inTx, pair.outTx, ...prev]; recalculateAccountsBalance(next); return next; });
     if (isSupabaseConfigured && supabase) {
       try {
         const user = activeUserRef.current || (await getSupabaseUser());
-        if (user?.id) await supabase.from('transactions').upsert([mapTransactionToSupabasePayload(outTx, user.id), mapTransactionToSupabasePayload(inTx, user.id)], { onConflict: 'id' });
+        if (user?.id) await supabase.from('transactions').upsert([mapTransactionToSupabasePayload(pair.outTx, user.id), mapTransactionToSupabasePayload(pair.inTx, user.id)], { onConflict: 'id' });
       } catch {}
     }
     toast.success('Movimiento registrado con éxito');
-    return { inTx, outTx };
+    return pair;
   }, [trm, recalculateAccountsBalance]);
 
   return {
     transactions, setTransactions,
-    handleAddTransaction: (tx) => saveTx(tx, false), handleSaveTransaction: (tx) => saveTx(tx, false), handleUpdateTransaction: (tx) => saveTx(tx, true),
+    handleAddTransaction: saveTx, handleSaveTransaction: saveTx, handleUpdateTransaction,
     handleDeleteTransaction, handleExecuteTransfer, handleTransfer: handleExecuteTransfer,
     resetTransactions: useCallback(() => setTransactions([]), [])
   };

@@ -59,10 +59,10 @@ export default function InvoicePaymentBankSection({
               </div>
             </div>
 
-            <div className="md:col-span-7 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/10 rounded-xl p-4 grid grid-cols-3 gap-3 text-right">
-              <div><span className="block text-[11px] text-slate-400 uppercase">Subtotal</span><span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">{formatCOP(subtotal)}</span></div>
-              <div><span className="block text-[11px] text-slate-400 uppercase">IVA {tax.applyIva ? '(19%)' : '(0%)'}</span><span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatCOP(ivaAmount)}</span></div>
-              <div className="border-l border-slate-200 dark:border-white/10 pl-3"><span className="block text-[11px] text-slate-400 uppercase font-bold">Total a Pagar</span><span className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white">{formatCOP(total)}</span></div>
+            <div className="md:col-span-7 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/10 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-left sm:text-right">
+              <div className="flex items-center justify-between sm:block"><span className="block text-[11px] text-slate-400 uppercase">Subtotal</span><span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">{formatCOP(subtotal)}</span></div>
+              <div className="flex items-center justify-between sm:block"><span className="block text-[11px] text-slate-400 uppercase">IVA {tax.applyIva ? '(19%)' : '(0%)'}</span><span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatCOP(ivaAmount)}</span></div>
+              <div className="flex items-center justify-between sm:block border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-white/10 pt-2 sm:pt-0 sm:pl-3"><span className="block text-[11px] text-slate-400 uppercase font-bold">Total a Pagar</span><span className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white">{formatCOP(total)}</span></div>
             </div>
           </div>
 

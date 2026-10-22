@@ -33,8 +33,7 @@ export default function ProfileModal({
   categories = [], onAddCategory, onUpdateCategory, onDeleteCategory, onAddSubcategory, onUpdateSubcategory,
   onDeleteSubcategory, investments = [], debtsAndLoans = [], accounts = [], onAddAccount, onUpdateAccount,
   onDeleteAccount, onReorderAccounts, trm = 4000, onRestoreBackup, onFactoryReset, onOpenTutorial,
-  onNavigateToRecurring, onNavigateToNetWorth, onNavigate, onManualCloudSync, onLogout,
-  selectedDate, selectedMonth, selectedYear
+  onNavigateToRecurring, onNavigateToNetWorth, onNavigate, onManualCloudSync, onLogout, selectedDate = null, selectedMonth = null, selectedYear = null
 }) {
   const { formatMoney, enableDecimals, toggleEnableDecimals } = usePrivacy();
   const { user, signOut } = useAuth();
@@ -42,8 +41,7 @@ export default function ProfileModal({
   const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
   const fileInputRef = useRef(null);
 
-  const setCurrentView = (currentView) => setModalState((p) => ({ ...p, currentView }));
-  const setActiveTab = (activeTab) => setModalState((p) => ({ ...p, activeTab }));
+  const setCurrentView = (currentView) => setModalState((p) => ({ ...p, currentView })), setActiveTab = (activeTab) => setModalState((p) => ({ ...p, activeTab }));
   const showToast = (text, isError = false) => {
     setModalState((p) => ({ ...p, toastMessage: { text, isError } }));
     setTimeout(() => setModalState((p) => ({ ...p, toastMessage: null })), 3500);
@@ -80,10 +78,10 @@ export default function ProfileModal({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const prev = document.body?.style.overflow || '';
-    if (document.body) document.body.style.overflow = 'hidden';
-    return () => { if (document.body) document.body.style.overflow = prev; };
+    if (!isOpen || !document.body) return;
+    const prev = document.body.style.overflow || '';
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -96,7 +94,7 @@ export default function ProfileModal({
         savingsGoals={savingsGoals} totalSavedAcrossGoals={metrics.totalSavedAcrossGoals} totalTargetAcrossGoals={metrics.totalTargetAcrossGoals}
         subscriptions={subscriptions} totalMonthlySubscriptions={finances.totalMonthlySubscriptions} onNavigateToRecurring={onNavigateToRecurring}
         onNavigateToNetWorth={onNavigateToNetWorth} onNavigate={onNavigate} onClose={onClose} onOpenAccounts={onOpenAccounts}
-        accountsCount={accountsCount} categoriesCount={categoriesCount}
+        accountsCount={accountsCount} categoriesCount={categoriesCount} accounts={accounts} transactions={transactions}
       />
     );
     if (activeTab === 'security') return (

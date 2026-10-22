@@ -120,6 +120,7 @@ export default function DashboardView(props) {
         onCustomizeWidgets={onCustomizeWidgets}
         onSaveWidgets={onSaveWidgets}
         livePrices={resolvedLivePrices}
+        budgets={props.budgets || financeData?.budgets}
       />
     </div>
   );

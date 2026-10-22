@@ -25,7 +25,7 @@ export default function Dashboard({
   onAddCategory = () => {}, onAddSubcategory = () => {}, onUpdateSubcategory = () => {}, onDeleteSubcategory = () => {},
   onAddAccount = () => {}, onSelectCreditCardDetail = () => {}, currentMonthLabel = '', trm = 4050,
   widgetsConfig = null, widgets: widgetsProp = null, onSaveWidgets = null, allowedWidgetIds = null, className = null,
-  financeData = {}, financeActions = {}, isForcedMobile = false, isForcedDesktop = false, userProfile = null, livePrices = null
+  financeData = {}, financeActions = {}, isForcedMobile = false, isForcedDesktop = false, userProfile = null, livePrices = null, budgets = null
 }) {
   const effectiveLivePrices = livePrices || financeData?.livePrices || {};
   const effectiveUser = userProfile || financeData?.userProfile;
@@ -62,7 +62,7 @@ export default function Dashboard({
 
   const WIDGET_REGISTRY = useWidgetRegistry({
     ...metrics, accounts, categories, recurringPayments, subscriptions, trm, selectedDate, selectedDay,
-    currentMonthLabel, monthlyStats, transactions, navigateToTab, handleOpenDebtModal, handleOpenTxModal,
+    currentMonthLabel, monthlyStats, transactions, budgets: budgets || financeData?.budgets, navigateToTab, handleOpenDebtModal, handleOpenTxModal,
     handleOpenRecurringModal, handleSelectTransaction, onOpenCalendar, onSelectDay, onSelectCreditCardDetail,
     financeActions, formatMoney
   });

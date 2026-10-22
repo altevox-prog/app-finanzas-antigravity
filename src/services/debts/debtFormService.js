@@ -79,62 +79,41 @@ export const calculateDebtRemainingBalances = ({ baseAmount, accruedInterest = 0
 };
 
 export const buildDebtPayload = ({
-  editingItem = null,
-  type = 'receivable',
-  name = '',
-  totalAmount,
-  interestRate = '',
-  insuranceFee = '',
-  installments = '1',
-  startDate,
-  dueDate,
-  computedDueDate,
-  frequency = 'Único',
-  biweeklyDay1 = 15,
-  biweeklyDay2 = 30,
-  dueDay = 15,
-  notes = '',
-  parseFormattedAmountFn = parseFormattedAmount,
-  calculateElapsedMonthsFn = calculateElapsedMonths
+  editingItem = null, type = 'receivable', name = '', totalAmount, interestRate = '', insuranceFee = '',
+  installments = '1', startDate, dueDate, computedDueDate, frequency = 'Único',
+  biweeklyDay1 = 15, biweeklyDay2 = 30, dueDay = 15, notes = '',
+  parseFormattedAmountFn = parseFormattedAmount, calculateElapsedMonthsFn = calculateElapsedMonths
 }) => {
   const base = parseFormattedAmountFn ? parseFormattedAmountFn(totalAmount) : Number(totalAmount) || 0;
   const finalTargetDate = frequency === 'Único' ? dueDate : (computedDueDate || dueDate);
-
-  const { monthsElapsed, accruedInterest } = calculateAccruedInterest({
-    totalAmount, interestRate, startDate, parseFormattedAmountFn, calculateElapsedMonthsFn
-  });
-
+  const { monthsElapsed, accruedInterest } = calculateAccruedInterest({ totalAmount, interestRate, startDate, parseFormattedAmountFn, calculateElapsedMonthsFn });
   const existingPayments = editingItem?.payments || [];
-  const { remainingCapital, remainingInterest, totalRemaining } = calculateDebtRemainingBalances({
-    baseAmount: base, accruedInterest, payments: existingPayments
-  });
-
+  const { remainingCapital, remainingInterest, totalRemaining } = calculateDebtRemainingBalances({ baseAmount: base, accruedInterest, payments: existingPayments });
   const cleanName = (name || '').trim();
+  const instNum = parseInt(installments, 10) || 1;
+  const startDt = startDate || new Date().toISOString().split('T')[0];
+  const cleanBiweekly = frequency === 'Quincenal' ? [parseInt(biweeklyDay1, 10) || 15, parseInt(biweeklyDay2, 10) || 30] : (Array.isArray(editingItem?.biweeklyDays) ? editingItem.biweeklyDays : null);
+  const cleanDueDay = frequency === 'Mensual' ? (parseInt(dueDay, 10) || 15) : (editingItem?.dueDay != null ? Number(editingItem.dueDay) : null);
+
+  const rawData = {
+    ...(editingItem?.raw_data || {}),
+    installments: instNum, total_installments: instNum, frequency,
+    dueDay: cleanDueDay, due_day: cleanDueDay, biweeklyDays: cleanBiweekly, biweekly_days: cleanBiweekly,
+    dueDate: finalTargetDate, due_date: finalTargetDate, startDate: startDt, start_date: startDt,
+    interestRate: parseFloat(interestRate) || 0, insuranceFee: parseFloat(insuranceFee) || 0,
+    payments: existingPayments, disbursements: editingItem?.disbursements || [], initialAmount: base, totalAmount: base
+  };
 
   return {
     id: editingItem ? editingItem.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'debt-' + Date.now()),
-    type: normalizeDebtType(type),
-    name: cleanName,
-    personName: cleanName,
-    totalAmount: base,
-    principalAmount: base,
-    accruedInterest,
-    monthsElapsed,
-    remainingCapital,
-    remainingInterest,
-    totalRemaining,
-    remainingAmount: remainingCapital,
-    interestRate: parseFloat(interestRate) || 0,
-    insuranceFee: parseFloat(insuranceFee) || 0,
-    installments: parseInt(installments, 10) || 1,
-    startDate: startDate || new Date().toISOString().split('T')[0],
-    dueDate: finalTargetDate,
-    collectionDate: finalTargetDate,
-    frequency,
-    biweeklyDays: frequency === 'Quincenal' ? [parseInt(biweeklyDay1, 10), parseInt(biweeklyDay2, 10)] : null,
-    dueDay: frequency === 'Mensual' ? parseInt(dueDay, 10) : null,
-    notes: (notes || '').trim(),
-    payments: existingPayments
+    type: normalizeDebtType(type), name: cleanName, personName: cleanName, person: cleanName,
+    totalAmount: base, total_amount: base, principalAmount: base, amount: base,
+    accruedInterest, monthsElapsed, remainingCapital, remainingInterest, totalRemaining, remainingAmount: remainingCapital, remaining_amount: remainingCapital,
+    interestRate: parseFloat(interestRate) || 0, insuranceFee: parseFloat(insuranceFee) || 0,
+    installments: instNum, total_installments: instNum,
+    startDate: startDt, start_date: startDt, dueDate: finalTargetDate, due_date: finalTargetDate, collectionDate: finalTargetDate,
+    frequency, biweeklyDays: cleanBiweekly, biweekly_days: cleanBiweekly, dueDay: cleanDueDay, due_day: cleanDueDay,
+    notes: (notes || '').trim(), payments: existingPayments, disbursements: editingItem?.disbursements || [], raw_data: rawData
   };
 };
 

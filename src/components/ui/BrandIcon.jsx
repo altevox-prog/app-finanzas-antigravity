@@ -1,8 +1,7 @@
 import React from 'react';
-import { Building2 } from 'lucide-react';
+import { Building2, TrendingUp } from 'lucide-react';
 
 const BRAND_ASSETS = {
-  // SVGs Vectoriales Oficiales
   bancolombia: '/brands/bancolombia.svg',
   binance: '/brands/binance.svg',
   davivienda: '/brands/davivienda.svg',
@@ -14,8 +13,6 @@ const BRAND_ASSETS = {
   nubank: '/brands/nu.svg',
   paypal: '/brands/paypal.svg',
   visa: '/brands/visa.svg',
-
-  // Formatos PNG / WEBP / JPEG existentes
   addi: '/brands/addi.png',
   arq: '/brands/arq.png',
   bitcoin: '/brands/bitcoin.png',
@@ -25,8 +22,10 @@ const BRAND_ASSETS = {
   google: '/brands/google.webp',
   movistar: '/brands/movistar.png',
   xtb: '/brands/xtb.jpeg',
-
-  // Métodos Generales y Efectivo
+  trii: '/brands/trii.jpeg',
+  'acciones trii': '/brands/trii.jpeg',
+  'trii colombia': '/brands/trii.jpeg',
+  'trii app': '/brands/trii.jpeg',
   efectivo: '/brands/pago_en_efectivo.png',
   cash: '/brands/pago_en_efectivo.png',
   'pago en efectivo': '/brands/pago_en_efectivo.png',
@@ -55,118 +54,63 @@ const DEFAULT_FALLBACK = '/brands/pago_en_efectivo.png';
 
 const normalizeKey = (val) => {
   if (!val) return '';
-  return val
-    .toString()
-    .toLowerCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  return val.toString().toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
-const resolveBrandAsset = (name = '', type = '') => {
-  const normName = normalizeKey(name);
-  const normType = normalizeKey(type);
-
-  // 1. Coincidencia exacta por nombre
-  if (normName && BRAND_ASSETS[normName]) {
-    return BRAND_ASSETS[normName];
-  }
-
-  // 2. Coincidencia parcial por nombre
-  if (normName) {
+const resolveBrandAsset = (name = '', type = '', institution = '') => {
+  const candidates = [name, institution, type].map(normalizeKey).filter(Boolean);
+  for (const c of candidates) {
+    if (BRAND_ASSETS[c]) return BRAND_ASSETS[c];
     for (const [key, asset] of Object.entries(BRAND_ASSETS)) {
-      if (normName.includes(key) || key.includes(normName)) {
-        return asset;
-      }
+      if (c.includes(key) || (key.length >= 4 && key.includes(c))) return asset;
     }
   }
-
-  // 3. Coincidencia exacta o parcial por tipo
-  if (normType && BRAND_ASSETS[normType]) {
-    return BRAND_ASSETS[normType];
-  }
-
-  if (normType) {
-    for (const [key, asset] of Object.entries(BRAND_ASSETS)) {
-      if (normType.includes(key) || key.includes(normType)) {
-        return asset;
-      }
-    }
-  }
-
   return null;
 };
 
-export default function BrandIcon({ 
-  name = '', 
-  type = '', 
-  size = 36, 
-  className = '', 
-  wrapperClassName = '', 
-  fallback = null 
+export default function BrandIcon({
+  name = '', type = '', institution = '', size = 36,
+  className = '', wrapperClassName = '', fallback = null
 }) {
-  const brandSrc = resolveBrandAsset(name, type);
+  const brandSrc = resolveBrandAsset(name, type, institution);
 
-  // Renderizado de la imagen nítida sin deformaciones con prevención de bucles en error
   if (brandSrc) {
     const imgEl = (
-      <div 
-        style={{ width: size, height: size }} 
-        className={`flex items-center justify-center shrink-0 p-0.5 ${className}`}
-      >
+      <div style={{ width: size, height: size }} className={`flex items-center justify-center shrink-0 p-0.5 ${className}`}>
         <img
           src={brandSrc}
-          alt={name || 'Entidad financiera'}
+          alt={name || institution || 'Entidad financiera'}
           className="w-full h-full object-contain select-none rounded-xl"
           loading="lazy"
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.src = DEFAULT_FALLBACK;
-          }}
+          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_FALLBACK; }}
         />
       </div>
     );
-
-    if (wrapperClassName) {
-      return <div className={wrapperClassName}>{imgEl}</div>;
-    }
-    return imgEl;
+    return wrapperClassName ? <div className={wrapperClassName}>{imgEl}</div> : imgEl;
   }
 
-  // Fallback prop si se proporciona (para transacciones con categoría personalizada)
-  if (fallback) {
-    if (wrapperClassName) {
-      return <div className={wrapperClassName}>{fallback}</div>;
-    }
-    return fallback;
-  }
+  if (fallback) return wrapperClassName ? <div className={wrapperClassName}>{fallback}</div> : fallback;
 
-  // Fallback sobrio si no coincide ningún nombre ni tipo
+  const isMarket = ['crypto', 'variable', 'stock', 'etf', 'investment', 'accion', 'fondo'].some(k => (type || '').toLowerCase().includes(k));
+  const FallbackIcon = isMarket ? TrendingUp : Building2;
+
   const fallbackEl = (
-    <div 
-      style={{ width: size, height: size }} 
-      className={`rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ${className}`}
-    >
-      <Building2 className={size <= 24 ? 'w-3.5 h-3.5' : 'w-5 h-5'} />
+    <div style={{ width: size, height: size }} className={`rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 ${className}`}>
+      <FallbackIcon className={size <= 24 ? 'w-3.5 h-3.5' : 'w-5 h-5'} />
     </div>
   );
 
-  if (wrapperClassName) {
-    return <div className={wrapperClassName}>{fallbackEl}</div>;
-  }
-
-  return fallbackEl;
+  return wrapperClassName ? <div className={wrapperClassName}>{fallbackEl}</div> : fallbackEl;
 }
 
-export function hasBrandIcon(name = '', type = '') {
-  return !!resolveBrandAsset(name, type);
+export function hasBrandIcon(name = '', type = '', institution = '') {
+  return !!resolveBrandAsset(name, type, institution);
 }
 
-// Retrocompatibilidad
 export const BancolombiaIcon = (props) => <BrandIcon name="bancolombia" {...props} />;
 export const VisaIcon = (props) => <BrandIcon name="visa" {...props} />;
 export const MastercardIcon = (props) => <BrandIcon name="mastercard" {...props} />;
 export const NequiIcon = (props) => <BrandIcon name="nequi" {...props} />;
 export const NuIcon = (props) => <BrandIcon name="nu" {...props} />;
 export const DaviviendaIcon = (props) => <BrandIcon name="davivienda" {...props} />;
-
+export const TriiIcon = (props) => <BrandIcon name="trii" {...props} />;

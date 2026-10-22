@@ -46,12 +46,13 @@ export function normalizeRemoteDebt(d) {
   const raw = safeJson(d.raw_data), meta = safeJson(d.metadata), person = d.person || d.person_name || d.name || 'Sin nombre';
   const parsedTotal = pickNum(d.total_amount, d.totalAmount, d.amount, d.principalAmount, d.remaining_amount);
   const parsedRemaining = (d.remaining_amount != null && Number(d.remaining_amount) > 0) ? Number(d.remaining_amount) : (d.remainingAmount != null && Number(d.remainingAmount) > 0 ? Number(d.remainingAmount) : parsedTotal);
-  let payments = extractArray(d, raw, meta, 'payments'), disbursements = extractArray(d, raw, meta, 'disbursements'), initialAmount = null;
+  let payments = extractArray(d, raw, meta, 'payments'), disbursements = extractArray(d, raw, meta, 'disbursements'), initialAmount = null, pj = null;
   if (typeof d.notes === 'string' && d.notes.startsWith('PAYMENTS_JSON:')) {
     try {
       const p = JSON.parse(d.notes.replace('PAYMENTS_JSON:', ''));
       if (Array.isArray(p) && !payments.length) payments = p;
       else if (p && typeof p === 'object') {
+        pj = p;
         if (Array.isArray(p.payments) && !payments.length) payments = p.payments;
         if (Array.isArray(p.disbursements) && !disbursements.length) disbursements = p.disbursements;
         if (p.initialAmount) initialAmount = Number(p.initialAmount);
@@ -65,10 +66,25 @@ export function normalizeRemoteDebt(d) {
   initialAmount = initialAmount || (totalDisbursed > 0 ? (parsedTotal > totalDisbursed ? parsedTotal - totalDisbursed : parsedTotal) : parsedTotal);
   const calcRem = Math.max(0, totalAmount - totalCapPaid);
   const finalRemaining = (payments.length > 0 || totalDisbursed > 0) ? calcRem : (parsedRemaining || calcRem);
+
+  const installments = Number(d.installments ?? d.total_installments ?? raw.installments ?? raw.total_installments ?? pj?.installments ?? meta.installments) || 1;
+  const frequency = d.frequency || raw.frequency || pj?.frequency || meta.frequency || 'Único';
+  const dueDay = d.due_day ?? d.dueDay ?? raw.dueDay ?? raw.due_day ?? pj?.dueDay ?? pj?.due_day ?? 15;
+  const biweeklyDays = d.biweekly_days ?? d.biweeklyDays ?? raw.biweeklyDays ?? raw.biweekly_days ?? pj?.biweeklyDays ?? pj?.biweekly_days ?? [15, 30];
+  const dueDate = d.due_date || d.dueDate || raw.dueDate || raw.due_date || pj?.dueDate || pj?.due_date || '';
+  const startDate = d.start_date || d.startDate || raw.startDate || raw.start_date || pj?.startDate || pj?.start_date || '';
+
   return {
-    ...d, person, personName: person, name: person, initialAmount, initial_amount: initialAmount,
+    ...raw, ...d, person, personName: person, name: person, initialAmount, initial_amount: initialAmount,
     total_amount: totalAmount, totalAmount, principalAmount: totalAmount, amount: totalAmount,
     remaining_amount: finalRemaining, remainingAmount: finalRemaining, remainingCapital: finalRemaining, current_balance: finalRemaining,
+    installments, total_installments: installments, frequency,
+    dueDay: Number(dueDay) || 15, due_day: Number(dueDay) || 15,
+    biweeklyDays: Array.isArray(biweeklyDays) ? biweeklyDays : [15, 30], biweekly_days: Array.isArray(biweeklyDays) ? biweeklyDays : [15, 30],
+    dueDate, due_date: dueDate, collectionDate: dueDate,
+    startDate, start_date: startDate,
+    interestRate: safeNum(d.interest_rate ?? d.interestRate ?? raw.interestRate ?? raw.interest_rate ?? pj?.interestRate),
+    insuranceFee: safeNum(d.insurance_fee ?? d.insuranceFee ?? raw.insuranceFee ?? raw.insurance_fee ?? pj?.insuranceFee),
     payments, disbursements
   };
 }
@@ -106,37 +122,8 @@ export function normalizeRemoteRecurring(r) {
   };
 }
 
-export function resolveRemoteBudgets(res, userSettings = null) {
-  const list = Array.isArray(res) ? res : (res?.status === 'fulfilled' && !res.value?.error && Array.isArray(res.value?.data)) ? res.value.data : (Array.isArray(res?.data) ? res.data : []);
-  let loadedGlobal = null, categoriesMap = {};
-  if (list.length > 0) {
-    const isGlobal = (b) => Boolean(b.is_global === true || b.is_global === 'true' || b.isGlobal === true || b.isGlobal === 'true' || ['Límite Global', 'Presupuesto Global'].includes(b.name) || (!b.category_id && (!b.category || b.category === 'General')));
-    const globalRow = list.find(isGlobal);
-    if (globalRow) {
-      loadedGlobal = safeNum(globalRow.amount);
-      try { if (globalRow.id && typeof localStorage !== 'undefined') localStorage.setItem('global_budget_id', String(globalRow.id)); } catch {}
-    }
-    list.forEach((b) => {
-      if (!isGlobal(b)) {
-        const k = (b.category && b.category !== 'General') ? b.category : b.category_id;
-        if (k && k !== 'General') categoriesMap[k] = safeNum(b.amount);
-      }
-    });
-  }
-  if (userSettings) {
-    if (loadedGlobal === null) loadedGlobal = safeNum(userSettings.global_budget_limit ?? userSettings.global_budget ?? userSettings.budgets?.global);
-    if (userSettings.budgets?.categories) categoriesMap = { ...userSettings.budgets.categories, ...categoriesMap };
-  }
-  if (typeof localStorage !== 'undefined' && loadedGlobal === null) {
-    try {
-      const d = localStorage.getItem('global_budget_limit'), ls = localStorage.getItem('user_settings'), lb = localStorage.getItem('presu_budgets_v1') || localStorage.getItem('budgets');
-      if (d != null) loadedGlobal = safeNum(d);
-      else if (ls) loadedGlobal = safeNum(JSON.parse(ls).global_budget_limit ?? JSON.parse(ls).global_budget);
-      else if (lb) { const pb = JSON.parse(lb); loadedGlobal = safeNum(pb.global); categoriesMap = { ...(pb.categories || {}), ...categoriesMap }; }
-    } catch {}
-  }
-  return { global: loadedGlobal ?? 0, categories: categoriesMap };
-}
+export { resolveRemoteBudgets } from './budgetNormalizer';
+export { normalizeRemoteGoal } from './goalNormalizer';
 
 export function normalizeRemoteCategory(c, currentCategories = []) {
   if (!c || typeof c !== 'object') return c;
@@ -147,22 +134,4 @@ export function normalizeRemoteCategory(c, currentCategories = []) {
     if (Array.isArray(ex?.subcategories) && ex.subcategories.length) subs = ex.subcategories;
   }
   return { ...c, subcategories: Array.isArray(subs) ? subs : [] };
-}
-
-export function normalizeRemoteGoal(g) {
-  if (!g || typeof g !== 'object') return null;
-  const rawDate = g.deadline || g.target_date || g.dueDate || '';
-  let safeDate = '';
-  if (rawDate) { try { safeDate = new Date(rawDate).toISOString().split('T')[0]; } catch { safeDate = String(rawDate).split('T')[0]; } }
-  const target = safeNum(g.target_amount ?? g.targetAmount), current = safeNum(g.current_amount ?? g.currentAmount);
-  const targetAccId = g.target_account_id || g.targetAccountId || null, notifDay = safeNum(g.notification_day ?? g.notificationDay, 15);
-  const notifyEnabled = Boolean(g.notify_enabled !== undefined ? g.notify_enabled : (g.notifyEnabled !== undefined ? g.notifyEnabled : true));
-
-  return {
-    ...g, id: String(g.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`)),
-    user_id: g.user_id, name: (g.name || 'Nueva Meta').trim(), target_amount: target, targetAmount: target, current_amount: current, currentAmount: current,
-    deadline: safeDate, target_date: safeDate, dueDate: safeDate, icon: g.icon || 'Target', color: g.color || '#10B981',
-    target_account_id: targetAccId, targetAccountId: targetAccId, months: safeNum(g.months, 6), notification_day: notifDay, notificationDay: notifDay,
-    notify_enabled: notifyEnabled, notifyEnabled, created_at: g.created_at || new Date().toISOString(), updated_at: g.updated_at || new Date().toISOString()
-  };
 }

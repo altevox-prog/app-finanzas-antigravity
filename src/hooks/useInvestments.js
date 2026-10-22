@@ -7,6 +7,8 @@ import { getSupabaseUser } from '../services/supabaseClient';
 import { consolidateInvestmentsList } from '../components/investments/utils/investmentConsolidation';
 import { sanitizeInvestment, mapInvestmentToSupabasePayload, applyNewLot, applyDeleteLot } from '../components/investments/utils/investmentNormalizer';
 
+const sortInvestments = (list) => [...list].sort((a, b) => (a.symbol || a.ticker || a.name || '').localeCompare(b.symbol || b.ticker || b.name || '') || String(a.id).localeCompare(String(b.id)));
+
 export function useInvestments(isResettingRef, options = {}) {
   const explicitUser = typeof isResettingRef === 'object' && isResettingRef?.user ? isResettingRef.user : options?.user;
   const resetRef = typeof isResettingRef === 'object' && 'current' in isResettingRef ? isResettingRef : options?.isResettingRef;
@@ -31,7 +33,7 @@ export function useInvestments(isResettingRef, options = {}) {
       if (!uid) return [];
       const { data, error } = await supabase.from('investments').select('*').eq('user_id', uid).order('created_at', { ascending: false });
       if (error || !Array.isArray(data)) return [];
-      const consolidated = consolidateInvestmentsList(data.map(sanitizeInvestment));
+      const consolidated = sortInvestments(consolidateInvestmentsList(data.map(sanitizeInvestment)));
       setInvestments(consolidated);
       return consolidated;
     } catch { return []; }
@@ -50,7 +52,7 @@ export function useInvestments(isResettingRef, options = {}) {
           setInvestments((prev) => prev.filter((i) => i.id !== p.old.id && ensureUUID(i.id) !== ensureUUID(p.old.id)));
         } else {
           const upd = sanitizeInvestment(p.new);
-          setInvestments((prev) => consolidateInvestmentsList([upd, ...prev.filter((i) => i.id !== upd.id && ensureUUID(i.id) !== ensureUUID(upd.id))]));
+          setInvestments((prev) => sortInvestments(consolidateInvestmentsList([upd, ...prev.filter((i) => i.id !== upd.id && ensureUUID(i.id) !== ensureUUID(upd.id))])));
         }
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -72,9 +74,9 @@ export function useInvestments(isResettingRef, options = {}) {
       if (idx !== -1) {
         const lot = sanitized.lots?.[0] || { shares_count: sanitized.shares, purchase_price_per_share: sanitized.buyPrice, date: sanitized.startDate };
         target = applyNewLot(prev[idx], lot);
-        const next = [...prev]; next[idx] = target; return next;
+        const next = [...prev]; next[idx] = target; return sortInvestments(next);
       }
-      return [sanitized, ...prev];
+      return sortInvestments([sanitized, ...prev]);
     });
     await syncSupabase(target);
     toast.success('Inversión guardada correctamente');
@@ -83,7 +85,7 @@ export function useInvestments(isResettingRef, options = {}) {
 
   const handleUpdateInvestment = useCallback(async (inv) => {
     const sanitized = sanitizeInvestment(inv);
-    setInvestments((prev) => prev.map((i) => (i.id === sanitized.id || ensureUUID(i.id) === ensureUUID(sanitized.id) ? sanitized : i)));
+    setInvestments((prev) => sortInvestments(prev.map((i) => (i.id === sanitized.id || ensureUUID(i.id) === ensureUUID(sanitized.id) ? sanitized : i))));
     await syncSupabase(sanitized);
     toast.success('Inversión actualizada correctamente');
     return sanitized;
@@ -104,12 +106,12 @@ export function useInvestments(isResettingRef, options = {}) {
 
   const mutateLot = useCallback(async (assetId, mutatorFn, msg) => {
     let updated = null;
-    setInvestments((prev) => prev.map((item) => {
+    setInvestments((prev) => sortInvestments(prev.map((item) => {
       if (item.id === assetId || ensureUUID(item.id) === ensureUUID(assetId)) {
         updated = mutatorFn(item); return updated;
       }
       return item;
-    }));
+    })));
     if (updated) { await syncSupabase(updated); toast.success(msg); }
   }, [syncSupabase]);
 

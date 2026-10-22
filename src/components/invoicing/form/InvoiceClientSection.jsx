@@ -88,7 +88,7 @@ export default function InvoiceClientSection({
             <Calendar className="w-3.5 h-3.5 text-emerald-500" />
             Vigencia y Términos de Pago
           </div>
-          <div className="grid grid-cols-2 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
             <div className="flex flex-col justify-end">
               <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 min-h-[2rem] flex items-end">Fecha Emisión</label>
               <input

@@ -32,7 +32,26 @@ export const calculateNetWorth = ({
     else if (!currentPrice && buyPrice > 0) currentPrice = buyPrice;
 
     const costOrigin = rawInvested > 0 ? rawInvested : (shares > 0 && buyPrice > 0 ? shares * buyPrice : 0);
-    const currentOrigin = livePrice > 0 && shares > 0 ? shares * livePrice : (rawCurrent > 0 ? rawCurrent : (shares > 0 && currentPrice > 0 ? shares * currentPrice : costOrigin));
+    let currentOrigin = livePrice > 0 && shares > 0 ? shares * livePrice : (rawCurrent > 0 ? rawCurrent : (shares > 0 && currentPrice > 0 ? shares * currentPrice : costOrigin));
+
+    const isPrivateLoan = inv.subType === 'private_loan' || inv.assetType === 'loan';
+    const isCDT = !isPrivateLoan && (
+      inv.assetType === 'cdt' || inv.assetType === 'fixed_income' ||
+      inv.category === 'fixed' || inv.category === 'CDT' ||
+      inv.subType === 'cdt' || inv.subtype === 'cdt'
+    );
+    if (isCDT && rawInvested > 0 && !rawCurrent) {
+      const cdtRate = safeNumber(inv.interestRate ?? inv.rate);
+      const sDate = inv.startDate || inv.start_date;
+      const dDate = inv.dueDate || inv.due_date;
+      const isMatured = Boolean(dDate) && (new Date().toISOString().split('T')[0] >= dDate);
+      if (isMatured && dDate && sDate) {
+        const dTerm = Math.max(1, Math.round((new Date(dDate + 'T00:00:00') - new Date(sDate + 'T00:00:00')) / 86400000));
+        currentOrigin = costOrigin + calculateCDTMaturityReturn(rawInvested, cdtRate, dTerm, 0.04).netReturn;
+      } else if (sDate) {
+        currentOrigin = costOrigin + calculateCDTAccruedReturn(rawInvested, cdtRate, sDate, new Date(), 0.04).netReturn;
+      }
+    }
 
     totalInvestmentsCostCOP += costOrigin * rate;
     totalInvestmentsValueCOP += (currentOrigin || costOrigin) * rate;

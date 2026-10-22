@@ -10,7 +10,8 @@ interface ExtractedTransaction {
   description: string;
   date: string;
   account_type: string;
-  type?: "income" | "expense";
+  destination_account_type?: string;
+  type?: "income" | "expense" | "transfer";
 }
 
 function parseWithRegex(text: string): ExtractedTransaction | null {
@@ -88,17 +89,41 @@ function parseWithRegex(text: string): ExtractedTransaction | null {
 
   // 4. ARQ / DolarApp
   if (/arq|dolarapp|arqfinance|usd/i.test(clean)) {
-    // Caso 1: Ingreso ("Recibiste 1,000 USD de ...")
+    // Caso 1: Retiro propio hacia Bancolombia -> TRANSFERENCIA INTERNA
+    const esTransferenciaPropia = /has realizado un pago a alexander/i.test(clean) ||
+                                 (/debitado/i.test(clean) && /alexander/i.test(clean));
+
+    if (esTransferenciaPropia) {
+      const transferMatch = clean.match(/debitado\s*\$?\s*([\d\.,]+)/i) ||
+                            clean.match(/\$?\s*([\d\.,]+)\s*de tu saldo/i) ||
+                            clean.match(/(?:por|valor de|pago a)\s*\$?\s*([\d\.,]+)/i);
+      if (transferMatch) {
+        let rawAmount = transferMatch[1].replace(/,/g, "");
+        const amount = parseFloat(rawAmount);
+        if (!isNaN(amount) && amount > 0) {
+          return {
+            amount,
+            description: "TRANSFERENCIA ARQ → BANCOLOMBIA",
+            date: today,
+            account_type: "ARQ",
+            destination_account_type: "BANCOLOMBIA",
+            type: "transfer",
+          };
+        }
+      }
+    }
+
+    // Caso 2: Ingreso real desde terceros (ej: Sensei Empire)
     const incomeMatch = clean.match(/recibiste\s+([\d\.,]+)\s*USD(?:\s+de\s+([^\n\r\.\,]+))?/i) ||
                         clean.match(/([\d\.,]+)\s*USD(?:\s+de\s+([^\n\r\.\,]+))?/i);
 
-    if (incomeMatch && /recibiste|transferencia|de\s+/i.test(clean)) {
-      let rawAmount = incomeMatch[1].replace(/,/g, ""); // "1,000" -> "1000"
+    if (incomeMatch && /recibiste|de\s+/i.test(clean) && !/alexander/i.test(clean)) {
+      let rawAmount = incomeMatch[1].replace(/,/g, "");
       const amount = parseFloat(rawAmount);
       if (!isNaN(amount) && amount > 0) {
         return {
           amount,
-          description: incomeMatch[2] ? incomeMatch[2].trim().toUpperCase() : "TRANSFERENCIA ARQ",
+          description: incomeMatch[2] ? incomeMatch[2].trim().toUpperCase() : "INGRESO ARQ",
           date: today,
           account_type: "ARQ",
           type: "income",
@@ -106,8 +131,8 @@ function parseWithRegex(text: string): ExtractedTransaction | null {
       }
     }
 
-    // Caso 2: Gasto / Compra / Retiro ARQ
-    const amountMatch = clean.match(/(?:pagaste|compraste|por|valor de)\s*\$?\s*([\d\.,]+)/i);
+    // Caso 3: Gasto / Compra con tarjeta o pago ARQ a terceros
+    const amountMatch = clean.match(/(?:pagaste|compraste|debitado|por|valor de)\s*\$?\s*([\d\.,]+)/i);
     const merchantMatch = clean.match(/(?:en|comercio:?|a:?)\s+([A-Za-z0-9\s\.\-_]{2,30}?)(?:\s+por|\s+el|\s+con|\n|\.|$)/i);
 
     if (amountMatch) {
@@ -161,10 +186,8 @@ serve(async (req) => {
       });
     }
 
-    // Intentamos extraer datos localmente con Regex
     let parsedData = parseWithRegex(email_body);
 
-    // Si Regex no reconoció el formato del correo, usamos Gemini como respaldo
     if (!parsedData) {    
       const prompt = `
 Analiza la siguiente notificación de transacción bancaria en Colombia (Bancolombia, PSE ACH Colombia, RappiCard o ARQ/DolarApp) y extrae los datos en formato JSON estricto.
@@ -175,29 +198,21 @@ ${email_body}
 """
 
 Reglas de extracción:
-1. "amount": número decimal positivo sin signos ni separadores de miles (ej: si dice "$ 412.855,88" debe ser 412855.88, si dice "$56.300" debe ser 56300.00).
-2. "date": fecha de la transacción en formato YYYY-MM-DD (ej: si dice 15/10/2026 debe ser "2026-10-15").
-3. "description": nombre limpio del comercio, empresa o beneficiario (ej: si dice "Empresa: P.A. ADDI" o "Descripción: Pago ADDI", extrae "ADDI"; si dice "RAPPI", extrae "RAPPI").
-4. "account_type": 
-   - "RAPPICARD": si el texto menciona "RappiCard", "*7493" o viene de Rappi.
-   - "MASTERCARD": si menciona "TC*", tarjeta de crédito Bancolombia o terminada en 6295.
-   - "ARQ": si menciona "ARQ", "DolarApp" o cuenta en dólares.
-   - "BANCOLOMBIA": si es débito, código QR, transferencia o pago aprobado por PSE / ACH Colombia.
-5. "type": "income" si es una transferencia entrante o recibida, o "expense" si es una compra o pago.
+1. "amount": número decimal positivo sin signos ni separadores de miles.
+2. "date": fecha en formato YYYY-MM-DD.
+3. "description": nombre limpio del comercio o tercero.
+4. "account_type": "RAPPICARD", "MASTERCARD", "ARQ" o "BANCOLOMBIA".
+5. "type": "income" (ingreso recibido), "expense" (pago/compra) o "transfer" (si es transferencia propia entre cuentas).
 
-Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin bloques markdown:
+Responde ÚNICAMENTE con un JSON válido:
 {"amount": 412855.88, "date": "2026-10-15", "description": "ADDI", "account_type": "BANCOLOMBIA", "type": "expense"}
 `;
-      const MODELS = [
-        "gemini-3.8-flash"
-      ];
-
+      const MODELS = ["gemini-3.8-flash"];
       let geminiData = null;
       let lastError = null;
 
       for (const model of MODELS) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -215,18 +230,12 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin 
         }
       }
 
-      if (!geminiData) {
-        return new Response(JSON.stringify({ error: "Gemini fallback failed", details: lastError }), {
-          status: 502,
-          headers: { "Content-Type": "application/json" },
-        });
+      if (geminiData) {
+        const rawJson = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+        parsedData = JSON.parse(rawJson);
       }
-      
-      const rawJson = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-      parsedData = JSON.parse(rawJson);
     }
 
-    // Descartar correos informativos o sin monto para no romper la base de datos
     if (!parsedData || !parsedData.amount || parsedData.amount <= 0) {
       return new Response(
         JSON.stringify({ message: "Not a financial transaction email, skipped", data: parsedData }),
@@ -236,7 +245,6 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin 
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Manejo preventivo de duplicados si viene email_message_id
     if (email_message_id) {
       const { data: existingTx } = await supabase
         .from("transactions")
@@ -246,13 +254,12 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin 
 
       if (existingTx) {
         return new Response(
-          JSON.stringify({ message: "Transaction already processed (duplicate email_message_id)", id: existingTx.id, email_message_id }),
+          JSON.stringify({ message: "Transaction already processed", id: existingTx.id, email_message_id }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       }
     }
 
-    // Obtener las cuentas del usuario activo dinámicamente
     const { data: userAccounts, error: accountsError } = await supabase
       .from("accounts")
       .select("id, name, type")
@@ -265,13 +272,12 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin 
       });
     }
 
-    // Emparejar dinámicamente la cuenta destino
+    // Identificar cuenta de origen
     let targetAccountId = requestData.account_id || requestData.accountId || null;
+    const accType = (parsedData.account_type || "").toUpperCase();
 
     if (!targetAccountId) {
-      const accType = (parsedData.account_type || "").toUpperCase();
       let matched = null;
-
       if (accType === "RAPPICARD") {
         matched = userAccounts.find((a: any) => /rappi/i.test(a.name));
       } else if (accType === "MASTERCARD") {
@@ -284,37 +290,48 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin 
                   userAccounts.find((a: any) => a.type === "savings" || a.type === "bank" || a.type === "checking");
       }
 
-      // Fallback inteligente si no hubo coincidencia por palabras clave
       if (!matched) {
-        if (accType.includes("CARD") || accType.includes("CREDIT")) {
-          matched = userAccounts.find((a: any) => a.type === "card" || a.type === "credit") || userAccounts[0];
-        } else {
-          matched = userAccounts.find((a: any) => a.type !== "card" && a.type !== "credit") || userAccounts[0];
-        }
+        matched = userAccounts[0];
       }
-
-      targetAccountId = matched?.id || userAccounts[0].id;
+      targetAccountId = matched.id;
     }
 
-    // Insertar la transacción con el tipo dinámico (income o expense) y email_message_id
+    // Identificar cuenta de destino si es una transferencia interna
+    let destinationAccountId = null;
+    if (parsedData.type === "transfer") {
+      const destType = (parsedData.destination_account_type || "BANCOLOMBIA").toUpperCase();
+      let destMatched = null;
+      if (destType === "BANCOLOMBIA") {
+        destMatched = userAccounts.find((a: any) => /bancolombia/i.test(a.name)) ||
+                      userAccounts.find((a: any) => a.type === "savings" || a.type === "bank");
+      }
+      destinationAccountId = destMatched?.id || null;
+    }
+
+    // Insertar la transacción
+    const insertPayload: Record<string, any> = {
+      id: crypto.randomUUID(),
+      amount: parsedData.amount,
+      date: parsedData.date,
+      description: parsedData.description,
+      account_id: targetAccountId,
+      user_id: effectiveUserId,
+      type: parsedData.type || "expense",
+      email_message_id: email_message_id,
+    };
+
+    if (destinationAccountId) {
+      insertPayload.destination_account_id = destinationAccountId;
+    }
+
     const { data: txData, error: txError } = await supabase
       .from("transactions")
-      .insert({
-        id: crypto.randomUUID(),
-        amount: parsedData.amount,
-        date: parsedData.date,
-        description: parsedData.description,
-        account_id: targetAccountId,
-        user_id: effectiveUserId,
-        type: parsedData.type || "expense",
-        email_message_id: email_message_id,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
     if (txError) {
-      // Manejo de duplicado por índice UNIQUE (código 23505)
-      if (txError.code === "23505" || txError.message?.includes("idx_transactions_email_message_id") || txError.message?.includes("duplicate")) {
+      if (txError.code === "23505" || txError.message?.includes("duplicate")) {
         return new Response(
           JSON.stringify({ message: "Duplicate email_message_id ignored", email_message_id }),
           { status: 200, headers: { "Content-Type": "application/json" } }

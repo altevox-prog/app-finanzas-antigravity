@@ -45,52 +45,57 @@ export const sanitizeTransactionsOnSchemaError = (txs = [], err = '') => txs.map
   if (hasErr(err, 'is_transfer') || hasErr(err, 'PGRST204')) delete copy.is_transfer;
   return copy;
 });
-export const buildStrictlyRequiredTransactions = (txs = [], err = '') => txs.map(tx => ({
-  id: tx.id, user_id: tx.user_id, account_id: tx.account_id, amount: tx.amount, type: tx.type, date: tx.date,
-  description: tx.description, category: tx.category || 'General', ...(!hasErr(err, 'category_id') ? { category_id: tx.category_id || tx.category || null } : {})
-}));
+export const buildStrictlyRequiredTransactions = (txs = [], err = '') => txs.map(tx => ({ id: tx.id, user_id: tx.user_id, account_id: tx.account_id, amount: tx.amount, type: tx.type, date: tx.date, description: tx.description, category: tx.category || 'General', ...(!hasErr(err, 'category_id') ? { category_id: tx.category_id || tx.category || null } : {}) }));
 
 // 3. DEUDAS Y PRÉSTAMOS
 export function buildDebtsPayload(debtsAndLoans = [], userId, nowIso = new Date().toISOString()) {
   return (debtsAndLoans || []).map((d) => {
-    const person = d.person || d.person_name || d.name || 'Sin nombre', payments = Array.isArray(d.payments) ? d.payments : [], disbursements = Array.isArray(d.disbursements) ? d.disbursements : [];
+    const person = d.person || d.person_name || d.name || 'Sin nombre';
+    const payments = Array.isArray(d.payments) ? d.payments : (d.raw_data?.payments || []);
+    const disbursements = Array.isArray(d.disbursements) ? d.disbursements : (d.raw_data?.disbursements || []);
     const totalDisbursed = disbursements.reduce((s, x) => s + safeNum(x?.amount), 0);
     const initialAmount = safeNum(d.initialAmount ?? d.initial_amount ?? (safeNum(d.amount || d.totalAmount) - totalDisbursed)) || safeNum(d.amount || d.totalAmount);
     const totalAmount = initialAmount + totalDisbursed;
     const totalCapPaid = payments.reduce((s, p) => s + (p.capitalAmount !== undefined ? safeNum(p.capitalAmount) : (p.mode === 'interest' ? 0 : safeNum(p.amount))), 0);
-    const remaining = Math.max(0, totalAmount - totalCapPaid), rawData = { payments, disbursements, initialAmount };
+    const remaining = Math.max(0, totalAmount - totalCapPaid);
+    const installments = Number(d.installments ?? d.total_installments ?? d.raw_data?.installments) || 1;
+    const frequency = d.frequency || d.raw_data?.frequency || 'Único';
+    const dueDay = d.dueDay != null ? Number(d.dueDay) : (d.due_day != null ? Number(d.due_day) : (d.raw_data?.dueDay != null ? Number(d.raw_data.dueDay) : (d.raw_data?.due_day != null ? Number(d.raw_data.due_day) : null)));
+    const biweeklyDays = Array.isArray(d.biweeklyDays) ? d.biweeklyDays : (Array.isArray(d.biweekly_days) ? d.biweekly_days : (Array.isArray(d.raw_data?.biweeklyDays) ? d.raw_data.biweeklyDays : (Array.isArray(d.raw_data?.biweekly_days) ? d.raw_data.biweekly_days : null)));
+    const dueDate = d.dueDate || d.due_date || d.endDate || d.raw_data?.dueDate || d.raw_data?.due_date || null;
+    const startDate = d.startDate || d.start_date || d.createdAt || d.raw_data?.startDate || d.raw_data?.start_date || nowIso.split('T')[0];
+
+    const rawData = {
+      ...(d.raw_data || {}), payments, disbursements, initialAmount, totalAmount, installments, total_installments: installments,
+      frequency, dueDay, due_day: dueDay, biweeklyDays, biweekly_days: biweeklyDays, dueDate, due_date: dueDate, startDate, start_date: startDate,
+      interestRate: safeNum(d.interestRate ?? d.interest_rate ?? d.raw_data?.interestRate), insuranceFee: safeNum(d.insuranceFee ?? d.insurance_fee ?? d.raw_data?.insuranceFee), updated_at: nowIso
+    };
     return {
       id: ensureUUID(d.id), user_id: userId, person, person_name: person, name: person, amount: totalAmount, total_amount: totalAmount,
       remaining_amount: remaining, type: d.type || 'payable', status: d.status || (remaining <= 1 ? 'paid' : 'active'),
-      due_date: d.dueDate || d.endDate || null, interest_rate: safeNum(d.interestRate),
+      due_date: dueDate, start_date: startDate, interest_rate: safeNum(d.interestRate ?? d.interest_rate),
+      installments, frequency, due_day: dueDay, biweekly_days: biweeklyDays,
       notes: (payments.length || disbursements.length) ? `PAYMENTS_JSON:${JSON.stringify(rawData)}` : (d.notes || ''),
-      raw_data: rawData, created_at: d.createdAt || d.startDate || nowIso, updated_at: nowIso
+      raw_data: rawData, created_at: d.createdAt || startDate || nowIso, updated_at: nowIso
     };
   });
 }
-export function sanitizeDebtsOnSchemaError(debtsPayload = [], errMsg = '', errDetails = '') {
+export const sanitizeDebtsOnSchemaError = (debtsPayload = [], errMsg = '', errDetails = '') => {
   const c = `${errMsg || ''} ${errDetails || ''}`;
   return debtsPayload.map((d) => {
-    const p = d.person || d.person_name || d.name || 'Sin nombre', item = { id: d.id, user_id: d.user_id, type: d.type, amount: d.amount, total_amount: d.total_amount };
-    if (!hasErr(c, 'person')) item.person = p;
-    if (!hasErr(c, 'remaining_amount')) item.remaining_amount = d.remaining_amount;
-    if (!hasErr(c, "'name'")) item.name = p;
-    if (!hasErr(c, "'person_name'")) item.person_name = p;
-    if (!hasErr(c, 'raw_data') && d.raw_data && Object.keys(d.raw_data).length > 0) item.raw_data = d.raw_data;
-    return pickSafe(d, item, ['notes', 'status', 'interest_rate', 'updated_at'], c);
+    const p = d.person || d.person_name || d.name || 'Sin nombre', item = { id: d.id, user_id: d.user_id, type: d.type, amount: d.amount, total_amount: d.total_amount, ...(hasErr(c, 'person') ? {} : { person: p }), ...(hasErr(c, 'remaining_amount') ? {} : { remaining_amount: d.remaining_amount }), ...(hasErr(c, "'name'") ? {} : { name: p }), ...(hasErr(c, "'person_name'") ? {} : { person_name: p }), ...(!hasErr(c, 'raw_data') && d.raw_data && Object.keys(d.raw_data).length > 0 ? { raw_data: d.raw_data } : {}) };
+    return pickSafe(d, item, ['notes', 'status', 'interest_rate', 'due_date', 'start_date', 'installments', 'frequency', 'due_day', 'biweekly_days', 'updated_at'], c);
   });
-}
-export function buildStrictlyEssentialDebts(debtsPayload = [], fallbackErrMsg = '', initialErrMsg = '') {
-  const c = `${fallbackErrMsg || ''} ${initialErrMsg || ''}`;
-  return debtsPayload.map((d) => {
-    const p = d.person || d.person_name || d.name || 'Sin nombre', ess = { id: d.id, user_id: d.user_id, type: d.type, [!hasErr(c, "'total_amount'") ? 'total_amount' : 'amount']: d.total_amount || d.amount };
-    if (!hasErr(c, "'person'")) ess.person = p;
-    if (!hasErr(c, 'remaining_amount')) ess.remaining_amount = d.remaining_amount;
-    if (!hasErr(c, "'person_name'")) ess.person_name = p;
-    if (!hasErr(c, "'name'")) ess.name = p;
-    return ess;
-  });
-}
+};
+export const buildStrictlyEssentialDebts = (debtsPayload = [], fallbackErrMsg = '', initialErrMsg = '') => debtsPayload.map((d) => {
+  const p = d.person || d.person_name || d.name || 'Sin nombre', c = `${fallbackErrMsg || ''} ${initialErrMsg || ''}`;
+  const ess = { id: d.id, user_id: d.user_id, type: d.type, [!hasErr(c, "'total_amount'") ? 'total_amount' : 'amount']: d.total_amount || d.amount };
+  if (!hasErr(c, "'person'")) ess.person = p;
+  if (!hasErr(c, 'remaining_amount')) ess.remaining_amount = d.remaining_amount;
+  if (!hasErr(c, "'person_name'")) ess.person_name = p;
+  if (!hasErr(c, "'name'")) ess.name = p;
+  return ess;
+});
 
 // 4. INVERSIONES
 export function buildInvestmentsPayload(investments = [], userId, nowIso = new Date().toISOString()) {
@@ -128,11 +133,7 @@ export const buildStrictlyEssentialRec = (rec = []) => rec.map(r => ({ id: r.id,
 export function buildBudgetsPayload(currentBudgets = {}, userId, savedGlobalId = null, nowIso = new Date().toISOString()) {
   if (!currentBudgets) return [];
   const globalBudgetId = (savedGlobalId && /^[0-9a-f-]{36}$/i.test(savedGlobalId)) ? savedGlobalId : ensureUUID(`${userId}-global-budget`);
-  const payloads = [{
-    id: currentBudgets.id || globalBudgetId, user_id: userId, name: currentBudgets.name || 'Límite Global', category: currentBudgets.category || 'General',
-    period: currentBudgets.period || 'monthly', amount: safeNum(currentBudgets.amount ?? currentBudgets.global),
-    is_global: currentBudgets.is_global !== undefined ? Boolean(currentBudgets.is_global) : true, updated_at: nowIso
-  }];
+  const payloads = [{ id: currentBudgets.id || globalBudgetId, user_id: userId, name: currentBudgets.name || 'Límite Global', category: currentBudgets.category || 'General', period: currentBudgets.period || 'monthly', amount: safeNum(currentBudgets.amount ?? currentBudgets.global), is_global: currentBudgets.is_global !== undefined ? Boolean(currentBudgets.is_global) : true, updated_at: nowIso }];
   if (currentBudgets.categories && typeof currentBudgets.categories === 'object') {
     Object.entries(currentBudgets.categories).forEach(([catId, amount]) => {
       const num = safeNum(amount);

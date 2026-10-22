@@ -12,33 +12,33 @@ import {
 } from '../../services/debts/debtFormService';
 
 const getInitialForm = (item, dec) => {
-  if (item) {
-    const itemFreq = parseFrequency(item.frequency);
-    const itemInst = item.installments != null ? String(item.installments) : '1';
-    const numInst = parseInt(itemInst, 10);
+  if (!item) {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
     return {
-      type: normalizeDebtType(item.type || 'receivable'),
-      name: item.personName || item.name || '',
-      totalAmount: item.totalAmount != null ? formatCurrencyInput(item.totalAmount, dec) : '',
-      frequency: !isNaN(numInst) && numInst > 1 && itemFreq === 'Único' ? 'Mensual' : itemFreq,
-      biweeklyDay1: Array.isArray(item.biweeklyDays) ? (item.biweeklyDays[0] || 15) : 15,
-      biweeklyDay2: Array.isArray(item.biweeklyDays) ? (item.biweeklyDays[1] || 30) : 30,
-      dueDay: item.dueDay ? parseInt(item.dueDay, 10) : 15,
-      dueDate: item.dueDate || item.collectionDate || '',
-      startDate: item.startDate || new Date().toISOString().split('T')[0],
-      interestRate: item.interestRate != null ? String(item.interestRate) : '',
-      insuranceFee: item.insuranceFee != null ? String(item.insuranceFee) : '',
-      installments: itemInst
+      type: 'receivable', name: '', totalAmount: '', frequency: 'Único',
+      biweeklyDay1: 15, biweeklyDay2: 30, dueDay: 15, dueDate: d.toISOString().split('T')[0],
+      startDate: new Date().toISOString().split('T')[0], interestRate: '', insuranceFee: '', installments: '1'
     };
   }
-  const defaultDue = new Date();
-  defaultDue.setDate(defaultDue.getDate() + 30);
+  const raw = item.raw_data || {};
+  const itemFreq = parseFrequency(item.frequency || raw.frequency);
+  const itemInst = item.installments != null ? String(item.installments) : (raw.installments != null ? String(raw.installments) : '1');
+  const numInst = parseInt(itemInst, 10);
+  const biweekly = item.biweeklyDays || item.biweekly_days || raw.biweeklyDays || raw.biweekly_days;
+  const dueDayVal = item.dueDay ?? item.due_day ?? raw.dueDay ?? raw.due_day;
   return {
-    type: 'receivable', name: '', totalAmount: '', frequency: 'Único',
-    biweeklyDay1: 15, biweeklyDay2: 30, dueDay: 15,
-    dueDate: defaultDue.toISOString().split('T')[0],
-    startDate: new Date().toISOString().split('T')[0],
-    interestRate: '', insuranceFee: '', installments: '1'
+    type: normalizeDebtType(item.type || 'receivable'), name: item.personName || item.name || '',
+    totalAmount: item.totalAmount != null ? formatCurrencyInput(item.totalAmount, dec) : '',
+    frequency: !isNaN(numInst) && numInst > 1 && itemFreq === 'Único' ? 'Mensual' : itemFreq,
+    biweeklyDay1: Array.isArray(biweekly) ? (biweekly[0] || 15) : 15,
+    biweeklyDay2: Array.isArray(biweekly) ? (biweekly[1] || 30) : 30,
+    dueDay: dueDayVal ? parseInt(dueDayVal, 10) : 15,
+    dueDate: item.dueDate || item.due_date || item.collectionDate || raw.dueDate || raw.due_date || '',
+    startDate: item.startDate || item.start_date || raw.startDate || raw.start_date || new Date().toISOString().split('T')[0],
+    interestRate: item.interestRate != null ? String(item.interestRate) : (raw.interestRate != null ? String(raw.interestRate) : ''),
+    insuranceFee: item.insuranceFee != null ? String(item.insuranceFee) : (raw.insuranceFee != null ? String(raw.insuranceFee) : ''),
+    installments: itemInst
   };
 };
 
@@ -70,7 +70,9 @@ export default function DebtFormModal({ isOpen, onClose, onSave, editingItem = n
     return next;
   });
 
-  const computedDueDate = useMemo(() => calculateComputedDueDate(form), [form]);
+  const computedDueDate = useMemo(() => calculateComputedDueDate(form), [
+    form.frequency, form.biweeklyDay1, form.biweeklyDay2, form.dueDay, form.dueDate, form.startDate
+  ]);
   const formattedPreviewDate = useMemo(() => formatPreviewDueDate(computedDueDate), [computedDueDate]);
   const { principalAmount, monthlyRate, monthsElapsed, accruedInterest } = useMemo(() => (
     calculateAccruedInterest({ totalAmount: form.totalAmount, interestRate: form.interestRate, startDate: form.startDate })
@@ -92,10 +94,7 @@ export default function DebtFormModal({ isOpen, onClose, onSave, editingItem = n
     setIsSubmitting(true);
     try {
       const savedItem = buildDebtPayload({ ...form, editingItem, computedDueDate, notes: editingItem?.notes || '' });
-      if (onSave) {
-        const res = onSave(savedItem);
-        if (res?.catch) res.catch((err) => console.warn('[Offline/Sync] Advertencia al persistir deuda:', err));
-      }
+      if (onSave) onSave(savedItem)?.catch?.(err => console.warn('[Offline/Sync] Advertencia al persistir deuda:', err));
       onClose();
     } catch (err) {
       console.error('Error al guardar la deuda o préstamo:', err);
@@ -111,7 +110,7 @@ export default function DebtFormModal({ isOpen, onClose, onSave, editingItem = n
 
   const modalContent = (
     <div className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-fadeIn" onClick={onClose}>
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[85vh] overflow-hidden animate-slideUp" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col max-h-[85vh] overflow-hidden animate-slideUp" onClick={e => e.stopPropagation()}>
         <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className={`w-9 h-9 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm ${isReceivable ? 'bg-[#34C759]' : 'bg-[#FF3B30]'}`}><HandCoins className="w-5 h-5" /></div>
@@ -122,23 +121,20 @@ export default function DebtFormModal({ isOpen, onClose, onSave, editingItem = n
           </div>
           <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer" title="Cerrar"><X className="w-5 h-5" /></button>
         </div>
-
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
             {error && <div className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold">{error}</div>}
             <DebtTypeTabs type={form.type} setType={setField('type')} />
             <DebtFormInputs
               type={form.type} name={form.name} setName={setField('name')} totalAmount={form.totalAmount} setTotalAmount={setField('totalAmount')}
-              enableDecimals={enableDecimals} installments={form.installments} setInstallments={setField('installments')}
-              frequency={form.frequency} setFrequency={setField('frequency')} dueDay={form.dueDay} setDueDay={setField('dueDay')}
-              biweeklyDay1={form.biweeklyDay1} setBiweeklyDay1={setField('biweeklyDay1')} biweeklyDay2={form.biweeklyDay2} setBiweeklyDay2={setField('biweeklyDay2')}
-              dueDate={form.dueDate} setDueDate={setField('dueDate')} startDate={form.startDate} setStartDate={setField('startDate')}
-              interestRate={form.interestRate} setInterestRate={setField('interestRate')} insuranceFee={form.insuranceFee} setInsuranceFee={setField('insuranceFee')}
-              monthsElapsed={monthsElapsed} monthlyRate={monthlyRate} accruedInterest={accruedInterest}
-              principalAmount={principalAmount} formattedPreviewDate={formattedPreviewDate} setError={setError}
+              enableDecimals={enableDecimals} installments={form.installments} setInstallments={setField('installments')} frequency={form.frequency} setFrequency={setField('frequency')}
+              dueDay={form.dueDay} setDueDay={setField('dueDay')} biweeklyDay1={form.biweeklyDay1} setBiweeklyDay1={setField('biweeklyDay1')}
+              biweeklyDay2={form.biweeklyDay2} setBiweeklyDay2={setField('biweeklyDay2')} dueDate={form.dueDate} setDueDate={setField('dueDate')}
+              startDate={form.startDate} setStartDate={setField('startDate')} interestRate={form.interestRate} setInterestRate={setField('interestRate')}
+              insuranceFee={form.insuranceFee} setInsuranceFee={setField('insuranceFee')} monthsElapsed={monthsElapsed} monthlyRate={monthlyRate}
+              accruedInterest={accruedInterest} principalAmount={principalAmount} formattedPreviewDate={formattedPreviewDate} setError={setError}
             />
           </div>
-
           <div className="shrink-0 p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 rounded-b-3xl">
             <button type="button" onClick={onClose} className="px-4 py-2.5 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer">Cancelar</button>
             <button type="submit" disabled={isSubmitting} className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-sm active:scale-95 transition-transform cursor-pointer ${isReceivable ? 'bg-[#34C759] hover:bg-emerald-600' : 'bg-[#FF3B30] hover:bg-red-600'} ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -149,6 +145,5 @@ export default function DebtFormModal({ isOpen, onClose, onSave, editingItem = n
       </div>
     </div>
   );
-
   return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }
