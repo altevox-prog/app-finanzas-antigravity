@@ -96,12 +96,14 @@ export function useInvoiceForm() {
 
   const resetForm = () => {
     const today = new Date().toISOString().split('T')[0];
-    setInvoice((prev) => ({
-      ...prev,
-      client: { name: '', contactPerson: '', city: '', email: '' },
+    setInvoice({
+      ...INITIAL_INVOICE_STATE,
       items: [{ id: String(Date.now()), description: '', quantity: 1, unitPrice: 0 }],
-      meta: { ...prev.meta, issueDate: today, dueDate: '' }
-    }));
+      meta: { ...INITIAL_INVOICE_STATE.meta, issueDate: today, dueDate: '' }
+    });
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
   };
 
   const resetInvoice = () => {

@@ -32,7 +32,10 @@ export default function InvoicingView({ accounts = [], transactions = [], onAddT
   };
 
   const handleResetForm = () => {
-    const hasData = Boolean(invoice.client?.name || invoice.items?.some((it) => it.description || it.unitPrice));
+    const hasData = Boolean(
+      invoice.emitter?.name || invoice.emitter?.docNumber ||
+      invoice.client?.name || invoice.items?.some((it) => it.description || it.unitPrice)
+    );
     if (hasData && !window.confirm('¿Deseas limpiar todos los campos para una nueva factura?')) return;
     resetForm();
     setOpenSteps({ 1: true, 2: false, 3: false, 4: false });

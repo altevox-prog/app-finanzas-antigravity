@@ -4,13 +4,13 @@ import DesktopMonthPicker from '../layout/DesktopMonthPicker';
 import CalendarDropdown from '../common/CalendarDropdown';
 import LockScreen from '../auth/LockScreen';
 import { DEFAULT_WIDGETS_CONFIG } from '../../utils/widgetsConfig';
-import AddTransactionModal from '../transactions/modals/AddTransactionModal';
-import AddLoanModal from '../debts/AddLoanModal';
-import AddInvestmentModal from '../investments/modals/AddInvestmentModal';
-import AddAccountModal from '../accounts/modals/AddAccountModal';
-import AddRecurringModal from '../recurring/modals/AddRecurringModal';
-import CreditCardDetailModal from '../accounts/modals/CreditCardDetailModal';
 
+const AddTransactionModal = lazy(() => import('../transactions/modals/AddTransactionModal'));
+const AddLoanModal = lazy(() => import('../debts/AddLoanModal'));
+const AddInvestmentModal = lazy(() => import('../investments/modals/AddInvestmentModal'));
+const AddAccountModal = lazy(() => import('../accounts/modals/AddAccountModal'));
+const AddRecurringModal = lazy(() => import('../recurring/modals/AddRecurringModal'));
+const CreditCardDetailModal = lazy(() => import('../accounts/modals/CreditCardDetailModal'));
 const EditWidgetsModal = lazy(() => import('../dashboard/modals/EditWidgetsModal'));
 const ProfileModal = lazy(() => import('../profile/modals/ProfileModal'));
 const OnboardingFlow = lazy(() => import('../onboarding/OnboardingFlow'));
@@ -53,7 +53,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           />
         )}
       </AnimatePresence>
-
       <AnimatePresence mode="wait">
         {isInvestmentOpen && (
           <AddInvestmentModal
@@ -62,7 +61,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           />
         )}
       </AnimatePresence>
-
       <AnimatePresence mode="wait">
         {isLoanOpen && (
           <AddLoanModal
@@ -72,7 +70,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           />
         )}
       </AnimatePresence>
-
       {isRecurringOpen && (
         <AddRecurringModal
           isOpen={isRecurringOpen} onClose={m.closeAddRecurring || m.closeRecurring || m.closeRecurringModal || closeRecurring}
@@ -81,7 +78,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           onAddCategory={m.handleAddCategory} onAddSubcategory={m.handleAddSubcategory} trm={m.trm || 4050}
         />
       )}
-
       {Boolean(m.isAccountModalOpen || m.isAddAccountOpen) && (
         <AddAccountModal
           isOpen={Boolean(m.isAccountModalOpen || m.isAddAccountOpen)}
@@ -89,7 +85,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           onCreateAccount={m.handleAddAccount} trm={m.trm || 4050}
         />
       )}
-
       {m.showMonthPicker && (
         <DesktopMonthPicker
           isOpen={m.showMonthPicker} onClose={() => m.setShowMonthPicker?.(false)}
@@ -98,7 +93,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           onClearSelectedDay={() => m.setSelectedDay?.(null)} transactions={m.transactions || []}
         />
       )}
-
       {m.isCalendarOpen && (
         <CalendarDropdown
           isOpen={m.isCalendarOpen} onClose={() => m.setIsCalendarOpen?.(false)}
@@ -106,7 +100,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           selectedDay={m.selectedDay} onSelectDay={(d) => m.setSelectedDay?.(d)} transactions={m.transactions || []}
         />
       )}
-
       {Boolean(m.selectedCreditCardDetail) && (
         <CreditCardDetailModal
           isOpen={Boolean(m.selectedCreditCardDetail)} onClose={() => m.setSelectedCreditCardDetail?.(null)}
@@ -115,7 +108,6 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           onOpenEdit={() => { m.setSelectedCreditCardDetail?.(null); m.handleTabChange?.('accounts'); }}
         />
       )}
-
       {Boolean(m.isEditWidgetsModalOpen) && (
         <EditWidgetsModal
           isOpen={m.isEditWidgetsModalOpen} onClose={() => m.setIsEditWidgetsModalOpen?.(false)}
@@ -123,21 +115,18 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           onSave={(w) => m.setWidgets?.([...w])} onReset={(w) => m.setWidgets?.([...(w || DEFAULT_WIDGETS_CONFIG)])}
         />
       )}
-
       {Boolean(m.isSettingsOpen || m.isProfileOpen) && (
         <ProfileModal
           key={`profile-modal-${m.profileResetKey || 0}`} isOpen={true} onClose={closeProfile}
           userProfile={m.userProfile || { name: 'Usuario' }} onUpdateProfile={m.handleUpdateProfile}
-          securitySettings={m.securitySettings || {}} onUpdateSecurity={m.setSecuritySettings}
-          subscriptions={activeSubscriptions}
-          onAddSubscription={(sub) => { if (m.handleAddRecurring) m.handleAddRecurring(sub); else m.setSubscriptions?.(prev => [sub, ...prev]); }}
-          onDeleteSubscription={(id) => { const delFn = m.handleDeleteRecurring || m.onDeleteRecurring || m.deleteRecurringPayment; if (delFn) delFn(id); else m.setSubscriptions?.(prev => prev.filter(s => s.id !== id)); }}
+          securitySettings={m.securitySettings || {}} onUpdateSecurity={m.setSecuritySettings} subscriptions={activeSubscriptions}
+          onAddSubscription={(s) => m.handleAddRecurring ? m.handleAddRecurring(s) : m.setSubscriptions?.(prev => [s, ...prev])}
+          onDeleteSubscription={(id) => { const fn = m.handleDeleteRecurring || m.onDeleteRecurring || m.deleteRecurringPayment; if (fn) fn(id); else m.setSubscriptions?.(prev => prev.filter(s => s.id !== id)); }}
           accountsCount={(m.accounts || []).length} categoriesCount={(m.categories || []).length}
           onOpenAccounts={() => navigateFromSettings('accounts')} onNavigateToRecurring={() => navigateFromSettings('recurring')}
           onNavigateToNetWorth={() => navigateFromSettings('net_worth')} onNavigate={navigateFromSettings}
           onOpenTutorial={() => { closeProfile(); m.setShowTutorial?.(true); }}
-          theme={m.theme || 'dark'} onThemeChange={m.setTheme}
-          budgets={m.budgets || {}} onUpdateBudgets={m.setBudgets}
+          theme={m.theme || 'dark'} onThemeChange={m.setTheme} budgets={m.budgets || {}} onUpdateBudgets={m.setBudgets}
           savingsGoals={m.savingsGoals || []} onAddGoal={m.handleAddGoal} onUpdateGoal={m.handleUpdateGoal} onDeleteGoal={m.handleDeleteGoal}
           transactions={m.transactions || []} categories={m.categories || []}
           onAddCategory={m.handleAddCategory} onUpdateCategory={m.handleUpdateCategory} onDeleteCategory={m.handleDeleteCategory}
@@ -148,9 +137,7 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           onManualCloudSync={m.pushLocalToCloud} syncStatus={m.syncStatus} user={m.user} selectedDate={m.selectedDate} onLogout={m.onLogout}
         />
       )}
-
       {Boolean(m.showTutorial) && <OnboardingFlow tutorialOnly onClose={() => m.setShowTutorial?.(false)} />}
-
       {m.isLocked && Boolean(m.securitySettings?.pinEnabled) && Boolean(m.securitySettings?.pin && String(m.securitySettings.pin).trim().length >= 4) && (
         <LockScreen
           userProfile={m.userProfile} expectedPin={m.securitySettings?.pin || ''}

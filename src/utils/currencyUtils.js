@@ -105,15 +105,16 @@ export function getAccountNativeBalance(account, transactions = [], trm = 4050) 
       const isTransfer = Boolean(t.isTransfer || t.is_transfer || ['transfer', 'transferencia'].includes(t.type) || ['cat-transfer'].includes(t.categoryId || t.category_id) || ['sub-transfer-in', 'sub-transfer-out'].includes(t.subcategoryId));
 
       const txCurr = t.currency || t.originalCurrency || t.original_currency;
+      const rateUSD = safeNumber(t.exchangeRate || t.exchange_rate) || safeNumber(trm) || 4050;
+      const rateEUR = safeNumber(t.exchangeRate || t.exchange_rate) || Math.round((safeNumber(trm) || 4050) * 1.08);
+
       let nativeAmount = tAmount;
-
-      if (txCurr && txCurr !== accCurrency) {
-        const rateUSD = safeNumber(t.exchangeRate || t.exchange_rate) || safeNumber(trm) || 4050;
-        const rateEUR = safeNumber(t.exchangeRate || t.exchange_rate) || Math.round((safeNumber(trm) || 4050) * 1.08);
-
-        if (accCurrency === 'COP') nativeAmount = txCurr === 'USD' ? tAmount * rateUSD : txCurr === 'EUR' ? tAmount * rateEUR : tAmount;
-        else if (accCurrency === 'USD') nativeAmount = txCurr === 'COP' ? tAmount / (rateUSD || 1) : tAmount;
-        else if (accCurrency === 'EUR') nativeAmount = txCurr === 'COP' ? tAmount / (rateEUR || 1) : tAmount;
+      if (accCurrency === 'COP') {
+        nativeAmount = t.amount != null ? tAmount : (txCurr === 'USD' ? safeNumber(t.originalAmount) * rateUSD : txCurr === 'EUR' ? safeNumber(t.originalAmount) * rateEUR : tAmount);
+      } else if (txCurr === accCurrency) {
+        nativeAmount = t.originalAmount != null ? safeNumber(t.originalAmount) : (accCurrency === 'USD' ? tAmount / (rateUSD || 1) : tAmount / (rateEUR || 1));
+      } else {
+        nativeAmount = accCurrency === 'USD' ? tAmount / (rateUSD || 1) : tAmount / (rateEUR || 1);
       }
 
       const txType = String(t.type || '').toLowerCase();

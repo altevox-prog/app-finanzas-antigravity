@@ -68,20 +68,24 @@ export async function clearIndexedDatabases() {
   }
 }
 
+const safeDelete = async (table, uid) => {
+  try {
+    await supabase.from(table).delete().eq('user_id', uid);
+  } catch (_) {}
+};
+
 export async function clearRemoteUserData(userId) {
   if (!isSupabaseConfigured || !supabase || !userId) return;
   try {
-    console.log('[storageCleaner] Eliminando registros en Supabase para:', userId);
-
     // Tablas dependientes primero
-    await supabase.from('debt_payments').delete().eq('user_id', userId).catch(() => {});
-    await supabase.from('transactions').delete().eq('user_id', userId).catch(() => {});
+    await safeDelete('debt_payments', userId);
+    await safeDelete('transactions', userId);
 
     // Purgas de budgets y pagos recurrentes
     const { error: budgetError } = await supabase.from('budgets').delete().eq('user_id', userId);
     if (budgetError) throw new Error(`Error en budgets: ${budgetError.message}`);
 
-    await supabase.from('recurring_payments').delete().eq('user_id', userId).catch(() => {});
+    await safeDelete('recurring_payments', userId);
 
     // Entidades principales restantes
     await Promise.allSettled([
@@ -92,7 +96,7 @@ export async function clearRemoteUserData(userId) {
       supabase.from('user_settings').update({ global_budget_limit: 0, updated_at: new Date().toISOString() }).eq('user_id', userId)
     ]);
 
-    await supabase.from('accounts').delete().eq('user_id', userId).catch(() => {});
+    await safeDelete('accounts', userId);
   } catch (cloudErr) {
     console.error('[storageCleaner] Error al eliminar datos en Supabase:', cloudErr);
     throw cloudErr;

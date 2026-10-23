@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const BUILD_TIME = new Date().toISOString();
+const VERSION_PAYLOAD = JSON.stringify({ version: '1.0.0', buildTime: BUILD_TIME, buildId: BUILD_TIME }, null, 2);
 
 export default defineConfig(({ mode }) => ({
   define: {
@@ -13,25 +14,13 @@ export default defineConfig(({ mode }) => ({
     {
       name: 'generate-version-json',
       generateBundle() {
-        this.emitFile({
-          type: 'asset',
-          fileName: 'version.json',
-          source: JSON.stringify({
-            version: '1.0.0',
-            buildTime: BUILD_TIME,
-            buildId: BUILD_TIME
-          }, null, 2)
-        });
+        this.emitFile({ type: 'asset', fileName: 'version.json', source: VERSION_PAYLOAD });
       },
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
           if (req.url && req.url.startsWith('/version.json')) {
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({
-              version: '1.0.0',
-              buildTime: BUILD_TIME,
-              buildId: BUILD_TIME
-            }, null, 2));
+            res.end(VERSION_PAYLOAD);
             return;
           }
           next();
@@ -39,19 +28,27 @@ export default defineConfig(({ mode }) => ({
       }
     },
     VitePWA({
-      // En desarrollo: deshabilitar SW completamente para evitar
-      // SecurityError: "unsupported MIME type (text/html)" y conflictos de HMR
-      devOptions: {
-        enabled: false,
-      },
+      devOptions: { enabled: false },
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,woff2}'],
         skipWaiting: true,
         clientsClaim: true,
-        cleanupOutdatedCaches: true
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|webp|ico)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 días
+              },
+            },
+          },
+        ],
       },
-      // Solo incluir el manifest en producción
       manifest: mode === 'production' ? {
         id: '/?v=4',
         start_url: '/?v=4',
@@ -62,18 +59,8 @@ export default defineConfig(({ mode }) => ({
         background_color: '#080E0C',
         display: 'standalone',
         icons: [
-          {
-            src: '/icon-192-v4.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/icon-512-v4.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
+          { src: '/icon-192-v4.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: '/icon-512-v4.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
         ]
       } : false
     })
@@ -85,7 +72,6 @@ export default defineConfig(({ mode }) => ({
     host: 'localhost',
     port: 5173,
     open: true,
-    // HMR estabilizado — evita errores de WebSocket en dev local
     hmr: {
       protocol: 'ws',
       host: 'localhost',
@@ -103,7 +89,6 @@ export default defineConfig(({ mode }) => ({
     }
   },
   build: {
-    // Tolerancia de advertencia para chunks grandes (1500 kB)
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
@@ -111,7 +96,6 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes('node_modules')) return;
           const normalized = id.replace(/\\/g, '/');
 
-          // 1. Ecosistema de React
           if (
             normalized.includes('/react/') ||
             normalized.includes('/react-dom/') ||
@@ -121,12 +105,10 @@ export default defineConfig(({ mode }) => ({
             return 'vendor-react';
           }
 
-          // 2. Cliente de Supabase
           if (normalized.includes('/@supabase/')) {
             return 'vendor-supabase';
           }
 
-          // 3. Librería de iconos
           if (
             normalized.includes('/lucide-react/') ||
             normalized.includes('/@icons-pack/react-simple-icons/')
@@ -134,7 +116,6 @@ export default defineConfig(({ mode }) => ({
             return 'vendor-icons';
           }
 
-          // 4. Gráficos y visualización
           if (
             normalized.includes('/chart.js/') ||
             normalized.includes('/recharts/') ||
@@ -144,7 +125,6 @@ export default defineConfig(({ mode }) => ({
             return 'vendor-visuals';
           }
 
-          // 5. Resto de librerías de terceros
           return 'vendor-libs';
         }
       }

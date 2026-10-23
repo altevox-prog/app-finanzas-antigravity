@@ -7,19 +7,22 @@ export const INITIAL_INVOICE_STATE = {
   template: 'soporte',
   docTitle: 'SOPORTE EN ADQUISICIONES EFECTUADAS, NO OBLIGADOS A FACTURAR',
   emitter: {
-    logo: '',
-    name: 'Esteban Osorio Pabón',
+    name: '',
     docType: 'CC',
-    docNumber: '1037588061-9',
-    address: 'Calle 48 F Sur N 39B 143',
-    email: 'asistenciaprimes@gmail.com',
-    phone: '(+57) 3137884537'
+    docNumber: '',
+    phone: '',
+    email: '',
+    address: '',
+    logo: null
   },
   client: {
     name: '',
+    docNumber: '',
     contactPerson: '',
     city: '',
-    email: ''
+    email: '',
+    phone: '',
+    address: ''
   },
   meta: {
     issueDate: '',
@@ -36,20 +39,20 @@ export const INITIAL_INVOICE_STATE = {
   banking: {
     colombia: {
       bank: 'Bancolombia',
-      holder: 'Esteban Osorio',
+      holder: '',
       accountType: 'Ahorros',
-      accountNumber: '27564469489',
-      swift: 'COLOCOBM',
-      nequi: '3137884537'
+      accountNumber: '',
+      swift: '',
+      nequi: ''
     },
     achWire: {
       enabled: false,
-      bank: 'Lead Bank',
-      holder: 'Esteban Osorio',
+      bank: '',
+      holder: '',
       accountType: 'Corriente',
-      accountNumber: '215068446205',
-      routing: '101019644',
-      bankAddress: '1801 MAIN ST Kansas City, Missouri 64108 EE.UU.'
+      accountNumber: '',
+      routing: '',
+      bankAddress: ''
     }
   }
 };
