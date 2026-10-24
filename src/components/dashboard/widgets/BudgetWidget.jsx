@@ -61,48 +61,50 @@ export default function BudgetWidget({
   const progressBarColor = isExceeded ? '#EF4444' : isWarning ? '#F59E0B' : '#10B981';
 
   return (
-    <div className="p-4 sm:p-5 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] transition-all relative overflow-hidden bg-white dark:bg-zinc-900/90">
-      <div className="flex items-center justify-between mb-3.5 gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
-            <Target className="w-4 h-4 text-emerald-500" />
+    <div className="h-full flex flex-col justify-between min-w-0 w-full rounded-3xl bg-white dark:bg-zinc-900/90 p-4 sm:p-5 border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] select-none relative overflow-hidden">
+      <div>
+        <div className="flex items-center justify-between mb-3.5 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800/60 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+              <Target className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 leading-tight">
+                Presupuesto
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono truncate">
+                {hasConfiguredBudget ? 'Límite mensual global' : 'Basado en ingresos'}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 leading-tight">
-              Presupuesto
-            </h3>
-            <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono truncate">
-              {hasConfiguredBudget ? 'Límite mensual global' : 'Basado en ingresos'}
-            </p>
-          </div>
-        </div>
 
-        <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 tabular-nums shrink-0 ${statusBadgeClasses}`}>
-          {isHealthy && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
-          {isWarning && <AlertTriangle className="w-3 h-3 text-amber-500" />}
-          {isExceeded && <AlertTriangle className="w-3 h-3 text-rose-500" />}
-          <span>{clampedPercent}% • {statusLabel}</span>
-        </span>
-      </div>
-
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs font-mono font-medium tabular-nums">
-          <span className="text-slate-500 dark:text-zinc-400">
-            {clampedPercent}% ejecutado
-          </span>
-          <span className={`font-semibold ${statusTextClasses}`}>
-            {isExceeded ? `Excedido en ${formatMoney(totalSpent - budgetLimit)}` : `Disponible: ${formatMoney(remaining)}`}
+          <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1 tabular-nums shrink-0 ${statusBadgeClasses}`}>
+            {isHealthy && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+            {isWarning && <AlertTriangle className="w-3 h-3 text-amber-500" />}
+            {isExceeded && <AlertTriangle className="w-3 h-3 text-rose-500" />}
+            <span>{clampedPercent}% • {statusLabel}</span>
           </span>
         </div>
 
-        <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3 mb-2">
-          <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
-            style={{
-              width: `${Math.max(4, clampedPercent)}%`,
-              backgroundColor: progressBarColor
-            }}
-          />
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs font-mono font-medium tabular-nums">
+            <span className="text-slate-500 dark:text-zinc-400">
+              {clampedPercent}% ejecutado
+            </span>
+            <span className={`font-semibold ${statusTextClasses}`}>
+              {isExceeded ? `Excedido en ${formatMoney(totalSpent - budgetLimit)}` : `Disponible: ${formatMoney(remaining)}`}
+            </span>
+          </div>
+
+          <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3 mb-2">
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: `${Math.max(4, clampedPercent)}%`,
+                backgroundColor: progressBarColor
+              }}
+            />
+          </div>
         </div>
       </div>
 

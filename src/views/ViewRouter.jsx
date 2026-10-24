@@ -58,6 +58,7 @@ export default function ViewRouter({
             onDeleteTransaction={handleDeleteTransaction} onUpdateTransaction={handleUpdateTransaction} onAddCategory={handleAddCategory} onAddSubcategory={handleAddSubcategory} onUpdateSubcategory={handleUpdateSubcategory} onDeleteSubcategory={handleDeleteSubcategory}
             onAddAccount={handleAddAccount} onSelectCreditCardDetail={setSelectedCreditCardDetail} onOpenAddRecurring={openRecurring} currentMonthLabel={currentMonthLabel} trm={trm} widgetsConfig={widgets} widgets={widgets}
             onCustomizeWidgets={() => setIsEditWidgetsModalOpen?.(true)} onSaveWidgets={(newCfg) => setWidgets && queueMicrotask(() => setWidgets(newCfg))} livePrices={merged.livePrices || financeData?.livePrices}
+            savingsGoals={merged.savingsGoals || financeData?.savingsGoals || []} modalControls={merged.modalControls || merged} onOpenProfile={merged.onOpenProfile || merged.handleOpenProfile}
           />
         );
       case 'transactions':
@@ -85,7 +86,7 @@ export default function ViewRouter({
         return (
           <DebtsView
             key={`debts-${tabResetKeys?.debts || 0}-${merged.debtsInitialTab || activeTab}`}
-            initialTab={merged.debtsInitialTab || (String(activeTab).toLowerCase() === 'loans' ? 'receivable' : 'payable')}
+            initialTab={merged.debtsInitialTab || 'receivable'}
             onBack={handleBack} debtsAndLoans={debtsAndLoans} accounts={accounts} onAddDebtOrLoan={handleAddDebtOrLoan} onUpdateDebtOrLoan={handleUpdateDebtOrLoan}
             onAddPayment={handleAddPayment} onAddDisbursement={handleAddDisbursement} onDeletePayment={handleDeletePayment} onDeleteDebtOrLoan={handleDeleteDebtOrLoan}
             modalControls={merged.modalControls || merged} onOpenAddDebt={(t = 'payable') => openDebt?.(t)} onOpenAddLoan={(t = 'receivable') => openLoan?.(t)}

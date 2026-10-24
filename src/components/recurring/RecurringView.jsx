@@ -82,7 +82,7 @@ export default function RecurringView({
                 {item.originalCurrency && item.originalCurrency !== 'COP' && <span className="text-[10px] text-slate-400 font-mono tracking-tight tabular-nums">({Number(item.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} {item.originalCurrency})</span>}
               </div>
               <div className="hidden md:flex items-center justify-end w-14 shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button type="button" onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button><button type="button" onClick={(e) => { e.stopPropagation(); if (confirm(`¿Eliminar "${item.name}"?`)) onDeleteRecurring?.(item.id); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>
+                <button type="button" onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-zinc-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button><button type="button" onClick={(e) => { e.stopPropagation(); if (confirm(`¿Eliminar "${item.name}"?`)) onDeleteRecurring?.(item.id); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-zinc-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>
               </div>
             </div>
           </div>
@@ -101,16 +101,16 @@ export default function RecurringView({
   return (
     <div className="space-y-4 animate-fadeIn pb-12">
       <div className="flex items-center gap-3 min-w-0 mb-2">
-        {Boolean(onBack || fromSettings || previousView === 'settings') && <button type="button" onClick={handleGoBack} className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 cursor-pointer border border-slate-200/60 bg-white dark:bg-zinc-900 shadow-sm shrink-0" title="Volver"><ArrowLeft className="w-5 h-5" /></button>}
+        {Boolean(onBack || fromSettings || previousView === 'settings') && <button type="button" onClick={handleGoBack} className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 cursor-pointer border border-slate-200/60 bg-white dark:bg-zinc-900 shadow-sm shrink-0" title="Volver"><ArrowLeft className="w-5 h-5" /></button>}
         <div className="min-w-0"><h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate">Pagos recurrentes</h1><p className="text-xs text-slate-500 dark:text-slate-400 truncate">Control de gastos fijos y suscripciones automáticas</p></div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900/50 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><TrendingDown className="w-3.5 h-3.5 text-rose-500"/> Gastos comprometidos</span><span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" /></div>
           <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-rose-500 dark:text-rose-400">-{formatMoney(totalExpenseProjected)}</div>
           <p className="text-[11px] text-slate-400 mt-1 font-medium">Proyección mensual fija</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900/50 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Repeat className="w-3.5 h-3.5 text-indigo-500"/> Servicios activos</span><span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" /></div>
           <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-slate-800 dark:text-white">{activeItems.length}</div>
           <p className="text-[11px] text-slate-400 mt-1 font-medium">{activeItems.filter(i => (i.mode || 'auto') !== 'manual').length} automáticos • {activeItems.filter(i => i.mode === 'manual').length} manuales</p>
@@ -118,7 +118,7 @@ export default function RecurringView({
       </div>
       {safeRecurring.length > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-          <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60">
+          <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-zinc-800/80 border border-slate-200/60 dark:border-zinc-800">
             {[{ id: 'all', label: `Todos (${safeRecurring.length})`, col: 'text-slate-900 dark:text-white' }, { id: 'expense', label: `Gastos (${safeRecurring.filter((r) => r.type !== 'income').length})`, col: 'text-rose-500 dark:text-rose-400' }, { id: 'income', label: `Ingresos (${safeRecurring.filter((r) => r.type === 'income').length})`, col: 'text-emerald-500 dark:text-emerald-400' }].map(({ id, label, col }) => (
               <button key={id} type="button" onClick={() => setFilterType(id)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${filterType === id ? `bg-white dark:bg-zinc-900 ${col} shadow-xs` : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}>{label}</button>
             ))}

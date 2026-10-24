@@ -13,16 +13,16 @@ export default function InvoiceHistoryItem({ item = {}, onMarkAsPaid, onDelete, 
   };
 
   return (
-    <div className="p-3.5 sm:p-4 bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-xs space-y-3 transition-all hover:border-slate-300 dark:hover:border-white/20 w-full overflow-hidden">
+    <div className="p-3.5 sm:p-4 bg-white dark:bg-zinc-900/90 border border-slate-200/60 dark:border-white/[0.08] rounded-2xl shadow-xs space-y-3 transition-all hover:border-slate-300 dark:hover:border-white/20 w-full overflow-hidden">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200">
+          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 border border-slate-200/60 dark:border-white/[0.08]">
             {item.consecutive}
           </span>
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
             isPaid
               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20'
           }`}>
             {isPaid ? 'Pagada' : 'Pendiente'}
           </span>
@@ -68,7 +68,7 @@ export default function InvoiceHistoryItem({ item = {}, onMarkAsPaid, onDelete, 
         </div>
       </div>
 
-      <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+      <div className="pt-2 border-t border-slate-100 dark:border-white/[0.08] flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
         <div className="flex items-center gap-1.5 truncate">
           <Calendar className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">Emisión: {item.issue_date || '---'}</span>

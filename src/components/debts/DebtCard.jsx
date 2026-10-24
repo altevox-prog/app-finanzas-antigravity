@@ -6,8 +6,7 @@ import { toSafeNumber, calculateDebtStats } from '../../utils/financeMath';
 
 const formatDateShort = (d) => {
   if (!d) return null;
-  const p = String(d).split('T')[0].split('-');
-  const dt = p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : new Date(d);
+  const p = String(d).split('T')[0].split('-'), dt = p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : new Date(d);
   return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
 };
 
@@ -44,6 +43,7 @@ export default function DebtCard({ debt, stats = {}, formatCurrency, onAddPaymen
   const debtStats = calculateDebtStats(totalPrincipal, payments, { accruedInterest: totalAccruedInterest });
   const paidPrincipal = toSafeNumber(stats?.paidPrincipal ?? stats?.totalCapitalPaid ?? debtStats.totalCapitalPaid);
   const paidInterest = toSafeNumber(stats?.paidInterest ?? stats?.totalInterestPaid ?? debtStats.totalInterestPaid);
+  const hasInterest = (Number(debt?.interestRate) > 0) || (Number(stats?.accruedInterest || totalAccruedInterest) > 0) || (Number(paidInterest) > 0);
   const totalPaid = toSafeNumber(stats?.totalPaid ?? (paidPrincipal + paidInterest));
   const totalToPay = toSafeNumber(stats?.totalToPay ?? (totalPrincipal + (stats?.accruedInterest || (stats?.interestAmount + (stats?.insurance || 0)) || totalAccruedInterest)));
   const remainingInterest = toSafeNumber(stats?.remainingInterest ?? 0), outstandingBalance = toSafeNumber(stats?.outstandingBalance ?? (totalToPay - totalPaid));
@@ -80,8 +80,8 @@ export default function DebtCard({ debt, stats = {}, formatCurrency, onAddPaymen
               {dateLabel && <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-mono tabular-nums mt-0.5">{dateLabel}</span>}
             </div>
             <div className="hidden md:flex items-center justify-end w-14 shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-              {onEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(debt); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button>}
-              {onDelete && <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(debt.id); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>}
+              {onEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(debt); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-zinc-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button>}
+              {onDelete && <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(debt.id); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-zinc-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>}
             </div>
             <div className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
               <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-emerald-500' : 'rotate-0'}`} />
@@ -91,21 +91,23 @@ export default function DebtCard({ debt, stats = {}, formatCurrency, onAddPaymen
 
         <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-[1400px] opacity-100 border-t border-slate-100 dark:border-white/5' : 'max-h-0 opacity-0 pointer-events-none'}`}>
           <div className="p-3.5 sm:p-4 space-y-3 bg-slate-50/50 dark:bg-white/[0.01]">
-            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-zinc-900/40 border border-slate-100 dark:border-zinc-800/80">
               <MetricTile label="CAPITAL INICIAL" value={formatMoneyVal(initialAmount || stats?.initialAmount || stats?.base || totalPrincipal)} sub={totalDisbursed > 0 ? `+ Extra: ${formatMoneyVal(totalDisbursed)}` : `Amortizado: ${formatMoneyVal(paidPrincipal)} (${amortizationPercent}%)`} />
-              <MetricTile label="COMPROMISO TOTAL" value={formatMoneyVal(totalToPay)} sub={`Intereses: ${formatMoneyVal(stats?.accruedInterest || totalAccruedInterest)}`} />
-              <MetricTile label="TOTAL ABONADO" value={formatMoneyVal(totalPaid)} valueColor="text-emerald-600 dark:text-emerald-400" sub={`Cap: ${formatMoneyVal(paidPrincipal)} | Int: ${formatMoneyVal(paidInterest)}`} />
-              <MetricTile label="INTERESES PAGADOS" value={formatMoneyVal(paidInterest)} valueColor="text-amber-600 dark:text-amber-400" sub={remainingInterest > 0 ? `Pend: ${formatMoneyVal(remainingInterest)}` : `${((paidInterest / (totalPrincipal || 1)) * 100).toFixed(1)}% costo`} />
+              {hasInterest && (
+                <MetricTile label="COMPROMISO TOTAL" value={formatMoneyVal(totalToPay)} sub={`Intereses: ${formatMoneyVal(stats?.accruedInterest || totalAccruedInterest)}`} />
+              )}
+              <MetricTile label="TOTAL ABONADO" value={formatMoneyVal(totalPaid)} valueColor="text-emerald-600 dark:text-emerald-400" sub={hasInterest ? `Cap: ${formatMoneyVal(paidPrincipal)} | Int: ${formatMoneyVal(paidInterest)}` : `Amortizado: ${amortizationPercent}%`} />
+              {hasInterest && (
+                <MetricTile label="INTERESES PAGADOS" value={formatMoneyVal(paidInterest)} valueColor="text-amber-600 dark:text-amber-400" sub={remainingInterest > 0 ? `Pend: ${formatMoneyVal(remainingInterest)}` : `${((paidInterest / (totalPrincipal || 1)) * 100).toFixed(1)}% costo`} />
+              )}
             </div>
 
             <div className="space-y-1">
               <div className="flex justify-between items-center text-xs">
                 <span className="font-medium text-slate-600 dark:text-slate-400 text-[11px]">{isReceivable ? 'Capital recuperado' : 'Capital amortizado'}</span>
-                <span className="font-mono text-[11px] tabular-nums text-slate-700 dark:text-slate-300">
-                  <strong className="text-slate-900 dark:text-white font-bold">{formatMoneyVal(paidPrincipal)}</strong> de {formatMoneyVal(totalPrincipal)} <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-0.5">({amortizationPercent}%)</span>
-                </span>
+                <span className="font-mono text-[11px] tabular-nums text-slate-700 dark:text-slate-300"><strong className="text-slate-900 dark:text-white font-bold">{formatMoneyVal(paidPrincipal)}</strong> de {formatMoneyVal(totalPrincipal)} <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-0.5">({amortizationPercent}%)</span></span>
               </div>
-              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-full overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+              <div className="w-full h-1.5 bg-slate-100 dark:bg-zinc-800/80 rounded-full overflow-hidden border border-slate-200/50 dark:border-zinc-700/50">
                 <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${amortizationPercent}%` }} />
               </div>
             </div>

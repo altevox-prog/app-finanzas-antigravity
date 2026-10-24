@@ -4,6 +4,7 @@ import { generateUUID } from '../utils/recordMerger';
 import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { toast } from '../utils/toast';
+import { triggerSaveFeedback } from '../utils/saveFeedback';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
 import { mapSupabaseRowToTransaction, mapTransactionToSupabasePayload } from '../services/sync/txMappers';
@@ -71,7 +72,7 @@ export function useTransactions({ isResettingRef, accounts = [], setAccounts, tr
         if (user?.id) await supabase.from('transactions').upsert(mapTransactionToSupabasePayload(sanitized, user.id), { onConflict: 'id' });
       } catch {}
     }
-    toast.success('Movimiento registrado con éxito');
+    triggerSaveFeedback();
     return sanitized;
   }, [recalculateAccountsBalance]);
 
@@ -91,7 +92,7 @@ export function useTransactions({ isResettingRef, accounts = [], setAccounts, tr
         }
       } catch (err) { console.error('[useTransactions] Error update sync:', err); }
     }
-    toast.success('Movimiento actualizado con éxito');
+    triggerSaveFeedback();
     return updatedTx;
   }, [transactions, recalculateAccountsBalance]);
 
@@ -133,7 +134,7 @@ export function useTransactions({ isResettingRef, accounts = [], setAccounts, tr
         if (user?.id) await supabase.from('transactions').upsert([mapTransactionToSupabasePayload(pair.outTx, user.id), mapTransactionToSupabasePayload(pair.inTx, user.id)], { onConflict: 'id' });
       } catch {}
     }
-    toast.success('Movimiento registrado con éxito');
+    triggerSaveFeedback();
     return pair;
   }, [trm, recalculateAccountsBalance]);
 

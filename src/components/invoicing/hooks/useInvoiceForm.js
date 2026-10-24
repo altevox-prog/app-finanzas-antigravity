@@ -6,7 +6,15 @@ const STORAGE_KEY = 'invoice_draft_data';
 const getInitialState = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : INITIAL_INVOICE_STATE;
+    if (!saved) return INITIAL_INVOICE_STATE;
+    const parsed = JSON.parse(saved);
+    if (parsed?.banking?.colombia?.bank === 'Bancolombia' && !parsed?.banking?.colombia?.accountNumber) {
+      parsed.banking.colombia.bank = '';
+      if (parsed.banking.colombia.accountType === 'Ahorros') {
+        parsed.banking.colombia.accountType = '';
+      }
+    }
+    return parsed;
   } catch {
     return INITIAL_INVOICE_STATE;
   }

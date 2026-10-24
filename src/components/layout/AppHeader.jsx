@@ -72,7 +72,7 @@ export default function AppHeader({
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
 
   const iconBtnClass = (active = false) => `w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
-    active ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-[#12151E] border border-white/10 text-slate-200 hover:text-white hover:border-white/20'
+    active ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-zinc-900 border border-zinc-800 text-slate-200 hover:text-white hover:border-zinc-700'
   }`;
 
   return (
@@ -126,7 +126,7 @@ export default function AppHeader({
                 <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('monety:open-add-account'))} className="w-9 h-9 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm mr-1" title="Añadir nueva cuenta" aria-label="Agregar cuenta"><Plus className="w-5 h-5 stroke-[2.5]" /></button>
               )}
 
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#12151E] border border-white/10 text-xs text-slate-200 font-medium select-none shadow-sm" title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-slate-200 font-medium select-none shadow-sm" title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 <span>TRM Oficial: ${Number(trm).toLocaleString('es-CO')} COP</span>
               </div>
@@ -136,7 +136,7 @@ export default function AppHeader({
               </button>
 
               <div className="relative z-[60]">
-                <button type="button" onClick={() => setIsNotificationCenterOpen((p) => !p)} className="w-9 h-9 rounded-full flex items-center justify-center bg-[#12151E] border border-white/10 text-slate-200 hover:text-white hover:border-white/20 relative transition-colors cursor-pointer shadow-sm active:scale-95" title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"} aria-label="Centro de notificaciones">
+                <button type="button" onClick={() => setIsNotificationCenterOpen((p) => !p)} className="w-9 h-9 rounded-full flex items-center justify-center bg-zinc-900 border border-zinc-800 text-slate-200 hover:text-white hover:border-zinc-700 relative transition-colors cursor-pointer shadow-sm active:scale-95" title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"} aria-label="Centro de notificaciones">
                   <Bell className="w-4.5 h-4.5" />
                   {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500/90 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm ring-2 ring-[#0D0F17]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                 </button>

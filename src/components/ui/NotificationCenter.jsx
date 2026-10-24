@@ -141,14 +141,14 @@ export default function NotificationCenter({
   return (
     <>
       <div className="hidden md:block fixed inset-0 z-[65] bg-transparent" onClick={onClose} aria-hidden="true" />
-      <div onClick={(e) => e.stopPropagation()} className="hidden md:flex absolute right-0 top-full mt-3 w-84 sm:w-96 max-h-[520px] z-[70] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl p-4 backdrop-blur-md overflow-hidden flex-col text-slate-900 dark:text-white animate-slide-up">
+      <div onClick={(e) => e.stopPropagation()} className="hidden md:flex absolute right-0 top-full mt-3 w-84 sm:w-96 max-h-[520px] z-[70] bg-white dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-2xl p-4 backdrop-blur-md overflow-hidden flex-col text-slate-900 dark:text-white animate-slide-up">
         {content}
       </div>
 
       {typeof document !== 'undefined' && createPortal(
         <div className="md:hidden fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
-          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm max-h-[80vh] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl p-4 backdrop-blur-md flex flex-col z-10 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
+          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm max-h-[80vh] bg-white dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-2xl p-4 backdrop-blur-md flex flex-col z-10 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             {content}
           </div>
         </div>,

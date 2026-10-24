@@ -2,6 +2,9 @@ import { formatTxDateClean } from '../components/transactions/components/Transac
 
 export function isTransferTx(tx) {
   if (!tx) return false;
+  if (tx.isDebtPayment || tx.isDebtDisbursement || tx.debtId || tx.paymentId) {
+    return false;
+  }
   const type = String(tx.type || '').toLowerCase();
   return Boolean(
     tx.isTransfer || tx.is_transfer ||

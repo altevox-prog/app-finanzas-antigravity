@@ -29,7 +29,7 @@ const NUM_INPUT_CLS = "w-full text-xs font-bold px-3 py-2.5 rounded-xl border bo
 export default function MarketAssetFields({
   category, currency, setCurrency, name, setName, ticker, setTicker,
   shares, setShares, buyPrice, setBuyPrice, currentPrice, setCurrentPrice,
-  assetType, setAssetType, setCategory, isEditing
+  assetType, setAssetType, setCategory, isEditing, startDate, setStartDate
 }) {
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [isManualPrice, setIsManualPrice] = useState(false);
@@ -106,9 +106,15 @@ export default function MarketAssetFields({
         </div>
       )}
 
-      <div>
-        <label className="block text-[11px] font-bold opacity-70 mb-1">Moneda de origen *</label>
-        <SegmentedControl options={[{ id: 'COP', label: 'COP ($)' }, { id: 'USD', label: 'USD ($)' }]} value={currency} onChange={setCurrency} size="sm" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div>
+          <label className="block text-[11px] font-bold opacity-70 mb-1">Moneda de origen *</label>
+          <SegmentedControl options={[{ id: 'COP', label: 'COP ($)' }, { id: 'USD', label: 'USD ($)' }]} value={currency} onChange={setCurrency} size="sm" />
+        </div>
+        <div>
+          <label className="block text-[11px] font-bold opacity-70 mb-1">Fecha de compra</label>
+          <input type="date" value={startDate || ''} onChange={(e) => setStartDate?.(e.target.value)} className={INPUT_CLS} style={INPUT_STYLE} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

@@ -78,7 +78,7 @@ export default function PortfolioSummaryHeader({
       {/* ============================================================== */}
       {/* MÉTRICAS SECUNDARIAS: 2 Columnas Simétricas (Invertido vs Rdto)*/}
       {/* ============================================================== */}
-      <div className="grid grid-cols-2 gap-2 py-2 border-y border-slate-100 dark:border-slate-800/80 my-2">
+      <div className="grid grid-cols-2 gap-2 py-2 border-y border-slate-100 dark:border-zinc-800/80 my-2">
         {/* Columna Izquierda (Invertido) */}
         <div>
           <span className="block text-[10px] uppercase font-semibold text-slate-400 tracking-wider">

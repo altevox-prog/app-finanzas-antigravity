@@ -45,14 +45,14 @@ export default function PaymentAccountModal({
 
   return (
     <div
-      className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-[60] p-4 animate-fadeIn"
+      className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-[60] p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm sm:max-w-md bg-white dark:bg-[#12151E] rounded-3xl p-5 shadow-2xl border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white flex flex-col space-y-4 animate-slideUp"
+        className="w-full max-w-sm sm:max-w-md bg-white dark:bg-zinc-950 rounded-3xl p-5 shadow-2xl border border-slate-200/80 dark:border-zinc-800/90 text-slate-900 dark:text-white flex flex-col space-y-4 animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800/80">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
@@ -100,10 +100,10 @@ export default function PaymentAccountModal({
               <select
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
-                className="w-full pl-10 pr-8 py-2.5 bg-slate-50 dark:bg-[#181B26] border border-slate-200/80 dark:border-white/10 rounded-xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer"
+                className="w-full pl-10 pr-8 py-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer"
               >
                 {accountOptions.map((acc) => (
-                  <option key={acc.id} value={acc.id} className="bg-white dark:bg-[#181B26] text-slate-900 dark:text-white">
+                  <option key={acc.id} value={acc.id} className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
                     {acc.name} {acc.currency ? `(${acc.currency})` : ''}
                   </option>
                 ))}

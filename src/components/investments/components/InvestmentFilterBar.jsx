@@ -64,7 +64,7 @@ export default function InvestmentFilterBar({
       {/* 2. SELECTOR DE VISTA (POR BANCO VS TODOS) Y CONTADOR */}
       {showViewControls && (
         <div className="flex items-center justify-between gap-2">
-          <div className="bg-slate-100 dark:bg-slate-800/70 p-1 rounded-xl flex gap-1 border border-slate-200/50 dark:border-white/5">
+          <div className="bg-slate-100 dark:bg-zinc-900/70 p-1 rounded-xl flex gap-1 border border-slate-200/50 dark:border-zinc-800">
             <button
               type="button"
               onClick={() => onChangeViewGrouping && onChangeViewGrouping('flat')}

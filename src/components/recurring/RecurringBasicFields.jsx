@@ -55,7 +55,7 @@ export default function RecurringBasicFields({
 
       {/* 2. Nombre del Servicio o Beneficiario */}
       <div>
-        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
+        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
           Servicio o Entidad *
         </label>
         <input
@@ -64,13 +64,13 @@ export default function RecurringBasicFields({
           value={name}
           onChange={(e) => setName?.(e.target.value)}
           placeholder="Ej. Netflix, Arriendo Apartamento, Internet Fibra, Gimnasio"
-          className="w-full h-11 px-3.5 rounded-xl text-sm font-semibold border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100"
+          className="w-full h-11 px-3.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-800/80 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100"
         />
       </div>
 
       {/* 3. Monto en Pesos Colombianos (COP) */}
       <div>
-        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
+        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
           Monto ($ COP) *
         </label>
         <AmountInput
@@ -80,11 +80,11 @@ export default function RecurringBasicFields({
           required
           onFocus={(e) => e.target.select()}
           prefix={
-            <span className="opacity-40 font-black text-lg text-slate-900 dark:text-zinc-100">
+            <span className="opacity-40 font-black text-lg text-zinc-900 dark:text-zinc-100">
               $
             </span>
           }
-          className="w-full pl-8 pr-3.5 h-12 rounded-xl text-xl font-bold font-mono tracking-tight border border-slate-200 dark:border-white/[0.08] focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-zinc-100"
+          className="w-full pl-8 pr-3.5 h-12 rounded-xl text-xl font-bold font-mono tracking-tight border border-zinc-200 dark:border-zinc-800/80 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 bg-slate-50 dark:bg-zinc-900/60 text-slate-900 dark:text-zinc-100"
         />
       </div>
     </>

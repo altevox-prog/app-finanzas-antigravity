@@ -3,12 +3,12 @@ export const WIDGETS_ORDER_STORAGE_KEY_V2 = 'monety_widgets_order_v2';
 
 export const DEFAULT_WIDGETS_CONFIG = [
   ['weekly_cashflow', 'Actividad de gastos', 'Evolución y comparación semanal de gastos', 'Activity'],
-  ['expenses_category', 'Tus gastos', 'Distribución y desglose de gastos por categoría', 'PieChart'],
+  ['expenses_category', 'Gastos y movimientos', 'Distribución de gastos y últimos movimientos', 'PieChart'],
   ['debts_loans', 'Préstamos y deudas', 'Montos por cobrar y compromisos por pagar', 'HandCoins'],
   ['investments', 'Inversiones', 'Portafolio por banco, capital aportado y rentabilidad neta', 'TrendingUp'],
   ['recent_movements', 'Movimientos recientes', 'Últimos movimientos con acceso rápido', 'Receipt'],
   ['recurring_payments', 'Pagos recurrentes', 'Suscripciones y gastos fijos al mes', 'CalendarSync'],
-  ['savings_rate', 'Tasa de ahorro / Superávit', 'Porcentaje de ahorro y excedente de liquidez libre', 'PiggyBank'],
+  ['savings_rate', 'Metas de ahorro', 'Progreso de metas de ahorro y alcancías', 'PiggyBank'],
   ['budget', 'Presupuesto mensual', 'Progreso y límites del presupuesto mensual y categorías', 'Target']
 ].map(([id, label, description, icon]) => ({ id, label, name: label, description, icon, visible: true }));
 
@@ -16,9 +16,10 @@ const WIDGET_ID_ALIASES = {
   inversiones: 'investments',
   prestamos: 'debts_loans', prestamos_deudas: 'debts_loans', debts: 'debts_loans',
   gastos_categoria: 'expenses_category', charts: 'expenses_category', expenses: 'expenses_category', tus_gastos: 'expenses_category', donut: 'expenses_category',
+  expenses_and_movements: 'expenses_category', gastos_movimientos: 'expenses_category', gastos_y_movimientos: 'expenses_category',
   movimientos_recientes: 'recent_movements', recent_transactions: 'recent_movements', recent: 'recent_movements', transactions: 'recent_movements',
   pagos_recurrentes: 'recurring_payments', recurring: 'recurring_payments',
-  tasa_ahorro: 'savings_rate', superavit: 'savings_rate', savings: 'savings_rate',
+  tasa_ahorro: 'savings_rate', superavit: 'savings_rate', savings: 'savings_rate', savings_goals: 'savings_rate', metas_ahorro: 'savings_rate', metas: 'savings_rate',
   presupuesto: 'budget', presupuesto_metas: 'budget',
   pill_bar_chart: 'weekly_cashflow', weekly_cashflow_classic: 'weekly_cashflow'
 };

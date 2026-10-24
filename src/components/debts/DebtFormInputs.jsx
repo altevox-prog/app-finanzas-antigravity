@@ -81,12 +81,15 @@ export default function DebtFormInputs({
       <div>
         <label className="block text-[11px] font-semibold opacity-70 mb-1">Cargos de Seguro / Trámite ($)</label>
         <div className="relative">
-          <input
-            type="number" step="any" min="0" placeholder="0" value={insuranceFee} onFocus={(e) => e.target.select()}
-            onChange={(e) => setInsuranceFee(e.target.value)} className="w-full text-xs px-3.5 py-2.5 rounded-xl border focus:outline-none focus:ring-1 focus:ring-[#007AFF]"
-            style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+          <AmountInput
+            value={insuranceFee}
+            onChange={(cleanVal) => setInsuranceFee(cleanVal)}
+            placeholder="0"
+            enableDecimals={enableDecimals}
+            onFocus={(e) => e.target.select()}
+            className={INPUT_CLS}
           />
-          <ShieldCheck className="w-3.5 h-3.5 opacity-40 absolute right-3 top-1/2 -translate-y-1/2" />
+          <ShieldCheck className="w-3.5 h-3.5 opacity-40 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
     </div>

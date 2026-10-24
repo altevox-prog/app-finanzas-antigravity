@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { toSafeNumber } from '../utils/financeMath';
 import { toast } from '../utils/toast';
+import { triggerSaveFeedback } from '../utils/saveFeedback';
 import { ensureUUID } from '../services/syncEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
@@ -79,7 +80,7 @@ export function useInvestments(isResettingRef, options = {}) {
       return sortInvestments([sanitized, ...prev]);
     });
     await syncSupabase(target);
-    toast.success('Inversión guardada correctamente');
+    triggerSaveFeedback();
     return target;
   }, [syncSupabase]);
 
@@ -87,7 +88,7 @@ export function useInvestments(isResettingRef, options = {}) {
     const sanitized = sanitizeInvestment(inv);
     setInvestments((prev) => sortInvestments(prev.map((i) => (i.id === sanitized.id || ensureUUID(i.id) === ensureUUID(sanitized.id) ? sanitized : i))));
     await syncSupabase(sanitized);
-    toast.success('Inversión actualizada correctamente');
+    triggerSaveFeedback();
     return sanitized;
   }, [syncSupabase]);
 
@@ -112,7 +113,7 @@ export function useInvestments(isResettingRef, options = {}) {
       }
       return item;
     })));
-    if (updated) { await syncSupabase(updated); toast.success(msg); }
+    if (updated) { await syncSupabase(updated); triggerSaveFeedback(); }
   }, [syncSupabase]);
 
   const handleAddLot = useCallback((assetId, lot) => mutateLot(assetId, (a) => applyNewLot(a, lot), 'Lote agregado correctamente'), [mutateLot]);

@@ -105,9 +105,9 @@ export default function EditTransactionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-slide-up" onClick={(e) => e.stopPropagation()}>
-        <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800/90 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-zinc-800/80 flex items-center justify-between">
           <div><h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Editar transacción</h3><p className="text-xs text-slate-500 dark:text-zinc-400">Modifica los detalles y recalcula balances</p></div>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
@@ -125,7 +125,7 @@ export default function EditTransactionModal({
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5">Nota / Descripción</label>
-                <input type="text" value={form.note} onChange={(e) => setF('note', e.target.value)} placeholder="Descripción del movimiento..." className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-white/[0.08] rounded-lg text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60" />
+                <input type="text" value={form.note} onChange={(e) => setF('note', e.target.value)} placeholder="Descripción del movimiento..." className="w-full h-11 px-3.5 text-sm bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-zinc-800/80 rounded-lg text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60" />
               </div>
               <EditTransactionReceipt receiptImage={receiptImage} setReceiptImage={setReceiptImage} />
             </div>

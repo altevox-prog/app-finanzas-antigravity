@@ -43,7 +43,7 @@ export default function InvestmentLotHistory({
           return (
             <div
               key={lot.id || idx}
-              className="flex items-center justify-between p-2 rounded-xl bg-white/70 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs"
+              className="flex items-center justify-between p-2 rounded-xl bg-white/70 dark:bg-zinc-900/60 border border-slate-100 dark:border-zinc-800 text-xs"
             >
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">

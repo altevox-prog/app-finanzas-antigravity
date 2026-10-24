@@ -45,7 +45,7 @@ export default function ReceiptModal({ transaction, onClose }) {
       onClick={onClose}
     >
       <div 
-        className="rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white space-y-3.5 animate-slide-up"
+        className="rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200/80 dark:border-zinc-800/90 bg-white dark:bg-zinc-950 text-slate-900 dark:text-white space-y-3.5 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

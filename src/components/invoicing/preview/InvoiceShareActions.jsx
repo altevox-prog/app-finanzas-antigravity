@@ -48,13 +48,13 @@ export default function InvoiceShareActions({ invoice = {} }) {
       type="button"
       disabled={isCapturing}
       onClick={handleShare}
-      className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+      className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
       title="Compartir factura"
     >
       {isCapturing ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600 dark:text-slate-300" />
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600 dark:text-zinc-300" />
       ) : (
-        <Share2 className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+        <Share2 className="w-3.5 h-3.5 text-slate-600 dark:text-zinc-300" />
       )}
       <span>Compartir</span>
     </button>

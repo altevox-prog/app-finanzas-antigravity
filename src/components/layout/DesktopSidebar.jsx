@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ArrowLeftRight, CreditCard, CalendarSync, HandCoins,
   TrendingUp, Plus, Settings, PanelLeftClose, PanelLeftOpen, FileText
@@ -23,6 +23,25 @@ export default function DesktopSidebar({
   const [isCollapsed, setIsCollapsed] = useState(() => {
     try { return localStorage.getItem('monety_sidebar_collapsed') === 'true'; } catch { return false; }
   });
+  const [isPulsing, setIsPulsing] = useState(false);
+
+  useEffect(() => {
+    let timer = null;
+    const handleSaved = () => {
+      setIsPulsing(true);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setIsPulsing(false), 2000);
+    };
+    if (typeof window !== 'undefined') window.addEventListener('app:data-saved', handleSaved);
+    return () => {
+      if (typeof window !== 'undefined') window.removeEventListener('app:data-saved', handleSaved);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  const ringClass = isPulsing
+    ? 'ring-2 ring-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.6)] scale-[1.04] transition-all duration-300'
+    : 'ring-2 ring-emerald-500/30 hover:ring-emerald-500 transition-all duration-300';
 
   const toggleCollapse = () => {
     setIsCollapsed((prev) => {
@@ -90,13 +109,13 @@ export default function DesktopSidebar({
 
       <div className="w-full shrink-0 pb-4 pt-2 flex flex-col items-center justify-center border-t border-slate-100 dark:border-white/[0.04] px-2">
         {isCollapsed ? (
-          <button type="button" onClick={handleOpenSettings} className="w-10 h-10 rounded-full ring-2 ring-emerald-500/20 hover:ring-emerald-500 hover:scale-105 transition-all cursor-pointer overflow-hidden flex items-center justify-center shrink-0" title={`Perfil - ${avatarName}`} aria-label={`Perfil - ${avatarName}`}>
+          <button type="button" onClick={handleOpenSettings} className={`w-10 h-10 rounded-full ${ringClass} cursor-pointer overflow-hidden flex items-center justify-center shrink-0`} title={`Perfil - ${avatarName}`} aria-label={`Perfil - ${avatarName}`}>
             <Avatar src={avatarSrc} name={avatarName} email={avatarEmail} size="sm" className="!w-full !h-full" showStatus={false} />
           </button>
         ) : (
           <button type="button" onClick={handleOpenSettings} className="w-full flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-100 hover:dark:bg-white/[0.03] transition-colors text-left cursor-pointer group" title={`Perfil - ${avatarName}`} aria-label="Abrir perfil y configuración">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="relative inline-flex items-center justify-center w-10 h-10 rounded-full ring-2 ring-emerald-500/20 group-hover:ring-emerald-500 transition-all overflow-hidden shrink-0">
+              <div className={`relative inline-flex items-center justify-center w-10 h-10 rounded-full ${ringClass} overflow-hidden shrink-0`}>
                 <Avatar src={avatarSrc} name={avatarName} email={avatarEmail} size="sm" className="!w-full !h-full" showStatus={false} />
               </div>
               <div className="min-w-0 text-left flex-1">

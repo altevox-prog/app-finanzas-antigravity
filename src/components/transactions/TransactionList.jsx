@@ -81,7 +81,7 @@ export default function TransactionList({
   const pillCls = (active) => `px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${active ? 'bg-[#007AFF] text-white shadow-sm font-bold' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'}`;
 
   return (
-    <div className={`ios-card ${isCompact ? 'p-3.5 sm:p-4' : 'p-3.5 sm:p-5'}`}>
+    <div className={isCompact ? 'ios-card p-3.5 sm:p-4' : 'space-y-4'}>
       {isCompact && <h2 className="text-[17px] sm:text-[19px] font-bold tracking-tight text-slate-900 dark:text-white truncate mb-2">Movimientos Recientes</h2>}
       {!isCompact && isSearchOpen && (
         <div className="flex items-center gap-2 w-full mb-3 animate-in fade-in duration-150">
@@ -114,12 +114,12 @@ export default function TransactionList({
         <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06]">
           {itemsToRender.map((tx) => <TransactionItem key={tx.id} transaction={tx} category={categoryMap.get(tx.categoryId)} account={accountMap.get(tx.accountId)} onSelect={setSelectedDetailTx} onEdit={setEditingTx} onDelete={onDeleteTransaction} onViewReceipt={setViewingReceiptTx} />)}
           {!isCompact && totalItems > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-zinc-800 text-xs text-slate-500">
               <span>Mostrando {startIndex + 1} - {Math.min(startIndex + itemsPerPage, totalItems)} de {totalItems}</span>
               <div className="flex items-center gap-1">
-                <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 cursor-pointer"><ChevronLeft size={16} /></button>
+                <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 disabled:opacity-40 cursor-pointer"><ChevronLeft size={16} /></button>
                 <span className="px-2 font-medium">Página {currentPage} de {totalPages}</span>
-                <button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 cursor-pointer"><ChevronRight size={16} /></button>
+                <button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 disabled:opacity-40 cursor-pointer"><ChevronRight size={16} /></button>
               </div>
             </div>
           )}

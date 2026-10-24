@@ -26,10 +26,10 @@ export default function TransactionFormModalLayout({
 
   return (
     <div
-      className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-slide-up pointer-events-auto"
+      className="bg-white dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800/90 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-slide-up pointer-events-auto"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+      <div className="shrink-0 px-6 py-4 border-b border-slate-200/80 dark:border-zinc-800/80 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Nuevo movimiento</h3>
           <p className="text-xs text-slate-500 dark:text-zinc-400">Ingresa tus finanzas al instante</p>
@@ -50,7 +50,7 @@ export default function TransactionFormModalLayout({
           {children}
           <SuccessAlert show={showSuccess} />
         </div>
-        <div className="shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-zinc-900/90 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-end gap-3">
+        <div className="shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-zinc-950 border-t border-slate-200/80 dark:border-zinc-800/80 flex items-center justify-end gap-3">
           {onClose && (
             <button
               type="button"

@@ -19,12 +19,12 @@ export default function InvoiceLivePreview({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-zinc-900/90 border border-slate-200/60 dark:border-white/[0.08] rounded-3xl p-4 sm:p-5 shadow-sm">
         <div className="flex items-center gap-2">
           <FileCheck2 className="w-5 h-5 text-emerald-500 shrink-0" />
           <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white">Vista Previa del Documento</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Diseño listo para exportación PDF</p>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">Vista previa del documento</h3>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Diseño listo para exportación PDF</p>
           </div>
         </div>
 
@@ -43,7 +43,7 @@ export default function InvoiceLivePreview({
         </div>
       </div>
 
-      <div className="flex justify-center overflow-x-auto p-2 sm:p-4 bg-slate-100/70 dark:bg-black/30 rounded-2xl">
+      <div className="flex justify-center overflow-x-auto p-3 sm:p-5 bg-slate-100/70 dark:bg-zinc-900/50 border border-slate-200/60 dark:border-white/[0.08] rounded-3xl shadow-xs">
         <div
           id="invoice-printable-sheet"
           className="w-full max-w-[800px] bg-white text-slate-900 p-6 sm:p-10 rounded-xl shadow-xl border border-slate-200/80 space-y-3.5"

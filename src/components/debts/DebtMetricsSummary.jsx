@@ -25,7 +25,7 @@ export default function DebtMetricsSummary({
   const totalAccounts = filteredItemsCount || (tabTotals.paidCount + tabTotals.pendingCount) || 0;
 
   return (
-    <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3.5 sm:p-4 shadow-sm shadow-slate-200/50 dark:shadow-xl dark:shadow-black/40 space-y-2.5">
+    <div className="bg-white/80 dark:bg-zinc-950/60 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800/80 rounded-2xl p-3.5 sm:p-4 shadow-sm shadow-slate-200/50 dark:shadow-xl dark:shadow-black/40 space-y-2.5">
       {/* ============================================================== */}
       {/* BLOQUE SUPERIOR: Monto Principal y Badge de Pendientes         */}
       {/* ============================================================== */}
@@ -54,7 +54,7 @@ export default function DebtMetricsSummary({
       {/* ============================================================== */}
       {/* MÉTRICAS SECUNDARIAS: Fila horizontal continua                 */}
       {/* ============================================================== */}
-      <div className="flex items-center justify-between text-xs py-2 border-y border-slate-100 dark:border-slate-800/80 my-2 flex-wrap gap-2">
+      <div className="flex items-center justify-between text-xs py-2 border-y border-slate-100 dark:border-zinc-800/80 my-2 flex-wrap gap-2">
         <div className="flex items-center gap-1 min-w-0">
           <span className="text-slate-400 dark:text-slate-500 font-medium">{isReceivable ? 'Prestado:' : 'Compromiso:'}</span>
           <span className="font-semibold font-mono text-slate-800 dark:text-slate-200 tabular-nums">
@@ -93,7 +93,7 @@ export default function DebtMetricsSummary({
             </span>
           )}
         </div>
-        <div className="bg-slate-100 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+        <div className="bg-slate-100 dark:bg-zinc-800/80 h-1.5 rounded-full overflow-hidden border border-slate-200/50 dark:border-zinc-700/50">
           <div 
             className={`h-full rounded-full transition-all duration-500 ${
               isReceivable ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-rose-500 dark:bg-rose-400'

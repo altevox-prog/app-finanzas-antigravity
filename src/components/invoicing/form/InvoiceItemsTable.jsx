@@ -24,7 +24,7 @@ export default function InvoiceItemsTable({
   };
 
   return (
-    <div className={`bg-white dark:bg-[#12141C] border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-sm transition-all ${
+    <div className={`bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-sm transition-all ${
       isOpen ? 'p-5 sm:p-6 space-y-4' : 'p-4 sm:p-5 hover:border-slate-300 dark:hover:border-white/20'
     }`}>
       <div
@@ -38,7 +38,7 @@ export default function InvoiceItemsTable({
           <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Paso 3</span>
           <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <Layers className="w-4 h-4 text-emerald-500" />
-            Conceptos e Ítems a Facturar
+            Conceptos e ítems a facturar
           </h3>
         </div>
         <div className="flex items-center gap-2.5">
@@ -49,48 +49,48 @@ export default function InvoiceItemsTable({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Agregar Ítem</span>
+              <span>Agregar ítem</span>
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
+              <span className="text-xs text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800/70 border border-transparent dark:border-white/[0.08] px-2 py-0.5 rounded-md">
                 {items.length} {items.length === 1 ? 'ítem' : 'ítems'}
               </span>
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 hidden sm:inline">
+              <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 hidden sm:inline">
                 {formatCOP(subtotal)}
               </span>
             </div>
           )}
-          {isOpen ? <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" /> : <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" />}
+          {isOpen ? <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-zinc-200 transition-colors" /> : <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-zinc-200 transition-colors" />}
         </div>
       </div>
 
       {isOpen && (
         <>
-          <div className="overflow-x-auto border-t border-slate-100 dark:border-white/5 pt-3">
+          <div className="overflow-x-auto border-t border-slate-100 dark:border-white/[0.08] pt-3">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="border-b border-slate-200/60 dark:border-white/10 text-slate-400 font-semibold uppercase tracking-wider">
-              <th className="py-2.5 px-2">Descripción / Concepto</th>
+            <tr className="border-b border-slate-200/60 dark:border-white/[0.08] bg-slate-50/50 dark:bg-zinc-800/40 text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+              <th className="py-2.5 px-2">Descripción o concepto</th>
               <th className="py-2.5 px-2 w-20 text-center">Cant.</th>
-              <th className="py-2.5 px-2 w-32 text-right">Valor Unitario</th>
+              <th className="py-2.5 px-2 w-32 text-right">Valor unitario</th>
               <th className="py-2.5 px-2 w-32 text-right">Total</th>
               <th className="py-2.5 px-2 w-10 text-center"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+          <tbody className="divide-y divide-slate-100 dark:divide-white/[0.08]">
             {items.map((item, idx) => {
               const qty = Number(item.quantity) || 0;
               const price = Number(item.unitPrice) || 0;
               const lineTotal = qty * price;
               return (
-                <tr key={item.id || idx} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
+                <tr key={item.id || idx} className="group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                   <td className="py-2 px-2">
                     <input
                       type="text" value={item.description || ''}
                       onChange={(e) => updateItem(item.id, { description: e.target.value })}
                       placeholder="Descripción del servicio o producto..."
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
                     />
                   </td>
                   <td className="py-2 px-2 text-center">
@@ -98,7 +98,7 @@ export default function InvoiceItemsTable({
                       type="number" min="0" step="any"
                       value={item.quantity === 0 ? 0 : item.quantity ?? ''}
                       onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                      className="w-full text-center px-2 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full text-center px-2 py-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
                     />
                   </td>
                   <td className="py-2 px-2 text-right">
@@ -106,7 +106,7 @@ export default function InvoiceItemsTable({
                       type="number" min="0" step="1000"
                       value={item.unitPrice === 0 ? 0 : item.unitPrice ?? ''}
                       onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                      className="w-full text-right px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full text-right px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
                     />
                   </td>
                   <td className="py-2 px-2 text-right font-medium text-slate-800 dark:text-zinc-200 whitespace-nowrap">
@@ -118,7 +118,7 @@ export default function InvoiceItemsTable({
                       onClick={() => removeItem(item.id)}
                       disabled={items.length <= 1}
                       title="Eliminar fila"
-                      className="p-1 text-slate-400 hover:text-rose-500 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                      className="p-1 text-slate-400 hover:text-rose-500 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -130,8 +130,8 @@ export default function InvoiceItemsTable({
         </table>
       </div>
 
-      <div className="flex justify-end items-center gap-3 pt-3 border-t border-slate-100 dark:border-white/5">
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Subtotal Ítems:</span>
+      <div className="flex justify-end items-center gap-3 pt-3 border-t border-slate-100 dark:border-white/[0.08]">
+        <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Subtotal ítems:</span>
         <span className="text-sm font-bold text-slate-900 dark:text-white">{formatCOP(subtotal)}</span>
       </div>
         </>

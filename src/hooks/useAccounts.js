@@ -3,7 +3,7 @@ import { normalizeAccountType, ensureUUID } from '../services/syncEngine';
 import { generateUUID } from '../utils/recordMerger';
 import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
-import { toast } from '../utils/toast';
+import { triggerSaveFeedback } from '../utils/saveFeedback';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
 import { normalizeRemoteAccount } from '../services/sync/syncNormalizers';
@@ -98,7 +98,7 @@ export function useAccounts({
     };
     setAccounts((prev) => (isUpdate ? prev.map((a) => (a.id === acc.id ? acc : a)) : [...prev.filter((a) => a.id !== id), acc]).sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)));
     if (isUpdate) getActiveSetTransactions()?.((prev) => prev.map((t) => (t.accountId === acc.id ? { ...t, accountName: acc.name } : t)));
-    await syncAccountCloud(acc); toast.success('Cuenta guardada correctamente'); return acc;
+    await syncAccountCloud(acc); triggerSaveFeedback(); return acc;
   }, [accounts, getActiveTransactions, trm, getActiveSetTransactions]);
 
   const handleDeleteAccount = useCallback(async (accountId) => {
@@ -112,7 +112,7 @@ export function useAccounts({
         await Promise.all([supabase.from('accounts').delete().eq('id', cid).match(u?.id ? { user_id: u.id } : {}), supabase.from('transactions').delete().eq('account_id', cid).match(u?.id ? { user_id: u.id } : {})]);
       } catch (err) { console.error('[useAccounts] Delete error:', err); }
     }
-    toast.success('Cuenta eliminada correctamente');
+    triggerSaveFeedback();
   }, [getActiveSetTransactions]);
 
   const handleReorderAccounts = useCallback((newAccounts) => {
@@ -131,7 +131,7 @@ export function useAccounts({
       const u = activeUserRef.current || (await getSupabaseUser());
       await supabase.from('accounts').update({ is_archived: isArchived, updated_at: nowIso }).eq('id', ensureUUID(accountId)).match(u?.id ? { user_id: u.id } : {});
     }
-    toast.success(isArchived ? 'Cuenta archivada' : 'Cuenta desarchivada');
+    triggerSaveFeedback();
   }, []);
   const handleAdjustAccountBalance = useCallback(async (accountId, newBalance) => {
     const bal = toSafeNumber(newBalance), nowIso = new Date().toISOString();
@@ -140,7 +140,7 @@ export function useAccounts({
       const u = activeUserRef.current || (await getSupabaseUser());
       await supabase.from('accounts').update({ balance: bal, initial_balance: bal, updated_at: nowIso }).eq('id', ensureUUID(accountId)).match(u?.id ? { user_id: u.id } : {});
     }
-    toast.success('Saldo ajustado correctamente');
+    triggerSaveFeedback();
   }, []);
 
   const totalBalance = useMemo(() => accounts.reduce((acc, a) => {

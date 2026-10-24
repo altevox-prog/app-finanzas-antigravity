@@ -17,6 +17,7 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [profileResetKey, setProfileResetKey] = useState(0);
+  const [profileInitialView, setProfileInitialView] = useState('main');
 
   const normalizeTxType = (val) => (val === 'income' || val === 'ingreso') ? 'income' : (val === 'transfer' || val === 'transferencia') ? 'transfer' : 'expense';
   const normalizeLoanType = (val) => (val === 'payable' || val === 'borrowed' || val === 'debo' || val === 'debt') ? 'payable' : 'receivable';
@@ -60,13 +61,14 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
   const handleCloseInvestment = useCallback(() => setIsAddInvestmentOpen(false), []);
   const handleOpenSettings = useCallback(() => setIsSettingsOpen(true), []);
 
-  const handleOpenProfile = useCallback(() => {
+  const handleOpenProfile = useCallback((subview = 'main') => {
     setIsActionMenuOpen(false);
     setIsAddTxOpen(false);
     setIsAddInvestmentOpen(false);
     setIsAddLoanOpen(false);
     setIsAddRecurringOpen(false);
     setIsCalendarOpen(false);
+    setProfileInitialView(typeof subview === 'string' ? subview : 'main');
     setProfileResetKey((prev) => prev + 1);
     setIsSettingsOpen(true);
     onOpenProfileCallback?.();
@@ -83,6 +85,7 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
     setSelectedCreditCardDetail(null);
     setIsExportModalOpen(false);
     setIsGoalModalOpen(false);
+    setProfileInitialView('main');
   }, []);
 
   const modalFlags = {
@@ -145,6 +148,8 @@ export function useModalControls({ onOpenProfileCallback = null } = {}) {
     handleOpenProfile,
     openProfileModal: handleOpenProfile,
     openSettingsModal: handleOpenSettings,
+    profileInitialView,
+    setProfileInitialView,
     handleCloseAllModals,
     modalFlags
   };

@@ -40,7 +40,7 @@ export const calculateNetWorth = ({
       inv.category === 'fixed' || inv.category === 'CDT' ||
       inv.subType === 'cdt' || inv.subtype === 'cdt'
     );
-    if (isCDT && rawInvested > 0 && !rawCurrent) {
+    if (isCDT && rawInvested > 0) {
       const cdtRate = safeNumber(inv.interestRate ?? inv.rate);
       const sDate = inv.startDate || inv.start_date;
       const dDate = inv.dueDate || inv.due_date;
@@ -50,6 +50,8 @@ export const calculateNetWorth = ({
         currentOrigin = costOrigin + calculateCDTMaturityReturn(rawInvested, cdtRate, dTerm, 0.04).netReturn;
       } else if (sDate) {
         currentOrigin = costOrigin + calculateCDTAccruedReturn(rawInvested, cdtRate, sDate, new Date(), 0.04).netReturn;
+      } else {
+        currentOrigin = costOrigin;
       }
     }
 
@@ -141,9 +143,7 @@ export const runFinanceMathAudit = () => {
     const debt = calculateDebtStats(5000000, [{ capitalAmount: 6000000 }]);
     assertions.push(debt.remainingCapital === 0, debt.isPaid === true, convertUSDtoCOP(1500, 4050) === 6075000);
     return assertions.every(Boolean);
-  } catch (err) {
-    return false;
-  }
+  } catch { return false; }
 };
 
 if (typeof window !== 'undefined') runFinanceMathAudit();

@@ -75,7 +75,7 @@ export default function ProfileCloudTab({
               key={id}
               type="button"
               onClick={action}
-              className="w-full p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm flex items-center justify-between gap-3.5 hover:border-emerald-500/40 hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer group text-left"
+              className="w-full p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 shadow-sm flex items-center justify-between gap-3.5 hover:border-emerald-500/40 hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer group text-left"
             >
               <div className="flex items-center gap-3.5 min-w-0">
                 <div className={`p-2.5 rounded-xl border ${iconColor} shrink-0 group-hover:scale-105 transition-transform`}>
@@ -86,7 +86,7 @@ export default function ProfileCloudTab({
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{desc}</p>
                 </div>
               </div>
-              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0">
+              <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0">
                 <Download className="w-4 h-4" />
               </div>
             </button>
@@ -98,7 +98,7 @@ export default function ProfileCloudTab({
       <div>
         <div 
           onClick={() => restoreInputRef?.current?.click()}
-          className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-emerald-500/40 hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-3 group shadow-sm"
+          className="p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-emerald-500/40 hover:shadow-sm active:scale-[0.99] transition-all cursor-pointer flex items-center justify-between gap-3 group shadow-sm"
         >
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0 group-hover:text-emerald-500 group-hover:bg-emerald-500/10 transition-colors">

@@ -17,7 +17,7 @@ export default function FixedIncomeFields({
     ? Math.max(1, Math.round((new Date(dueDate + 'T00:00:00') - new Date(startDate + 'T00:00:00')) / 86400000))
     : 180;
 
-  const stats = (numInvested > 0 && numRate > 0)
+  const stats = (numInvested > 0 && numRate > 0 && startDate && dueDate)
     ? calculateCDTMaturityReturn(numInvested, numRate, daysTerm, 0.04)
     : null;
 
@@ -42,17 +42,17 @@ export default function FixedIncomeFields({
 
       <div className="grid grid-cols-2 gap-2.5">
         <div>
-          <label className="block text-[10px] font-bold opacity-70 mb-1">Fecha de Inicio *</label>
+          <label className="block text-[10px] font-bold opacity-70 mb-1">Fecha de inicio</label>
           <input
-            type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-            className={INPUT_CLS} style={INPUT_STYLE} required
+            type="date" value={startDate || ''} onChange={(e) => setStartDate(e.target.value)}
+            className={INPUT_CLS} style={INPUT_STYLE}
           />
         </div>
         <div>
-          <label className="block text-[10px] font-bold opacity-70 mb-1">Fecha de Vencimiento *</label>
+          <label className="block text-[10px] font-bold opacity-70 mb-1">Fecha de vencimiento</label>
           <input
-            type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-            className={INPUT_CLS} style={INPUT_STYLE} required
+            type="date" value={dueDate || ''} onChange={(e) => setDueDate(e.target.value)}
+            className={INPUT_CLS} style={INPUT_STYLE}
           />
         </div>
       </div>

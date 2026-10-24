@@ -81,17 +81,30 @@ export function buildDebtPaymentTransactions({ debtItem, payment, targetAccId, t
   const makeTx = (amt, subId, subName, isCap) => {
     const txId = crypto.randomUUID();
     createdTxIds.push(txId);
+    const resolvedDisplayName = isCap
+      ? (payment.note ? payment.note : (isReceivable ? `Cobro préstamo: ${debtName}` : `Abono a deuda: ${debtName}`))
+      : (payment.note ? payment.note : (isReceivable ? `Intereses recibidos: ${debtName}` : `Intereses pagados: ${debtName}`));
+
     return {
       id: txId, date: opDate, type: isReceivable ? 'income' : 'expense', amount: amt, originalCurrency: 'COP', originalAmount: amt, exchangeRate: 1,
       categoryId: isReceivable && !isCap ? 'cat-8' : finanzasCatId, categoryName: isReceivable && !isCap ? 'Ingresos' : 'Finanzas',
       subcategoryId: subId, subcategoryName: subName, accountId: targetAccId, accountName: targetAccName,
-      note: payment.note ? `${payment.note} (${isCap ? 'Capital' : 'Intereses'} ${debtName})` : `${isCap ? 'Amortización de deuda' : 'Intereses de deuda'} - ${debtName}`,
-      debtId: debtItem?.id, paymentId, isDebtPayment: true, ...(isCap ? { isTransfer: true, is_transfer: true, isDebtCapital: true } : {})
+      displayName: resolvedDisplayName, displaySubtitle: `${subName} · ${targetAccName}`,
+      note: payment.note ? `${payment.note} (${isCap ? 'Capital' : 'Intereses'} - ${debtName})` : resolvedDisplayName,
+      notes: payment.note || resolvedDisplayName, debtId: debtItem?.id, paymentId, isDebtPayment: true, isDebtCapital: isCap
     };
   };
 
-  if (intAmt > 0) newTxs.push(makeTx(intAmt, isReceivable ? 'sub-intereses-cobrados' : 'sub-intereses-deuda', isReceivable ? 'Intereses cobrados' : 'Intereses de deuda', false));
-  if (capAmt > 0) newTxs.push(makeTx(capAmt, isReceivable ? 'sub-cobro-prestamo' : 'sub-amortizacion-deuda', isReceivable ? 'Cobro de préstamo / Capital' : 'Amortización de deuda', true));
+  if (intAmt > 0) {
+    const subName = isReceivable ? 'Intereses cobrados' : 'Intereses de deuda';
+    const subId = isReceivable ? 'sub-intereses-cobrados' : 'sub-intereses-deuda';
+    newTxs.push(makeTx(intAmt, subId, subName, false));
+  }
+  if (capAmt > 0) {
+    const subName = isReceivable ? 'Cobro de préstamo (Capital)' : 'Amortización de deuda (Capital)';
+    const subId = isReceivable ? 'sub-cobro-prestamo' : 'sub-amortizacion-deuda';
+    newTxs.push(makeTx(capAmt, subId, subName, true));
+  }
 
   return { newTxs, createdTxIds, capAmt, intAmt, totAmt: Number(payment.amount) || (capAmt + intAmt), isReceivable };
 }

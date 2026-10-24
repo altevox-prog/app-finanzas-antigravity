@@ -19,7 +19,7 @@ export default function InvestmentProfitSummary({ shares, buyPrice, currentPrice
   const formatVal = (val) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-white/5 space-y-1.5 text-xs animate-fadeIn">
+    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/80 dark:border-zinc-800 space-y-1.5 text-xs animate-fadeIn">
       <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
         <span>Capital Invertido:</span>
         <span className="font-mono font-bold text-slate-900 dark:text-white">${formatVal(totalCost)} {currency}</span>

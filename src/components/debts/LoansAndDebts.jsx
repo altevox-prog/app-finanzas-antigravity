@@ -52,9 +52,9 @@ export default function LoansAndDebts({
   const tabTotals = calculateTabTotals(filteredItems, calculateItemStats);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200 p-4 sm:p-6 pb-32 sm:pb-36 space-y-2.5 sm:space-y-3 animate-fadeIn">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0A0C10] transition-colors duration-200 p-4 sm:p-6 pb-32 sm:pb-36 space-y-2.5 sm:space-y-3 animate-fadeIn">
       {/* 1. Barra de pestañas tipo pastilla compacta y moderna */}
-      <div className="bg-slate-200/70 dark:bg-slate-900/80 border border-slate-300/60 dark:border-slate-800/80 rounded-xl p-1 flex gap-1 backdrop-blur-sm w-full">
+      <div className="bg-slate-200/70 dark:bg-zinc-900/80 border border-slate-300/60 dark:border-zinc-800/80 rounded-xl p-1 flex gap-1 backdrop-blur-sm w-full">
         {/* Pestaña: Préstamos (Por cobrar) */}
         <button
           type="button"
@@ -70,7 +70,7 @@ export default function LoansAndDebts({
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono ${
             activeTab === 'receivable'
               ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
-              : 'bg-slate-300/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              : 'bg-slate-300/60 dark:bg-zinc-800 text-slate-600 dark:text-slate-400'
           }`}>
             {safeLoans.filter(d => d.type === 'receivable').length}
           </span>
@@ -91,7 +91,7 @@ export default function LoansAndDebts({
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono ${
             activeTab === 'payable'
               ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400'
-              : 'bg-slate-300/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              : 'bg-slate-300/60 dark:bg-zinc-800 text-slate-600 dark:text-slate-400'
           }`}>
             {safeLoans.filter(d => d.type === 'payable').length}
           </span>
@@ -109,7 +109,7 @@ export default function LoansAndDebts({
       {/* 3. Lista de Registros unificada o Estado Vacío */}
       {filteredItems.length === 0 ? (
         <div 
-          className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 text-center shadow-sm dark:shadow-xl flex flex-col items-center justify-center"
+          className="bg-white/80 dark:bg-zinc-950/60 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800/80 rounded-2xl p-6 text-center shadow-sm dark:shadow-xl flex flex-col items-center justify-center"
         >
           <HandCoins className="text-emerald-500 dark:text-emerald-400 w-10 h-10 mx-auto" />
           <h4 className="text-slate-800 dark:text-slate-100 font-semibold text-base sm:text-lg mt-3">

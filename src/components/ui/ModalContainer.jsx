@@ -118,6 +118,7 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
       {Boolean(m.isSettingsOpen || m.isProfileOpen) && (
         <ProfileModal
           key={`profile-modal-${m.profileResetKey || 0}`} isOpen={true} onClose={closeProfile}
+          initialView={m.profileInitialView || 'main'}
           userProfile={m.userProfile || { name: 'Usuario' }} onUpdateProfile={m.handleUpdateProfile}
           securitySettings={m.securitySettings || {}} onUpdateSecurity={m.setSecuritySettings} subscriptions={activeSubscriptions}
           onAddSubscription={(s) => m.handleAddRecurring ? m.handleAddRecurring(s) : m.setSubscriptions?.(prev => [s, ...prev])}

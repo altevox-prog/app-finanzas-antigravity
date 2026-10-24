@@ -23,7 +23,7 @@ export default function InvestmentsWidget({
   return (
     <div 
       onClick={() => handleNav('investments')}
-      className={`w-full min-h-[170px] p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group ${className}`}
+      className={`h-full flex flex-col justify-between min-w-0 w-full rounded-3xl bg-white dark:bg-zinc-900/90 p-4 sm:p-5 border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] select-none cursor-pointer transition-all hover:border-emerald-500/40 hover:shadow-md active:scale-[0.99] group ${className}`}
     >
       <div>
         {/* Encabezado */}
@@ -44,7 +44,7 @@ export default function InvestmentsWidget({
         {/* Bloque resumido y armonizado (Paridad simétrica con DebtsWidget) */}
         <div className="grid grid-cols-2 gap-2 my-1">
           <div 
-            className="p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/60 border border-slate-200/60 dark:border-white/10 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 transition-colors"
+            className="p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/40 border border-slate-200/60 dark:border-white/[0.08] hover:bg-zinc-200/50 dark:hover:bg-zinc-800/60 transition-colors"
           >
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400 block truncate">
               Capital invertido

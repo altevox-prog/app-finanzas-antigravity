@@ -28,7 +28,7 @@ export default function TransactionTypeSelector({ type, setType }) {
   ];
 
   return (
-    <div className="relative flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/50">
+    <div className="relative flex p-1 bg-slate-100 dark:bg-zinc-900/80 rounded-2xl border border-slate-200/80 dark:border-zinc-800">
       {tabs.map((tab) => {
         const isActive = type === tab.id;
         const Icon = tab.icon;

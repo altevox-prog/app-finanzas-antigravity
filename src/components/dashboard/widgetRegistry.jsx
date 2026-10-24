@@ -7,11 +7,12 @@ import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import InvestmentsWidget from './widgets/InvestmentsWidget';
 import DebtsWidget from './widgets/DebtsWidget';
 import RecurringPaymentsWidget from './widgets/RecurringPaymentsWidget';
-import { SavingsRateWidget } from './BalanceCardsWidget';
+import SavingsGoalsWidget from './widgets/SavingsGoalsWidget';
 import WeeklyExpensesChart from './WeeklyExpensesChart';
 import RecentMovementsSection from './RecentMovementsSection';
 import ReportsAndCharts from '../reports/ReportsAndCharts';
 import BudgetWidget from './widgets/BudgetWidget';
+import ExpensesAndMovementsWidget from './widgets/ExpensesAndMovementsWidget';
 
 export const WIDGET_ICON_MAP = {
   Landmark, TrendingUp, HandCoins, Wallet, ArrowDownRight, ArrowUpRight,
@@ -38,20 +39,64 @@ export function createWidgetRegistry({
   categories = [],
   recurringPayments = [],
   subscriptions = [],
+  savingsGoals = [],
   navigateToTab = () => {},
   handleSelectTransaction = () => {},
   onOpenCalendar = () => {},
   financeActions = {},
   formatMoney = (val) => val,
-  budgets = {}
+  budgets = {},
+  onOpenProfile,
+  modalControls,
+  onOpenSavingsGoals
 } = {}) {
+  const handleOpenSavingsGoalsView = () => {
+    if (onOpenSavingsGoals) {
+      onOpenSavingsGoals();
+    } else if (modalControls?.openProfileModal) {
+      modalControls.openProfileModal('savings_goals');
+    } else if (modalControls?.handleOpenProfile) {
+      modalControls.handleOpenProfile('savings_goals');
+    } else if (onOpenProfile) {
+      onOpenProfile('savings_goals');
+    } else if (navigateToTab) {
+      navigateToTab('profile', { subview: 'savings_goals' });
+    }
+  };
+
+  const savingsGoalsComp = (
+    <SavingsGoalsWidget
+      savingsGoals={savingsGoals}
+      formatMoney={formatMoney}
+      onOpenSavingsGoals={handleOpenSavingsGoalsView}
+    />
+  );
+
+  const expensesAndMovementsComp = (
+    <ExpensesAndMovementsWidget
+      transactions={transactions}
+      categories={categories}
+      selectedDate={selectedDate}
+      selectedDay={selectedDay}
+      financeActions={financeActions}
+      onNavigateToTab={navigateToTab}
+      setActiveTab={navigateToTab}
+      onViewAll={() => navigateToTab('transactions')}
+      onNavigateToMovements={() => navigateToTab('transactions')}
+      onSelectTransaction={handleSelectTransaction}
+      formatMoney={formatMoney}
+    />
+  );
+
   return {
     investments: <InvestmentsWidget investmentsMetrics={investmentsMetrics} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} formatMoney={formatMoney} />,
     debts: <DebtsWidget debtsAndLoansMetrics={debtsAndLoansMetrics} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} formatMoney={formatMoney} />,
-    savings_rate: <SavingsRateWidget savingsRate={savingsRate} freeCash={freeCash !== undefined ? freeCash : Math.max(0, netBalance || 0)} formatMoney={formatMoney} />,
+    savings_rate: savingsGoalsComp,
+    savings_goals: savingsGoalsComp,
     budget: <BudgetWidget budgets={budgets} monthlyStats={monthlyStats} totalIncome={totalIncome} totalExpense={totalExpense} formatMoney={formatMoney} />,
     weekly_cashflow: <WeeklyExpensesChart transactions={transactions} selectedDate={selectedDate} selectedDay={selectedDay} currentMonthLabel={currentMonthLabel} formatMoney={formatMoney} />,
-    expenses_category: <ReportsAndCharts transactions={transactions} categories={categories} selectedDate={selectedDate} selectedDay={selectedDay} onOpenCalendar={onOpenCalendar} financeActions={financeActions} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} />,
+    expenses_category: expensesAndMovementsComp,
+    expenses_and_movements: expensesAndMovementsComp,
     recent_movements: <RecentMovementsSection transactions={displayTransactions} onViewAll={() => navigateToTab('transactions')} setActiveTab={navigateToTab} onNavigateToTab={navigateToTab} onSelectTransaction={handleSelectTransaction} onOpenTransaction={handleSelectTransaction} formatMoney={formatMoney} />,
     recurring_payments: <RecurringPaymentsWidget recurringPayments={recurringPayments} subscriptions={subscriptions} formatMoney={formatMoney} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} />
   };
@@ -77,6 +122,7 @@ export function useWidgetRegistry(params = {}) {
     params.savingsRate, params.freeCash, params.displayTransactions, params.transactions,
     params.monthlyStats, params.selectedDate, params.selectedDay, params.currentMonthLabel,
     params.accounts, params.categories, params.recurringPayments, params.subscriptions,
+    params.savingsGoals, params.onOpenProfile, params.modalControls, params.onOpenSavingsGoals,
     params.trm, params.weeklyCashFlow, params.hoveredWeekIndex, params.setHoveredWeekIndex,
     params.navigateToTab, params.handleOpenDebtModal, params.handleOpenTxModal,
     params.handleOpenRecurringModal, params.handleSelectTransaction, params.onOpenCalendar,

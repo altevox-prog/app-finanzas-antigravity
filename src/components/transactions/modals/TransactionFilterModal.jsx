@@ -17,9 +17,9 @@ export default function TransactionFilterModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-200/80 dark:border-white/10 max-h-[85vh] overflow-y-auto z-10 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+      <div className="fixed inset-0 bg-black/75 backdrop-blur-xs" onClick={onClose} />
+      <div className="relative bg-white dark:bg-zinc-950 w-full max-w-md rounded-3xl p-5 shadow-2xl border border-slate-200/80 dark:border-zinc-800/90 max-h-[85vh] overflow-y-auto z-10 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800/80">
           <div className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-[#007AFF]" /><h3 className="text-base font-bold text-slate-900 dark:text-white">Filtros de movimientos</h3></div>
           <div className="flex items-center gap-1">
             {hasActiveFilters && <button type="button" onClick={handleResetFilters} className="px-2.5 py-1 text-xs font-semibold text-rose-500 hover:text-rose-600 rounded-lg cursor-pointer">Restablecer</button>}
@@ -31,7 +31,7 @@ export default function TransactionFilterModal({
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-[#007AFF]" /><span>Filtrar por día</span></span>
             {selectedDay && <button type="button" onClick={handleClearSelectedDay} className="text-[11px] text-rose-500 hover:underline font-semibold cursor-pointer">Quitar día</button>}
           </div>
-          <input type="date" value={selectedDay || ''} onChange={(e) => onSelectDay?.(e.target.value || null)} className="w-full text-xs sm:text-sm bg-slate-50 dark:bg-zinc-800/60 text-slate-900 dark:text-white rounded-xl px-3.5 py-2.5 border border-slate-200/80 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 cursor-pointer" />
+          <input type="date" value={selectedDay || ''} onChange={(e) => onSelectDay?.(e.target.value || null)} className="w-full text-xs sm:text-sm bg-slate-50 dark:bg-zinc-900/60 text-slate-900 dark:text-white rounded-xl px-3.5 py-2.5 border border-slate-200/80 dark:border-zinc-800/80 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 cursor-pointer" />
         </div>
         {sections.map((sec) => (
           <div key={sec.label}>
@@ -48,7 +48,7 @@ export default function TransactionFilterModal({
             </div>
           </div>
         ))}
-        <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center gap-2">
+        <div className="pt-3 border-t border-slate-100 dark:border-zinc-800/80 flex items-center gap-2">
           {hasActiveFilters && <button type="button" onClick={handleResetFilters} className="py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5 cursor-pointer"><RotateCcw className="w-3.5 h-3.5" /><span>Limpiar</span></button>}
           <button type="button" onClick={onClose} className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#007AFF] hover:bg-[#0062cc] active:scale-98 shadow-md cursor-pointer text-center">Ver resultados ({totalItems})</button>
         </div>

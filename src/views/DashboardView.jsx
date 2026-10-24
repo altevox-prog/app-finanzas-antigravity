@@ -121,6 +121,9 @@ export default function DashboardView(props) {
         onSaveWidgets={onSaveWidgets}
         livePrices={resolvedLivePrices}
         budgets={props.budgets || financeData?.budgets}
+        savingsGoals={props.savingsGoals || financeData?.savingsGoals || []}
+        modalControls={modalControls || props.modalControls || financeActions?.modalControls}
+        onOpenProfile={props.onOpenProfile || financeActions?.onOpenProfile || financeActions?.handleOpenProfile || modalControls?.openProfileModal}
       />
     </div>
   );

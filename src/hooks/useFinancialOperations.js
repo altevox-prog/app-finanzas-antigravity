@@ -3,6 +3,7 @@ import { toSafeNumber } from '../utils/financeMath';
 import { getAccountNativeBalance } from '../utils/currencyUtils';
 import { saveTransactionsToStorage, saveAccountsToStorage } from '../services/storageService';
 import { toast } from '../utils/toast';
+import { triggerSaveFeedback } from '../utils/saveFeedback';
 import { ensureUUID } from '../services/syncEngine';
 
 export function useFinancialOperations({
@@ -40,7 +41,7 @@ export function useFinancialOperations({
     const updatedTxs = [sanitizedTx, ...transactions];
     if (setTransactions) { setTransactions(updatedTxs); saveTransactionsToStorage(updatedTxs); }
     syncLocalAccounts(updatedTxs);
-    toast.success('Movimiento registrado con éxito');
+    triggerSaveFeedback();
     return sanitizedTx;
   }, [baseSaveTransaction, baseAddTransaction, transactions, setTransactions, accounts, setAccounts, trm]);
 
@@ -57,7 +58,7 @@ export function useFinancialOperations({
     const updatedTxs = transactions.map((t) => (t.id === sanitizedTx.id ? sanitizedTx : t));
     if (setTransactions) { setTransactions(updatedTxs); saveTransactionsToStorage(updatedTxs); }
     syncLocalAccounts(updatedTxs);
-    toast.success('Movimiento actualizado con éxito');
+    triggerSaveFeedback();
     return sanitizedTx;
   }, [baseUpdateTransaction, transactions, setTransactions, accounts, setAccounts, trm]);
 
@@ -114,7 +115,7 @@ export function useFinancialOperations({
       saveAccountsToStorage(nextAccs);
     }
 
-    toast.success('Transferencia realizada con éxito');
+    triggerSaveFeedback();
     return { txOut, txIn };
   }, [baseExecuteTransfer, transactions, setTransactions, accounts, setAccounts, trm]);
 

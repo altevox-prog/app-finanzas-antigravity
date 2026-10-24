@@ -27,6 +27,7 @@ import useProfileMetrics from '../hooks/useProfileMetrics';
 
 export default function ProfileModal({
   isOpen, onClose, onOpenAuth, userProfile, onUpdateProfile, securitySettings, onUpdateSecurity,
+  initialView = 'main',
   subscriptions = [], onAddSubscription, onDeleteSubscription, accountsCount = 0, categoriesCount = 0,
   onOpenAccounts, onOpenCategories, theme = 'dark', onThemeChange, budgets = { global: 0, categories: {} },
   onUpdateBudgets, savingsGoals = [], onAddGoal, onUpdateGoal, onDeleteGoal, transactions = [],
@@ -37,7 +38,7 @@ export default function ProfileModal({
 }) {
   const { formatMoney, enableDecimals, toggleEnableDecimals } = usePrivacy();
   const { user, signOut } = useAuth();
-  const [modalState, setModalState] = useState({ currentView: 'main', activeTab: 'finances', toastMessage: null });
+  const [modalState, setModalState] = useState({ currentView: initialView || 'main', activeTab: 'finances', toastMessage: null });
   const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
   const fileInputRef = useRef(null);
 

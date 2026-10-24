@@ -39,9 +39,9 @@ export default function InvoiceFooterPreview({
             Cuenta Bancaria
           </p>
           <div className="space-y-1 pt-0.5">
-            <p><span className="text-slate-500">Banco:</span> <strong className="text-slate-800">{colombia.bank || 'Bancolombia'}</strong></p>
+            <p><span className="text-slate-500">Banco:</span> <strong className="text-slate-800">{colombia.bank || '---'}</strong></p>
             <p><span className="text-slate-500">Titular:</span> {colombia.holder || '---'}</p>
-            <p><span className="text-slate-500">Cuenta {colombia.accountType || 'Ahorros'}:</span> <strong className="text-slate-800">{colombia.accountNumber || '---'}</strong></p>
+            <p><span className="text-slate-500">{colombia.accountType ? `Cuenta ${colombia.accountType}:` : 'Cuenta:'}</span> <strong className="text-slate-800">{colombia.accountNumber || '---'}</strong></p>
             {colombia.nequi && <p><span className="text-slate-500">Nequi:</span> <strong className="text-slate-800">{colombia.nequi}</strong></p>}
           </div>
         </div>
@@ -52,9 +52,9 @@ export default function InvoiceFooterPreview({
               Cuenta Internacional (ACH & Wire)
             </p>
             <div className="space-y-1 pt-0.5">
-              <p><span className="text-slate-500">Banco:</span> <strong className="text-slate-800">{achWire.bank || 'Lead Bank'}</strong></p>
+              <p><span className="text-slate-500">Banco:</span> <strong className="text-slate-800">{achWire.bank || '---'}</strong></p>
               <p><span className="text-slate-500">Titular:</span> {achWire.holder || '---'}</p>
-              <p><span className="text-slate-500">N° Cuenta:</span> <strong className="text-slate-800">{achWire.accountNumber || '---'}</strong> ({achWire.accountType || 'Corriente'})</p>
+              <p><span className="text-slate-500">N° Cuenta:</span> <strong className="text-slate-800">{achWire.accountNumber || '---'}</strong> {achWire.accountType ? `(${achWire.accountType})` : ''}</p>
               <p><span className="text-slate-500">Routing (ABA):</span> {achWire.routing || '---'}</p>
               {achWire.bankAddress && <p><span className="text-slate-500">Dirección:</span> {achWire.bankAddress}</p>}
             </div>

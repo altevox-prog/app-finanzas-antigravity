@@ -93,7 +93,7 @@ export default function AccountCard({
           else if (offset.x < -65 || velocity.x < -300) { vibrate(35); onDelete?.(account.id || account); }
         }}
         onClick={handleCardClick}
-        className={`group w-full h-full min-h-[134px] sm:min-h-[138px] flex flex-col justify-between bg-white dark:bg-zinc-900/60 border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-500/40 hover:dark:bg-[#151924] rounded-2xl p-3 sm:p-3.5 shadow-xs transition-all select-none relative z-10 touch-pan-y ${isReadOnly ? 'cursor-default' : 'cursor-default lg:cursor-pointer'}`}
+        className={`group w-full h-full min-h-[134px] sm:min-h-[138px] flex flex-col justify-between bg-white dark:bg-zinc-900/60 border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-500/40 hover:dark:bg-zinc-800/80 rounded-2xl p-3 sm:p-3.5 shadow-xs transition-all select-none relative z-10 touch-pan-y ${isReadOnly ? 'cursor-default' : 'cursor-default lg:cursor-pointer'}`}
       >
         <div className="h-8 flex items-center justify-between gap-2 mb-1 shrink-0">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">

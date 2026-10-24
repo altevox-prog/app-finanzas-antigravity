@@ -106,7 +106,7 @@ export default function TickerSearchInput({
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800/60">
+        <ul className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-xl z-50 divide-y divide-slate-100 dark:divide-zinc-800/60">
           {suggestions.map((item) => (
             <li
               key={`${item.symbol}-${item.exchange}`}
@@ -114,12 +114,12 @@ export default function TickerSearchInput({
                 e.preventDefault();
                 handleSelect(item);
               }}
-              className="px-3.5 py-2.5 flex items-center justify-between hover:bg-emerald-50 dark:hover:bg-emerald-950/20 cursor-pointer transition-colors"
+              className="px-3.5 py-2.5 flex items-center justify-between hover:bg-emerald-50 dark:hover:bg-zinc-900/80 cursor-pointer transition-colors"
             >
               <div className="min-w-0 pr-2">
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">{item.symbol}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold">{item.exchange}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-500 font-semibold">{item.exchange}</span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{item.name}</p>
               </div>

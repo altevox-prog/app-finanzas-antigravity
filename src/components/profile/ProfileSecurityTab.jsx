@@ -30,9 +30,9 @@ export default function ProfileSecurityTab({
           <span>Credenciales del dispositivo</span>
         </h3>
 
-        <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm">
+        <div className="p-4 rounded-2xl border border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 shadow-sm">
           {/* Toggle PIN */}
-          <div onClick={handleTogglePin} className="py-2 sm:py-2.5 px-2 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors gap-3 select-none">
+          <div onClick={handleTogglePin} className="py-2 sm:py-2.5 px-2 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors gap-3 select-none">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
                 <Lock className="w-4 h-4" />
@@ -59,10 +59,10 @@ export default function ProfileSecurityTab({
             </div>
           )}
 
-          <div className="my-3 border-t border-slate-100 dark:border-slate-800" />
+          <div className="my-3 border-t border-slate-100 dark:border-zinc-800" />
 
           {/* Toggle Biometría WebAuthn */}
-          <div onClick={handleToggleBiometrics} className="py-2 sm:py-2.5 px-2 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors gap-3 select-none">
+          <div onClick={handleToggleBiometrics} className="py-2 sm:py-2.5 px-2 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors gap-3 select-none">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
                 <Fingerprint className="w-4 h-4" />
@@ -78,7 +78,7 @@ export default function ProfileSecurityTab({
             </div>
           </div>
 
-          <div className="my-3 border-t border-slate-100 dark:border-slate-800" />
+          <div className="my-3 border-t border-slate-100 dark:border-zinc-800" />
 
           {/* Tiempo de Bloqueo Automático */}
           <div className="space-y-2">
@@ -86,13 +86,13 @@ export default function ProfileSecurityTab({
               <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tiempo de bloqueo automático</span>
             </div>
-            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-50 dark:bg-zinc-900/80 border border-slate-100 dark:border-zinc-800">
               {['Inmediato', '1 minuto', '5 minutos'].map((option) => (
                 <button
                   key={option} type="button" onClick={() => handleAutolockChange(option)}
                   className={`py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer select-none text-center truncate ${
                     autoLockTime === option
-                      ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs border border-slate-200/70 dark:border-white/10'
+                      ? 'bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 shadow-xs border border-slate-200/70 dark:border-white/10'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >

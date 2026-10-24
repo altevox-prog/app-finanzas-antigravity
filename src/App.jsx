@@ -9,8 +9,10 @@ import PwaUpdateBanner from './components/ui/PwaUpdateBanner';
 import { RotateCcw } from 'lucide-react';
 import Toaster from './components/ui/Toaster';
 import { useAppOrchestrator } from './hooks/useAppOrchestrator';
+import { useGlobalCapitalize } from './hooks/useGlobalCapitalize';
 
 export default function App() {
+  useGlobalCapitalize();
   const state = useAppOrchestrator();
 
   if (state.authLoading || (state.user && state.isOnboardingLoading)) return <SplashScreen message="Verificando tu espacio..." />;
@@ -33,7 +35,7 @@ export default function App() {
 
   const headerProps = {
     activeTab: state.activeTab, currentView: state.activeTab, onNavigate: state.handleTabChange,
-    onBack: () => state.handleTabChange('dashboard'),
+    onBack: state.handleGoBackFromSubView,
     onOpenAddInvestment: () => modalControls.openAddInvestment(),
     onOpenAddDebt: () => modalControls.openAddLoan('payable'),
     onOpenAddLoan: () => modalControls.openAddLoan('receivable'),

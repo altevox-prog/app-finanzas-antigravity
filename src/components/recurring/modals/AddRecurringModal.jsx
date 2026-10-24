@@ -81,13 +81,13 @@ export default function AddRecurringModal({
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
       <div 
-        className="w-full max-w-lg lg:max-w-xl mx-auto my-auto bg-white dark:bg-[#121622] rounded-t-[32px] sm:rounded-3xl flex flex-col max-h-[92vh] sm:max-h-[90vh] shadow-2xl overflow-hidden animate-slide-up border border-slate-200/80 dark:border-white/10"
+        className="w-full max-w-lg lg:max-w-xl mx-auto my-auto bg-white dark:bg-zinc-950 rounded-3xl flex flex-col max-h-[92vh] sm:max-h-[90vh] shadow-2xl border border-slate-200/80 dark:border-zinc-800/90 overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabecera */}
-        <div className="shrink-0 px-6 py-4 border-b border-slate-200/70 dark:border-white/10 flex items-center justify-between">
+        <div className="shrink-0 px-6 py-4 border-b border-slate-200/70 dark:border-zinc-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
               <CalendarSync className="w-5 h-5" />
@@ -96,10 +96,10 @@ export default function AddRecurringModal({
               <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">
                 {editingItem ? 'Editar pago recurrente' : 'Nuevo pago recurrente'}
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Automatiza o programa avisos de cobro</p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Automatiza o programa avisos de cobro</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer" aria-label="Cerrar modal">
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer" aria-label="Cerrar modal">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -125,8 +125,8 @@ export default function AddRecurringModal({
           </div>
 
           {/* Footer Fijo */}
-          <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-[#181D2A] border-t border-slate-200/70 dark:border-white/10 flex items-center justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer">
+          <div className="shrink-0 px-6 py-4 bg-slate-50 dark:bg-zinc-950 border-t border-slate-200/70 dark:border-zinc-800/80 flex items-center justify-end gap-3">
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-700 dark:text-zinc-300 border border-transparent dark:border-zinc-800 dark:bg-zinc-900 hover:bg-slate-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
               Cancelar
             </button>
             <button type="submit" className="px-6 py-2.5 rounded-2xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer">

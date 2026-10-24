@@ -70,7 +70,7 @@ export default function AccountsWidget({
       {displayedAccounts.length === 0 ? (
         <div 
           onClick={handleNavigateToAccounts}
-          className="w-full min-h-[108px] p-4 rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 dark:border-white/[0.07] bg-white dark:bg-[#12151E] flex items-center justify-between gap-3.5 cursor-pointer hover:border-slate-400 dark:hover:border-emerald-500/40 transition-all group shrink-0"
+          className="w-full min-h-[108px] p-4 rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3.5 cursor-pointer hover:border-slate-400 dark:hover:border-emerald-500/40 transition-all group shrink-0"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/[0.04] dark:border dark:border-white/[0.06] text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
@@ -123,7 +123,7 @@ export default function AccountsWidget({
               <div 
                 key={acc?.id || `acc-car-${index}`}
                 onClick={handleNavigateToAccounts}
-                className={`w-full min-h-[116px] h-full p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#12151E] flex flex-col justify-between shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] cursor-pointer active:scale-98 transition-all hover:border-emerald-500/40 hover:dark:bg-[#151924] group ${
+                className={`w-full min-h-[116px] h-full p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] cursor-pointer active:scale-98 transition-all hover:border-emerald-500/40 hover:dark:bg-zinc-800/80 group ${
                   index >= 2 ? 'hidden md:flex' : 'flex'
                 }`}
               >

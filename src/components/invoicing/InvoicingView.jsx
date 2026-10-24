@@ -44,27 +44,29 @@ export default function InvoicingView({ accounts = [], transactions = [], onAddT
   return (
     <div className="w-full flex-1 flex flex-col overflow-hidden animate-fadeIn">
       {/* Selector superior de pestañas del módulo */}
-      <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-white/60 dark:bg-[#0c0e14]/60 backdrop-blur-md">
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
+      <div className="px-4 sm:px-6 pt-3 pb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <button
             type="button" onClick={() => setActiveSubTab('editor')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeSubTab === 'editor' ? 'bg-white dark:bg-emerald-600 text-slate-800 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+              activeSubTab === 'editor' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60'
             }`}
           >
             <PenSquare className="w-3.5 h-3.5" />
-            <span>Editor & Previsualización</span>
+            <span>Editor y previsualización</span>
           </button>
           <button
             type="button" onClick={() => setActiveSubTab('history')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeSubTab === 'history' ? 'bg-white dark:bg-emerald-600 text-slate-800 dark:text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+              activeSubTab === 'history' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60'
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>Cuentas por Cobrar</span>
+            <span>Cuentas por cobrar</span>
             {invoices.filter((i) => i.status === 'pending').length > 0 && (
-              <span className="w-4 h-4 text-[10px] rounded-full bg-amber-500 text-white font-bold flex items-center justify-center">
+              <span className={`w-4 h-4 text-[10px] rounded-full font-bold flex items-center justify-center ${
+                activeSubTab === 'history' ? 'bg-white text-emerald-700' : 'bg-emerald-500 text-white'
+              }`}>
                 {invoices.filter((i) => i.status === 'pending').length}
               </span>
             )}
@@ -74,10 +76,10 @@ export default function InvoicingView({ accounts = [], transactions = [], onAddT
         {activeSubTab === 'editor' && (
           <button
             type="button" onClick={handleResetForm} title="Limpiar campos / Nueva factura"
-            className="p-1.5 sm:px-2.5 sm:py-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+            className="p-1.5 sm:px-2.5 sm:py-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-medium"
           >
             <RotateCcw className="w-4 h-4" />
-            <span className="hidden sm:inline">Nueva Factura</span>
+            <span className="hidden sm:inline">Nueva factura</span>
           </button>
         )}
       </div>
@@ -120,11 +122,11 @@ export default function InvoicingView({ accounts = [], transactions = [], onAddT
               <button
                 type="button" onClick={handleSaveToHistory}
                 className={`px-4 py-2.5 text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
-                  savedFeedback ? 'bg-emerald-600 text-white' : 'bg-slate-800 hover:bg-slate-900 text-white dark:bg-white/10 dark:hover:bg-white/20'
+                  savedFeedback ? 'bg-emerald-600 text-white' : 'bg-slate-800 hover:bg-slate-900 text-white dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:border dark:border-white/[0.08]'
                 }`}
               >
                 {savedFeedback ? <Check className="w-4 h-4 text-emerald-200" /> : <BookmarkCheck className="w-4 h-4" />}
-                <span>{savedFeedback ? '¡Guardada en Cuentas por Cobrar!' : 'Guardar en Historial'}</span>
+                <span>{savedFeedback ? '¡Guardada en cuentas por cobrar!' : 'Guardar en historial'}</span>
               </button>
             </div>
           </div>

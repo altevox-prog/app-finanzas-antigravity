@@ -18,7 +18,7 @@ export default function RecurringModeSelector({
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-bold opacity-60 uppercase tracking-wider mb-1.5">
+      <label className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
         Modo de Ejecución *
       </label>
       <div className="grid grid-cols-2 gap-2.5">
@@ -29,7 +29,7 @@ export default function RecurringModeSelector({
           className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
             mode === 'auto'
               ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 ring-1 ring-emerald-500 shadow-sm'
-              : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 opacity-70 hover:opacity-100'
+              : 'border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 opacity-70 hover:opacity-100'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <div className="flex items-center justify-between mb-1">
@@ -41,7 +41,7 @@ export default function RecurringModeSelector({
               Auto
             </span>
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-snug">
             Se anota solo en tu balance al llegar la fecha
           </p>
         </button>
@@ -53,7 +53,7 @@ export default function RecurringModeSelector({
           className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
             mode === 'manual'
               ? 'border-amber-500 bg-amber-500/10 dark:bg-amber-500/15 ring-1 ring-amber-500 shadow-sm'
-              : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 opacity-70 hover:opacity-100'
+              : 'border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 opacity-70 hover:opacity-100'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <div className="flex items-center justify-between mb-1">
@@ -65,7 +65,7 @@ export default function RecurringModeSelector({
               Manual
             </span>
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-snug">
             Te avisa para que revises y apruebes el registro
           </p>
         </button>

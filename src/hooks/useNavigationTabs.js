@@ -25,6 +25,11 @@ export function useNavigationTabs({
   const [historyStack, setHistoryStack] = useState([initialTab]);
   const mainContentRef = useRef(null);
 
+  const onTabChangeRef = useRef(onTabChange);
+  const onOpenProfileRef = useRef(onOpenProfile);
+  useEffect(() => { onTabChangeRef.current = onTabChange; }, [onTabChange]);
+  useEffect(() => { onOpenProfileRef.current = onOpenProfile; }, [onOpenProfile]);
+
   const [tabResetKeys, setTabResetKeys] = useState({
     dashboard: 0, transactions: 0, accounts: 0, debts: 0, investments: 0, recurring: 0, tax: 0, net_worth: 0
   });
@@ -64,18 +69,18 @@ export function useNavigationTabs({
       setHistoryStack([tab]);
     }
 
-    try { onTabChange?.(tab, fromSource); } catch (err) { console.warn('Error onTabChange:', err); }
+    try { onTabChangeRef.current?.(tab, fromSource); } catch (err) { console.warn('Error onTabChange:', err); }
     setTabResetKeys((prev) => ({ ...prev, [tab]: (prev[tab] || 0) + 1 }));
 
-    if (isSettingsTab(tab)) { onOpenProfile?.(); return; }
+    if (isSettingsTab(tab)) { onOpenProfileRef.current?.(); return; }
     setActiveTab(tab);
-  }, [activeTab, onTabChange, onOpenProfile, scrollToTop, setActiveTab]);
+  }, [activeTab, scrollToTop, setActiveTab]);
 
   const handleGoBackFromSubView = useCallback(() => {
     if (fromSettings && (['tax', 'taxes', 'impuestos', 'net_worth'].includes(activeTab) || historyStack.length <= 2)) {
       setFromSettings(false);
       setHistoryStack(['dashboard']);
-      onOpenProfile?.();
+      onOpenProfileRef.current?.();
       return;
     }
 
@@ -93,18 +98,18 @@ export function useNavigationTabs({
 
     if (fromSettings) {
       setFromSettings(false);
-      onOpenProfile?.();
+      onOpenProfileRef.current?.();
     } else {
       handleTabChange('dashboard');
     }
-  }, [activeTab, historyStack, fromSettings, onOpenProfile, handleTabChange]);
+  }, [activeTab, historyStack, fromSettings, handleTabChange]);
 
   useEffect(() => {
     if (isSettingsTab(activeTab)) {
-      onOpenProfile?.();
+      onOpenProfileRef.current?.();
       setActiveTab('dashboard');
     }
-  }, [activeTab, onOpenProfile, setActiveTab]);
+  }, [activeTab, setActiveTab]);
 
   return {
     activeTab, setActiveTab, tabResetKeys, setTabResetKeys, handleTabChange,

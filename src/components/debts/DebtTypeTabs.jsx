@@ -9,7 +9,7 @@ const DEBT_TABS = [
 
 export default function DebtTypeTabs({ type, setType }) {
   return (
-    <div className="relative flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-white/10 select-none">
+    <div className="relative flex p-1 bg-slate-100 dark:bg-zinc-900/80 rounded-2xl border border-slate-200/80 dark:border-white/10 select-none">
       {DEBT_TABS.map((tab) => {
         const isActive = type === tab.id;
         const Icon = tab.icon;

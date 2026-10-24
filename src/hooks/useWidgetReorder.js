@@ -35,11 +35,9 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
     pressedIndexRef.current = index;
     longPressTimerRef.current = setTimeout(() => {
       setIsReordering(true);
-      if (pressedIndexRef.current != null) {
-        draggedIndexRef.current = pressedIndexRef.current;
-        setDraggedIndex(pressedIndexRef.current);
-      }
-    }, 500);
+      draggedIndexRef.current = null;
+      setDraggedIndex(null);
+    }, 400);
   }, []);
 
   const handlePressEnd = useCallback(() => {
@@ -50,7 +48,7 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
   const handleSwapWidgets = useCallback((targetIndex) => {
     const fromIdx = draggedIndexRef.current;
     if (fromIdx == null || fromIdx === targetIndex) return;
-    const isVis = (w) => w.visible && !w.hidden && !VETOED_IDS.has(normalizeWidgetId(w.id)) && !VETOED_IDS.has(w.id) && (!getWidget || Boolean(getWidget(w.id)));
+    const isVis = (w) => w.visible && !w.hidden && !VETOED_IDS.has(normalizeWidgetId(w.id)) && !VETOED_IDS.has(w.id) && (!allowedWidgetIds || allowedWidgetIds.includes(normalizeWidgetId(w.id)) || allowedWidgetIds.includes(w.id)) && (!getWidget || Boolean(getWidget(w.id)));
     const visibleList = widgetsRef.current.filter(isVis);
     const source = visibleList[fromIdx], target = visibleList[targetIndex];
     if (!source || !target || source.id === target.id) return;
@@ -63,7 +61,7 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
     draggedIndexRef.current = targetIndex;
     setDraggedIndex(targetIndex);
     persistOrder(updated);
-  }, [getWidget, persistOrder]);
+  }, [allowedWidgetIds, getWidget, persistOrder]);
 
   const handleDragStart = useCallback((e, index) => {
     if (!isReorderingRef.current) return;

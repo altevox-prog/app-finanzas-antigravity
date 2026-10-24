@@ -46,13 +46,9 @@ export default function CategoryBottomSheetPicker({
     const orig = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const timer = setTimeout(() => { containerRef.current?.querySelector('[data-selected="true"]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 40);
-    return () => { document.body.style.overflow = orig; clearTimeout(timer); };
-  }, [isOpen]);
-
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape' && isOpen) setIsOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setIsOpen(false); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => { document.body.style.overflow = orig; clearTimeout(timer); window.removeEventListener('keydown', onKey); };
   }, [isOpen]);
 
   const handleCategoryClick = (cat) => {
@@ -99,17 +95,27 @@ export default function CategoryBottomSheetPicker({
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 animate-fadeIn">
           <div onClick={() => setIsOpen(false)} className="fixed inset-0 z-[999998] bg-black/60 backdrop-blur-sm cursor-pointer" />
-          <div className="relative z-[999999] w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col overflow-hidden animate-scaleIn">
-            <div className="pt-4 pb-2.5 px-5 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between shrink-0">
-              <div><h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Categoría</h3><p className="text-[11px] text-slate-400">Selecciona categoría y subcategoría</p></div>
-              <button type="button" onClick={() => setIsOpen(false)} className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs active:scale-95 cursor-pointer">Listo</button>
+          <div className="relative z-[999999] w-full max-w-md bg-white dark:bg-zinc-950 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-zinc-800 flex flex-col overflow-hidden animate-scaleIn">
+            <div className="pt-4 pb-2.5 px-5 border-b border-slate-100 dark:border-zinc-800/60 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">Categoría</h3>
+                <p className="text-[11px] text-slate-400">Selecciona categoría y subcategoría</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             <div className="px-4 py-2.5 shrink-0">
               <div className="relative flex items-center">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-                <input ref={searchInputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar categoría..." className="w-full h-10 pl-9 pr-8 text-xs rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500/60" />
-                {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2.5 w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-[10px]"><X className="w-3 h-3" /></button>}
+                <input ref={searchInputRef} type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar categoría..." className="w-full h-10 pl-9 pr-8 text-xs rounded-xl bg-slate-100 dark:bg-zinc-900/80 border border-slate-200/60 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500/60" />
+                {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2.5 w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-500 flex items-center justify-center text-[10px]"><X className="w-3 h-3" /></button>}
               </div>
             </div>
 
@@ -120,7 +126,7 @@ export default function CategoryBottomSheetPicker({
                 filteredCategories.map((cat) => {
                   const isSel = cat && (cat.id === selectedCategoryId || cat.name === selectedCategoryId);
                   return (
-                    <button key={cat.id} type="button" data-selected={isSel} onClick={() => handleCategoryClick(cat)} className={`w-full min-h-[44px] px-3.5 py-2.5 rounded-2xl flex items-center justify-between text-left cursor-pointer active:scale-[0.99] ${isSel ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 font-medium'}`}>
+                    <button key={cat.id} type="button" data-selected={isSel} onClick={() => handleCategoryClick(cat)} className={`w-full min-h-[44px] px-3.5 py-2.5 rounded-2xl flex items-center justify-between text-left cursor-pointer active:scale-[0.99] ${isSel ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30 text-emerald-900 dark:text-emerald-100 font-semibold shadow-xs' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-zinc-800/60 text-slate-700 dark:text-zinc-300 font-medium'}`}>
                       <div className="flex items-center gap-2.5 min-w-0"><CategoryIcon category={cat} size="sm" /><span className="truncate text-sm">{cat.name}</span></div>
                       {isSel && <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 ml-2 shadow-xs"><Check className="w-3.5 h-3.5 stroke-[2.5]" /></div>}
                     </button>
@@ -130,7 +136,7 @@ export default function CategoryBottomSheetPicker({
             </div>
 
             {selectedCategory && (
-              <div className="shrink-0 border-t border-slate-200/60 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 px-4 pt-3 pb-5">
+              <div className="shrink-0 border-t border-slate-200/60 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-900/60 px-4 pt-3 pb-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Subcategoría (opcional):</span>
                   {selectedSubcategoryId && <button type="button" onClick={() => onSelectSubcategory('')} className="text-[11px] text-slate-400 hover:text-rose-500 font-medium cursor-pointer">Quitar selección</button>}
@@ -142,7 +148,7 @@ export default function CategoryBottomSheetPicker({
                     {activeSubcategories.map((sub) => {
                       const isSubSel = selectedSubcategoryId === sub.id || selectedSubcategoryId === sub.name;
                       return (
-                        <button key={sub.id} type="button" onClick={() => !dragRef.current.moved && onSelectSubcategory(isSubSel ? '' : sub.id)} className={`whitespace-nowrap px-3.5 py-1.5 text-xs rounded-xl shrink-0 cursor-pointer active:scale-95 border ${isSubSel ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs ring-2 ring-emerald-500/20 font-semibold' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100'}`}>
+                        <button key={sub.id} type="button" onClick={() => !dragRef.current.moved && onSelectSubcategory(isSubSel ? '' : sub.id)} className={`whitespace-nowrap px-3.5 py-1.5 text-xs rounded-xl shrink-0 cursor-pointer active:scale-95 border ${isSubSel ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs ring-2 ring-emerald-500/20 font-semibold' : 'bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-800 hover:bg-slate-100'}`}>
                           {cleanGasName(sub.name || '')}
                         </button>
                       );
@@ -151,6 +157,10 @@ export default function CategoryBottomSheetPicker({
                 )}
               </div>
             )}
+
+            <div className="shrink-0 p-4 border-t border-slate-200/60 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+              <button type="button" onClick={() => setIsOpen(false)} className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center">Listo</button>
+            </div>
           </div>
         </div>,
         document.body

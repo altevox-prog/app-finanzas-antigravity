@@ -114,7 +114,7 @@ export default function TransactionsHeroCard({
       </div>
 
       {/* 2. Resumen simétrico de 2 columnas (Ingresos y Gastos) */}
-      <div className="w-full grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-sm select-none">
+      <div className="w-full grid grid-cols-2 divide-x divide-slate-100 dark:divide-zinc-800 bg-white dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl p-4 shadow-sm select-none">
         {/* Columna 1 (Ingresos - Izquierda) */}
         <button
           type="button"

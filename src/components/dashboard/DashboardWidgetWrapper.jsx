@@ -24,26 +24,9 @@ export const isWideWidget = (id) => {
  * como el modo de reorganización (con manija de arrastre 'Mover', botón para ocultar y animaciones de sacudida/jiggle).
  */
 export default function DashboardWidgetWrapper({
-  id,
-  widget,
-  index = 0,
-  isReordering = false,
-  draggedIndex = null,
-  isWide,
-  // Handlers para modo normal (pulsación larga / mouse & touch)
-  onPressStart,
-  onPressEnd,
-  // Handlers para modo reorganización (arrastre & touch)
-  onTouchStart,
-  onTouchMove,
-  onTouchEnd,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
-  onToggleVisibility,
-  className = '',
-  children
+  id, widget, index = 0, isReordering = false, draggedIndex = null, isWide,
+  onPressStart, onPressEnd, onTouchStart, onTouchMove, onTouchEnd,
+  onDragStart, onDragOver, onDrop, onDragEnd, onToggleVisibility, className = '', children
 }) {
   const widgetId = id || widget?.id;
   if (!children) return null;
@@ -52,37 +35,38 @@ export default function DashboardWidgetWrapper({
 
   // MODO REORGANIZACIÓN
   if (isReordering) {
-    const isDragging = draggedIndex !== null && draggedIndex !== undefined;
     const isCurrentlyDragged = draggedIndex === index;
     const isJigglingAlt = index % 2 === 1;
 
-    // Desactivar animaciones continuas durante el arrastre activo para estabilizar las coordenadas
-    const animationClass = isDragging 
+    // Desactivar animación únicamente en el widget que se arrastra activamente
+    const animationClass = isCurrentlyDragged 
       ? '!animate-none' 
       : (isJigglingAlt ? 'animate-jiggle-alt' : 'animate-jiggle');
 
-    // Desactivar transiciones CSS durante reorganización/arrastre para evitar competición con el cálculo de coordenadas
-    const transitionClass = (isReordering || isDragging)
+    const transitionClass = isCurrentlyDragged
       ? '!transition-none'
       : 'transition-transform duration-150';
 
     return (
       <div
         data-widget-index={index}
+        data-widget-id={widgetId}
         draggable={true}
         onDragStart={(e) => onDragStart?.(e, index)}
-        onDragOver={(e) => onDragOver?.(e, index)}
+        onDragOver={(e) => {
+          e.preventDefault();
+          onDragOver?.(e, index);
+        }}
         onDrop={(e) => onDrop?.(e, index)}
         onDragEnd={onDragEnd}
         className={`relative ${
           wide ? 'col-span-1 lg:col-span-2' : 'col-span-1'
-        } w-full select-none touch-pan-y ${transitionClass} ${animationClass} ${
-          isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : (isDragging ? '' : 'hover:scale-[1.01]')
+        } min-w-0 w-full overflow-hidden select-none touch-pan-y ${transitionClass} ${animationClass} ${
+          isCurrentlyDragged ? 'opacity-40 scale-[0.98]' : 'hover:scale-[1.01]'
         } cursor-grab active:cursor-grabbing ${className}`}
         style={{
           touchAction: 'pan-y',
           willChange: isReordering ? 'transform' : 'auto',
-          transform: 'translate3d(0, 0, 0)',
         }}
       >
         {/* Manija de arrastre para móvil y PC */}
@@ -101,7 +85,7 @@ export default function DashboardWidgetWrapper({
           onDrop={onDrop}
           onDragEnd={onDragEnd}
           style={{ touchAction: 'none' }}
-          className="absolute -top-3 left-3 z-30 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/95 dark:bg-zinc-800 text-white shadow-xl border border-white/20 hover:border-emerald-500/50 cursor-grab active:cursor-grabbing active:scale-105 active:bg-emerald-600 transition-all touch-none select-none pointer-events-auto"
+          className="absolute top-2 left-3 z-30 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/95 dark:bg-zinc-800 text-white shadow-xl border border-white/20 hover:border-emerald-500/50 cursor-grab active:cursor-grabbing active:scale-105 active:bg-emerald-600 transition-all touch-none select-none pointer-events-auto"
           title="Arrastra desde aquí para mover el widget"
           aria-label="Manija para mover widget"
         >
@@ -115,7 +99,7 @@ export default function DashboardWidgetWrapper({
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onClick={(e) => onToggleVisibility?.(e, widgetId, false)}
-          className="absolute -top-2.5 -right-2.5 z-30 w-7 h-7 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer border-2 border-white dark:border-slate-900 pointer-events-auto"
+          className="absolute top-2 right-2.5 z-30 w-7 h-7 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer border-2 border-white dark:border-zinc-950 pointer-events-auto"
           title="Ocultar widget"
           aria-label="Ocultar widget"
         >
@@ -124,10 +108,9 @@ export default function DashboardWidgetWrapper({
 
         {/* Contenido del widget sin eventos interactivos ni transiciones internas durante reordenamiento */}
         <div 
-          className="pointer-events-none select-none [&_*]:!pointer-events-none [&_*]:!transition-none"
+          className="pointer-events-none select-none min-w-0 w-full h-full flex flex-col [&_*]:!pointer-events-none [&_*]:!transition-none"
           style={{ 
-            willChange: isReordering ? 'transform' : 'auto',
-            transform: 'translate3d(0, 0, 0)' 
+            willChange: isReordering ? 'transform' : 'auto'
           }}
         >
           {children}
@@ -140,6 +123,7 @@ export default function DashboardWidgetWrapper({
   return (
     <div
       data-widget-index={index}
+      data-widget-id={widgetId}
       onMouseDown={index >= 0 && onPressStart ? () => onPressStart(index) : undefined}
       onMouseUp={onPressEnd}
       onMouseLeave={onPressEnd}
@@ -149,7 +133,7 @@ export default function DashboardWidgetWrapper({
       onTouchCancel={onTouchEnd}
       className={`relative ${
         wide ? 'col-span-1 lg:col-span-2' : 'col-span-1'
-      } w-full h-auto flex flex-col touch-pan-y ${className}`}
+      } min-w-0 w-full overflow-hidden h-auto flex flex-col touch-pan-y ${className}`}
       style={{
         transform: 'translate3d(0, 0, 0)',
       }}

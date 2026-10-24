@@ -3,8 +3,21 @@ import { useEffect, useRef } from 'react';
 // Pila global compartida en memoria para registrar modales abiertos en orden de apertura
 const modalStack = [];
 let isPopstateListenerActive = false;
+let isProgrammaticBack = false;
+let programmaticBackTimeout = null;
 
 function globalPopstateHandler(event) {
+  // Neutralizar el popstate si fue disparado programáticamente por la limpieza de un modal
+  if (isProgrammaticBack) {
+    isProgrammaticBack = false;
+    if (programmaticBackTimeout) {
+      clearTimeout(programmaticBackTimeout);
+      programmaticBackTimeout = null;
+    }
+    event.stopImmediatePropagation?.();
+    return;
+  }
+
   if (modalStack.length === 0) return;
 
   // Solo el modal que está al frente de la pantalla (el último en el stack) debe cerrarse
@@ -23,7 +36,8 @@ function globalPopstateHandler(event) {
 
 function ensureGlobalListener() {
   if (typeof window === 'undefined' || isPopstateListenerActive) return;
-  window.addEventListener('popstate', globalPopstateHandler);
+  // Usar capture phase para interceptar y neutralizar popstates programáticos antes que cualquier otro listener
+  window.addEventListener('popstate', globalPopstateHandler, true);
   isPopstateListenerActive = true;
 }
 
@@ -72,10 +86,16 @@ export function useBackHandler(isOpen, onClose) {
       // Revertir historial solo si se cerró por botón de UI (cruz/guardar) y este modal era el tope
       try {
         if (!wasPopped && isTop && window.history?.state?.modalId === modalId) {
+          isProgrammaticBack = true;
+          if (programmaticBackTimeout) clearTimeout(programmaticBackTimeout);
+          programmaticBackTimeout = setTimeout(() => {
+            isProgrammaticBack = false;
+            programmaticBackTimeout = null;
+          }, 200);
           window.history.back();
         }
       } catch (e) {
-        // ignore
+        isProgrammaticBack = false;
       }
     };
   }, [isOpen]);

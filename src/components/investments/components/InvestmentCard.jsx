@@ -18,19 +18,12 @@ export default function InvestmentCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const { isPrivacyMode, enableDecimals } = usePrivacy();
   const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
-
-  const formatInvestMoney = (amt, cur = viewCurrency) => (
-    cur === 'USD' ? formatUSD(amt, isPrivacyMode, showDecimals) : formatCurrency(amt, isPrivacyMode, showDecimals)
-  );
+  const formatInvestMoney = (amt, cur = viewCurrency) => cur === 'USD' ? formatUSD(amt, isPrivacyMode, showDecimals) : formatCurrency(amt, isPrivacyMode, showDecimals);
 
   if (!inv) return null;
 
   const isPrivateLoan = inv.subType === 'private_loan' || inv.assetType === 'loan';
-  const isCDT = !isPrivateLoan && (
-    inv.assetType === 'cdt' || inv.assetType === 'fixed_income' ||
-    inv.category === 'fixed' || inv.category === 'CDT' ||
-    inv.subType === 'cdt' || inv.subtype === 'cdt'
-  );
+  const isCDT = !isPrivateLoan && (inv.assetType === 'cdt' || inv.assetType === 'fixed_income' || inv.category === 'fixed' || inv.category === 'CDT' || inv.subType === 'cdt' || inv.subtype === 'cdt');
   const todayStr = new Date().toISOString().split('T')[0];
   const isMatured = isCDT && Boolean(inv.dueDate) && todayStr >= inv.dueDate;
 
@@ -38,8 +31,7 @@ export default function InvestmentCard({
   if (isCDT) {
     const invested = Number(inv.investedAmount || inv.buyPrice || inv.currentAmount || 0);
     const rate = Number(inv.interestRate || 0);
-    const startDate = inv.startDate || inv.start_date;
-    const dueDate = inv.dueDate || inv.due_date;
+    const startDate = inv.startDate || inv.start_date, dueDate = inv.dueDate || inv.due_date;
     if (startDate && dueDate) cdtTermDays = Math.max(1, Math.round((new Date(dueDate + 'T00:00:00') - new Date(startDate + 'T00:00:00')) / 86400000));
     else if (inv.termDays) cdtTermDays = Number(inv.termDays);
     else if (dueDate) cdtTermDays = Math.max(1, Math.round((new Date(dueDate + 'T00:00:00') - new Date(inv.created_at || inv.createdAt || Date.now())) / 86400000));
@@ -65,6 +57,7 @@ export default function InvestmentCard({
     pnlPercentage: cdtPnlPct, isPositive: true
   } : baseMetrics;
 
+  const pnlAmount = m.currency === 'USD' ? m.pnlUSD : m.pnlCOP;
   const assetTypeLabel = isPrivateLoan ? 'Préstamo' : inv.subType === 'bond' || inv.assetType === 'bond' ? 'Bono' : inv.assetType === 'crypto' || inv.category === 'crypto' ? 'Cripto' : inv.assetType === 'stock' || inv.category === 'variable' ? 'Acción' : inv.assetType === 'etf' ? 'ETF' : isCDT ? 'CDT' : 'Fondo';
   const badgeColor = isPrivateLoan || (!isCDT && m.isPositive) || (isCDT && !isMatured) ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : isMatured ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' : 'bg-rose-500/10 text-rose-500 border-rose-500/20';
   const isMarket = ['crypto', 'variable', 'stock', 'etf'].includes(inv.category) || Boolean(inv.ticker);
@@ -94,7 +87,12 @@ export default function InvestmentCard({
                 {m.currency === 'USD' ? `${formatInvestMoney(m.currentValueUSD, 'USD')} USD` : `${formatInvestMoney(m.currentValueCOP, 'COP')} COP`}
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-tight tabular-nums border ${badgeColor}`}>
+                {(isCDT || pnlAmount !== 0) && (
+                  <span className={`text-[10px] sm:text-[11px] font-bold font-mono tracking-tight tabular-nums ${m.isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
+                    {m.isPositive ? '+' : ''}{formatInvestMoney(pnlAmount, m.currency)}
+                  </span>
+                )}
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-tight tabular-nums border ${badgeColor}`}>
                   {isPrivateLoan ? `+${Number(inv.monthlyRate || 0).toFixed(1)}% M.V.` : isCDT ? `+${Number(inv.interestRate || 0).toFixed(2)}% E.A.` : `${m.isPositive ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%`}
                 </span>
                 {m.shares > 0 && <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium font-mono tabular-nums hidden sm:inline">{m.shares.toLocaleString('es-CO', { maximumFractionDigits: 4 })} {m.ticker || 'uds'}</span>}
@@ -104,8 +102,8 @@ export default function InvestmentCard({
               <button type="button" onClick={(e) => { e.stopPropagation(); onOpenAddLot(inv); }} className="p-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors" title="Añadir compra / Lote"><Plus className="w-4 h-4 stroke-[2.5]" /></button>
             )}
             <div className="hidden md:flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              {onEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(inv); }} className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button>}
-              {onDelete && <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(inv); }} className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>}
+              {onEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(inv); }} className="w-6 h-6 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-emerald-600 flex items-center justify-center cursor-pointer" title="Editar"><Pencil className="w-3 h-3" /></button>}
+              {onDelete && <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(inv); }} className="w-6 h-6 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-rose-600 flex items-center justify-center cursor-pointer" title="Eliminar"><Trash2 className="w-3 h-3" /></button>}
             </div>
             <div className="p-1 text-slate-400"><ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-emerald-500' : ''}`} /></div>
           </div>
@@ -119,7 +117,7 @@ export default function InvestmentCard({
               <span className="opacity-60 text-[10px] font-mono shrink-0">(TRM: {formatInvestMoney(trm || 4050, 'COP')})</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800/80">
               {[
                 { title: 'CAPITAL INVERTIDO', val: m.currency === 'USD' ? `${formatInvestMoney(m.totalCostUSD, 'USD')} USD` : `${formatInvestMoney(m.totalCostCOP, 'COP')} COP`, sub: m.currency === 'USD' ? `≈ ${formatInvestMoney(m.totalCostCOP, 'COP')} COP` : `≈ ${formatInvestMoney(m.totalCostUSD, 'USD')} USD` },
                 { title: 'RENDIMIENTO TOTAL', val: `${m.currency === 'USD' ? `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD` : `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP`} (${m.pnlPercentage >= 0 ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%)`, sub: `≈ ${m.currency === 'USD' ? `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP` : `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD`}`, isPnl: true },
@@ -134,11 +132,7 @@ export default function InvestmentCard({
               ))}
             </div>
 
-            <InvestmentFixedIncomeDetails
-              inv={inv} isCDT={isCDT} isPrivateLoan={isPrivateLoan} isMatured={isMatured}
-              cdtStats={maturityStats} accruedStats={accruedStats} maturityStats={maturityStats}
-              cdtTermDays={cdtTermDays} formatInvestMoney={formatInvestMoney} onOpenLiquidation={onOpenLiquidation}
-            />
+            <InvestmentFixedIncomeDetails inv={inv} isCDT={isCDT} isPrivateLoan={isPrivateLoan} isMatured={isMatured} cdtStats={maturityStats} accruedStats={accruedStats} maturityStats={maturityStats} cdtTermDays={cdtTermDays} formatInvestMoney={formatInvestMoney} onOpenLiquidation={onOpenLiquidation} />
             <InvestmentLotHistory asset={inv} lots={m.lots || []} currency={m.currency} onOpenAddLot={onOpenAddLot} onDeleteLot={onDeleteLot} />
           </div>
         </div>

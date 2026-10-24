@@ -67,6 +67,7 @@ export function mapInvestmentToSupabasePayload(inv, userId) {
       rate: toSafeNumber(inv.rate),
       institution: inv.institution || null,
       issueDate: inv.issueDate || inv.issue_date || null,
+      startDate: inv.startDate || inv.start_date || null,
       dueDate: inv.dueDate || inv.due_date || null,
       subtype: inv.subtype || inv.type || 'stock',
       assetType: inv.assetType || inv.asset_type || inv.category || 'other',

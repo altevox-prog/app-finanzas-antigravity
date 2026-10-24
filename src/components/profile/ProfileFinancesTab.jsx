@@ -71,7 +71,7 @@ export default function ProfileFinancesTab({
     {
       icon: CreditCard, iconBg: 'bg-blue-500/10 border-blue-500/20', iconColor: 'text-[#007AFF]',
       title: 'Mis cuentas', subtitle: `${accountsCount} cuentas bancarias, billeteras y efectivo`,
-      onClick: () => setCurrentView('accounts'), hoverColor: 'group-hover:text-[#007AFF]'
+      onClick: () => handleNavView('accounts', onOpenAccounts), hoverColor: 'group-hover:text-[#007AFF]'
     },
     {
       icon: Tag, iconBg: 'bg-purple-500/10 border-purple-500/20', iconColor: 'text-purple-600 dark:text-purple-400',

@@ -38,9 +38,9 @@ export const INITIAL_INVOICE_STATE = {
   },
   banking: {
     colombia: {
-      bank: 'Bancolombia',
+      bank: '',
       holder: '',
-      accountType: 'Ahorros',
+      accountType: '',
       accountNumber: '',
       swift: '',
       nequi: ''
@@ -49,7 +49,7 @@ export const INITIAL_INVOICE_STATE = {
       enabled: false,
       bank: '',
       holder: '',
-      accountType: 'Corriente',
+      accountType: '',
       accountNumber: '',
       routing: '',
       bankAddress: ''

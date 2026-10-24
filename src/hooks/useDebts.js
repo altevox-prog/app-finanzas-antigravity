@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from '../utils/toast';
+import { triggerSaveFeedback } from '../utils/saveFeedback';
 import { ensureUUID } from '../services/syncEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
 import { toSafeNumber } from '../utils/financeMath';
+import { saveTransactionsToStorage } from '../services/storageService';
 import { mapSupabaseRowToDebt, mapDebtToSupabasePayload, recalculateDebtBalance, ensureFinanzasCategory, buildDebtPaymentTransactions, buildDebtDisbursementTransaction } from './utils/debtCalculations';
 import { syncPaymentToCloud, syncDisbursementToCloud, syncDeletePaymentToCloud, syncDeleteDebtToCloud } from './utils/debtCloudSync';
 
@@ -60,7 +62,7 @@ export function useDebts({ isResettingRef, accounts = [], categories = [], setAc
         if (!user?.id) return;
         const cleanId = ensureUUID(accountId);
         supabase.from('accounts').select('balance').eq('id', cleanId).maybeSingle().then(({ data }) => {
-          if (data) supabase.from('accounts').update({ balance: (Number(data.balance) || 0) + deltaAmount, updated_at: nowIso }).eq('id', cleanId).catch(() => {});
+          if (data) supabase.from('accounts').update({ balance: (Number(data.balance) || 0) + deltaAmount, updated_at: nowIso }).eq('id', cleanId).then(null, () => {});
         });
       });
     }
@@ -119,15 +121,27 @@ export function useDebts({ isResettingRef, accounts = [], categories = [], setAc
     const debtItem = debtsAndLoans.find((d) => d.id === itemId), pDelete = debtItem?.payments?.find((p) => p.id === paymentId);
     if (pDelete?.accountId) { const totAmt = Number(pDelete.amount) || 0; if (totAmt > 0) adjustAccountDbBalance(pDelete.accountId, debtItem?.type === 'receivable' ? -totAmt : totAmt); }
 
+    const cleanPaymentId = ensureUUID(paymentId);
+    const txIds = Array.isArray(pDelete?.transactionIds) ? pDelete.transactionIds : [];
+    const txIdSet = new Set(txIds.map(ensureUUID));
+
     setDebtsAndLoans((prev) => prev.map((item) => {
       if (item.id !== itemId) return item;
       const updated = recalculateDebtBalance(item, (item.payments || []).filter((p) => p.id !== paymentId));
-      if (isSupabaseConfigured && supabase) getSupabaseUser().then((user) => syncDeletePaymentToCloud({ supabase, user, updatedDebt: updated, paymentId }));
+      if (isSupabaseConfigured && supabase) getSupabaseUser().then((user) => syncDeletePaymentToCloud({ supabase, user, updatedDebt: updated, paymentId, transactionIds: txIds }));
       return updated;
     }));
     if (setTransactions) {
-      setTransactions((prev) => prev.filter((t) => t.paymentId !== paymentId));
-      if (isSupabaseConfigured && supabase && pDelete?.transactionIds?.length > 0) pDelete.transactionIds.forEach((txId) => supabase.from('transactions').delete().eq('id', ensureUUID(txId)).catch(() => {}));
+      setTransactions((prev) => {
+        const next = prev.filter((t) => {
+          const tPayId = t.paymentId || t.payment_id;
+          const matchPayment = tPayId === paymentId || (tPayId && ensureUUID(tPayId) === cleanPaymentId);
+          const matchTxId = txIds.includes(t.id) || (t.id && txIdSet.has(ensureUUID(t.id)));
+          return !matchPayment && !matchTxId;
+        });
+        saveTransactionsToStorage(next);
+        return next;
+      });
     }
   }, [debtsAndLoans, adjustAccountDbBalance, setTransactions]);
 
@@ -149,7 +163,7 @@ export function useDebts({ isResettingRef, accounts = [], categories = [], setAc
       const user = activeUserRef.current || (await getSupabaseUser());
       syncDisbursementToCloud({ supabase, user, tx, disb, fromAccountId, disbAmount, opDate, debtName, nowIso, updatedDebt });
     }
-    toast.success('Desembolso registrado correctamente');
+    triggerSaveFeedback();
     return updatedDebt;
   }, [debtsAndLoans, accounts, adjustAccountDbBalance, setTransactions]);
 

@@ -28,14 +28,17 @@ export default function TransactionItem({
   const { formatMoney } = usePrivacy();
   const type = String(tx?.type || '').toLowerCase();
   const amt = Number(tx?.amount) || 0;
-  const isTransfer = type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer);
+  const isDebtRelated = Boolean(tx?.isDebtPayment || tx?.isDebtDisbursement || tx?.debtId || tx?.paymentId);
+  const isPlaceholderTransfer = tx?.displayName === 'Transferencia a Destino' || tx?.displayName === 'Transferencia desde Origen';
+  const isTransfer = !isDebtRelated && (type === 'transfer' || type === 'transferencia' || Boolean(tx?.isTransfer));
   const isNeutral = tx?.isConsolidatedTransfer || (isTransfer && (!tx?.displayType || tx?.displayType === 'transfer'));
   const isExpense = !isNeutral && (tx?.displayType === 'expense' || (!isTransfer && (type === 'expense' || type === 'gasto' || type === 'egreso' || amt < 0)));
   const isIncome = !isNeutral && (tx?.displayType === 'income' || (!isTransfer && (type === 'income' || type === 'ingreso' || (!isExpense && amt > 0))));
 
   const inv = parseInvoiceTx(tx);
   const invoiceTitle = inv.consecutive ? (/^factura\b/i.test(inv.consecutive) ? inv.consecutive : `Factura ${inv.consecutive}`) : 'Factura';
-  const displayName = tx?.displayName || (inv.isInvoice ? invoiceTitle : (tx?.note || tx?.categoryName || 'Movimiento'));
+  const rawDisplayName = (!isDebtRelated || !isPlaceholderTransfer) ? tx?.displayName : null;
+  const displayName = inv.isInvoice ? invoiceTitle : (rawDisplayName || tx?.note || tx?.categoryName || 'Movimiento');
 
   const handleDelete = () => {
     const txLabel = displayName || 'este movimiento';
@@ -57,7 +60,7 @@ export default function TransactionItem({
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/10 shadow-xs">
             {isTransfer ? (
-              <div className="w-full h-full flex items-center justify-center bg-blue-500/10 text-blue-500 dark:text-blue-400">
+              <div className="w-full h-full flex items-center justify-center bg-emerald-500/10 text-emerald-500 dark:text-emerald-400">
                 <ArrowRightLeft className="w-4 h-4" />
               </div>
             ) : (
@@ -85,6 +88,8 @@ export default function TransactionItem({
                 </>
               ) : isTransfer ? (
                 <span className="truncate">{tx.displaySubtitle || `Transferencia interna · ${formatTxDateClean(tx)}`}</span>
+              ) : isDebtRelated && tx?.displaySubtitle && !tx.displaySubtitle.includes('Transferencia') ? (
+                <span className="truncate">{tx.displaySubtitle}</span>
               ) : (
                 <>
                   {tx.categoryName && tx.note && <span>{tx.categoryName} · </span>}
@@ -112,13 +117,25 @@ export default function TransactionItem({
 
         <div className="hidden md:flex items-center justify-end w-14 shrink-0 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
           {onEdit && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(tx); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-emerald-600 flex items-center justify-center transition-colors cursor-pointer" title="Editar" aria-label="Editar">
-              <Pencil className="w-3 h-3" />
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEdit(tx); }}
+              className="p-1 rounded-md text-slate-400 hover:text-emerald-500 dark:text-zinc-500 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              title="Editar"
+              aria-label="Editar"
+            >
+              <Pencil className="w-3.5 h-3.5" />
             </button>
           )}
           {onDelete && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); handleDelete(); }} className="w-6 h-6 rounded-md bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer" title="Eliminar" aria-label="Eliminar">
-              <Trash2 className="w-3 h-3" />
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+              className="p-1 rounded-md text-slate-400 hover:text-rose-500 dark:text-zinc-500 dark:hover:text-rose-400 transition-colors cursor-pointer"
+              title="Eliminar"
+              aria-label="Eliminar"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>

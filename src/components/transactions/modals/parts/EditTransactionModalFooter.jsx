@@ -12,7 +12,7 @@ export default function EditTransactionModalFooter({
   };
 
   return (
-    <div className="shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-zinc-900/90 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between gap-3">
+    <div className="shrink-0 px-6 py-4 bg-slate-50/50 dark:bg-zinc-950 border-t border-slate-200/80 dark:border-zinc-800/80 flex items-center justify-between gap-3">
       <button
         type="button"
         onClick={handleDelete}

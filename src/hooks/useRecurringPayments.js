@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { toast } from '../utils/toast';
+import { triggerSaveFeedback } from '../utils/saveFeedback';
 import { ensureUUID } from '../services/syncEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getSupabaseUser } from '../services/supabaseClient';
@@ -123,7 +124,7 @@ export function useRecurringPayments(isResettingRef, options = {}) {
     const sanitized = sanitizeRecurringItem(itemOrId);
     setRecurringPayments((prev) => sortRecurring([sanitized, ...prev.filter((r) => r.id !== sanitized.id && ensureUUID(r.id) !== ensureUUID(sanitized.id))]));
     if (user?.id) await upsertRecurringSafe(mapRecurringToSupabasePayload(sanitized, user.id));
-    toast.success(action === 'add' ? '✓ Pago recurrente guardado con éxito' : '✓ Pago recurrente actualizado con éxito');
+    triggerSaveFeedback();
     return sanitized;
   }, []);
 

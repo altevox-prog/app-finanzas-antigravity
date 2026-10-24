@@ -35,7 +35,7 @@ export default function AccountCategoryFields({
     <>
       {/* 1. Categoría Unificada con Subcategoría Contextual (filtrada para pagos recurrentes) */}
       <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
+        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-400 mb-1.5 select-none">
           Categoría *
         </label>
         <CategoryBottomSheetPicker
@@ -53,7 +53,7 @@ export default function AccountCategoryFields({
 
       {/* 2. Cuenta / Tarjeta de Cargo Asociada */}
       <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1.5 select-none">
+        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-400 mb-1.5 select-none">
           Cuenta de Cargo / Método *
         </label>
         <AccountCombobox
