@@ -1,5 +1,6 @@
 import React from 'react';
 import { Building2, TrendingUp } from 'lucide-react';
+import { isBancolombia, BANCOLOMBIA_SVG_PATH } from '../../utils/bankIcons';
 
 const BRAND_ASSETS = {
   bancolombia: '/brands/bancolombia.svg',
@@ -58,6 +59,9 @@ const normalizeKey = (val) => {
 };
 
 const resolveBrandAsset = (name = '', type = '', institution = '') => {
+  if (isBancolombia(name, institution, type)) {
+    return BANCOLOMBIA_SVG_PATH;
+  }
   const candidates = [name, institution, type].map(normalizeKey).filter(Boolean);
   for (const c of candidates) {
     if (BRAND_ASSETS[c]) return BRAND_ASSETS[c];

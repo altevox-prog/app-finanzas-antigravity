@@ -1,16 +1,47 @@
-node_modules 
-.next 
-dist 
-build 
-.env*.local 
-.env
-.vercel
-.env*
-dist 
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
 
-/brands/
-node_modules
-# Variables de entorno
+# Entornos y producción
+dist/
+build/
+.next/
+.vercel/
+coverage/
+
+# Variables de entorno y secretos locales (Crítico)
 .env
+.env*
 .env.local
 .env.*.local
+*.local
+
+# Supabase y Edge Functions locales
+.supabase/
+supabase/.temp/
+
+# Logs y depuración
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Llaves, certificados y volcados de bases de datos
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.sql
+*.dump
+
+# Archivos de sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Activos específicos locales
+/brands/

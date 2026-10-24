@@ -1,4 +1,5 @@
 import React from 'react';
+import BrandIcon from '../../ui/BrandIcon';
 import { formatCOP } from '../../../utils/currencyUtils';
 
 export default function InvoiceFooterPreview({
@@ -35,9 +36,14 @@ export default function InvoiceFooterPreview({
 
       <div className={showInternational ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 w-full' : 'w-full'}>
         <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/70 space-y-1 text-[11px] leading-tight">
-          <p className="font-bold text-slate-900 uppercase tracking-wider text-[10px] border-b border-slate-200 pb-0.5">
-            Cuenta Bancaria
-          </p>
+          <div className="flex items-center justify-between border-b border-slate-200 pb-0.5">
+            <p className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">
+              Cuenta Bancaria
+            </p>
+            {colombia.bank && (
+              <BrandIcon name={colombia.bank} size={16} className="w-4 h-4 object-contain" />
+            )}
+          </div>
           <div className="space-y-1 pt-0.5">
             <p><span className="text-slate-500">Banco:</span> <strong className="text-slate-800">{colombia.bank || '---'}</strong></p>
             <p><span className="text-slate-500">Titular:</span> {colombia.holder || '---'}</p>

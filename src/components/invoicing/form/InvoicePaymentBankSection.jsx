@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CreditCard, Globe, ChevronDown, ChevronUp, DollarSign } from 'lucide-react';
+import BrandIcon from '../../ui/BrandIcon';
 import { formatCOP } from '../../../utils/currencyUtils';
 
 export default function InvoicePaymentBankSection({
@@ -80,7 +81,10 @@ export default function InvoicePaymentBankSection({
             {showNationalBank && (
               <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-200/50 dark:border-white/[0.08]">
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Banco</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] text-slate-500 dark:text-zinc-400">Banco</label>
+                    {colombia.bank && <BrandIcon name={colombia.bank} size={14} className="w-3.5 h-3.5 object-contain" />}
+                  </div>
                   <input type="text" value={colombia.bank || ''} onChange={(e) => updateBanking('colombia', { bank: e.target.value })} placeholder="Nombre del banco" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
                 </div>
                 <div>
