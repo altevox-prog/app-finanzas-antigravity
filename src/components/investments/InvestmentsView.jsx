@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Plus } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { INVESTMENT_CATEGORIES } from '../../data/initialData';
 import InvestmentFormModal from './modals/InvestmentFormModal';
 import AddLotModal from './modals/AddLotModal';
@@ -69,6 +69,48 @@ export default function InvestmentsView({
   const handleEditInvestment = (inv) => { setEditingInvestment(inv); setIsFormModalOpen(true); };
   const handleDeleteInvestmentClick = (inv) => { if (confirm(`¿Eliminar la inversión "${inv.name}"?`)) onDeleteInvestment(inv.id); };
 
+  const handleSaveInvestmentWithAccounting = async (data) => {
+    if (editingInvestment) {
+      await onUpdateInvestment(data);
+    } else {
+      await onAddInvestment(data);
+      if (data.deductFromAccount && data.originAccountId && onAddTransaction) {
+        const targetAccount = accounts.find((a) => a.id === data.originAccountId);
+        const rawInvested = Number(data.investedAmount || data.buyPrice || data.amount || 0);
+        const invCurr = (data.currency || 'COP').toUpperCase();
+        const accCurr = (targetAccount?.currency || 'COP').toUpperCase();
+
+        let finalDeductAmount = rawInvested;
+        if (invCurr === 'USD' && accCurr === 'COP') finalDeductAmount = Math.round(rawInvested * (trm || 4050));
+        else if (invCurr === 'COP' && accCurr === 'USD') finalDeductAmount = Number(((rawInvested / (trm || 4050))).toFixed(2));
+
+        const entityOrName = data.institution || data.bank || data.name || data.ticker || 'Inversión';
+        const txTitle = `Desembolso Inversión: ${entityOrName}`;
+        const txDate = data.startDate || data.start_date || new Date().toISOString().split('T')[0];
+
+        const txOutflow = {
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-inv-out-' + Date.now()),
+          date: txDate,
+          type: 'expense',
+          amount: finalDeductAmount,
+          accountId: targetAccount ? targetAccount.id : data.originAccountId,
+          accountName: targetAccount ? targetAccount.name : 'Cuenta Principal',
+          category: 'Inversiones / Desembolso',
+          categoryId: 'cat-inversiones',
+          categoryName: 'Inversiones',
+          subcategoryId: 'sub-desembolso-capital',
+          subcategoryName: 'Desembolso Capital',
+          isCapitalOutflow: true,
+          isTransfer: true,
+          displayName: txTitle,
+          description: txTitle,
+          note: txTitle
+        };
+        await onAddTransaction(txOutflow);
+      }
+    }
+  };
+
   return (
     <div className="space-y-2.5 pb-36 animate-fadeIn">
       <PortfolioSummaryHeader portfolioMetrics={portfolioMetrics} allocationByCategory={allocationByCategory} trm={trm} />
@@ -84,9 +126,6 @@ export default function InvestmentsView({
           <div className="text-center py-6 px-4 border border-dashed rounded-2xl flex flex-col items-center justify-center" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card-sub)' }}>
             <TrendingUp className="w-7 h-7 opacity-35 mx-auto mb-2 text-emerald-500" />
             <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{investments.length === 0 ? 'No tienes inversiones registradas' : 'No hay inversiones en esta categoría'}</p>
-            <button type="button" onClick={investments.length === 0 ? () => { setEditingInvestment(null); setIsFormModalOpen(true); } : () => setSelectedCategoryFilter('all')} className="mt-3.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer">
-              {investments.length === 0 ? <><Plus className="w-3.5 h-3.5 stroke-[2.5]" /><span>Registrar primera inversión</span></> : 'Ver todas las inversiones'}
-            </button>
           </div>
         ) : viewGrouping === 'flat' ? (
           filteredInvestments.map((inv) => (
@@ -110,7 +149,7 @@ export default function InvestmentsView({
 
       <InvestmentFormModal
         isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} initialInvestment={editingInvestment}
-        onSave={(data) => { if (editingInvestment) onUpdateInvestment(data); else onAddInvestment(data); }} onDelete={onDeleteInvestment}
+        accounts={accounts} onSave={handleSaveInvestmentWithAccounting} onDelete={onDeleteInvestment}
       />
       <AddLotModal isOpen={Boolean(lotModalAsset)} onClose={() => setLotModalAsset(null)} asset={lotModalAsset} onAddLot={handleExecuteAddLot} />
       <CDTLiquidationModal

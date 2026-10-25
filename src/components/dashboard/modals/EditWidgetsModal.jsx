@@ -29,7 +29,6 @@ export default function EditWidgetsModal({ isOpen, onClose, widgetsConfig, widge
 
   const persistWidgets = async (list) => {
     try {
-      ['monety_widgets_order_v2', 'monety_widgets_config', 'presu_widget_order'].forEach((k) => localStorage.setItem(k, JSON.stringify(list)));
       await saveStoredWidgetsConfig(list, user?.id);
     } catch (err) { console.error('Error al persistir widgets:', err); }
   };

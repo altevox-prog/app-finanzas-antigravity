@@ -37,8 +37,13 @@ export default function TransactionItem({
 
   const inv = parseInvoiceTx(tx);
   const invoiceTitle = inv.consecutive ? (/^factura\b/i.test(inv.consecutive) ? inv.consecutive : `Factura ${inv.consecutive}`) : 'Factura';
-  const rawDisplayName = (!isDebtRelated || !isPlaceholderTransfer) ? tx?.displayName : null;
-  const displayName = inv.isInvoice ? invoiceTitle : (rawDisplayName || tx?.note || tx?.categoryName || 'Movimiento');
+  const hasCustomCapitalNote = Boolean(tx?.isCapitalReturn && (tx?.note || tx?.description));
+  const rawDisplayName = hasCustomCapitalNote
+    ? (tx.note || tx.description)
+    : (isPlaceholderTransfer && (tx?.note || tx?.description))
+      ? (tx.note || tx.description)
+      : (!isDebtRelated ? tx?.displayName : null);
+  const displayName = inv.isInvoice ? invoiceTitle : (rawDisplayName || tx?.displayName || tx?.note || tx?.categoryName || 'Movimiento');
 
   const handleDelete = () => {
     const txLabel = displayName || 'este movimiento';

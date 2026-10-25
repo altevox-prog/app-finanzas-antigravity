@@ -17,12 +17,12 @@ const TAB_ALIAS = {
   facturacion: 'invoicing', facturas: 'invoicing', invoice: 'invoicing'
 };
 
-export default function ViewRouter({
-  activeTab = 'dashboard', tabResetKeys = {}, financeData = {}, financeActions = {}, ...rest
-}) {
+export default function ViewRouter(props) {
+  const { activeTab = 'dashboard', tabResetKeys = {}, financeData = {}, financeActions = {}, ...rest } = props || {};
   const merged = { ...financeData, ...financeActions, ...rest, activeTab, tabResetKeys };
+  const accounts = props.accounts || merged.accounts || [];
   const {
-    accounts = [], investments = [], debtsAndLoans = [], transactions = [], monthlyTransactions = [], categories = [], recurringPayments = [], subscriptions = [], monthlyStats = {},
+    investments = [], debtsAndLoans = [], transactions = [], monthlyTransactions = [], categories = [], recurringPayments = [], subscriptions = [], monthlyStats = {},
     selectedDate = new Date(), selectedDay = null, setSelectedDay, currentMonthLabel = '', trm = 4050, widgets = [], setWidgets, tomorrowDebtAlerts = [], handleReviewDebtAlert, handleDismissAlert,
     formatMoney, fromSettings = false, handleGoBackFromSubView, handleTabChange, setIsCalendarOpen, setIsEditWidgetsModalOpen, setIsAddTxOpen, handleOpenTransaction, setSelectedCreditCardDetail,
     setIsAddRecurringOpen, handleOpenAddDebt, handleOpenAddLoan, setAddLoanInitialType, setIsAddLoanOpen, handleAddTransaction, handleUpdateTransaction, handleDeleteTransaction, handleAddCategory,

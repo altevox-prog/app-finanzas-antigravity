@@ -52,6 +52,13 @@ function formatBadgeInfo(badge, urgency) {
   return { text, pillClasses };
 }
 
+const getNotificationTargetView = (item) => {
+  if (item?.actionPayload?.debtOrLoan || /debt|loan/.test(item?.type || '')) return 'debts';
+  if (item?.actionPayload?.investment || /investment|cdt/.test(item?.type || '')) return 'investments';
+  if (item?.actionPayload?.account || /card|credit/.test(item?.type || '')) return 'accounts';
+  return 'recurring';
+};
+
 export default function NotificationCenter({
   isOpen, onClose, activeNotifications = [], onDismiss, onMarkAllAsRead,
   onApproveRecurring = null, onSkipRecurring = null, onNavigate = null
@@ -59,10 +66,10 @@ export default function NotificationCenter({
   if (!isOpen) return null;
   const count = activeNotifications.length, hasItems = count > 0;
 
-  const handleViewRecurring = () => {
-    if (typeof onNavigate === 'function') onNavigate('recurring');
-    else if (typeof window !== 'undefined' && window.__monetyNavigate) window.__monetyNavigate('recurring');
-    else if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('monety:navigate', { detail: 'recurring' }));
+  const handleNavigate = (target = 'recurring') => {
+    if (typeof onNavigate === 'function') onNavigate(target);
+    else if (typeof window !== 'undefined' && window.__monetyNavigate) window.__monetyNavigate(target);
+    else if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('monety:navigate', { detail: target }));
     onClose?.();
   };
 
@@ -99,7 +106,7 @@ export default function NotificationCenter({
               const { text: badgeText, pillClasses } = formatBadgeInfo(item.badge, item.urgency);
               const amountAndMethod = formatNotificationAmountAndMethod(item);
               return (
-                <div key={item.id} className="group p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all cursor-pointer flex items-start gap-3">
+                <div key={item.id} onClick={() => handleNavigate(getNotificationTargetView(item))} className="group p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all cursor-pointer flex items-start gap-3">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                     isUrgent ? 'bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400' : isWarning ? 'bg-amber-50 text-amber-500 dark:bg-amber-950/40 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
                   }`}>
@@ -131,7 +138,7 @@ export default function NotificationCenter({
       </div>
 
       <div className="border-t border-slate-100 dark:border-slate-800 mt-2 pt-2 text-center shrink-0">
-        <button type="button" onClick={handleViewRecurring} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
+        <button type="button" onClick={() => handleNavigate('recurring')} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
           Ver pagos recurrentes →
         </button>
       </div>

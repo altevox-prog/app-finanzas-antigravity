@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { getStoredWidgetsConfig, saveStoredWidgetsConfig, normalizeWidgetId, DEFAULT_WIDGETS_CONFIG } from '../utils/widgetsConfig';
 
 const VETOED_IDS = new Set(['accounts', 'my_accounts', 'liquid_balance', 'available_balance', 'monthly_net', 'hero_net', 'neto_mes', 'net_month', 'trm', 'trm_oficial']);
 
 export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, allowedWidgetIds = null, onSaveWidgets = null, getWidget = null } = {}) {
+  const { user } = useAuth();
   const [widgets, setWidgets] = useState(() => {
     const stored = getStoredWidgetsConfig();
     if (Array.isArray(stored) && stored.length > 0) return stored;
@@ -19,25 +21,39 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
   useEffect(() => { widgetsRef.current = widgets; }, [widgets]);
   useEffect(() => { isReorderingRef.current = isReordering; }, [isReordering]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOrderUpdate = (e) => {
+      const inc = e?.detail;
+      if (Array.isArray(inc) && inc.length > 0) { widgetsRef.current = inc; setWidgets(inc); }
+    };
+    window.addEventListener('monety_widgets_order_v2_updated', handleOrderUpdate);
+    return () => window.removeEventListener('monety_widgets_order_v2_updated', handleOrderUpdate);
+  }, []);
+
+  useEffect(() => {
+    const candidate = widgetsConfig || widgetsProp;
+    if (!Array.isArray(candidate) || candidate.length === 0) return;
+    const current = widgetsRef.current || [];
+    const isDiff = current.length !== candidate.length || candidate.some((w, idx) => (w?.id || w) !== (current[idx]?.id || current[idx]));
+    if (isDiff) { widgetsRef.current = candidate; setWidgets(candidate); }
+  }, [widgetsConfig, widgetsProp]);
+
   const resetDrag = () => { draggedIndexRef.current = null; setDraggedIndex(null); };
 
   const persistOrder = useCallback((updated) => {
     widgetsRef.current = updated;
     setWidgets(updated);
-    try { localStorage.setItem('monety_widgets_order_v2', JSON.stringify(updated)); } catch (_) {}
-    saveStoredWidgetsConfig(updated, null);
+    saveStoredWidgetsConfig(updated, user?.id);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('monety_widgets_order_v2_updated', { detail: updated }));
     onSaveWidgets?.(updated);
-  }, [onSaveWidgets]);
+  }, [user?.id, onSaveWidgets]);
 
   const handlePressStart = useCallback((index = null) => {
     if (isReorderingRef.current) return;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     pressedIndexRef.current = index;
-    longPressTimerRef.current = setTimeout(() => {
-      setIsReordering(true);
-      draggedIndexRef.current = null;
-      setDraggedIndex(null);
-    }, 400);
+    longPressTimerRef.current = setTimeout(() => { setIsReordering(true); resetDrag(); }, 400);
   }, []);
 
   const handlePressEnd = useCallback(() => {
@@ -52,14 +68,12 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
     const visibleList = widgetsRef.current.filter(isVis);
     const source = visibleList[fromIdx], target = visibleList[targetIndex];
     if (!source || !target || source.id === target.id) return;
-    const fromReal = widgetsRef.current.findIndex(w => w.id === source.id);
-    const toReal = widgetsRef.current.findIndex(w => w.id === target.id);
+    const fromReal = widgetsRef.current.findIndex(w => w.id === source.id), toReal = widgetsRef.current.findIndex(w => w.id === target.id);
     if (fromReal === -1 || toReal === -1) return;
     const updated = [...widgetsRef.current];
     const [moved] = updated.splice(fromReal, 1);
     updated.splice(toReal, 0, moved);
-    draggedIndexRef.current = targetIndex;
-    setDraggedIndex(targetIndex);
+    draggedIndexRef.current = targetIndex; setDraggedIndex(targetIndex);
     persistOrder(updated);
   }, [allowedWidgetIds, getWidget, persistOrder]);
 
@@ -103,11 +117,7 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
     if (isReorderingRef.current) resetDrag();
   }, [handlePressEnd]);
 
-  const handleFinishReordering = useCallback(() => {
-    setIsReordering(false);
-    resetDrag();
-    pressedIndexRef.current = null;
-  }, []);
+  const handleFinishReordering = useCallback(() => { setIsReordering(false); resetDrag(); pressedIndexRef.current = null; }, []);
 
   const handleToggleVisibility = useCallback((e, widgetId, newVisible) => {
     e?.stopPropagation?.();
@@ -121,8 +131,7 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
   }, [persistOrder]);
 
   const visibleWidgets = useMemo(() => widgets.filter(w => (
-    w.visible && !w.hidden &&
-    !VETOED_IDS.has(normalizeWidgetId(w.id)) && !VETOED_IDS.has(w.id) &&
+    w.visible && !w.hidden && !VETOED_IDS.has(normalizeWidgetId(w.id)) && !VETOED_IDS.has(w.id) &&
     (!allowedWidgetIds || allowedWidgetIds.includes(normalizeWidgetId(w.id)) || allowedWidgetIds.includes(w.id)) &&
     (!getWidget || Boolean(getWidget(w.id)))
   )), [widgets, allowedWidgetIds, getWidget]);

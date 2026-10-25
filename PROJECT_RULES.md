@@ -53,7 +53,20 @@
 
 ---
 
-### 7. CHECKLIST DE ENTREGA PARA CADA FIX O LOTE
+### 7. ARQUITECTURA DE DATOS Y FLUJO UNIDIRECCIONAL (SINGLE SOURCE OF TRUTH)
+- **Modales y componentes de formulario puramente presentacionales:** Los modales, formularios y tarjetas son componentes "tontos" (dumb components). Reciben sus datos exclusivamente vía `props` y notifican eventos vía callbacks (`onSave`, `onClose`).
+- **PROHIBICIÓN ESTRICTA DE HOOKS CON EFECTOS EN MODALES:** Queda terminantemente prohibido invocar hooks de dominio que gestionen sincronización, WebSockets, realtime o llamadas de red (ej. `useAccounts`, `useTransactions`, `useDebts`) dentro de modales o componentes visuales secundarios. Estos hooks solo viven en el orquestador o en vistas raíz.
+- **Prohibición de almacenamiento ficticio (Zero Mock Storage):** Si una prop llega vacía (`[]`, `null` o `undefined`), está estrictamente PROHIBIDO inventar lecturas a `localStorage`, `sessionStorage` o crear arreglos mockeados para "parchear" la vista. El flujo de datos debe corregirse en el componente padre que origina la prop.
+
+---
+
+### 8. MANEJO DE SUPABASE Y TIEMPO REAL (REALTIME SAFETY)
+- **Instancia única de suscripción:** Toda suscripción a canales de `postgres_changes` debe centralizarse en los hooks del orquestador. Ningún componente hijo o modal puede suscribirse directamente a canales existentes.
+- **Sin colisiones de WebSockets:** No añadir callbacks ni re-suscribir canales una vez que el cliente ya ejecutó `.subscribe()`.
+
+---
+
+### 9. CHECKLIST DE ENTREGA PARA CADA FIX O LOTE
 Cada intervención de Antigravity debe cumplir rigurosamente:
 1. `npm run build` compila con código de salida 0.
 2. Cero advertencias de dependencias faltantes o bucles en consola.

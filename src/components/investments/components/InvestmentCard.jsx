@@ -18,12 +18,21 @@ export default function InvestmentCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const { isPrivacyMode, enableDecimals } = usePrivacy();
   const showDecimals = enableDecimals ?? (typeof window !== 'undefined' && localStorage.getItem('app_enable_decimals') === 'true');
-  const formatInvestMoney = (amt, cur = viewCurrency) => cur === 'USD' ? formatUSD(amt, isPrivacyMode, showDecimals) : formatCurrency(amt, isPrivacyMode, showDecimals);
 
   if (!inv) return null;
 
-  const isPrivateLoan = inv.subType === 'private_loan' || inv.assetType === 'loan';
-  const isCDT = !isPrivateLoan && (inv.assetType === 'cdt' || inv.assetType === 'fixed_income' || inv.category === 'fixed' || inv.category === 'CDT' || inv.subType === 'cdt' || inv.subtype === 'cdt');
+  const isMarket = ['crypto', 'variable', 'stock', 'etf'].includes(inv.category?.toLowerCase()) || 
+                   ['crypto', 'stock', 'etf'].includes(inv.assetType?.toLowerCase()) || 
+                   Boolean(inv.ticker);
+  const isPrivateLoan = !isMarket && (inv.subType === 'private_loan' || inv.assetType === 'loan');
+  const isCDT = !isMarket && !isPrivateLoan && (
+    inv.assetType === 'cdt' || 
+    inv.assetType === 'fixed_income' || 
+    inv.category === 'fixed' || 
+    inv.category === 'CDT' || 
+    inv.subType === 'cdt' || 
+    inv.subtype === 'cdt'
+  );
   const todayStr = new Date().toISOString().split('T')[0];
   const isMatured = isCDT && Boolean(inv.dueDate) && todayStr >= inv.dueDate;
 
@@ -46,21 +55,25 @@ export default function InvestmentCard({
   const cdtCurrentVal = investedAmount + (accruedStats?.netReturn || 0);
   const cdtPnlPct = investedAmount > 0 ? ((cdtPnl / investedAmount) * 100) : 0;
 
+  const rawCurr = typeof inv?.raw_data === 'string' ? (() => { try { return JSON.parse(inv.raw_data)?.currency; } catch { return null; } })() : inv?.raw_data?.currency;
+  const cdtCurrency = inv.currency || rawCurr || 'COP';
   const m = isCDT ? {
-    ...baseMetrics, currency: inv.currency || 'COP',
-    currentValueCOP: inv.currency === 'USD' ? convertUSDtoCOP(cdtCurrentVal, trm) : cdtCurrentVal,
-    currentValueUSD: inv.currency === 'USD' ? cdtCurrentVal : convertCOPtoUSD(cdtCurrentVal, trm),
-    totalCostCOP: inv.currency === 'USD' ? convertUSDtoCOP(investedAmount, trm) : investedAmount,
-    totalCostUSD: inv.currency === 'USD' ? investedAmount : convertCOPtoUSD(investedAmount, trm),
-    pnlCOP: inv.currency === 'USD' ? convertUSDtoCOP(cdtPnl, trm) : cdtPnl,
-    pnlUSD: inv.currency === 'USD' ? cdtPnl : convertCOPtoUSD(cdtPnl, trm),
+    ...baseMetrics, currency: cdtCurrency,
+    currentValueCOP: cdtCurrency === 'USD' ? convertUSDtoCOP(cdtCurrentVal, trm) : cdtCurrentVal,
+    currentValueUSD: cdtCurrency === 'USD' ? cdtCurrentVal : convertCOPtoUSD(cdtCurrentVal, trm),
+    totalCostCOP: cdtCurrency === 'USD' ? convertUSDtoCOP(investedAmount, trm) : investedAmount,
+    totalCostUSD: cdtCurrency === 'USD' ? investedAmount : convertCOPtoUSD(investedAmount, trm),
+    pnlCOP: cdtCurrency === 'USD' ? convertUSDtoCOP(cdtPnl, trm) : cdtPnl,
+    pnlUSD: cdtCurrency === 'USD' ? cdtPnl : convertCOPtoUSD(cdtPnl, trm),
     pnlPercentage: cdtPnlPct, isPositive: true
   } : baseMetrics;
 
-  const pnlAmount = m.currency === 'USD' ? m.pnlUSD : m.pnlCOP;
+  const assetCurrency = (m?.currency || inv?.currency || rawCurr || (isMarket ? 'USD' : 'COP')).toUpperCase();
+  const isUSD = assetCurrency === 'USD';
+  const formatInvestMoney = (amt, cur = assetCurrency) => cur === 'USD' ? formatUSD(amt, isPrivacyMode, showDecimals) : formatCurrency(amt, isPrivacyMode, showDecimals);
+  const pnlAmount = isUSD ? m.pnlUSD : m.pnlCOP;
   const assetTypeLabel = isPrivateLoan ? 'Préstamo' : inv.subType === 'bond' || inv.assetType === 'bond' ? 'Bono' : inv.assetType === 'crypto' || inv.category === 'crypto' ? 'Cripto' : inv.assetType === 'stock' || inv.category === 'variable' ? 'Acción' : inv.assetType === 'etf' ? 'ETF' : isCDT ? 'CDT' : 'Fondo';
   const badgeColor = isPrivateLoan || (!isCDT && m.isPositive) || (isCDT && !isMatured) ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : isMatured ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' : 'bg-rose-500/10 text-rose-500 border-rose-500/20';
-  const isMarket = ['crypto', 'variable', 'stock', 'etf'].includes(inv.category) || Boolean(inv.ticker);
 
   return (
     <SwipeableRow onEdit={onEdit ? () => onEdit(inv) : undefined} onDelete={onDelete ? () => onDelete(inv) : undefined} className="rounded-2xl" contentClassName="rounded-2xl">
@@ -84,12 +97,12 @@ export default function InvestmentCard({
           <div className="flex items-center gap-2 sm:gap-3 shrink-0 text-right">
             <div className="flex flex-col items-end justify-center">
               <span className="text-sm sm:text-base font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100 leading-tight">
-                {m.currency === 'USD' ? `${formatInvestMoney(m.currentValueUSD, 'USD')} USD` : `${formatInvestMoney(m.currentValueCOP, 'COP')} COP`}
+                {isUSD ? `${formatInvestMoney(m.currentValueUSD, 'USD')} USD` : `${formatInvestMoney(m.currentValueCOP, 'COP')} COP`}
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {(isCDT || pnlAmount !== 0) && (
                   <span className={`text-[10px] sm:text-[11px] font-bold font-mono tracking-tight tabular-nums ${m.isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'}`}>
-                    {m.isPositive ? '+' : ''}{formatInvestMoney(pnlAmount, m.currency)}
+                    {m.isPositive ? '+' : ''}{formatInvestMoney(pnlAmount, isUSD ? 'USD' : 'COP')}
                   </span>
                 )}
                 <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-tight tabular-nums border ${badgeColor}`}>
@@ -113,16 +126,16 @@ export default function InvestmentCard({
           <div className="p-4 sm:p-5 pt-3.5 space-y-3.5 bg-slate-50/50 dark:bg-white/[0.01]">
             <div className="flex items-center gap-1.5 flex-wrap pt-1 pb-2 border-b border-slate-100 dark:border-white/5 text-xs text-slate-500 font-medium">
               <span className="text-[11px] opacity-75">Equivalente:</span>
-              <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">{m.currency === 'USD' ? `≈ ${formatInvestMoney(m.currentValueCOP, 'COP')} COP` : `≈ ${formatInvestMoney(m.currentValueUSD, 'USD')} USD`}</span>
+              <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-xs">{isUSD ? `≈ ${formatInvestMoney(m.currentValueCOP, 'COP')} COP` : `≈ ${formatInvestMoney(m.currentValueUSD, 'USD')} USD`}</span>
               <span className="opacity-60 text-[10px] font-mono shrink-0">(TRM: {formatInvestMoney(trm || 4050, 'COP')})</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800/80">
               {[
-                { title: 'CAPITAL INVERTIDO', val: m.currency === 'USD' ? `${formatInvestMoney(m.totalCostUSD, 'USD')} USD` : `${formatInvestMoney(m.totalCostCOP, 'COP')} COP`, sub: m.currency === 'USD' ? `≈ ${formatInvestMoney(m.totalCostCOP, 'COP')} COP` : `≈ ${formatInvestMoney(m.totalCostUSD, 'USD')} USD` },
-                { title: 'RENDIMIENTO TOTAL', val: `${m.currency === 'USD' ? `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD` : `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP`} (${m.pnlPercentage >= 0 ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%)`, sub: `≈ ${m.currency === 'USD' ? `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP` : `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD`}`, isPnl: true },
-                { title: 'PRECIO ACTUAL', val: m.shares > 0 ? formatInvestMoney(m.currentPrice, m.currency) : formatInvestMoney(m.currency === 'USD' ? m.currentValueUSD : m.currentValueCOP, m.currency), sub: m.shares > 0 ? `${m.shares.toLocaleString('es-CO', { maximumFractionDigits: 4 })} ${m.ticker || 'uds'}` : '1 posición', border: true },
-                { title: 'PRECIO DE COMPRA', val: m.shares > 0 ? formatInvestMoney(m.buyPrice, m.currency) : formatInvestMoney(m.currency === 'USD' ? m.totalCostUSD : m.totalCostCOP, m.currency), sub: m.shares > 0 ? 'Precio Promedio (PPP)' : 'Costo inicial', border: true }
+                { title: 'CAPITAL INVERTIDO', val: isUSD ? `${formatInvestMoney(m.totalCostUSD, 'USD')} USD` : `${formatInvestMoney(m.totalCostCOP, 'COP')} COP`, sub: isUSD ? `≈ ${formatInvestMoney(m.totalCostCOP, 'COP')} COP` : `≈ ${formatInvestMoney(m.totalCostUSD, 'USD')} USD` },
+                { title: 'RENDIMIENTO TOTAL', val: `${isUSD ? `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD` : `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP`} (${m.pnlPercentage >= 0 ? '+' : ''}${m.pnlPercentage ? m.pnlPercentage.toFixed(2) : '0.00'}%)`, sub: `≈ ${isUSD ? `${m.pnlCOP >= 0 ? '+' : ''}${formatInvestMoney(m.pnlCOP, 'COP')} COP` : `${m.pnlUSD >= 0 ? '+' : ''}${formatInvestMoney(m.pnlUSD, 'USD')} USD`}`, isPnl: true },
+                { title: 'PRECIO ACTUAL', val: m.shares > 0 ? formatInvestMoney(m.currentPrice, isUSD ? 'USD' : 'COP') : formatInvestMoney(isUSD ? m.currentValueUSD : m.currentValueCOP, isUSD ? 'USD' : 'COP'), sub: m.shares > 0 ? `${m.shares.toLocaleString('es-CO', { maximumFractionDigits: 4 })} ${m.ticker || 'uds'}` : '1 posición', border: true },
+                { title: 'PRECIO DE COMPRA', val: m.shares > 0 ? formatInvestMoney(m.buyPrice, isUSD ? 'USD' : 'COP') : formatInvestMoney(isUSD ? m.totalCostUSD : m.totalCostCOP, isUSD ? 'USD' : 'COP'), sub: m.shares > 0 ? 'Precio Promedio (PPP)' : 'Costo inicial', border: true }
               ].map((it, i) => (
                 <div key={i} className={it.border ? "pt-2 border-t border-slate-200/60 dark:border-white/5" : ""}>
                   <span className="block text-[10px] tracking-wider text-slate-400 font-semibold uppercase">{it.title}</span>
@@ -132,8 +145,12 @@ export default function InvestmentCard({
               ))}
             </div>
 
-            <InvestmentFixedIncomeDetails inv={inv} isCDT={isCDT} isPrivateLoan={isPrivateLoan} isMatured={isMatured} cdtStats={maturityStats} accruedStats={accruedStats} maturityStats={maturityStats} cdtTermDays={cdtTermDays} formatInvestMoney={formatInvestMoney} onOpenLiquidation={onOpenLiquidation} />
-            <InvestmentLotHistory asset={inv} lots={m.lots || []} currency={m.currency} onOpenAddLot={onOpenAddLot} onDeleteLot={onDeleteLot} />
+            {(isCDT || isPrivateLoan) && (
+              <InvestmentFixedIncomeDetails inv={inv} isCDT={isCDT} isPrivateLoan={isPrivateLoan} isMatured={isMatured} cdtStats={maturityStats} accruedStats={accruedStats} maturityStats={maturityStats} cdtTermDays={cdtTermDays} formatInvestMoney={formatInvestMoney} onOpenLiquidation={onOpenLiquidation} />
+            )}
+            {isMarket && (
+              <InvestmentLotHistory asset={inv} lots={m.lots || []} currency={isUSD ? 'USD' : 'COP'} onOpenAddLot={onOpenAddLot} onDeleteLot={onDeleteLot} />
+            )}
           </div>
         </div>
       </div>

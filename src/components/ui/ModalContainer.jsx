@@ -58,6 +58,8 @@ export default function ModalContainer({ modalControls, financeData = {}, financ
           <AddInvestmentModal
             isOpen={isInvestmentOpen} onClose={m.closeInvestment || m.closeInvestmentModal || closeInvestment}
             onSave={(newInv) => { m.handleAddInvestment?.(newInv); closeInvestment(); m.handleTabChange?.('investments'); }}
+            accounts={m.accounts || []}
+            {...m}
           />
         )}
       </AnimatePresence>

@@ -48,28 +48,36 @@ export default function useInvestmentLiquidation({
       const maturityTotal = Number(stats?.maturityTotal || inv.investedAmount || 0);
       const netGain = Number(stats?.netReturn || 0);
       const invested = Number(inv.investedAmount || inv.buyPrice || 0);
+      const entityOrName = inv.institution || inv.bank || inv.name || 'CDT';
+      const capitalNote = `Retorno de Capital CDT: ${entityOrName}`;
+      const cleanYieldTitle = /^cdt\b/i.test(inv.name || '')
+        ? `Rendimiento Neto: ${inv.name}`
+        : `Rendimiento Neto CDT: ${entityOrName}`;
 
       // 1. Crear transacciones contables respetando la separación de capital y rendimiento
       if (onAddTransaction) {
         const txDate = liquidationDate || new Date().toISOString().split('T')[0];
+        const buildTxCapital = (amt) => ({
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-cap-' + Date.now()),
+          date: txDate,
+          type: 'income',
+          amount: amt,
+          accountId: selectedAccount ? selectedAccount.id : null,
+          accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
+          category: 'Retorno de Capital / Inversiones',
+          categoryId: 'cat-inversiones',
+          categoryName: 'Retorno de Capital',
+          subcategoryId: 'sub-retorno-capital',
+          subcategoryName: 'Retorno de Capital',
+          isCapitalReturn: true,
+          isTransfer: true,
+          displayName: capitalNote,
+          description: capitalNote,
+          note: capitalNote
+        });
 
         if (invested > 0 && netGain > 0) {
-          // Retorno de Capital: afecta balance sin inflar ingresos operativos
-          const txCapital = {
-            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-cap-' + Date.now()),
-            date: txDate,
-            type: 'income',
-            amount: invested,
-            accountId: selectedAccount ? selectedAccount.id : null,
-            accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
-            category: 'Retorno de Capital / Inversiones',
-            categoryId: 'cat-inversiones',
-            subcategoryId: 'sub-retorno-capital',
-            isCapitalReturn: true,
-            isTransfer: true, // Asegura exclusión de ingresos operativos en motores que ignoran banderas custom
-            note: `Liquidación Capital: ${inv.name}`
-          };
-          onAddTransaction(txCapital);
+          onAddTransaction(buildTxCapital(invested));
 
           // Rendimiento Neto Ganado: ingreso operativo genuino
           const txYield = {
@@ -83,27 +91,14 @@ export default function useInvestmentLiquidation({
             categoryId: 'cat-inversiones',
             subcategoryId: 'sub-rendimiento-inversion',
             isInvestmentYield: true,
-            note: `Rendimiento Neto CDT: ${inv.name}`
+            description: cleanYieldTitle,
+            note: cleanYieldTitle
           };
           onAddTransaction(txYield);
         } else {
           // Si netGain <= 0 y no hay rendimiento, solo se emite txCapital con maturityTotal
           const capitalAmount = maturityTotal > 0 ? maturityTotal : (invested > 0 ? invested : 0);
-          const txCapital = {
-            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('tx-cap-' + Date.now()),
-            date: txDate,
-            type: 'income',
-            amount: capitalAmount,
-            accountId: selectedAccount ? selectedAccount.id : null,
-            accountName: selectedAccount ? selectedAccount.name : 'Cuenta Principal',
-            category: 'Retorno de Capital / Inversiones',
-            categoryId: 'cat-inversiones',
-            subcategoryId: 'sub-retorno-capital',
-            isCapitalReturn: true,
-            isTransfer: true,
-            note: `Liquidación Capital: ${inv.name}`
-          };
-          onAddTransaction(txCapital);
+          onAddTransaction(buildTxCapital(capitalAmount));
         }
       }
 
@@ -116,7 +111,16 @@ export default function useInvestmentLiquidation({
           liquidatedAt: liquidationDate || new Date().toISOString().split('T')[0],
           liquidatedAmount: maturityTotal,
           liquidatedAccountId: selectedAccount ? selectedAccount.id : null,
-          currentAmount: 0
+          currentAmount: 0,
+          raw_data: {
+            ...(typeof inv.raw_data === 'object' && inv.raw_data !== null ? inv.raw_data : {}),
+            status: 'liquidated',
+            isLiquidated: true,
+            liquidatedAt: liquidationDate || new Date().toISOString().split('T')[0],
+            liquidatedAmount: maturityTotal,
+            liquidatedAccountId: selectedAccount ? selectedAccount.id : null,
+            currentAmount: 0
+          }
         });
       }
 

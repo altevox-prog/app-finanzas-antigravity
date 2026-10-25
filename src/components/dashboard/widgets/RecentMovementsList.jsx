@@ -45,8 +45,12 @@ export default function RecentMovementsList({
         const invoiceTitle = inv.consecutive
           ? (/^factura\b/i.test(inv.consecutive) ? inv.consecutive : `Factura ${inv.consecutive}`)
           : 'Factura';
-        const rawDisplayName = (!isDebtRelated || !isPlaceholderTransfer) ? tx?.displayName : null;
-        const title = inv.isInvoice ? invoiceTitle : (rawDisplayName || tx?.note || tx?.categoryName || tx?.category || 'Movimiento');
+        const displayName = (tx?.isCapitalReturn && (tx?.note || tx?.description))
+          ? (tx.note || tx.description)
+          : (isPlaceholderTransfer && (tx?.note || tx?.description))
+            ? (tx.note || tx.description)
+            : (tx?.displayName || tx?.note || tx?.categoryName || 'Movimiento');
+        const title = inv.isInvoice ? invoiceTitle : displayName;
         const defaultSubtitle = `${accountLabel ? `${accountLabel} • ` : ''}${dateLabel || 'Reciente'}`;
         const transferSubtitle = tx?.displaySubtitle || `Transferencia interna · ${dateLabel || 'Reciente'}`;
         const subtitle = inv.isInvoice

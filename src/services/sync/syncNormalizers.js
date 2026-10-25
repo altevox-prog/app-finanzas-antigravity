@@ -94,14 +94,28 @@ export function normalizeRemoteInvestment(inv) {
   const raw = safeJson(inv.raw_data);
   const invAmount = pickNum(inv.investedAmount, inv.invested_amount, raw.investedAmount, raw.invested_amount, inv.amount, raw.amount, inv.totalInvested, raw.totalInvested, inv.buyPrice, raw.buyPrice);
   const currVal = pickNum(inv.currentAmount, inv.currentValue, inv.current_value, raw.currentAmount, raw.currentValue, raw.current_value, invAmount);
+  const currentPriceVal = pickNum(inv.currentPrice, inv.current_price, raw.currentPrice, raw.current_price, raw.unitPrice, null);
   const rateVal = safeNum(inv.rate ?? raw.rate ?? inv.interestRate ?? raw.interestRate);
+  const dueDateVal = inv.dueDate || inv.due_date || raw.dueDate || raw.due_date || raw.maturityDate || raw.maturity_date || null;
+  const startDateVal = inv.startDate || inv.start_date || raw.startDate || raw.start_date || raw.issueDate || raw.issue_date || null;
+  const rawCurr = raw.currency || (typeof inv.raw_data === 'string' ? safeJson(inv.raw_data)?.currency : null);
+  const finalCurrency = (inv.currency || rawCurr || (['crypto', 'variable', 'stock', 'etf'].includes(inv.category || raw.category) ? 'USD' : 'COP')).toUpperCase();
+  const isLiquidated = Boolean(inv.isLiquidated || inv.is_liquidated || raw.isLiquidated || raw.is_liquidated || inv.status === 'liquidated' || raw.status === 'liquidated');
+  const statusVal = isLiquidated ? 'liquidated' : (inv.status || raw.status || 'active');
   return {
     ...raw, ...inv, amount: invAmount, investedAmount: invAmount, invested_amount: invAmount, totalInvested: invAmount,
+    currentPrice: (currentPriceVal !== null && currentPriceVal > 0) ? currentPriceVal : undefined,
+    current_price: (currentPriceVal !== null && currentPriceVal > 0) ? currentPriceVal : undefined,
     currentAmount: currVal, currentValue: currVal, current_value: currVal, category: inv.category || raw.category || 'fixed',
     assetType: inv.assetType || inv.asset_type || raw.assetType || (inv.category === 'fixed' ? 'cdt' : 'other'),
     type: inv.subtype || inv.type || raw.subtype || raw.type || 'fixed_income', subtype: inv.subtype || inv.type || raw.subtype || raw.type || 'cdt',
     institution: inv.institution || raw.institution || null, interestRate: rateVal, rate: rateVal,
-    dueDate: inv.dueDate || inv.due_date || raw.dueDate || raw.due_date || null, startDate: inv.startDate || inv.start_date || raw.startDate || raw.start_date || null
+    dueDate: dueDateVal, due_date: dueDateVal, startDate: startDateVal, start_date: startDateVal,
+    currency: finalCurrency,
+    status: statusVal,
+    isLiquidated,
+    liquidatedAt: inv.liquidatedAt || inv.liquidated_at || raw.liquidatedAt || raw.liquidated_at || null,
+    liquidatedAmount: pickNum(inv.liquidatedAmount, inv.liquidated_amount, raw.liquidatedAmount, raw.liquidated_amount, 0)
   };
 }
 

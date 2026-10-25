@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { safeNumber } from '../utils/financeMath';
-import { getTodayLocalString, normalizeDateToYYYYMMDD } from '../services/recurring/recurringAutoProcessor';
+import { normalizeDateToYYYYMMDD } from '../services/recurring/recurringAutoProcessor';
 
 export function useFinancialDueAlerts({
   accounts = [], investments = [], debtsAndLoans = [],
@@ -64,25 +64,45 @@ export function useFinancialDueAlerts({
       }
     });
 
-    // 3. Pagos Recurrentes
-    const todayStr = getTodayLocalString();
+    // 3. Pagos Recurrentes (Automáticos y Por Confirmar)
     const allRec = (recurringPayments && recurringPayments.length > 0) ? recurringPayments : (subscriptions || []);
     allRec.forEach((item) => {
-      if (!item) return;
-      if (item.mode === 'manual' && item.active !== false && item.isActive !== false) {
-        const nextDate = normalizeDateToYYYYMMDD(item.nextPaymentDate || item.nextDate || item.next_date);
-        if (nextDate && nextDate <= todayStr) {
-          const isOverdue = nextDate < todayStr, isExp = item.type !== 'income';
-          list.push({ id: `pending-recurring-${item.id}-${nextDate}`, type: 'recurring_pending', category: isExp ? 'Gasto por confirmar' : 'Ingreso por confirmar', title: item.name || 'Movimiento recurrente', message: isOverdue ? `Venció el ${nextDate}. Requiere confirmación.` : `Vence hoy. Confirma si deseas registrar este ${isExp ? 'gasto' : 'ingreso'}.`, amount: Number(item.amount) || 0, isExpense: isExp, date: nextDate, urgency: isOverdue ? 'urgent' : 'warning', badge: isOverdue ? 'Vencido' : 'Pendiente hoy', icon: 'Bell', recurringItem: item });
-        }
-      } else if (item.mode !== 'manual' && item.billingDay) {
+      if (!item || item.active === false || item.isActive === false) return;
+      const rawNextDate = item.nextPaymentDate || item.nextDate || item.next_date;
+      let targetDateStr = normalizeDateToYYYYMMDD(rawNextDate);
+      if (!targetDateStr && item.billingDay) {
         const bDay = parseInt(item.billingDay, 10);
         if (!isNaN(bDay)) {
-          let target = new Date(todayY, todayM, bDay), diff = getDiffDays(target);
-          if (diff < 0 && Math.abs(diff) > 3) { target = new Date(todayY, todayM + 1, bDay); diff = getDiffDays(target); }
-          if (diff >= 0 && diff <= 3) {
-            list.push({ id: `sub-${item.id}-${todayY}-${todayM + 1}`, type: 'subscription', category: 'Suscripción', title: `Cobro: ${item.name}`, message: diff === 0 ? `Hoy se realiza el débito de ${item.name}.` : diff === 1 ? `Mañana se realiza el débito de ${item.name}.` : `En ${diff} días se procesará el cobro de ${item.name}.`, date: target.toISOString().split('T')[0], urgency: diff === 0 ? 'urgent' : 'warning', badge: diff === 0 ? 'Cobro hoy' : `En ${diff} días`, icon: 'Receipt', actionPayload: { subscription: item } });
-          }
+          let tDate = new Date(todayY, todayM, bDay);
+          if (getDiffDays(tDate) < 0 && Math.abs(getDiffDays(tDate)) > 3) tDate = new Date(todayY, todayM + 1, bDay);
+          targetDateStr = `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}-${String(tDate.getDate()).padStart(2, '0')}`;
+        }
+      }
+      if (!targetDateStr) return;
+      const targetObj = parseYMD(targetDateStr);
+      if (!targetObj) return;
+      const diff = getDiffDays(targetObj);
+      if (diff > 3) return;
+
+      const isManual = item.mode === 'manual', isExp = item.type !== 'income', amt = Number(item.amount) || 0;
+      const formattedAmt = amt > 0 ? `$ ${amt.toLocaleString('es-CO')}` : '', accountLabel = item.accountName || item.account || '';
+
+      if (isManual) {
+        if (diff < 0) {
+          list.push({ id: `pending-recurring-${item.id}-${targetDateStr}`, type: 'recurring_pending', category: isExp ? 'Gasto por confirmar' : 'Ingreso por confirmar', title: item.name || 'Movimiento recurrente', message: `Venció el ${targetDateStr}. Requiere confirmación manual para anotarlo en tu balance.`, amount: amt, isExpense: isExp, date: targetDateStr, urgency: 'urgent', badge: 'Vencido', icon: 'AlertTriangle', recurringItem: item, actionPayload: { subscription: item, action: 'confirm' } });
+        } else if (diff === 0) {
+          list.push({ id: `pending-recurring-${item.id}-${targetDateStr}`, type: 'recurring_pending', category: isExp ? 'Gasto por confirmar' : 'Ingreso por confirmar', title: item.name || 'Movimiento recurrente', message: `Vence hoy (${formattedAmt}). Revisa y confirma el registro en tu balance.`, amount: amt, isExpense: isExp, date: targetDateStr, urgency: 'warning', badge: 'Pendiente hoy', icon: 'Bell', recurringItem: item, actionPayload: { subscription: item, action: 'confirm' } });
+        } else {
+          const daysText = diff === 1 ? 'mañana' : `en ${diff} días`;
+          list.push({ id: `upcoming-manual-${item.id}-${targetDateStr}`, type: 'recurring_pending', category: isExp ? 'Gasto por confirmar' : 'Ingreso por confirmar', title: `Pago próximo: ${item.name || 'Recurrente'}`, message: `Vence ${daysText} (${formattedAmt}). Recuerda realizar el pago para luego confirmarlo.`, amount: amt, isExpense: isExp, date: targetDateStr, urgency: 'info', badge: diff === 1 ? 'Vence mañana' : `En ${diff}d`, icon: 'Clock', recurringItem: item, actionPayload: { subscription: item, action: 'view' } });
+        }
+      } else {
+        const accInfo = accountLabel ? ` de ${accountLabel}` : '';
+        if (diff === 0) {
+          list.push({ id: `sub-${item.id}-${targetDateStr}`, type: 'subscription', category: 'Débito Automático', title: `Débito hoy: ${item.name}`, message: `Hoy se procesará automáticamente el débito de ${formattedAmt}${accInfo}.`, amount: amt, date: targetDateStr, urgency: 'urgent', badge: 'Débito hoy', icon: 'Receipt', recurringItem: item, actionPayload: { subscription: item, action: 'view' } });
+        } else if (diff > 0 && diff <= 3) {
+          const daysText = diff === 1 ? 'mañana' : `en ${diff} días`;
+          list.push({ id: `sub-${item.id}-${targetDateStr}`, type: 'subscription', category: 'Débito Automático', title: `Débito programado: ${item.name}`, message: `Se debitará ${daysText} (${formattedAmt})${accInfo}. Asegúrate de tener saldo suficiente.`, amount: amt, date: targetDateStr, urgency: 'warning', badge: diff === 1 ? 'Debita mañana' : `En ${diff}d`, icon: 'Clock', recurringItem: item, actionPayload: { subscription: item, action: 'view' } });
         }
       }
     });
@@ -101,13 +121,7 @@ export function useFinancialDueAlerts({
       const diff = getDiffDays(targetDate);
 
       if (diff >= 0 && diff <= 3) {
-        list.push({
-          id: `debt-${item.id}-${todayY}-${todayM + 1}`, type: isRec ? 'loan_collection' : 'debt_payment',
-          category: isRec ? 'Por Cobrar (Me deben)' : 'Deuda (Debo)',
-          title: diff === 1 ? (isRec ? `Recordatorio de Cobro: ${item.name}` : `Recordatorio: Vence mañana ${item.name}`) : (isRec ? `Cobro Próximo: ${item.name}` : `Vencimiento: ${item.name}`),
-          message: diff === 0 ? (isRec ? `Hoy corresponde cobrar a ${item.name}.` : `Hoy es el día límite de pago para ${item.name}.`) : diff === 1 ? (isRec ? `Mañana corresponde cobrarle a ${item.name}.` : `El pago de ${item.name} vence mañana.`) : `Faltan ${diff} días para el vencimiento de ${item.name}.`,
-          date: targetStr, urgency: diff === 0 ? 'urgent' : 'warning', badge: diff === 0 ? (isRec ? 'Cobro hoy' : 'Vence hoy') : `En ${diff} días`, icon: isRec ? 'Receipt' : 'Clock', actionPayload: { debtOrLoan: item }
-        });
+        list.push({ id: `debt-${item.id}-${todayY}-${todayM + 1}`, type: isRec ? 'loan_collection' : 'debt_payment', category: isRec ? 'Por Cobrar (Me deben)' : 'Deuda (Debo)', title: diff === 1 ? (isRec ? `Recordatorio de Cobro: ${item.name}` : `Recordatorio: Vence mañana ${item.name}`) : (isRec ? `Cobro Próximo: ${item.name}` : `Vencimiento: ${item.name}`), message: diff === 0 ? (isRec ? `Hoy corresponde cobrar a ${item.name}.` : `Hoy es el día límite de pago para ${item.name}.`) : diff === 1 ? (isRec ? `Mañana corresponde cobrarle a ${item.name}.` : `El pago de ${item.name} vence mañana.`) : `Faltan ${diff} días para el vencimiento de ${item.name}.`, date: targetStr, urgency: diff === 0 ? 'urgent' : 'warning', badge: diff === 0 ? (isRec ? 'Cobro hoy' : 'Vence hoy') : `En ${diff} días`, icon: isRec ? 'Receipt' : 'Clock', actionPayload: { debtOrLoan: item } });
       } else if (diff < 0 && Math.abs(diff) <= 14) {
         list.push({ id: `debt-overdue-${item.id}-${todayY}-${todayM + 1}`, type: 'debt_overdue', category: isRec ? 'Por Cobrar (Me deben)' : 'Deuda (Debo)', title: isRec ? `Cobro Atrasado: ${item.name}` : `Deuda Vencida: ${item.name}`, message: `La fecha de vencimiento de ${item.name} pasó hace ${Math.abs(diff)} día(s).`, date: targetStr, urgency: 'urgent', badge: 'Atrasado', icon: 'AlertTriangle', actionPayload: { debtOrLoan: item } });
       }
@@ -123,13 +137,7 @@ export function useFinancialDueAlerts({
       if (todayD === effectiveDay) {
         const installment = Math.round(Math.max(0, target - current) / Math.max(1, Number(goal.months) || 1));
         const targetAcc = (accounts || []).find((a) => String(a.id) === String(goal.target_account_id || goal.targetAccountId));
-        list.push({
-          id: `goal-reminder-${goal.id}-${todayY}-${todayM + 1}`, type: 'savings_goal', category: 'Meta de Ahorro',
-          title: `Recordatorio de ahorro: ${goal.name}`,
-          message: `Hoy corresponde abonar $${installment.toLocaleString('es-CO')} en ${targetAcc ? targetAcc.name : 'tu cuenta'}.`,
-          date: `${todayY}-${String(todayM + 1).padStart(2, '0')}-${String(effectiveDay).padStart(2, '0')}`,
-          urgency: 'info', badge: 'Ahorro hoy', icon: 'Target', actionPayload: { goal }
-        });
+        list.push({ id: `goal-reminder-${goal.id}-${todayY}-${todayM + 1}`, type: 'savings_goal', category: 'Meta de Ahorro', title: `Recordatorio de ahorro: ${goal.name}`, message: `Hoy corresponde abonar $${installment.toLocaleString('es-CO')} en ${targetAcc ? targetAcc.name : 'tu cuenta'}.`, date: `${todayY}-${String(todayM + 1).padStart(2, '0')}-${String(effectiveDay).padStart(2, '0')}`, urgency: 'info', badge: 'Ahorro hoy', icon: 'Target', actionPayload: { goal } });
       }
     });
 

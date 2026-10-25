@@ -7,12 +7,16 @@ export { parseStrictNumber, normalizeLot, getAssetLots, computeLotsSummary };
 export const calculateAssetMetrics = (asset, livePrices = {}, trm = 4050) => {
   if (!asset) return {};
   const ticker = (asset.ticker || asset.symbol || (asset.name && asset.name.length <= 6 ? asset.name : '')).toUpperCase().trim();
-  const currency = (asset.currency || 'USD').toUpperCase();
+  const rawData = typeof asset.raw_data === 'string' ? (() => { try { return JSON.parse(asset.raw_data || '{}'); } catch { return {}; } })() : (asset.raw_data || {});
+  const currency = (asset.currency || rawData.currency || (['crypto', 'variable', 'stock', 'etf'].includes(asset.category?.toLowerCase() || asset.category) ? 'USD' : 'COP')).toUpperCase();
   const trmValue = parseStrictNumber(trm, 4050);
   const livePrice = parseStrictNumber(livePrices[ticker], 0);
 
-  const isPrivateLoan = asset.subType === 'private_loan' || asset.assetType === 'loan';
-  const isCDT = !isPrivateLoan && (
+  const isMarket = ['crypto', 'variable', 'stock', 'etf'].includes(asset.category?.toLowerCase()) || 
+                   ['crypto', 'stock', 'etf'].includes(asset.assetType?.toLowerCase()) || 
+                   Boolean(asset.ticker);
+  const isPrivateLoan = !isMarket && (asset.subType === 'private_loan' || asset.assetType === 'loan');
+  const isCDT = !isMarket && !isPrivateLoan && (
     asset.assetType === 'cdt' || asset.assetType === 'fixed_income' ||
     asset.category === 'fixed' || asset.category === 'CDT' ||
     asset.subType === 'cdt' || asset.subtype === 'cdt'
@@ -47,7 +51,7 @@ export const calculateAssetMetrics = (asset, livePrices = {}, trm = 4050) => {
 
     return {
       ticker, shares: 0, buyPrice: invested, currentPrice: currentValueOrigin,
-      currency, totalCostOrigin, currentValueOrigin, gainOrigin,
+      currency: currency || 'USD', totalCostOrigin, currentValueOrigin, gainOrigin,
       totalCostUSD, currentValueUSD, pnlUSD: currentValueUSD - totalCostUSD,
       totalCostCOP, currentValueCOP, pnlCOP: currentValueCOP - totalCostCOP,
       pnlPercentage, isPositive: gainOrigin >= 0, lots: [],
@@ -56,16 +60,15 @@ export const calculateAssetMetrics = (asset, livePrices = {}, trm = 4050) => {
   }
 
   const lots = getAssetLots(asset);
-  const { totalShares, totalInvested, avgBuyPrice } = computeLotsSummary(lots);
+  const { totalShares: lotShares, totalInvested: lotInvested, avgBuyPrice: lotBuyPrice } = computeLotsSummary(lots);
+  const rawShares = parseStrictNumber(asset.shares ?? asset.quantity, 0);
+  const shares = lotShares > 0 ? lotShares : rawShares;
+  const rawBuyPrice = parseStrictNumber(asset.buyPrice ?? asset.purchasePrice, 0);
+  const avgBuyPrice = lotBuyPrice > 0 ? lotBuyPrice : (rawBuyPrice > 0 ? rawBuyPrice : (shares > 0 && asset.investedAmount ? parseStrictNumber(asset.investedAmount) / shares : 0));
+  const currentPrice = livePrice > 0 ? livePrice : parseStrictNumber(asset.currentPrice ?? asset.current_price ?? asset.unitPrice, avgBuyPrice);
 
-  const hasMarketShares = totalShares > 0;
-  const currentUnitPrice = livePrice > 0 ? livePrice : parseStrictNumber(asset.currentPrice ?? asset.unitPrice, avgBuyPrice);
-
-  const totalCostOrigin = hasMarketShares ? totalInvested : parseStrictNumber(asset.investedAmount ?? asset.amount, 0);
-  const currentValueOrigin = hasMarketShares
-    ? (totalShares * currentUnitPrice)
-    : parseStrictNumber(asset.currentAmount ?? asset.currentValue, totalCostOrigin);
-
+  const totalCostOrigin = shares * avgBuyPrice;
+  const currentValueOrigin = shares * currentPrice;
   const gainOrigin = currentValueOrigin - totalCostOrigin;
   const pnlPercentage = totalCostOrigin > 0 ? (gainOrigin / totalCostOrigin) * 100 : 0;
 
@@ -75,8 +78,8 @@ export const calculateAssetMetrics = (asset, livePrices = {}, trm = 4050) => {
   const currentValueCOP = currency === 'COP' ? currentValueOrigin : convertUSDtoCOP(currentValueOrigin, trmValue);
 
   return {
-    ticker, shares: totalShares, buyPrice: avgBuyPrice, currentPrice: currentUnitPrice,
-    currency, totalCostOrigin, currentValueOrigin, gainOrigin,
+    ticker, shares, buyPrice: avgBuyPrice, currentPrice,
+    currency: currency || 'USD', totalCostOrigin, currentValueOrigin, gainOrigin,
     totalCostUSD, currentValueUSD, pnlUSD: currentValueUSD - totalCostUSD,
     totalCostCOP, currentValueCOP, pnlCOP: currentValueCOP - totalCostCOP,
     pnlPercentage, isPositive: gainOrigin >= 0, lots
@@ -89,8 +92,11 @@ export const consolidateInvestmentsList = (list = []) => {
 
   list.forEach((inv) => {
     if (!inv) return;
-    const isPrivateLoan = inv.subType === 'private_loan' || inv.assetType === 'loan';
-    const isCDT = !isPrivateLoan && (
+    const isMarket = ['crypto', 'variable', 'stock', 'etf'].includes(inv.category?.toLowerCase()) || 
+                     ['crypto', 'stock', 'etf'].includes(inv.assetType?.toLowerCase()) || 
+                     Boolean(inv.ticker);
+    const isPrivateLoan = !isMarket && (inv.subType === 'private_loan' || inv.assetType === 'loan');
+    const isCDT = !isMarket && !isPrivateLoan && (
       inv.assetType === 'cdt' || inv.assetType === 'fixed_income' ||
       inv.category === 'fixed' || inv.category === 'CDT' ||
       inv.subType === 'cdt' || inv.subtype === 'cdt'

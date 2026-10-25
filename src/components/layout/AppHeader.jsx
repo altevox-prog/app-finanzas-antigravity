@@ -140,7 +140,7 @@ export default function AppHeader({
                   <Bell className="w-4.5 h-4.5" />
                   {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500/90 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm ring-2 ring-[#0D0F17]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                 </button>
-                <NotificationCenter isOpen={isNotificationCenterOpen} onClose={() => setIsNotificationCenterOpen(false)} notifications={alerts} activeNotifications={activeAlerts} onDismiss={dismissAlert} onMarkAllAsRead={markAllAsRead} onApproveRecurring={handleApproveRecurring} onSkipRecurring={handleSkipRecurring} />
+                <NotificationCenter isOpen={isNotificationCenterOpen} onClose={() => setIsNotificationCenterOpen(false)} notifications={alerts} activeNotifications={activeAlerts} onDismiss={dismissAlert} onMarkAllAsRead={markAllAsRead} onApproveRecurring={handleApproveRecurring} onSkipRecurring={handleSkipRecurring} onNavigate={onNavigate} />
               </div>
             </div>
           </div>

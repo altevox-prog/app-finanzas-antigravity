@@ -37,7 +37,7 @@ export function mapTransactionToSupabasePayload(tx, userId) {
 
   return {
     id: cleanId, user_id: userId, type: resolvedType, amount, original_amount: origAmount, original_currency: origCurr,
-    exchange_rate: exRate, account_id: rawAccId ? ensureUUID(rawAccId) : null, destination_account_id: cleanDestId, category_id: catId, category: catName,
+    exchange_rate: exRate, account_id: rawAccId ? ensureUUID(rawAccId) : null, category_id: catId, category: catName,
     date: tx.date || now.split('T')[0], description: desc, notes: note, is_transfer: isTransfer,
     raw_data: { originalAmount: origAmount, originalCurrency: origCurr, exchangeRate: exRate, accountName: tx.accountName || '', categoryId: catId, categoryName: catName, subcategoryId: tx.subcategoryId || null, subcategoryName: tx.subcategoryName || null, fromAccountId: rawAccId ? ensureUUID(rawAccId) : null, toAccountId: cleanDestId, destination_account_id: cleanDestId, fromAccountName: tx.fromAccountName || null, toAccountName: tx.toAccountName || null, isTransfer, receiptImage: tx.receiptImage || null, note, transferId: tx.transferId || tx.transfer_id || null },
     updated_at: tx.updated_at || now
