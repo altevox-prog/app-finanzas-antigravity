@@ -1,4 +1,5 @@
-export const BANCOLOMBIA_SVG_PATH = '/brands/bancolombia.svg';
+export const BRAND_ASSET_VERSION = 'v=20261024';
+export const BANCOLOMBIA_SVG_PATH = `/brands/bancolombia.svg?${BRAND_ASSET_VERSION}`;
 
 export function isBancolombia(name = '', bank = '', type = '') {
   const text = `${name || ''} ${bank || ''} ${type || ''}`.toLowerCase();

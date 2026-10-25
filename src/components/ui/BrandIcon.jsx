@@ -1,6 +1,6 @@
 import React from 'react';
 import { Building2, TrendingUp } from 'lucide-react';
-import { isBancolombia, BANCOLOMBIA_SVG_PATH } from '../../utils/bankIcons';
+import { isBancolombia, BANCOLOMBIA_SVG_PATH, BRAND_ASSET_VERSION } from '../../utils/bankIcons';
 
 const BRAND_ASSETS = {
   bancolombia: '/brands/bancolombia.svg',
@@ -51,7 +51,7 @@ const BRAND_ASSETS = {
   credit: '/brands/mastercard.svg',
 };
 
-const DEFAULT_FALLBACK = '/brands/pago_en_efectivo.png';
+const DEFAULT_FALLBACK = `/brands/pago_en_efectivo.png?${BRAND_ASSET_VERSION}`;
 
 const normalizeKey = (val) => {
   if (!val) return '';
@@ -63,13 +63,22 @@ const resolveBrandAsset = (name = '', type = '', institution = '') => {
     return BANCOLOMBIA_SVG_PATH;
   }
   const candidates = [name, institution, type].map(normalizeKey).filter(Boolean);
+  let matched = null;
   for (const c of candidates) {
-    if (BRAND_ASSETS[c]) return BRAND_ASSETS[c];
-    for (const [key, asset] of Object.entries(BRAND_ASSETS)) {
-      if (c.includes(key) || (key.length >= 4 && key.includes(c))) return asset;
+    if (BRAND_ASSETS[c]) {
+      matched = BRAND_ASSETS[c];
+      break;
     }
+    for (const [key, asset] of Object.entries(BRAND_ASSETS)) {
+      if (c.includes(key) || (key.length >= 4 && key.includes(c))) {
+        matched = asset;
+        break;
+      }
+    }
+    if (matched) break;
   }
-  return null;
+  if (!matched) return null;
+  return matched.includes('?') ? matched : `${matched}?${BRAND_ASSET_VERSION}`;
 };
 
 export default function BrandIcon({
