@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Target, PieChart, PiggyBank, CreditCard, Tag, ChevronRight, Scale, FileText, ReceiptText } from 'lucide-react';
-import ProfileInvoiceHistoryModal from './modals/ProfileInvoiceHistoryModal';
+import { Target, PieChart, PiggyBank, CreditCard, Tag, ChevronRight, ChevronDown, Scale, FileText, ReceiptText } from 'lucide-react';
 
 export default function ProfileFinancesTab({
   setCurrentView, formatMoney, budgets, totalMonthExpense = 0, savingsGoals = [],
@@ -9,7 +8,7 @@ export default function ProfileFinancesTab({
   onNavigate, onClose, onOpenAccounts, accountsCount = 0, categoriesCount = 0,
   accounts = [], transactions = [], onAddTransaction, onDeleteTransaction
 }) {
-  const [isInvoiceHistoryOpen, setIsInvoiceHistoryOpen] = useState(false);
+  const [isPlanningOpen, setIsPlanningOpen] = useState(false);
 
   const handleNavView = (viewKey, altCallback) => {
     onClose?.();
@@ -18,18 +17,18 @@ export default function ProfileFinancesTab({
     else if (typeof setCurrentView === 'function') setCurrentView(viewKey);
   };
 
-  const renderItem = ({ icon: Icon, iconBg, iconColor, title, subtitle, onClick, hoverColor = 'group-hover:text-emerald-500' }) => (
+  const renderItem = ({ icon: Icon, iconBg, iconColor, title, subtitle, onClick, hoverColor = 'group-hover:text-emerald-500', className = '' }) => (
     <button
       key={title} type="button" onClick={onClick}
-      className="w-full p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group"
+      className={`w-full p-3.5 rounded-2xl border border-white/70 dark:border-white/[0.08] bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md hover:bg-white/70 dark:hover:bg-zinc-800/60 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group shadow-xs ${className}`}
     >
       <div className="flex items-center gap-3">
         <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${iconBg} ${iconColor}`}>
           <Icon className="w-4.5 h-4.5" />
         </div>
         <div>
-          <p className={`text-[13px] font-semibold text-slate-800 dark:text-zinc-100 transition-colors ${hoverColor}`}>{title}</p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">{subtitle}</p>
+          <p className={`text-[13px] font-bold text-slate-900 dark:text-white transition-colors ${hoverColor}`}>{title}</p>
+          <p className="text-xs text-slate-700 dark:text-zinc-300 font-medium">{subtitle}</p>
         </div>
       </div>
       <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
@@ -63,7 +62,8 @@ export default function ProfileFinancesTab({
     {
       icon: ReceiptText, iconBg: 'bg-sky-500/10 border-sky-500/20', iconColor: 'text-sky-600 dark:text-sky-400',
       title: 'Cuentas por Cobrar / Facturas', subtitle: 'Historial de cobros y facturas emitidas',
-      onClick: () => setIsInvoiceHistoryOpen(true), hoverColor: 'group-hover:text-sky-500'
+      onClick: () => setCurrentView('invoice_history'), hoverColor: 'group-hover:text-sky-500',
+      className: 'md:hidden'
     }
   ];
 
@@ -71,7 +71,7 @@ export default function ProfileFinancesTab({
     {
       icon: CreditCard, iconBg: 'bg-blue-500/10 border-blue-500/20', iconColor: 'text-[#007AFF]',
       title: 'Mis cuentas', subtitle: `${accountsCount} cuentas bancarias, billeteras y efectivo`,
-      onClick: () => handleNavView('accounts', onOpenAccounts), hoverColor: 'group-hover:text-[#007AFF]'
+      onClick: () => setCurrentView('accounts'), hoverColor: 'group-hover:text-[#007AFF]'
     },
     {
       icon: Tag, iconBg: 'bg-purple-500/10 border-purple-500/20', iconColor: 'text-purple-600 dark:text-purple-400',
@@ -81,32 +81,50 @@ export default function ProfileFinancesTab({
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-5 animate-fadeIn">
+      {/* 1. SECCIÓN COLAPSABLE: PLANIFICACIÓN FINANCIERA (TARJETA GLASS CAPSULAR) */}
       <div className="space-y-2.5">
-        <div className="flex items-center gap-2 px-1">
-          <Target className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-          <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Planificación financiera</h3>
-        </div>
-        <div className="space-y-2">{planningItems.map(renderItem)}</div>
+        <button
+          type="button"
+          onClick={() => setIsPlanningOpen(prev => !prev)}
+          className="w-full p-3.5 rounded-2xl border border-white/70 dark:border-white/[0.08] bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md hover:bg-white/70 dark:hover:bg-zinc-800/60 active:scale-[0.99] transition-all flex items-center justify-between text-left cursor-pointer group shadow-xs select-none"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Target className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                Planificación financiera
+              </span>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-white transition-transform duration-200 ${
+              isPlanningOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isPlanningOpen && (
+          <div className="space-y-2 pt-1 pl-0 sm:pl-2 animate-fadeIn">
+            {planningItems.map(renderItem)}
+          </div>
+        )}
       </div>
 
+      {/* 2. SECCIÓN: CUENTAS Y MÉTODOS (DISTRIBUCIÓN EN GRID DE 2 COLUMNAS) */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-2 px-1">
           <CreditCard className="w-4 h-4 text-[#007AFF]" />
-          <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Cuentas y métodos</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-zinc-200">
+            Cuentas y métodos
+          </h3>
         </div>
-        <div className="space-y-2">{accountsItems.map(renderItem)}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {accountsItems.map(renderItem)}
+        </div>
       </div>
-
-      {isInvoiceHistoryOpen && (
-        <ProfileInvoiceHistoryModal
-          onClose={() => setIsInvoiceHistoryOpen(false)}
-          accounts={accounts}
-          transactions={transactions}
-          onAddTransaction={onAddTransaction}
-          onDeleteTransaction={onDeleteTransaction}
-        />
-      )}
     </div>
   );
 }

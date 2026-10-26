@@ -34,12 +34,12 @@ export default function NetWorthChart({
   const liabilitiesStroke = totalVolume > 0 ? (liabilitiesShare / 100) * circumference : 0;
 
   return (
-    <div className="bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-5 shadow-sm space-y-5">
+    <div className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md rounded-2xl border border-white/70 dark:border-white/[0.08] p-5 shadow-xs space-y-5">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-zinc-200">
           Proporción de Balance
         </h4>
-        <span className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500">
+        <span className="text-[11px] font-medium text-slate-600 dark:text-zinc-400">
           Activos vs Pasivos
         </span>
       </div>
@@ -93,7 +93,7 @@ export default function NetWorthChart({
             <span className="text-2xl font-extrabold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums leading-none">
               {solvencyRate}%
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500 mt-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-zinc-400 mt-1">
               Solvencia
             </span>
           </div>
@@ -108,7 +108,7 @@ export default function NetWorthChart({
                 <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
                   Activos ({assetsShare.toFixed(1)}%)
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                <p className="text-[11px] text-slate-700 dark:text-zinc-300 font-medium">
                   Bienes, cuentas & inversiones
                 </p>
               </div>
@@ -125,7 +125,7 @@ export default function NetWorthChart({
                 <p className="text-xs font-bold text-rose-800 dark:text-rose-300">
                   Pasivos ({liabilitiesShare.toFixed(1)}%)
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                <p className="text-[11px] text-slate-700 dark:text-zinc-300 font-medium">
                   Deudas & créditos por pagar
                 </p>
               </div>
@@ -151,7 +151,7 @@ export default function NetWorthChart({
             title={`Pasivos: ${liabilitiesShare.toFixed(1)}%`}
           />
         </div>
-        <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-zinc-400 pt-0.5">
+        <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-zinc-300 font-semibold pt-0.5">
           <span>● {assetsShare.toFixed(1)}% en Activos</span>
           <span>● {liabilitiesShare.toFixed(1)}% en Pasivos</span>
         </div>

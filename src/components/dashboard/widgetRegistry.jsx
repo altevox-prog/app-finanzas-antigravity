@@ -9,10 +9,10 @@ import DebtsWidget from './widgets/DebtsWidget';
 import RecurringPaymentsWidget from './widgets/RecurringPaymentsWidget';
 import SavingsGoalsWidget from './widgets/SavingsGoalsWidget';
 import WeeklyExpensesChart from './WeeklyExpensesChart';
-import RecentMovementsSection from './RecentMovementsSection';
 import ReportsAndCharts from '../reports/ReportsAndCharts';
 import BudgetWidget from './widgets/BudgetWidget';
 import ExpensesAndMovementsWidget from './widgets/ExpensesAndMovementsWidget';
+import DebtsAndBudgetWidget from './widgets/DebtsAndBudgetWidget';
 
 export const WIDGET_ICON_MAP = {
   Landmark, TrendingUp, HandCoins, Wallet, ArrowDownRight, ArrowUpRight,
@@ -41,6 +41,7 @@ export function createWidgetRegistry({
   subscriptions = [],
   savingsGoals = [],
   navigateToTab = () => {},
+  setActiveTab = null,
   handleSelectTransaction = () => {},
   onOpenCalendar = () => {},
   financeActions = {},
@@ -50,6 +51,8 @@ export function createWidgetRegistry({
   modalControls,
   onOpenSavingsGoals
 } = {}) {
+  const resolvedSetActiveTab = setActiveTab || navigateToTab || (() => {});
+
   const handleOpenSavingsGoalsView = () => {
     if (onOpenSavingsGoals) {
       onOpenSavingsGoals();
@@ -80,7 +83,7 @@ export function createWidgetRegistry({
       selectedDay={selectedDay}
       financeActions={financeActions}
       onNavigateToTab={navigateToTab}
-      setActiveTab={navigateToTab}
+      setActiveTab={resolvedSetActiveTab}
       onViewAll={() => navigateToTab('transactions')}
       onNavigateToMovements={() => navigateToTab('transactions')}
       onSelectTransaction={handleSelectTransaction}
@@ -88,17 +91,31 @@ export function createWidgetRegistry({
     />
   );
 
+  const debtsAndBudgetComp = (
+    <DebtsAndBudgetWidget
+      debtsAndLoansMetrics={debtsAndLoansMetrics}
+      monthlyStats={monthlyStats}
+      totalIncome={totalIncome}
+      totalExpense={totalExpense}
+      budgets={budgets}
+      onNavigateToTab={navigateToTab}
+      setActiveTab={resolvedSetActiveTab}
+      formatMoney={formatMoney}
+    />
+  );
+
   return {
-    investments: <InvestmentsWidget investmentsMetrics={investmentsMetrics} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} formatMoney={formatMoney} />,
-    debts: <DebtsWidget debtsAndLoansMetrics={debtsAndLoansMetrics} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} formatMoney={formatMoney} />,
+    investments: <InvestmentsWidget investmentsMetrics={investmentsMetrics} onNavigateToTab={navigateToTab} setActiveTab={resolvedSetActiveTab} formatMoney={formatMoney} />,
+    debts: debtsAndBudgetComp,
+    debts_loans: debtsAndBudgetComp,
+    budget: debtsAndBudgetComp,
+    debts_and_budget: debtsAndBudgetComp,
     savings_rate: savingsGoalsComp,
     savings_goals: savingsGoalsComp,
-    budget: <BudgetWidget budgets={budgets} monthlyStats={monthlyStats} totalIncome={totalIncome} totalExpense={totalExpense} formatMoney={formatMoney} />,
     weekly_cashflow: <WeeklyExpensesChart transactions={transactions} selectedDate={selectedDate} selectedDay={selectedDay} currentMonthLabel={currentMonthLabel} formatMoney={formatMoney} />,
     expenses_category: expensesAndMovementsComp,
     expenses_and_movements: expensesAndMovementsComp,
-    recent_movements: <RecentMovementsSection transactions={displayTransactions} onViewAll={() => navigateToTab('transactions')} setActiveTab={navigateToTab} onNavigateToTab={navigateToTab} onSelectTransaction={handleSelectTransaction} onOpenTransaction={handleSelectTransaction} formatMoney={formatMoney} />,
-    recurring_payments: <RecurringPaymentsWidget recurringPayments={recurringPayments} subscriptions={subscriptions} formatMoney={formatMoney} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} />
+    recurring_payments: <RecurringPaymentsWidget recurringPayments={recurringPayments} subscriptions={subscriptions} formatMoney={formatMoney} onNavigateToTab={navigateToTab} setActiveTab={resolvedSetActiveTab} />
   };
 }
 
@@ -110,7 +127,7 @@ export const getWidgetRegistry = createWidgetRegistry;
 export const getWidgetComponent = (id, registry) => {
   if (!registry || !id) return null;
   const norm = normalizeWidgetId(id);
-  return registry[norm] || registry[id] || ((norm === 'debts_loans' || id === 'debts_loans') ? registry.debts : null);
+  return registry[norm] || registry[id] || ((norm === 'debts_loans' || id === 'debts_loans' || norm === 'budget' || id === 'budget' || norm === 'debts' || id === 'debts') ? registry.debts_and_budget : null);
 };
 
 /**
@@ -124,7 +141,7 @@ export function useWidgetRegistry(params = {}) {
     params.accounts, params.categories, params.recurringPayments, params.subscriptions,
     params.savingsGoals, params.onOpenProfile, params.modalControls, params.onOpenSavingsGoals,
     params.trm, params.weeklyCashFlow, params.hoveredWeekIndex, params.setHoveredWeekIndex,
-    params.navigateToTab, params.handleOpenDebtModal, params.handleOpenTxModal,
+    params.navigateToTab, params.setActiveTab, params.handleOpenDebtModal, params.handleOpenTxModal,
     params.handleOpenRecurringModal, params.handleSelectTransaction, params.onOpenCalendar,
     params.onSelectDay, params.onSelectCreditCardDetail, params.financeActions, params.formatMoney,
     params.budgets

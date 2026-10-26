@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { CreditCard, Plus, ArrowLeft, ChevronUp, ChevronDown, Check } from 'lucide-react';
+import { CreditCard, Plus, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { useBackHandler } from '../../hooks/useBackHandler';
 import CreditCardDetailModal from './modals/CreditCardDetailModal';
@@ -48,18 +48,18 @@ export default function AccountsAndCategories({
     .reduce((sum, acc) => sum + (safeNumber(acc?.copEquivalent) > 0 ? safeNumber(acc.copEquivalent) : 0), 0);
 
   useBackHandler(Boolean(localSelectedCard), () => setLocalSelectedCard(null));
-  const handleGoBack = () => (onBack ? onBack() : (typeof window !== 'undefined' && window.history.length > 2 && window.history.back()));
 
   return (
     <div className="space-y-3 pt-1">
       <div className={`flex items-center justify-between gap-3 ${fromSettings ? 'mt-2 mb-2 px-1' : 'pb-3 border-b border-slate-200/80 dark:border-white/[0.08]'}`}>
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {!fromSettings && onBack && (
-            <button type="button" onClick={handleGoBack} className="p-2 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 opacity-75 hover:opacity-100 active:scale-90 transition-all cursor-pointer shrink-0" title="Volver"><ArrowLeft className="w-4 h-4" /></button>
-          )}
+          {/* Flecha atrás removida para escritorio por redundancia con el sidebar */}
           <div className="min-w-0 flex-1">
             {!fromSettings && <h2 className="text-base sm:text-lg font-bold truncate leading-tight text-slate-900 dark:text-white flex items-center gap-2"><CreditCard className="w-5 h-5 text-[#007AFF] shrink-0" /><span>Cuentas y Métodos de Pago</span></h2>}
-            <p className="text-[11px] sm:text-[12px] text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">Total disponible: {isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}</p>
+            <p className="text-xs sm:text-sm text-slate-800 dark:text-zinc-200 font-medium truncate mt-1 flex items-center gap-1.5">
+              <span className="opacity-75">Total disponible:</span>
+              <span className="font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400">{isPrivacyMode ? '••••••' : formatMoney(totalAvailableWealth)}</span>
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

@@ -62,7 +62,7 @@ export default function TaxCalendarAlerts({
   ];
 
   const renderCalendarCard = () => (
-    <div className="rounded-2xl p-5 sm:p-7 bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm dark:shadow-md transition-all">
+    <div className="rounded-2xl p-5 sm:p-7 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] shadow-xs transition-all">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-white/5">
         <div className="space-y-1">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -84,7 +84,7 @@ export default function TaxCalendarAlerts({
             value={cedulaDigits}
             onChange={(e) => setCedulaDigits(e.target.value.replace(/\D/g, '').slice(0, 2))}
             placeholder="00"
-            className="w-24 text-center font-black text-2xl h-12 rounded-xl border-2 border-emerald-500/40 focus:border-emerald-500 bg-slate-50 dark:bg-black/20 text-slate-900 dark:text-white outline-none transition-all shadow-inner tabular-nums"
+            className="w-24 text-center font-black text-2xl h-12 rounded-xl border-2 border-emerald-500/50 focus:border-emerald-500 bg-white/70 dark:bg-black/20 text-slate-900 dark:text-white outline-none transition-all shadow-inner tabular-nums"
           />
           <div className="text-xs text-slate-500 dark:text-slate-400">
             <span className="font-semibold text-slate-700 dark:text-slate-200 block">Dígitos finales</span>
@@ -100,7 +100,7 @@ export default function TaxCalendarAlerts({
               type="button"
               onClick={() => setCedulaDigits(dig)}
               className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                cedulaDigits === dig ? 'bg-emerald-600 text-white shadow-sm scale-105' : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                cedulaDigits === dig ? 'bg-emerald-600 text-white shadow-sm scale-105' : 'bg-white/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-white/80 border border-white/70 dark:border-white/10'
               }`}
             >
               {dig}
@@ -138,11 +138,11 @@ export default function TaxCalendarAlerts({
         <Bell className="w-4 h-4 text-emerald-500" />
         <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Plan de Recordatorios y Alertas</h3>
       </div>
-      <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] space-y-3.5 shadow-sm dark:shadow-md">
+      <div className="p-5 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] space-y-3.5 shadow-xs">
         <p className="text-xs text-slate-600 dark:text-slate-300">Recibe avisos antes de tu fecha límite para evitar sanciones por extemporaneidad de la DIAN:</p>
         <div className="space-y-2.5">
           {ALERT_ITEMS.map(({ id, title, desc, badge, icon: Icon, badgeClass, checked, onChange }) => (
-            <div key={id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5">
+            <div key={id} className="flex items-center justify-between p-3 rounded-2xl bg-white/40 dark:bg-white/[0.04] border border-white/60 dark:border-white/[0.06]">
               <div className="flex items-center gap-2.5">
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs border ${badgeClass}`}>
                   {badge || <Icon className="w-4 h-4" />}
@@ -162,10 +162,5 @@ export default function TaxCalendarAlerts({
 
   if (variant === 'calendar') return renderCalendarCard();
   if (variant === 'alerts') return renderAlertsCard();
-  return (
-    <>
-      {renderCalendarCard()}
-      {renderAlertsCard()}
-    </>
-  );
+  return <>{renderCalendarCard()}{renderAlertsCard()}</>;
 }

@@ -79,8 +79,7 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
 
   const handleDragStart = useCallback((e, index) => {
     if (!isReorderingRef.current) return;
-    draggedIndexRef.current = index;
-    setDraggedIndex(index);
+    draggedIndexRef.current = index; setDraggedIndex(index);
     if (e?.dataTransfer) e.dataTransfer.effectAllowed = 'move';
   }, []);
 
@@ -88,6 +87,28 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
     if (!isReorderingRef.current) return;
     if (e) { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; }
     handleSwapWidgets(targetIndex);
+  }, [handleSwapWidgets]);
+
+  const handleContainerDragOver = useCallback((e, containerRef) => {
+    if (!isReorderingRef.current || draggedIndexRef.current === null) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    if (!containerRef?.current) return;
+    const { clientX, clientY } = e;
+    const children = Array.from(containerRef.current.children);
+    let closestIndex = null, minDistance = Infinity;
+    children.forEach((child, idx) => {
+      const rect = child.getBoundingClientRect();
+      const dist = Math.hypot(clientX - (rect.left + rect.width / 2), clientY - (rect.top + rect.height / 2));
+      if (dist < minDistance) {
+        minDistance = dist;
+        const wIdx = Number(child.querySelector?.('[data-widget-index]')?.getAttribute('data-widget-index') || child.getAttribute?.('data-widget-index'));
+        closestIndex = !isNaN(wIdx) ? wIdx : idx;
+      }
+    });
+    if (closestIndex !== null && closestIndex !== draggedIndexRef.current) {
+      handleSwapWidgets(closestIndex);
+    }
   }, [handleSwapWidgets]);
 
   const handleDrop = useCallback((e) => { e?.preventDefault?.(); resetDrag(); }, []);
@@ -112,11 +133,7 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
     if (!isNaN(targetIdx) && targetIdx !== draggedIndexRef.current) handleSwapWidgets(targetIdx);
   }, [handlePressEnd, handleSwapWidgets]);
 
-  const handleTouchEnd = useCallback(() => {
-    handlePressEnd();
-    if (isReorderingRef.current) resetDrag();
-  }, [handlePressEnd]);
-
+  const handleTouchEnd = useCallback(() => { handlePressEnd(); if (isReorderingRef.current) resetDrag(); }, [handlePressEnd]);
   const handleFinishReordering = useCallback(() => { setIsReordering(false); resetDrag(); pressedIndexRef.current = null; }, []);
 
   const handleToggleVisibility = useCallback((e, widgetId, newVisible) => {
@@ -156,7 +173,7 @@ export function useWidgetReorder({ widgetsConfig = null, widgetsProp = null, all
     widgets, orderedWidgets: widgets, setWidgets, visibleWidgets, hiddenWidgets,
     isReordering, setIsReordering, draggedIndex, setDraggedIndex,
     isDragging: draggedIndex !== null && draggedIndex !== undefined,
-    handlePressStart, handlePressEnd, handleSwapWidgets, handleDragStart, handleDragOver, handleDrop, handleDragEnd,
+    handlePressStart, handlePressEnd, handleSwapWidgets, handleDragStart, handleDragOver, handleContainerDragOver, handleDrop, handleDragEnd,
     handleTouchStart, handleTouchMove, handleTouchEnd, handleFinishReordering, handleToggleVisibility,
     longPressTimerRef, pressedIndexRef, draggedIndexRef, widgetsRef, isReorderingRef, touchStartPosRef
   };

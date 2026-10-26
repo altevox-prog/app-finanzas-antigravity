@@ -12,8 +12,8 @@ export default function InvoicePaymentBankSection({
   const handleIvaChange = (applyIva) => updateTax({ applyIva, rate: applyIva ? 19 : 0 });
 
   return (
-    <div className={`bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-sm transition-all ${
-      isOpen ? 'p-5 sm:p-6 space-y-5' : 'p-4 sm:p-5 hover:border-slate-300 dark:hover:border-white/20'
+    <div className={`bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-white/[0.08] shadow-sm transition-all ${
+      isOpen ? 'p-5 sm:p-6 space-y-5' : 'p-4 sm:p-5 hover:border-white/80 dark:hover:border-white/20'
     }`}>
       <div
         role="button" tabIndex={0} onClick={onToggle}
@@ -29,7 +29,7 @@ export default function InvoicePaymentBankSection({
         </div>
         <div className="flex items-center gap-2.5">
           {!isOpen && (
-            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800/70 border border-transparent dark:border-white/[0.08] px-2.5 py-1 rounded-lg">
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 bg-slate-900/[0.04] dark:bg-white/[0.06] border border-slate-900/[0.08] dark:border-white/[0.08] px-2.5 py-1 rounded-full backdrop-blur-xs">
               Total: {formatCOP(total)}
             </span>
           )}
@@ -43,16 +43,16 @@ export default function InvoicePaymentBankSection({
             <div className="md:col-span-5 space-y-2">
               <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200">Configuración de IVA:</span>
               <div className="flex items-center gap-2">
-                <div className="inline-flex bg-slate-100 dark:bg-zinc-800/70 p-1 rounded-xl border border-transparent dark:border-white/[0.08]">
+                <div className="inline-flex bg-slate-900/[0.04] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] backdrop-blur-md p-1 rounded-xl">
                   <button
                     type="button" onClick={() => handleIvaChange(false)}
-                    className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer ${!tax.applyIva ? 'bg-white dark:bg-emerald-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-3 py-1 text-xs rounded-lg transition-all cursor-pointer ${!tax.applyIva ? 'bg-white/70 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs font-semibold' : 'text-slate-700 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white font-medium'}`}
                   >
                     0% (Exento)
                   </button>
                   <button
                     type="button" onClick={() => handleIvaChange(true)}
-                    className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer ${tax.applyIva ? 'bg-white dark:bg-emerald-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`px-3 py-1 text-xs rounded-lg transition-all cursor-pointer ${tax.applyIva ? 'bg-white/70 dark:bg-emerald-600 text-slate-900 dark:text-white shadow-xs font-semibold' : 'text-slate-700 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white font-medium'}`}
                   >
                     19% (General)
                   </button>
@@ -67,7 +67,7 @@ export default function InvoicePaymentBankSection({
             </div>
           </div>
 
-          <div className="border border-slate-200/70 dark:border-white/[0.08] rounded-2xl overflow-hidden bg-white/40 dark:bg-zinc-800/20">
+          <div className="border border-white/80 dark:border-white/[0.08] rounded-2xl overflow-hidden bg-white/50 dark:bg-zinc-800/30 backdrop-blur-md shadow-xs">
             <button
               type="button" onClick={() => setShowNationalBank(!showNationalBank)}
               className="w-full flex items-center justify-between p-3.5 bg-slate-50/70 dark:bg-zinc-800/50 text-xs font-bold text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors cursor-pointer"
@@ -82,36 +82,36 @@ export default function InvoicePaymentBankSection({
               <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-200/50 dark:border-white/[0.08]">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] text-slate-500 dark:text-zinc-400">Banco</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300">Banco</label>
                     {colombia.bank && <BrandIcon name={colombia.bank} size={14} className="w-3.5 h-3.5 object-contain" />}
                   </div>
-                  <input type="text" value={colombia.bank || ''} onChange={(e) => updateBanking('colombia', { bank: e.target.value })} placeholder="Nombre del banco" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <input type="text" value={colombia.bank || ''} onChange={(e) => updateBanking('colombia', { bank: e.target.value })} placeholder="Nombre del banco" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Tipo de cuenta</label>
-                  <input type="text" value={colombia.accountType || ''} onChange={(e) => updateBanking('colombia', { accountType: e.target.value })} placeholder="Ej. Ahorros, Corriente" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Tipo de cuenta</label>
+                  <input type="text" value={colombia.accountType || ''} onChange={(e) => updateBanking('colombia', { accountType: e.target.value })} placeholder="Ej. Ahorros, Corriente" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Número de cuenta</label>
-                  <input type="text" value={colombia.accountNumber || ''} onChange={(e) => updateBanking('colombia', { accountNumber: e.target.value })} placeholder="Número de cuenta" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Número de cuenta</label>
+                  <input type="text" value={colombia.accountNumber || ''} onChange={(e) => updateBanking('colombia', { accountNumber: e.target.value })} placeholder="Número de cuenta" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Titular</label>
-                  <input type="text" value={colombia.holder || ''} onChange={(e) => updateBanking('colombia', { holder: e.target.value })} placeholder="Nombre del titular" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Titular</label>
+                  <input type="text" value={colombia.holder || ''} onChange={(e) => updateBanking('colombia', { holder: e.target.value })} placeholder="Nombre del titular" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Código SWIFT</label>
-                  <input type="text" value={colombia.swift || ''} onChange={(e) => updateBanking('colombia', { swift: e.target.value })} placeholder="Código SWIFT / BIC" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Código SWIFT</label>
+                  <input type="text" value={colombia.swift || ''} onChange={(e) => updateBanking('colombia', { swift: e.target.value })} placeholder="Código SWIFT / BIC" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Nequi</label>
-                  <input type="text" value={colombia.nequi || ''} onChange={(e) => updateBanking('colombia', { nequi: e.target.value })} placeholder="Número de celular" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Nequi</label>
+                  <input type="text" value={colombia.nequi || ''} onChange={(e) => updateBanking('colombia', { nequi: e.target.value })} placeholder="Número de celular" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
               </div>
             )}
           </div>
 
-          <div className="border border-slate-200/70 dark:border-white/[0.08] rounded-2xl p-4 space-y-3 bg-white/40 dark:bg-zinc-800/20">
+          <div className="border border-white/80 dark:border-white/[0.08] rounded-2xl p-4 space-y-3 bg-white/50 dark:bg-zinc-800/30 backdrop-blur-md shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-blue-500" />
@@ -126,16 +126,16 @@ export default function InvoicePaymentBankSection({
             {achWire.enabled && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Banco internacional</label>
-                  <input type="text" value={achWire.bank || ''} onChange={(e) => updateBanking('achWire', { bank: e.target.value })} placeholder="Nombre del banco" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Banco internacional</label>
+                  <input type="text" value={achWire.bank || ''} onChange={(e) => updateBanking('achWire', { bank: e.target.value })} placeholder="Nombre del banco" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">N° cuenta / routing (ABA)</label>
-                  <input type="text" value={achWire.accountNumber || ''} onChange={(e) => updateBanking('achWire', { accountNumber: e.target.value })} placeholder="Cuenta / ABA" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">N° cuenta / routing (ABA)</label>
+                  <input type="text" value={achWire.accountNumber || ''} onChange={(e) => updateBanking('achWire', { accountNumber: e.target.value })} placeholder="Cuenta / ABA" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] text-slate-500 dark:text-zinc-400 mb-1">Dirección del banco</label>
-                  <input type="text" value={achWire.bankAddress || ''} onChange={(e) => updateBanking('achWire', { bankAddress: e.target.value })} placeholder="Dirección del banco" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60" />
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-zinc-300 mb-1">Dirección del banco</label>
+                  <input type="text" value={achWire.bankAddress || ''} onChange={(e) => updateBanking('achWire', { bankAddress: e.target.value })} placeholder="Dirección del banco" className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs" />
                 </div>
               </div>
             )}

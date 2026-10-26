@@ -103,7 +103,8 @@ export default function TransactionsHeroCard({
         <button
           type="button"
           onClick={handlePeriodClick}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200/80 dark:border-white/10 shadow-xs transition-all cursor-pointer select-none active:scale-95"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold text-slate-800 dark:text-zinc-200 hover:scale-105 transition-all cursor-pointer select-none active:scale-95"
+          style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', border: '1px solid rgba(255, 255, 255, 0.85)', boxShadow: 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px -6px rgba(15, 23, 42, 0.08)' }}
           title="Cambiar mes o periodo"
           aria-label="Seleccionar periodo o mes"
         >
@@ -114,7 +115,10 @@ export default function TransactionsHeroCard({
       </div>
 
       {/* 2. Resumen simétrico de 2 columnas (Ingresos y Gastos) */}
-      <div className="w-full grid grid-cols-2 divide-x divide-slate-100 dark:divide-zinc-800 bg-white dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl p-4 shadow-sm select-none">
+      <div
+        className="w-full grid grid-cols-2 divide-x divide-white/40 dark:divide-white/[0.08] rounded-3xl p-5 select-none transition-all"
+        style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(24px) saturate(190%)', WebkitBackdropFilter: 'blur(24px) saturate(190%)', border: '1px solid rgba(255, 255, 255, 0.85)', boxShadow: 'inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.95), inset 0 0 20px rgba(255, 255, 255, 0.20), 0 20px 45px -10px rgba(15, 23, 42, 0.12)' }}
+      >
         {/* Columna 1 (Ingresos - Izquierda) */}
         <button
           type="button"
@@ -144,11 +148,11 @@ export default function TransactionsHeroCard({
           title={typeFilter === 'expense' ? 'Quitar filtro de gastos' : 'Filtrar por Gastos'}
           aria-pressed={typeFilter === 'expense'}
         >
-          <div className="text-xs font-semibold tracking-wider text-rose-500 dark:text-rose-400 flex items-center gap-1 px-4">
-            <ArrowDown className="w-3.5 h-3.5 shrink-0" />
+          <div className="text-xs font-bold tracking-wider flex items-center gap-1 px-4" style={{ color: '#dc2626' }}>
+            <ArrowDown className="w-3.5 h-3.5 shrink-0" style={{ color: '#dc2626' }} />
             <span>GASTOS</span>
           </div>
-          <span className="text-lg sm:text-xl font-bold font-mono tracking-tight text-rose-500 dark:text-rose-400 tabular-nums whitespace-nowrap mt-1 px-4">
+          <span className="text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums whitespace-nowrap mt-1 px-4" style={{ color: '#dc2626' }}>
             {formatMoney(expense)}
           </span>
         </button>

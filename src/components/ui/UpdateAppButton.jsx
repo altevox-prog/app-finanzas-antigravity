@@ -47,7 +47,7 @@ export default function UpdateAppButton() {
   const isLoading = isChecking || isUpdating;
 
   return (
-    <div className="w-full p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex items-center justify-between gap-3">
+    <div className="w-full p-3 sm:p-3.5 rounded-2xl border border-white/70 dark:border-white/[0.08] bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md shadow-xs flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
           <RefreshCw className="w-4.5 h-4.5" />
@@ -56,7 +56,7 @@ export default function UpdateAppButton() {
           <span className="font-semibold text-sm text-slate-900 dark:text-zinc-100 whitespace-nowrap">
             Monety
           </span>
-          <span className="text-xs text-slate-500 dark:text-zinc-400 whitespace-nowrap mt-0.5">
+          <span className="text-xs text-slate-700 dark:text-zinc-300 font-medium whitespace-nowrap mt-0.5">
             {feedbackMsg || `v${APP_VERSION}`}
           </span>
         </div>
@@ -66,14 +66,14 @@ export default function UpdateAppButton() {
         type="button"
         onClick={handleCheckOrUpdate}
         disabled={isLoading}
-        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap shadow-sm transition-all shrink-0 active:scale-95 text-white cursor-pointer ${
+        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all shrink-0 active:scale-95 cursor-pointer backdrop-blur-sm shadow-xs ${
           isUpToDate
-            ? 'bg-emerald-600'
+            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40'
             : isUpdating
-            ? 'bg-indigo-600 animate-pulse'
+            ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 animate-pulse'
             : isChecking
-            ? 'bg-slate-700 opacity-90'
-            : 'bg-emerald-600 hover:bg-emerald-700'
+            ? 'bg-white/40 dark:bg-white/[0.08] text-slate-700 dark:text-zinc-300 border border-white/60 dark:border-white/10 opacity-90'
+            : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
         } ${isLoading ? 'cursor-not-allowed opacity-90' : ''}`}
       >
         {isUpToDate ? (

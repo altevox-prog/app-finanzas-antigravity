@@ -75,7 +75,7 @@ export default function DesktopSidebar({
   const avatarEmail = syncUser?.email || userProfile?.email;
 
   return (
-    <aside className={`${className} flex flex-col justify-between flex-shrink-0 transition-all duration-300 ease-in-out border-r border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0c0d0e] ${isCollapsed ? 'w-20' : 'w-64'} h-[calc(100vh-4rem)] sticky top-16 z-30 select-none overflow-y-auto no-scrollbar`}>
+    <aside className={`${className} flex flex-col justify-between flex-shrink-0 transition-all duration-300 ease-in-out border border-white/80 dark:border-white/10 bg-white/30 dark:bg-[#0c0d0e]/60 backdrop-blur-2xl saturate-180 shadow-[0_20px_40px_-10px_rgba(15,23,42,0.1),inset_0_1.5px_1.5px_0_rgba(255,255,255,0.95)] rounded-[28px] ${isCollapsed ? 'w-[4.5rem]' : 'w-56'} h-auto self-center my-auto ml-4 lg:ml-5 z-30 select-none overflow-hidden py-3`}>
       <div className="relative flex flex-col items-center pt-4 pb-2 shrink-0 w-full">
         <div className={`w-full flex items-center px-4 mb-3 ${isCollapsed ? 'justify-center' : 'justify-end'}`}>
           <button type="button" onClick={toggleCollapse} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] border border-transparent hover:border-slate-200 dark:hover:border-white/10 transition-all cursor-pointer" title={isCollapsed ? "Expandir barra" : "Colapsar barra"}>
@@ -89,7 +89,7 @@ export default function DesktopSidebar({
         </button>
       </div>
 
-      <nav className={`w-full flex-1 flex flex-col justify-center items-center my-auto ${isCollapsed ? 'gap-6 py-4' : 'gap-1.5 px-3 py-4'}`}>
+      <nav className={`w-full flex-1 flex flex-col justify-center items-center my-auto ${isCollapsed ? 'gap-3 py-3' : 'gap-1 px-3 py-3'}`}>
         {NAV_ITEMS.map(({ id, label, icon: Icon, className: itemClass }) => {
           const isActive = activeTab === id;
           return (
@@ -107,7 +107,7 @@ export default function DesktopSidebar({
         })}
       </nav>
 
-      <div className="w-full shrink-0 pb-4 pt-2 flex flex-col items-center justify-center border-t border-slate-100 dark:border-white/[0.04] px-2">
+      <div className="w-full shrink-0 pb-3 pt-2 flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 px-2">
         {isCollapsed ? (
           <button type="button" onClick={handleOpenSettings} className={`w-10 h-10 rounded-full ${ringClass} cursor-pointer overflow-hidden flex items-center justify-center shrink-0`} title={`Perfil - ${avatarName}`} aria-label={`Perfil - ${avatarName}`}>
             <Avatar src={avatarSrc} name={avatarName} email={avatarEmail} size="sm" className="!w-full !h-full" showStatus={false} />

@@ -63,12 +63,21 @@ export default function App() {
   const layoutClasses = isForcedMobile
     ? 'flex-col items-center justify-start p-2 sm:p-4'
     : isForcedDesktop
-    ? 'flex-row items-stretch justify-start p-0'
-    : 'flex-col lg:flex-row items-center lg:items-stretch justify-start sm:justify-center lg:justify-start p-0 sm:p-4 md:p-6 lg:p-0';
+    ? 'flex-row items-center justify-start p-0'
+    : 'flex-col lg:flex-row items-center lg:items-center justify-start sm:justify-center lg:justify-start p-0 sm:p-4 md:p-6 lg:p-0';
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] max-h-[100dvh] bg-slate-50 dark:bg-[#090A0F] text-slate-800 dark:text-slate-100 flex flex-col transition-colors font-sans antialiased w-full overflow-hidden">
-      <AppHeader desktopOnly {...headerProps} />
+    <div className="min-h-[100dvh] h-[100dvh] max-h-[100dvh] bg-[#E2E8F0] dark:bg-[#0B0E14] text-slate-800 dark:text-slate-100 flex flex-col transition-colors font-sans antialiased w-full overflow-hidden relative">
+      {/* Fondo de oficina desenfocado escénico exclusivo de Modo Claro */}
+      <div 
+        className="fixed inset-0 bg-[url('/assets/images/green_office.jpg')] bg-cover bg-center filter blur-[5px] scale-105 opacity-90 pointer-events-none dark:hidden z-0" 
+        aria-hidden="true" 
+      />
+      <div className="fixed inset-0 bg-white/20 pointer-events-none dark:hidden z-0" aria-hidden="true" />
+
+      {/* Orbes para Modo Oscuro */}
+      <div className="fixed -top-40 right-[-5%] w-[650px] h-[650px] rounded-full bg-gradient-to-br from-emerald-500/25 via-teal-500/20 to-transparent blur-3xl pointer-events-none hidden dark:block z-0" aria-hidden="true" />
+      <div className="fixed -bottom-40 left-[-5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-emerald-600/25 via-emerald-400/15 to-transparent blur-3xl pointer-events-none hidden dark:block z-0" aria-hidden="true" />
 
       <div className={`flex-1 flex ${layoutClasses} w-full overflow-hidden relative`}>
         <DesktopSidebar
@@ -96,11 +105,12 @@ export default function App() {
           </button>
         </div>
 
-        <div className={`w-full ${containerClasses} flex flex-col overflow-hidden relative transition-colors bg-slate-50 dark:bg-[#090A0F] text-slate-800 dark:text-slate-100 antialiased flex-1`} style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}>
+        <div className={`w-full ${containerClasses} flex flex-col overflow-hidden relative transition-colors bg-transparent dark:bg-[#090A0F] text-slate-800 dark:text-slate-100 antialiased flex-1 h-full`}>
           <AppHeader mobileOnly {...headerProps} />
 
           <main ref={state.mainContentRef} className={`flex-1 w-full px-3.5 sm:px-4 lg:px-0 py-2.5 sm:py-3 lg:py-0 ${isForcedMobile ? 'pb-32 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]' : isForcedDesktop ? 'pb-12' : 'pb-32 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] lg:pb-12'} relative overflow-y-auto overscroll-y-contain space-y-3.5 sm:space-y-4 lg:space-y-0`}>
-            <div className="w-full lg:max-w-[1550px] lg:mx-auto lg:px-6 lg:py-6">
+            <div className="w-full lg:max-w-[1550px] lg:mx-auto lg:px-6 lg:pt-3 lg:pb-6 flex flex-col gap-3">
+              <AppHeader desktopOnly {...headerProps} />
               <ViewRouter
                 activeTab={state.activeTab}
                 tabResetKeys={state.tabResetKeys}

@@ -16,7 +16,7 @@ export default function TaxChecklistSection({
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-zinc-100">
             Ruta y Checklist de la Renta
           </h3>
         </div>
@@ -34,7 +34,7 @@ export default function TaxChecklistSection({
       </div>
 
       {/* Pasos interactivos estilo checklist */}
-      <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] space-y-3 shadow-sm dark:shadow-md">
+      <div className="p-5 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] space-y-3 shadow-xs">
         {items.map((step, index) => {
           const isDone = Boolean(checklist[step.id]);
 
@@ -46,7 +46,7 @@ export default function TaxChecklistSection({
               className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-start gap-3 cursor-pointer group active:scale-[0.99] ${
                 isDone
                   ? 'bg-emerald-500/10 border-emerald-500/25 dark:bg-emerald-500/10'
-                  : 'bg-slate-50 dark:bg-white/[0.03] border-slate-100 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/15'
+                  : 'bg-white/40 dark:bg-white/[0.04] border-white/60 dark:border-white/[0.06] hover:bg-white/60 dark:hover:bg-white/[0.08]'
               }`}
             >
               <div className="mt-0.5 shrink-0">
@@ -61,7 +61,7 @@ export default function TaxChecklistSection({
 
               <div className="space-y-0.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono font-bold text-slate-400">
+                  <span className="text-[11px] font-mono font-bold text-slate-600 dark:text-zinc-400">
                     Paso {index + 1}
                   </span>
                   <h5 className={`text-xs sm:text-sm font-semibold transition-all ${
@@ -72,7 +72,7 @@ export default function TaxChecklistSection({
                     {step.title}
                   </h5>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                <p className="text-xs text-slate-700 dark:text-zinc-300 font-medium leading-relaxed">
                   {step.description}
                 </p>
               </div>

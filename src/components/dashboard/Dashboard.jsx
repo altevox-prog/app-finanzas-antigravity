@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Check } from 'lucide-react';
 import { usePrivacy } from '../../context/PrivacyContext';
 import useDashboardMetrics from '../../hooks/useDashboardMetrics';
@@ -11,7 +11,6 @@ import { normalizeWidgetId } from '../../utils/widgetsConfig';
 import DashboardModals from './DashboardModals';
 import MonthlyNetHeroCard from './MonthlyNetHeroCard';
 import AccountsWidget from './widgets/AccountsWidget';
-import RecentMovementsSection from './RecentMovementsSection';
 import RecurringPaymentsWidget from './widgets/RecurringPaymentsWidget';
 import WeeklyExpensesChart from './WeeklyExpensesChart';
 
@@ -62,10 +61,10 @@ export default function Dashboard({
   });
 
   const getWidget = (id) => getWidgetComponent(id, WIDGET_REGISTRY);
+  const gridContainerRef = useRef(null);
   const reorder = useWidgetReorder({ widgetsConfig, widgetsProp, allowedWidgetIds, onSaveWidgets, getWidget });
   const { visibleWidgets, hiddenWidgets, isReordering, draggedIndex, handleFinishReordering, handleToggleVisibility } = reorder;
 
-  const hasWidget = (id) => visibleWidgets.some((w) => normalizeWidgetId(w.id) === normalizeWidgetId(id));
   const getWidgetIndex = (id) => Math.max(0, visibleWidgets.findIndex((w) => normalizeWidgetId(w.id) === normalizeWidgetId(id)));
 
   const renderWrapper = (id, children, extraClasses = '') => (
@@ -78,16 +77,24 @@ export default function Dashboard({
   );
 
   const colSpanLeft = isForcedMobile ? 'col-span-1 min-w-0 w-full' : 'lg:col-span-7 xl:col-span-8 min-w-0 w-full', colSpanRight = isForcedMobile ? 'col-span-1 min-w-0 w-full' : 'lg:col-span-5 xl:col-span-4 min-w-0 w-full';
-  const bottomGridIds = new Set(['debts_loans', 'debts', 'investments', 'savings_rate', 'savings_goals', 'budget']);
-  const reorderableWidgets = visibleWidgets.filter((w) => bottomGridIds.has(normalizeWidgetId(w.id)) || bottomGridIds.has(w.id));
-  const hasExpensesWidget = visibleWidgets.some((w) => ['expenses_category', 'expenses_and_movements', 'expenses_chart', 'tus_gastos', 'donut'].includes(normalizeWidgetId(w.id)));
-  const rightColumnIds = new Set(['expenses_category', 'expenses_and_movements', 'expenses_chart', 'tus_gastos', 'donut', 'recurring_payments', 'recent_movements']);
-  const rightWidgets = visibleWidgets.filter((w) => {
+  const movableWidgets = visibleWidgets.filter((w) => normalizeWidgetId(w.id) !== 'recent_movements');
+
+  const renderWidgetComponent = (w) => {
     const nid = normalizeWidgetId(w.id);
-    if (!rightColumnIds.has(nid) && !rightColumnIds.has(w.id)) return false;
-    if (nid === 'recent_movements' && hasExpensesWidget) return false;
-    return true;
-  });
+    let comp = null;
+    if (nid === 'weekly_cashflow' || nid === 'cashflow') {
+      comp = (
+        <WeeklyExpensesChart transactions={transactions} selectedDate={selectedDate} selectedDay={selectedDay} currentMonthLabel={currentMonthLabel} formatMoney={formatMoney}
+          onSelectWeek={(weekData, maybeRange) => {
+            const weekNum = typeof weekData === 'object' ? (weekData?.start ? Math.ceil(weekData.start / 7) : parseInt(String(weekData?.label || '').replace(/\D/g, ''), 10) || 1) : weekData;
+            navigateToTab('transactions', { week: weekNum, weekRange: typeof weekData === 'object' ? weekData?.range : maybeRange, weekData });
+          }} />
+      );
+    } else {
+      comp = getWidget(w.id) || (nid === 'recurring_payments' && <RecurringPaymentsWidget recurringPayments={recurringPayments} subscriptions={subscriptions} />);
+    }
+    return comp ? renderWrapper(w.id, comp, 'h-full') : null;
+  };
 
   return (
     <>
@@ -100,55 +107,38 @@ export default function Dashboard({
         </div>
       )}
 
-      <div className={`w-full max-w-[1600px] mx-auto px-3 sm:px-6 py-4 space-y-6 ${className || ''}`}>
+      <div className={`w-full max-w-[1600px] mx-auto px-3 sm:px-6 pt-1.5 pb-4 sm:py-4 space-y-4 sm:space-y-6 glass-stage rounded-2xl sm:rounded-[36px] p-3 sm:p-7 my-2 sm:my-3 ${className || ''}`}>
         <div className={`${isForcedDesktop ? 'block' : 'hidden lg:block'} pt-1`}>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">Hola, {userName}</h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Resumen financiero de {currentMonthLabel || 'este mes'}</p>
         </div>
 
         {/* Hero Fila Fija */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch w-full mb-6">
-          <div className={`${colSpanLeft} min-w-0 w-full flex flex-col`}>
-            <AccountsWidget accounts={accounts} transactions={transactions} trm={trm} availableLiquidBalance={metrics.availableLiquidBalance} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} onOpenAccounts={() => navigateToTab('accounts')} onSelectCreditCardDetail={onSelectCreditCardDetail} formatMoney={formatMoney} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch w-full mb-4 sm:mb-6">
           <div className={`${colSpanRight} min-w-0 w-full flex flex-col h-full [&>div]:h-full`}>
             <MonthlyNetHeroCard netBalance={metrics.netBalance} totalIncome={metrics.totalIncome} totalExpense={metrics.totalExpense} savingsRate={metrics.savingsRate} transactions={transactions} monthlyTransactions={monthlyTransactions || metrics.scopedTransactions} selectedDate={selectedDate} selectedDay={selectedDay} currentMonthLabel={currentMonthLabel} onOpenCalendar={onOpenCalendar} onOpenMonthPicker={onOpenMonthPicker || onOpenCalendar} formatMoney={formatMoney} trm={trm} />
           </div>
+          <div className={`${colSpanLeft} min-w-0 w-full flex flex-col`}>
+            <AccountsWidget accounts={accounts} transactions={transactions} trm={trm} availableLiquidBalance={metrics.availableLiquidBalance} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} onOpenAccounts={() => navigateToTab('accounts')} onSelectCreditCardDetail={onSelectCreditCardDetail} formatMoney={formatMoney} />
+          </div>
         </div>
 
-        {/* Macro Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start w-full">
-          <div className={`${colSpanLeft} min-w-0 w-full flex flex-col gap-5 sm:gap-6`}>
-            {hasWidget('weekly_cashflow') && renderWrapper('weekly_cashflow', (
-              <WeeklyExpensesChart transactions={transactions} selectedDate={selectedDate} selectedDay={selectedDay}
-                currentMonthLabel={currentMonthLabel} formatMoney={formatMoney}
-                onSelectWeek={(weekData, maybeRange) => {
-                  const weekNum = typeof weekData === 'object' ? (weekData?.start ? Math.ceil(weekData.start / 7) : parseInt(String(weekData?.label || '').replace(/\D/g, ''), 10) || 1) : weekData;
-                  navigateToTab('transactions', { week: weekNum, weekRange: typeof weekData === 'object' ? weekData?.range : maybeRange, weekData });
-                }} />
-            ))}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch w-full min-w-0">
-              {reorderableWidgets.map((w) => {
-                const widgetComp = getWidget(w.id);
-                if (!widgetComp) return null;
-                return (
-                  <div key={w.id} className="w-full h-full min-w-0">
-                    {renderWrapper(w.id, widgetComp, 'h-full')}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className={`${colSpanRight} min-w-0 w-full flex flex-col gap-5 sm:gap-6`}>
-            {rightWidgets.map((w) => {
-              const widgetComp = normalizeWidgetId(w.id) === 'recent_movements'
-                ? <RecentMovementsSection transactions={transactions.slice(0, 4)} accounts={accounts} onSelectTransaction={handleSelectTransaction} onNavigateToMovements={() => navigateToTab('transactions')} onNavigateToTab={navigateToTab} setActiveTab={navigateToTab} onAddTransaction={handleOpenTxModal} compactMode={false} formatMoney={formatMoney} limit={4} />
-                : (getWidget(w.id) || (w.id === 'recurring_payments' && <RecurringPaymentsWidget recurringPayments={recurringPayments} subscriptions={subscriptions} />));
-              if (!widgetComp) return null;
-              return <div key={w.id} className="w-full min-w-0">{renderWrapper(w.id, widgetComp)}</div>;
-            })}
-          </div>
+        {/* Macro Bento Grid (3 Columnas) */}
+        <div
+          ref={gridContainerRef}
+          onDragOver={(e) => reorder.handleContainerDragOver?.(e, gridContainerRef) || e.preventDefault()}
+          onDrop={reorder.handleDrop}
+          className={`grid ${isForcedMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'} gap-5 sm:gap-6 w-full items-stretch`}
+        >
+          {movableWidgets.map((w) => {
+            const comp = renderWidgetComponent(w);
+            if (!comp) return null;
+            return (
+              <div key={w.id} className="col-span-1 min-w-0 w-full flex flex-col h-full">
+                {comp}
+              </div>
+            );
+          })}
         </div>
 
         {isReordering && hiddenWidgets && hiddenWidgets.length > 0 && (

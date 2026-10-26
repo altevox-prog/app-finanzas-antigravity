@@ -33,12 +33,12 @@ export default function ProfileSavingsGoalsView({
 
   return (
     <div className="space-y-4">
-      <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs flex items-center justify-between transition-all">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] shadow-xs flex items-center justify-between transition-all">
         <div>
           <p className="text-xs uppercase tracking-wider font-bold font-mono text-emerald-600 dark:text-emerald-400">Total Ahorrado</p>
           <p className="text-lg sm:text-xl font-bold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums mt-0.5">
             {formatMoney(totalSavedAcrossGoals)}
-            <span className="text-xs text-slate-500 dark:text-zinc-400 font-normal font-mono tabular-nums tracking-tight"> / {formatMoney(totalTargetAcrossGoals)}</span>
+            <span className="text-xs text-slate-700 dark:text-zinc-300 font-semibold font-mono tabular-nums tracking-tight"> / {formatMoney(totalTargetAcrossGoals)}</span>
           </p>
         </div>
         {savingsGoals.length > 0 && (
@@ -107,16 +107,16 @@ export default function ProfileSavingsGoalsView({
             const notifDay = goal.notification_day || goal.notificationDay;
 
             return (
-              <div key={goal.id} className="bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xs transition-all space-y-3">
+              <div key={goal.id} className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xs transition-all space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
                       <Target className="w-4 h-4 text-emerald-500" />
                     </div>
                     <div className="min-w-0">
-                      <h5 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 truncate">{goal.name}</h5>
+                      <h5 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">{goal.name}</h5>
                       <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-xs font-mono">
-                        {daysLeftText && <span className="text-slate-500 dark:text-zinc-400 flex items-center gap-1"><Calendar className="w-3 h-3" /><span>{daysLeftText}</span></span>}
+                        {daysLeftText && <span className="text-slate-700 dark:text-zinc-300 font-semibold flex items-center gap-1"><Calendar className="w-3 h-3" /><span>{daysLeftText}</span></span>}
                         {targetAcc && <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Wallet className="w-3 h-3 shrink-0" /><span>{targetAcc.name}</span></span>}
                         {suggestedQuota > 0 && <span className="text-teal-600 dark:text-teal-400">Cuota: {formatMoney(suggestedQuota)}/m ({monthsCount}m)</span>}
                         {goal.notify_enabled !== false && notifDay && <span className="text-amber-600 dark:text-amber-400 flex items-center gap-0.5"><Bell className="w-2.5 h-2.5" /><span>Día {notifDay}</span></span>}
@@ -133,11 +133,11 @@ export default function ProfileSavingsGoalsView({
                 </div>
 
                 {contributeGoalId === goal.id && (
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800/50 border border-emerald-500/30 flex items-center gap-2 animate-fadeIn">
+                  <div className="p-3 rounded-xl bg-white/40 dark:bg-white/[0.04] border border-emerald-500/30 flex items-center gap-2 animate-fadeIn">
                     <input
                       type="number" inputMode="decimal" placeholder="Monto a abonar ($)" value={contributeAmount}
                       onFocus={(e) => e.target.select()} onChange={(e) => setContributeAmount(e.target.value)}
-                      className="flex-1 h-11 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] text-xs sm:text-sm font-mono tabular-nums text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60"
+                      className="flex-1 h-11 px-3.5 rounded-xl bg-white/70 dark:bg-zinc-900/70 border border-white/80 dark:border-white/[0.08] text-xs sm:text-sm font-mono tabular-nums text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 font-bold"
                     />
                     <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleContributeToGoal(goal.id); }} className="h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all shadow-xs cursor-pointer">Abonar</button>
                     <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setContributeGoalId(null); }} className="h-11 px-3 rounded-xl text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 text-xs transition-colors cursor-pointer">✕</button>
@@ -147,12 +147,12 @@ export default function ProfileSavingsGoalsView({
                 <div className="space-y-1">
                   <div className="flex justify-between items-baseline gap-2">
                     <span className="text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">{formatMoney(current)}</span>
-                    <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono tabular-nums tracking-tight">Meta: {formatMoney(target)}</span>
+                    <span className="text-xs text-slate-700 dark:text-zinc-300 font-semibold font-mono tabular-nums tracking-tight">Meta: {formatMoney(target)}</span>
                   </div>
                   <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-3 mb-2">
                     <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${Math.max(4, percent)}%`, backgroundColor: percent >= 50 ? '#10B981' : percent >= 20 ? '#F59E0B' : '#0D9488' }} />
                   </div>
-                  <div className="flex justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 tabular-nums">
+                  <div className="flex justify-between text-xs font-mono text-slate-700 dark:text-zinc-300 font-semibold tabular-nums">
                     <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{percent}% alcanzado</span>
                     <span>Faltan {formatMoney(Math.max(0, target - current))}</span>
                   </div>

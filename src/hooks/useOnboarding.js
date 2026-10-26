@@ -17,9 +17,19 @@ const removeAllKeys = (keys) => {
 };
 
 export function useOnboarding({ user = null } = {}) {
-  const [showTutorial, setShowTutorial] = useState(() => {
-    try { return !checkAnyKey(TUTORIAL_KEYS) && checkAnyKey(ONBOARDING_KEYS); } catch { return false; }
-  });
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  const isTutorialCompletedForUser = useCallback((uid) => {
+    if (!uid) return checkAnyKey(TUTORIAL_KEYS);
+    try {
+      return (
+        localStorage.getItem(`app_tutorial_completed_${uid}`) === 'true' ||
+        checkAnyKey(TUTORIAL_KEYS)
+      );
+    } catch {
+      return false;
+    }
+  }, []);
 
   const isKnownCompleted = () => {
     try {
@@ -37,7 +47,11 @@ export function useOnboarding({ user = null } = {}) {
 
   useEffect(() => {
     if (!user?.id || !isSupabaseConfigured || !supabase) {
-      if (!user) { setIsOnboardingActive(false); setIsOnboardingLoading(false); }
+      if (!user) {
+        setIsOnboardingActive(false);
+        setIsOnboardingLoading(false);
+        setShowTutorial(false);
+      }
       return;
     }
 
@@ -64,22 +78,26 @@ export function useOnboarding({ user = null } = {}) {
         if (hasFlag || hasAccounts) {
           setIsOnboardingActive(false);
           setAllKeys([...ONBOARDING_KEYS, `has_completed_onboarding_${user.id}`, `hasCompletedOnboarding_${user.id}`, 'app_onboarding_completed'], 'true');
+          setAllKeys([...TUTORIAL_KEYS, `app_tutorial_completed_${user.id}`], 'true');
+          setShowTutorial(false);
           setHasCompletedOnboarding(user.id, true);
 
           if (!hasFlag) {
             try {
               await supabase.from('profiles').update({ onboarding_completed: true, updated_at: new Date().toISOString() }).eq('id', user.id);
-            } catch (err) {
-              console.warn('[useOnboarding] Error actualizando perfil:', err.message);
-            }
+            } catch {}
           }
         } else {
-          setIsOnboardingActive(true);
-          try { localStorage.setItem(`has_completed_onboarding_${user.id}`, 'false'); } catch {}
+          if (!isTutorialCompletedForUser(user.id)) {
+            setIsOnboardingActive(true);
+            try { localStorage.setItem(`has_completed_onboarding_${user.id}`, 'false'); } catch {}
+          } else {
+            setIsOnboardingActive(false);
+            setShowTutorial(false);
+          }
         }
-      } catch (e) {
+      } catch {
         if (!isMounted) return;
-        console.warn('[useOnboarding] Excepción en comprobación Supabase:', e);
         setIsOnboardingActive(!isKnownCompleted());
       } finally {
         if (isMounted) setIsOnboardingLoading(false);
@@ -88,7 +106,7 @@ export function useOnboarding({ user = null } = {}) {
 
     checkOnboardingStatus();
     return () => { isMounted = false; };
-  }, [user?.id]);
+  }, [user?.id, isTutorialCompletedForUser]);
 
   const completeOnboarding = useCallback((userId = null) => {
     setAllKeys(ONBOARDING_KEYS, 'true');
@@ -102,18 +120,33 @@ export function useOnboarding({ user = null } = {}) {
   }, []);
 
   const openTutorial = useCallback(() => setShowTutorial(true), []);
-  const closeTutorial = useCallback(() => setShowTutorial(false), []);
 
-  const completeTutorial = useCallback((userId = null) => {
-    markUserTutorialCompleted(userId);
+  const closeTutorial = useCallback(() => {
+    const targetId = user?.id;
+    if (targetId) {
+      try { localStorage.setItem(`app_tutorial_completed_${targetId}`, 'true'); } catch {}
+    }
     setAllKeys(TUTORIAL_KEYS, 'true');
     setShowTutorial(false);
-  }, []);
+  }, [user?.id]);
+
+  const completeTutorial = useCallback((userId = null) => {
+    const targetId = userId || user?.id;
+    if (targetId) {
+      try { localStorage.setItem(`app_tutorial_completed_${targetId}`, 'true'); } catch {}
+    }
+    markUserTutorialCompleted(targetId);
+    setAllKeys(TUTORIAL_KEYS, 'true');
+    setShowTutorial(false);
+  }, [user?.id]);
 
   const resetTutorial = useCallback(() => {
+    if (user?.id) {
+      try { localStorage.removeItem(`app_tutorial_completed_${user.id}`); } catch {}
+    }
     removeAllKeys(TUTORIAL_KEYS);
     setShowTutorial(true);
-  }, []);
+  }, [user?.id]);
 
   const resetOnboarding = useCallback(() => {
     removeAllKeys(ONBOARDING_KEYS);

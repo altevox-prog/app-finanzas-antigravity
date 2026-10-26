@@ -58,7 +58,7 @@ export default function NetWorthView({
         <button
           type="button"
           onClick={handleBack}
-          className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 transition-colors cursor-pointer border border-slate-200/60 dark:border-white/5 bg-white dark:bg-zinc-900 shadow-sm shrink-0"
+          className="flex w-10 h-10 min-w-[40px] min-h-[40px] rounded-2xl items-center justify-center text-slate-700 dark:text-zinc-200 hover:text-slate-950 dark:hover:text-white bg-white/50 dark:bg-zinc-900/50 border border-white/70 dark:border-white/[0.08] backdrop-blur-md hover:bg-white/70 dark:hover:bg-zinc-800/60 active:scale-95 transition-all cursor-pointer shadow-xs shrink-0"
           aria-label="Volver"
           title="Volver"
         >
@@ -69,29 +69,31 @@ export default function NetWorthView({
             <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
               Patrimonio Neto
             </h2>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${
-              isNetWorthPositive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border shrink-0 backdrop-blur-sm shadow-xs ${
+              isNetWorthPositive
+                ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-500/30'
+                : 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border-rose-500/30'
             }`}>
               {isNetWorthPositive ? 'Solvente' : 'Pasivo Alto'}
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 truncate mt-0.5">
+          <p className="text-xs text-slate-800 dark:text-zinc-200 font-semibold truncate mt-0.5">
             Balance general de activos y pasivos consolidados
           </p>
         </div>
       </div>
 
       {/* Bloque 1 - Tarjeta Hero de Balance General */}
-      <div className="p-5 sm:p-6 bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4">
+      <div className="p-5 sm:p-6 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md rounded-2xl border border-white/70 dark:border-white/[0.08] shadow-xs space-y-4">
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+          <span className="text-xs uppercase tracking-wider text-slate-800 dark:text-zinc-200 font-bold flex items-center gap-1.5">
             <Scale className="w-4 h-4 text-emerald-500" />
             <span>Patrimonio Neto Total</span>
           </span>
           <h3 className="text-3xl sm:text-4xl font-extrabold font-mono tracking-tight text-slate-900 dark:text-zinc-100 tabular-nums mt-1 leading-tight">
             {formatVal(netWorthCOP)}
           </h3>
-          <p className="text-xs text-slate-400 dark:text-zinc-500 mt-1 font-mono">Calculado en pesos colombianos (COP)</p>
+          <p className="text-xs text-slate-600 dark:text-zinc-400 font-medium mt-1 font-mono">Calculado en pesos colombianos (COP)</p>
         </div>
 
         {/* Desglose horizontal: Activos vs Pasivos */}
@@ -116,7 +118,7 @@ export default function NetWorthView({
         </div>
 
         {/* Ratios */}
-        <div className="pt-2 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 font-medium">
+        <div className="pt-2 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 font-semibold">
           <span className="truncate">
             Pasivos representan el <strong className="text-rose-600 dark:text-rose-400 font-mono font-bold">{liabilityRatio}%</strong> de tus activos.
           </span>

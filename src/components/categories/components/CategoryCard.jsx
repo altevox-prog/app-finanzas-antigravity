@@ -18,7 +18,7 @@ export default function CategoryCard({
   const subcats = category.subcategories || [];
 
   return (
-    <div className="rounded-2xl border transition-all overflow-hidden bg-white dark:bg-zinc-900/90 border-slate-200/80 dark:border-white/[0.08]">
+    <div className="rounded-2xl border transition-all overflow-hidden bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border-white/70 dark:border-white/[0.08] shadow-xs hover:border-white/90 dark:hover:border-white/20">
       {/* Cabecera */}
       <div className="p-3 sm:p-3.5 flex items-center justify-between cursor-pointer active:opacity-80 select-none gap-2" onClick={onToggleExpand}>
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -53,7 +53,7 @@ export default function CategoryCard({
 
       {/* Subcategorías Desplegables */}
       {isExpanded && (
-        <div className="px-3.5 pb-3.5 pt-2.5 border-t border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-zinc-950/40 animate-slide-up space-y-2.5">
+        <div className="px-3.5 pb-3.5 pt-2.5 border-t border-white/40 dark:border-white/[0.08] bg-white/25 dark:bg-black/20 backdrop-blur-sm animate-slide-up space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Subcategorías / Etiquetas de {category.name}</span>
             {!isActiveSubInput && (
@@ -104,7 +104,7 @@ export default function CategoryCard({
                 }
 
                 return (
-                  <span key={sub.id} className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg border shadow-sm group/sub bg-slate-100 dark:bg-zinc-800 border-slate-200/80 dark:border-white/[0.08] text-slate-800 dark:text-zinc-200">
+                  <span key={sub.id} className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg border shadow-xs group/sub bg-white/70 dark:bg-white/[0.06] border-white/80 dark:border-white/[0.08] text-slate-800 dark:text-zinc-200 backdrop-blur-xs">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sub.color || category.color || '#007AFF' }} />
                     <span className="truncate max-w-[120px]">{sub.name}</span>
                     <button type="button" onClick={() => onStartEditSub(sub)} title="Editar etiqueta" className="opacity-40 hover:opacity-100 hover:text-[#007AFF] transition-colors p-0.5 cursor-pointer">
@@ -132,7 +132,7 @@ export default function CategoryCard({
                 type="text" autoFocus placeholder="Nueva subcategoría..." value={subInput}
                 onChange={(e) => setSubInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') onSubmitSubcategory(category.id); }}
-                className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#34C759]"
+                className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-900/70 backdrop-blur-sm text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#34C759]"
               />
               <button type="button" onClick={() => onSubmitSubcategory(category.id)} className="px-2.5 py-1.5 text-xs font-bold bg-[#34C759] text-white rounded-lg hover:bg-emerald-600 active:scale-95 cursor-pointer">
                 Añadir

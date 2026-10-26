@@ -71,8 +71,8 @@ export default function AppHeader({
 
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
 
-  const iconBtnClass = (active = false) => `w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
-    active ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-zinc-900 border border-zinc-800 text-slate-200 hover:text-white hover:border-zinc-700'
+  const iconBtnClass = (active = false) => `w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm backdrop-blur-sm ${
+    active ? 'bg-emerald-500/15 border border-emerald-500/50 text-emerald-500 dark:text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-white/40 dark:bg-zinc-900/60 border border-white/70 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:border-white'
   }`;
 
   return (
@@ -97,17 +97,24 @@ export default function AppHeader({
       )}
 
       {!mobileOnly && (
-        <header className={`${desktopOnlyClass} sticky top-0 z-40 w-full h-16 shrink-0 select-none relative bg-[#090A0F]/95 backdrop-blur-md border-b border-emerald-500/10 shadow-2xl flex items-center overflow-visible`}>
-          <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-emerald-500/15 via-emerald-500/5 to-transparent pointer-events-none z-0" />
-          <div className="absolute top-0 left-1/4 right-1/4 h-8 bg-emerald-500/20 blur-2xl pointer-events-none z-0" />
-          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/35 to-transparent pointer-events-none z-0" />
-
-          <div className="w-full px-6 flex items-center justify-between gap-3 relative z-10">
+        <header
+          className={`w-full transition-all z-40 select-none ${desktopOnlyClass} ${!desktopOnly ? 'hidden lg:block' : ''}`}
+        >
+          <div
+            className="w-full flex items-center justify-between px-5 py-2.5 rounded-full transition-all dark:!bg-[#0c0d0e]/60 dark:!border-white/10 dark:!shadow-[0_10px_30px_-5px_rgba(0,0,0,0.5),inset_0_1px_1px_0_rgba(255,255,255,0.08)]"
+            style={{
+              background: 'rgba(255, 255, 255, 0.25)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.85)',
+              boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.08), inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.95)'
+            }}
+          >
             <div className="flex items-center gap-2.5 select-none shrink-0">
               <AppLogo size="sm" showText={false} iconClassName="w-8 h-8 sm:w-9 sm:h-9 rounded-full [&_img]:rounded-full shadow-sm ring-1 ring-white/10" />
               <div className="flex flex-col min-w-0">
-                <span className="text-base sm:text-lg font-black tracking-tight text-white leading-none">Monety</span>
-                <span className="text-[9px] font-bold tracking-wider text-emerald-400 uppercase leading-none mt-0.5">Finanzas Personales</span>
+                <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white leading-none">Monety</span>
+                <span className="text-[9px] font-bold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase leading-none mt-0.5">Finanzas Personales</span>
               </div>
             </div>
 
@@ -123,20 +130,20 @@ export default function AppHeader({
               )}
 
               {activeTab === 'accounts' && fromSettings && (
-                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('monety:open-add-account'))} className="w-9 h-9 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm mr-1" title="Añadir nueva cuenta" aria-label="Agregar cuenta"><Plus className="w-5 h-5 stroke-[2.5]" /></button>
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('monety:open-add-account'))} className="w-9 h-9 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400 flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-sm mr-1" title="Añadir nueva cuenta" aria-label="Agregar cuenta"><Plus className="w-5 h-5 stroke-[2.5]" /></button>
               )}
 
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-slate-200 font-medium select-none shadow-sm" title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/40 dark:bg-zinc-900/60 border border-white/70 dark:border-white/10 text-xs text-slate-800 dark:text-slate-200 font-medium select-none shadow-sm backdrop-blur-sm" title="Tasa Representativa del Mercado (TRM) oficial sincronizada automáticamente con datos abiertos">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 <span>TRM Oficial: ${Number(trm).toLocaleString('es-CO')} COP</span>
               </div>
 
               <button type="button" onClick={togglePrivacyMode} className={iconBtnClass(isPrivacyMode)} title={isPrivacyMode ? "Mostrar cifras" : "Ocultar cifras (modo discreto)"} aria-label="Modo discreto">
-                {isPrivacyMode ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
+                {isPrivacyMode ? <EyeOff className="w-4 h-4 text-emerald-500 dark:text-emerald-400" /> : <Eye className="w-4 h-4" />}
               </button>
 
               <div className="relative z-[60]">
-                <button type="button" onClick={() => setIsNotificationCenterOpen((p) => !p)} className="w-9 h-9 rounded-full flex items-center justify-center bg-zinc-900 border border-zinc-800 text-slate-200 hover:text-white hover:border-zinc-700 relative transition-colors cursor-pointer shadow-sm active:scale-95" title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"} aria-label="Centro de notificaciones">
+                <button type="button" onClick={() => setIsNotificationCenterOpen((p) => !p)} className="w-9 h-9 rounded-full flex items-center justify-center bg-white/40 dark:bg-zinc-900/60 border border-white/70 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white hover:border-white relative transition-colors cursor-pointer shadow-sm active:scale-95 backdrop-blur-sm" title={unreadCount > 0 ? `${unreadCount} alerta(s) pendientes` : "Sin notificaciones"} aria-label="Centro de notificaciones">
                   <Bell className="w-4.5 h-4.5" />
                   {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500/90 text-white text-[10px] font-mono font-bold flex items-center justify-center leading-none shadow-sm ring-2 ring-[#0D0F17]">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                 </button>

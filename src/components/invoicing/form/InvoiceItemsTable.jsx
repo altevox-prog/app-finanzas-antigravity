@@ -24,8 +24,8 @@ export default function InvoiceItemsTable({
   };
 
   return (
-    <div className={`bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-sm transition-all ${
-      isOpen ? 'p-5 sm:p-6 space-y-4' : 'p-4 sm:p-5 hover:border-slate-300 dark:hover:border-white/20'
+    <div className={`bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-white/[0.08] shadow-sm transition-all ${
+      isOpen ? 'p-5 sm:p-6 space-y-4' : 'p-4 sm:p-5 hover:border-white/80 dark:hover:border-white/20'
     }`}>
       <div
         role="button"
@@ -53,7 +53,7 @@ export default function InvoiceItemsTable({
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800/70 border border-transparent dark:border-white/[0.08] px-2 py-0.5 rounded-md">
+              <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 bg-slate-900/[0.04] dark:bg-white/[0.06] border border-slate-900/[0.08] dark:border-white/[0.08] px-2.5 py-1 rounded-full text-xs backdrop-blur-xs">
                 {items.length} {items.length === 1 ? 'ítem' : 'ítems'}
               </span>
               <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 hidden sm:inline">
@@ -90,7 +90,7 @@ export default function InvoiceItemsTable({
                       type="text" value={item.description || ''}
                       onChange={(e) => updateItem(item.id, { description: e.target.value })}
                       placeholder="Descripción del servicio o producto..."
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs"
                     />
                   </td>
                   <td className="py-2 px-2 text-center">
@@ -98,7 +98,7 @@ export default function InvoiceItemsTable({
                       type="number" min="0" step="any"
                       value={item.quantity === 0 ? 0 : item.quantity ?? ''}
                       onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                      className="w-full text-center px-2 py-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                      className="w-full text-center px-2 py-1.5 rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs"
                     />
                   </td>
                   <td className="py-2 px-2 text-right">
@@ -106,7 +106,7 @@ export default function InvoiceItemsTable({
                       type="number" min="0" step="1000"
                       value={item.unitPrice === 0 ? 0 : item.unitPrice ?? ''}
                       onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                      className="w-full text-right px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/50 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+                      className="w-full text-right px-2.5 py-1.5 rounded-lg border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/50 text-slate-900 dark:text-white focus:outline-none focus:bg-white/95 focus:border-emerald-500/60 shadow-xs"
                     />
                   </td>
                   <td className="py-2 px-2 text-right font-medium text-slate-800 dark:text-zinc-200 whitespace-nowrap">

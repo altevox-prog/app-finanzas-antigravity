@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { INVESTMENT_CATEGORIES } from '../../data/initialData';
 import InvestmentFormModal from './modals/InvestmentFormModal';
@@ -48,6 +48,10 @@ export default function InvestmentsView({
     liquidationDate, setLiquidationDate, isSubmittingLiquidation,
     handleOpenLiquidation, handleCloseLiquidation, handleConfirmLiquidation
   } = useInvestmentLiquidation({ accounts, onAddTransaction, onUpdateInvestment });
+
+  const activeInvestments = useMemo(() => {
+    return (investments || []).filter(inv => inv && inv.status !== 'liquidated' && !inv.isLiquidated && !inv.is_deleted && inv.status !== 'inactive');
+  }, [investments]);
 
   const {
     portfolioMetrics, filteredInvestments, groupedInvestments,
@@ -118,14 +122,14 @@ export default function InvestmentsView({
         categories={INVESTMENT_CATEGORIES} selectedCategory={selectedCategoryFilter}
         onSelectCategory={setSelectedCategoryFilter} viewGrouping={viewGrouping}
         onChangeViewGrouping={setViewGrouping} totalFilteredCount={filteredInvestments.length}
-        totalGroupedCount={Object.keys(groupedInvestments).length} investments={investments}
+        totalGroupedCount={Object.keys(groupedInvestments).length} investments={activeInvestments}
       />
 
       <div className="flex flex-col gap-2.5">
         {filteredInvestments.length === 0 ? (
           <div className="text-center py-6 px-4 border border-dashed rounded-2xl flex flex-col items-center justify-center" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-card-sub)' }}>
             <TrendingUp className="w-7 h-7 opacity-35 mx-auto mb-2 text-emerald-500" />
-            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{investments.length === 0 ? 'No tienes inversiones registradas' : 'No hay inversiones en esta categoría'}</p>
+            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{activeInvestments.length === 0 ? 'No tienes inversiones registradas' : 'No hay inversiones en esta categoría'}</p>
           </div>
         ) : viewGrouping === 'flat' ? (
           filteredInvestments.map((inv) => (

@@ -23,7 +23,7 @@ export default function ExpensesAndMovementsWidget({
   formatMoney: propFormatMoney,
   isReordering = false,
   className = '',
-  limit = 4
+  limit = 2
 }) {
   const { formatMoney: privacyFormatMoney } = usePrivacy();
   const formatMoney = propFormatMoney || privacyFormatMoney;
@@ -45,7 +45,7 @@ export default function ExpensesAndMovementsWidget({
   return (
     <div
       onClick={() => handleNav('transactions')}
-      className={`rounded-3xl bg-white dark:bg-zinc-900/90 border border-slate-200/60 dark:border-white/[0.08] p-4 sm:p-5 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:border-emerald-500/40 hover:shadow-md flex flex-col justify-between transition-all select-none cursor-pointer group min-w-0 w-full ${className}`}
+      className={`glass-card rounded-3xl p-3 sm:p-5 hover:border-emerald-500/40 hover:shadow-lg flex flex-col justify-between transition-all select-none cursor-pointer group min-w-0 w-full h-full max-h-[380px] overflow-hidden ${className}`}
     >
       {/* SECCIÓN SUPERIOR: RESUMEN DE GASTOS */}
       <div className="w-full min-w-0">
@@ -57,7 +57,7 @@ export default function ExpensesAndMovementsWidget({
         </div>
 
         {/* Gráfico Donut Pseudo-3D */}
-        <div className="w-full flex items-center justify-center py-2">
+        <div className="w-full flex items-center justify-center -mt-3 pb-0 sm:-mt-2 sm:pb-1">
           <Expenses3DDonut
             totalExpense={totalExpense}
             categoryBreakdown={categoryExpenses}
@@ -100,7 +100,7 @@ export default function ExpensesAndMovementsWidget({
 
       {/* SECCIÓN INFERIOR: ÚLTIMOS REGISTROS */}
       <div className="w-full min-w-0">
-        <div className="pt-3 mt-1 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between mb-2 px-0.5">
+        <div className="pt-1.5 mt-0.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between mb-1 sm:pt-3 sm:mt-1 sm:mb-2 px-0.5">
           <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
             Últimos Registros
           </span>
@@ -109,13 +109,15 @@ export default function ExpensesAndMovementsWidget({
           </span>
         </div>
 
-        <RecentMovementsList
-          transactions={transactions}
-          limit={limit}
-          onSelectTransaction={onSelectTransaction}
-          formatMoney={formatMoney}
-          isReordering={isReordering}
-        />
+        <div className="max-h-44 overflow-y-auto no-scrollbar pr-1">
+          <RecentMovementsList
+            transactions={transactions}
+            limit={limit}
+            onSelectTransaction={onSelectTransaction}
+            formatMoney={formatMoney}
+            isReordering={isReordering}
+          />
+        </div>
       </div>
     </div>
   );

@@ -81,7 +81,7 @@ export default function WeeklyExpensesChart({
   return (
     <div
       onClick={() => setHoveredIndex(null)}
-      className={`h-full flex flex-col justify-between p-5 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:border-emerald-500/40 transition-all select-none relative ${className}`}
+      className={`h-full flex flex-col justify-between p-5 rounded-3xl border border-slate-300/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] hover:border-emerald-500/40 transition-all select-none relative ${className}`}
     >
       <div className="flex items-center justify-between mb-3.5">
         <div>

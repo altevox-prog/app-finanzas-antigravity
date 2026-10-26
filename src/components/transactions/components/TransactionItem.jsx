@@ -56,22 +56,22 @@ export default function TransactionItem({
   return (
     <SwipeableRow
       onEdit={onEdit ? () => onEdit(tx) : undefined} onDelete={onDelete ? handleDelete : undefined}
-      className="w-full" contentClassName="bg-white dark:bg-zinc-900 touch-pan-y"
+      className="w-full" contentClassName="bg-transparent touch-pan-y"
     >
       <div 
         onClick={() => onSelect?.(tx)}
-        className="p-2.5 sm:p-3 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex items-center justify-between gap-3 select-none active:bg-slate-100/60 dark:active:bg-white/[0.05] touch-pan-y"
+        className="p-3 sm:p-3.5 hover:bg-white/30 dark:hover:bg-white/[0.05] transition-colors cursor-pointer flex items-center justify-between gap-3 select-none active:bg-white/40 dark:active:bg-white/[0.08] touch-pan-y"
       >
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/10 shadow-xs">
+        <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 flex items-center justify-center bg-transparent border-0 shadow-none">
             {isTransfer ? (
-              <div className="w-full h-full flex items-center justify-center bg-emerald-500/10 text-emerald-500 dark:text-emerald-400">
-                <ArrowRightLeft className="w-4 h-4" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <ArrowRightLeft className="w-5 h-5" />
               </div>
             ) : (
               <BrandIcon
-                name={displayName || ''} size={18}
-                fallback={<CategoryIcon category={inv.isInvoice ? 'Facturación' : (category || tx.categoryName)} status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'} size={16} withBadge={false} />}
+                name={displayName || ''} size={32}
+                fallback={<CategoryIcon category={inv.isInvoice ? 'Facturación' : (category || tx.categoryName)} status={isExpense ? 'negative' : isIncome ? 'positive' : 'neutral'} size={24} withBadge={false} />}
               />
             )}
           </div>
@@ -85,7 +85,7 @@ export default function TransactionItem({
                 </button>
               )}
             </div>
-            <div className="text-xs text-slate-400 dark:text-zinc-500 font-medium truncate flex items-center gap-1.5 mt-0.5">
+            <div className="text-xs text-slate-600 dark:text-zinc-400 font-medium truncate flex items-center gap-1.5 mt-0.5">
               {inv.isInvoice ? (
                 <>
                   <span className="truncate">{tx.accountName || 'Principal'}</span>
@@ -107,16 +107,19 @@ export default function TransactionItem({
         </div>
 
         <div className="flex flex-col items-end shrink-0 pl-2">
-          <span className={`text-sm font-black font-mono tracking-tight tabular-nums whitespace-nowrap ${isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'}`}>
+          <span
+            className={`text-sm sm:text-base font-black font-mono tracking-tight tabular-nums whitespace-nowrap ${isIncome ? 'text-emerald-500 dark:text-emerald-400' : isExpense ? '' : 'text-slate-700 dark:text-slate-200'}`}
+            style={isExpense ? { color: '#dc2626' } : undefined}
+          >
             {isExpense ? '-' : isIncome ? '+' : ''}{formatMoney(Math.abs(amt))}
           </span>
           <div className="flex items-center gap-1 mt-0.5">
             {tx.originalCurrency && tx.originalCurrency !== 'COP' && (
-              <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono tabular-nums hidden sm:inline">
+              <span className="text-[10px] text-slate-600 dark:text-zinc-400 font-medium font-mono tabular-nums hidden sm:inline">
                 ({Number(tx.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {tx.originalCurrency})
               </span>
             )}
-            <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono">{formatTxDateClean(tx)}</span>
+            <span className="text-[11px] text-slate-600 dark:text-zinc-400 font-semibold font-mono">{formatTxDateClean(tx)}</span>
           </div>
         </div>
 
@@ -125,7 +128,7 @@ export default function TransactionItem({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onEdit(tx); }}
-              className="p-1 rounded-md text-slate-400 hover:text-emerald-500 dark:text-zinc-500 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-slate-500 hover:text-emerald-500 dark:text-zinc-400 dark:hover:text-emerald-400 transition-colors cursor-pointer"
               title="Editar"
               aria-label="Editar"
             >
@@ -136,7 +139,7 @@ export default function TransactionItem({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-              className="p-1 rounded-md text-slate-400 hover:text-rose-500 dark:text-zinc-500 dark:hover:text-rose-400 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-slate-500 hover:text-rose-500 dark:text-zinc-400 dark:hover:text-rose-400 transition-colors cursor-pointer"
               title="Eliminar"
               aria-label="Eliminar"
             >

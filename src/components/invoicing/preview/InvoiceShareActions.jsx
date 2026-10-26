@@ -48,7 +48,7 @@ export default function InvoiceShareActions({ invoice = {} }) {
       type="button"
       disabled={isCapturing}
       onClick={handleShare}
-      className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-zinc-800/60 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+      className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-white/80 dark:border-white/[0.08] bg-white/70 dark:bg-zinc-800/60 hover:bg-white/90 text-slate-800 dark:text-zinc-100 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
       title="Compartir factura"
     >
       {isCapturing ? (

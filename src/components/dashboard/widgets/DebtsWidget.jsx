@@ -26,7 +26,7 @@ export default function DebtsWidget({
   return (
     <div 
       onClick={() => handleNav('debts')}
-      className={`h-full flex flex-col justify-between min-w-0 w-full rounded-3xl bg-white dark:bg-zinc-900/90 p-4 sm:p-5 border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] select-none cursor-pointer transition-all hover:border-emerald-500/40 hover:shadow-md active:scale-[0.99] group ${className}`}
+      className={`h-full flex flex-col justify-between min-w-0 w-full rounded-3xl bg-white dark:bg-zinc-900/90 p-4 sm:p-5 border border-slate-300/80 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] select-none cursor-pointer transition-all hover:border-emerald-500/40 hover:shadow-md active:scale-[0.99] group ${className}`}
     >
       <div>
         {/* Encabezado */}

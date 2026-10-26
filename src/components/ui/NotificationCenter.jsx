@@ -36,8 +36,7 @@ function getNotificationIcon(item) {
   if (/tv|netflix|spotify|disney|hbo|prime|youtube|streaming|entretenimiento/.test(t)) return <Tv className="w-4 h-4" />;
   if (item.type === 'credit_card_payment' || item.icon === 'CreditCard' || /tarjeta|cr[eé]dito/.test(t)) return <CreditCard className="w-4 h-4" />;
   if (item.icon === 'Receipt' || /factura|servicio|recibo|luz|agua|gas/.test(t)) return <Receipt className="w-4 h-4" />;
-  if (item.icon === 'Target' || /meta|ahorro/.test(t)) return <Target className="w-4 h-4" />;
-  return <CalendarClock className="w-4 h-4" />;
+  return item.icon === 'Target' || /meta|ahorro/.test(t) ? <Target className="w-4 h-4" /> : <CalendarClock className="w-4 h-4" />;
 }
 
 function formatBadgeInfo(badge, urgency) {
@@ -45,19 +44,12 @@ function formatBadgeInfo(badge, urgency) {
   const isTomorrow = /1 d[ií]a|ma[ñn]ana/.test(b), isToday = /hoy/.test(b), isOverdue = urgency === 'urgent' || /vencid|atrasad/.test(b);
   const text = isTomorrow ? 'Vence mañana' : isToday ? 'Vence hoy' : isOverdue ? 'Vencido' : badge;
   const pillClasses = `text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
-    isOverdue || isToday ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400'
-      : isTomorrow ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
-      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+    isOverdue || isToday ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400' : isTomorrow ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
   }`;
   return { text, pillClasses };
 }
 
-const getNotificationTargetView = (item) => {
-  if (item?.actionPayload?.debtOrLoan || /debt|loan/.test(item?.type || '')) return 'debts';
-  if (item?.actionPayload?.investment || /investment|cdt/.test(item?.type || '')) return 'investments';
-  if (item?.actionPayload?.account || /card|credit/.test(item?.type || '')) return 'accounts';
-  return 'recurring';
-};
+const getNotificationTargetView = (item) => (/debt|loan/.test(item?.type || '') || item?.actionPayload?.debtOrLoan) ? 'debts' : (/investment|cdt/.test(item?.type || '') || item?.actionPayload?.investment) ? 'investments' : (/card|credit/.test(item?.type || '') || item?.actionPayload?.account) ? 'accounts' : 'recurring';
 
 export default function NotificationCenter({
   isOpen, onClose, activeNotifications = [], onDismiss, onMarkAllAsRead,
@@ -75,14 +67,14 @@ export default function NotificationCenter({
 
   const content = (
     <>
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+      <div className="flex items-center justify-between pb-3 border-b border-white/30 dark:border-white/10 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 p-2 rounded-xl shrink-0 flex items-center justify-center">
+          <div className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 p-2 rounded-xl shrink-0 flex items-center justify-center shadow-xs">
             <Bell className="w-4 h-4" />
           </div>
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight">Notificaciones</h3>
-            <span className="bg-emerald-100/60 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0">{count}</span>
+            <span className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 tabular-nums shadow-xs">{count}</span>
           </div>
         </div>
         {hasItems && (
@@ -92,12 +84,12 @@ export default function NotificationCenter({
         )}
       </div>
 
-      <div className="py-2 overflow-y-auto flex-1 space-y-1">
+      <div className="py-2 overflow-y-auto flex-1 flex flex-col space-y-1">
         {!hasItems ? (
-          <div className="py-8 flex flex-col items-center justify-center text-center px-4">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5"><CheckCircle2 className="w-5 h-5" /></div>
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-0.5">Sin notificaciones pendientes</h4>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs leading-relaxed">Tus fechas de corte, pagos de tarjeta, suscripciones y deudas están al día.</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center justify-center mb-3 shadow-xs"><CheckCircle2 className="w-6 h-6" /></div>
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1">Sin notificaciones pendientes</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">Tus fechas de corte, pagos de tarjeta, suscripciones y deudas están al día.</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -115,7 +107,7 @@ export default function NotificationCenter({
                   <div className="flex-1 min-w-0">
                     <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide truncate block">{formatCategory(item.category)}</span>
                     <h5 className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate leading-snug">{cleanNotificationTitle(item.title)}</h5>
-                    {amountAndMethod && <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">{amountAndMethod}</p>}
+                    {amountAndMethod && <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5 truncate">{amountAndMethod}</p>}
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     {badgeText && <span className={pillClasses}>{badgeText}</span>}
@@ -136,31 +128,35 @@ export default function NotificationCenter({
           </div>
         )}
       </div>
-
-      <div className="border-t border-slate-100 dark:border-slate-800 mt-2 pt-2 text-center shrink-0">
-        <button type="button" onClick={() => handleNavigate('recurring')} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
-          Ver pagos recurrentes →
-        </button>
-      </div>
     </>
   );
 
-  return (
-    <>
-      <div className="hidden md:block fixed inset-0 z-[65] bg-transparent" onClick={onClose} aria-hidden="true" />
-      <div onClick={(e) => e.stopPropagation()} className="hidden md:flex absolute right-0 top-full mt-3 w-84 sm:w-96 max-h-[520px] z-[70] bg-white dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-2xl p-4 backdrop-blur-md overflow-hidden flex-col text-slate-900 dark:text-white animate-slide-up">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 select-none">
+      {/* 1. Backdrop global sutil: desenfoque suave de 3px y velo liviano */}
+      <div
+        className="fixed inset-0 bg-slate-950/15 backdrop-blur-[3px] transition-all duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* 2. Modal centrado con acabados de cristal de alta gama */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 w-full max-w-sm sm:max-w-md min-h-[380px] sm:min-h-[420px] max-h-[85vh] sm:max-h-[620px] rounded-3xl p-6 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 pointer-events-auto transition-all"
+        style={{
+          background: 'rgba(255, 255, 255, 0.50)',
+          backdropFilter: 'blur(24px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(190%)',
+          border: '1px solid rgba(255, 255, 255, 0.90)',
+          boxShadow: 'inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.95), inset 0 0 24px rgba(255, 255, 255, 0.25), 0 30px 60px -12px rgba(15, 23, 42, 0.25)'
+        }}
+      >
         {content}
       </div>
-
-      {typeof document !== 'undefined' && createPortal(
-        <div className="md:hidden fixed inset-0 z-[999] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
-          <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-sm max-h-[80vh] bg-white dark:bg-zinc-950 border border-slate-100 dark:border-zinc-800 rounded-2xl shadow-2xl p-4 backdrop-blur-md flex flex-col z-10 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
-            {content}
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
+    </div>,
+    document.body
   );
 }

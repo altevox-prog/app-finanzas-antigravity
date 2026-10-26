@@ -52,25 +52,25 @@ export default function LoansAndDebts({
   const tabTotals = calculateTabTotals(filteredItems, calculateItemStats);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0A0C10] transition-colors duration-200 p-4 sm:p-6 pb-32 sm:pb-36 space-y-2.5 sm:space-y-3 animate-fadeIn">
-      {/* 1. Barra de pestañas tipo pastilla compacta y moderna */}
-      <div className="bg-slate-200/70 dark:bg-zinc-900/80 border border-slate-300/60 dark:border-zinc-800/80 rounded-xl p-1 flex gap-1 backdrop-blur-sm w-full">
+    <div className="min-h-full bg-transparent p-4 sm:p-6 pb-32 sm:pb-36 space-y-3 sm:space-y-4 animate-fadeIn">
+      {/* 1. Barra de pestañas tipo pastilla compacta y moderna (Aislada contra parpadeo GPU) */}
+      <div className="relative isolate bg-white/40 dark:bg-zinc-900/40 border border-slate-900/[0.08] dark:border-white/[0.08] rounded-2xl p-1 flex gap-1 backdrop-blur-xl w-full overflow-hidden select-none">
         {/* Pestaña: Préstamos (Por cobrar) */}
         <button
           type="button"
           onClick={() => setActiveTab('receivable')}
-          className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer px-3.5 py-2 rounded-xl text-xs sm:text-sm transition-colors duration-150 ${
             activeTab === 'receivable'
-              ? 'bg-white dark:bg-emerald-500/15 border border-slate-200 dark:border-emerald-500/35 text-emerald-600 dark:text-emerald-300 shadow-sm px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors border border-transparent'
+              ? 'bg-white/60 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+              : 'text-slate-700 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-zinc-200 font-semibold hover:bg-white/20'
           }`}
         >
           <ArrowUpRight className="w-4 h-4 shrink-0" />
           <span>Préstamos</span>
-          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono ${
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono transition-colors duration-150 ${
             activeTab === 'receivable'
-              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
-              : 'bg-slate-300/60 dark:bg-zinc-800 text-slate-600 dark:text-slate-400'
+              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+              : 'bg-slate-900/5 dark:bg-white/5 text-slate-600 dark:text-zinc-400'
           }`}>
             {safeLoans.filter(d => d.type === 'receivable').length}
           </span>
@@ -80,18 +80,18 @@ export default function LoansAndDebts({
         <button
           type="button"
           onClick={() => setActiveTab('payable')}
-          className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer px-3.5 py-2 rounded-xl text-xs sm:text-sm transition-colors duration-150 ${
             activeTab === 'payable'
-              ? 'bg-white dark:bg-rose-500/15 border border-slate-200 dark:border-rose-500/35 text-rose-600 dark:text-rose-300 shadow-sm px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors border border-transparent'
+              ? 'bg-white/60 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 font-bold shadow-xs'
+              : 'text-slate-700 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-zinc-200 font-semibold hover:bg-white/20'
           }`}
         >
           <ArrowDownLeft className="w-4 h-4 shrink-0" />
           <span>Deudas</span>
-          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono ${
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono transition-colors duration-150 ${
             activeTab === 'payable'
-              ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400'
-              : 'bg-slate-300/60 dark:bg-zinc-800 text-slate-600 dark:text-slate-400'
+              ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300'
+              : 'bg-slate-900/5 dark:bg-white/5 text-slate-600 dark:text-zinc-400'
           }`}>
             {safeLoans.filter(d => d.type === 'payable').length}
           </span>
@@ -109,13 +109,13 @@ export default function LoansAndDebts({
       {/* 3. Lista de Registros unificada o Estado Vacío */}
       {filteredItems.length === 0 ? (
         <div 
-          className="bg-white/80 dark:bg-zinc-950/60 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800/80 rounded-2xl p-6 text-center shadow-sm dark:shadow-xl flex flex-col items-center justify-center"
+          className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/60 dark:border-white/[0.08] rounded-3xl p-8 sm:p-10 text-center shadow-sm flex flex-col items-center justify-center"
         >
           <HandCoins className="text-emerald-500 dark:text-emerald-400 w-10 h-10 mx-auto" />
           <h4 className="text-slate-800 dark:text-slate-100 font-semibold text-base sm:text-lg mt-3">
             {activeTab === 'receivable' ? 'No tienes préstamos por cobrar registrados' : 'No tienes deudas por pagar registradas'}
           </h4>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 mb-5 max-w-sm mx-auto leading-relaxed">
+          <p className="text-slate-700 dark:text-zinc-300 text-xs sm:text-sm font-medium mt-1 mb-5 max-w-sm mx-auto leading-relaxed">
             {activeTab === 'receivable'
               ? 'Registra préstamos concedidos a terceros para llevar el control de cuotas y abonos.'
               : 'Registra obligaciones financieras, créditos o deudas para monitorear tu amortización.'}

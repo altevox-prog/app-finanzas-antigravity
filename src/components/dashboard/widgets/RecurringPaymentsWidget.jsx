@@ -34,7 +34,7 @@ export default function RecurringPaymentsWidget({
   return (
     <div 
       onClick={() => handleNav('recurring')}
-      className="p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden w-full min-h-[135px]"
+      className="p-4 sm:p-5 bg-white dark:bg-zinc-900/90 rounded-3xl border border-slate-300/80 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:border-emerald-500/40 hover:shadow-md cursor-pointer active:scale-[0.99] group overflow-hidden w-full min-h-[135px]"
     >
       <div>
         {/* Cabecera interna limpia ([📅] Pagos Recurrentes) */}

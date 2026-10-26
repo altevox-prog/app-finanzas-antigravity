@@ -49,7 +49,7 @@ export default function InvoicingView({ accounts = [], transactions = [], onAddT
           <button
             type="button" onClick={() => setActiveSubTab('editor')}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-              activeSubTab === 'editor' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60'
+              activeSubTab === 'editor' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-800 dark:text-zinc-200 font-semibold hover:text-slate-950 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/10'
             }`}
           >
             <PenSquare className="w-3.5 h-3.5" />
@@ -58,7 +58,7 @@ export default function InvoicingView({ accounts = [], transactions = [], onAddT
           <button
             type="button" onClick={() => setActiveSubTab('history')}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-              activeSubTab === 'history' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60'
+              activeSubTab === 'history' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-800 dark:text-zinc-200 font-semibold hover:text-slate-950 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/10'
             }`}
           >
             <History className="w-3.5 h-3.5" />
@@ -75,8 +75,10 @@ export default function InvoicingView({ accounts = [], transactions = [], onAddT
 
         {activeSubTab === 'editor' && (
           <button
-            type="button" onClick={handleResetForm} title="Limpiar campos / Nueva factura"
-            className="p-1.5 sm:px-2.5 sm:py-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+            type="button"
+            onClick={handleResetForm}
+            title="Limpiar campos / Nueva factura"
+            className="px-3 py-1.5 bg-white/60 dark:bg-zinc-800/60 border border-white/80 dark:border-white/[0.08] backdrop-blur-md rounded-xl text-slate-800 dark:text-zinc-100 font-semibold shadow-xs hover:bg-white/80 hover:text-slate-950 dark:hover:bg-zinc-700/60 transition-all cursor-pointer flex items-center gap-1.5 text-xs"
           >
             <RotateCcw className="w-4 h-4" />
             <span className="hidden sm:inline">Nueva factura</span>

@@ -96,10 +96,18 @@ export default function RecentMovementsList({
             </div>
 
             <div className="text-right shrink-0">
-              <span className={`text-xs font-bold font-mono tracking-tight tabular-nums whitespace-nowrap ${
-                isExpense ? 'text-rose-500 dark:text-rose-400' : isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-200'
-              }`}>
-                {isExpense ? '-' : isIncome ? '+' : ''}
+              <span
+                data-tx-type={isExpense ? 'expense' : isIncome ? 'income' : 'neutral'}
+                className={`text-xs font-bold font-mono tracking-tight tabular-nums whitespace-nowrap ${
+                  isExpense ? 'tx-amount-expense text-rose-600' : isIncome ? 'tx-amount-income text-emerald-600' : 'text-slate-700'
+                }`}
+                ref={(el) => {
+                  if (el) {
+                    el.style.setProperty('color', isExpense ? '#dc2626' : isIncome ? '#16a34a' : '#334155', 'important');
+                  }
+                }}
+              >
+                {isExpense ? '- ' : isIncome ? '+ ' : ''}
                 {formatMoney(Math.abs(amt))}
               </span>
             </div>

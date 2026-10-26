@@ -9,7 +9,8 @@ const SUBVIEW_TITLES = {
   savings_goals: 'Metas de ahorro',
   categories: 'Mis categorías',
   tax: 'Impuestos y declaración de renta',
-  accounts: 'Mis cuentas'
+  accounts: 'Mis cuentas',
+  invoice_history: 'Cuentas por Cobrar'
 };
 
 export default function ProfileHeader({
@@ -18,7 +19,7 @@ export default function ProfileHeader({
   isOnline, onClose, handleSync, isSyncing = false, handleSignOut, children
 }) {
   return (
-    <div className={`border-b border-slate-200/80 dark:border-white/[0.08] shrink-0 bg-slate-50 dark:bg-[#121214] ${currentView === 'main' ? 'p-4 sm:p-5' : 'py-2 px-4'}`}>
+    <div className={`border-b border-white/40 dark:border-white/[0.08] shrink-0 bg-white/20 dark:bg-white/[0.02] backdrop-blur-md ${currentView === 'main' ? 'p-4 sm:p-5' : 'py-2 px-4'}`}>
       {currentView === 'main' ? (
         <>
           <div className="flex items-start justify-between gap-3">
@@ -58,16 +59,16 @@ export default function ProfileHeader({
 
             <div className="flex items-center gap-1 shrink-0">
               {handleSync && (
-                <button type="button" onClick={handleSync} disabled={isSyncing} title="Sincronizar ahora" aria-label="Sincronizar ahora" className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer disabled:opacity-50">
+                <button type="button" onClick={handleSync} disabled={isSyncing} title="Sincronizar ahora" aria-label="Sincronizar ahora" className="p-2 rounded-xl text-slate-700 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white/40 dark:hover:bg-white/10 transition-all cursor-pointer disabled:opacity-50">
                   <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600 dark:text-emerald-400' : ''}`} />
                 </button>
               )}
               {handleSignOut && (
-                <button type="button" onClick={handleSignOut} title="Cerrar sesión" aria-label="Cerrar sesión" className="p-2 rounded-xl text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer">
+                <button type="button" onClick={handleSignOut} title="Cerrar sesión" aria-label="Cerrar sesión" className="p-2 rounded-xl text-slate-700 dark:text-zinc-300 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-white/40 dark:hover:bg-white/10 transition-all cursor-pointer">
                   <LogOut className="w-4 h-4" />
                 </button>
               )}
-              <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer shrink-0 ml-0.5" title="Cerrar Centro de Control" aria-label="Cerrar Centro de Control">
+              <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/40 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white cursor-pointer shrink-0 ml-0.5" title="Cerrar Centro de Control" aria-label="Cerrar Centro de Control">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -77,7 +78,7 @@ export default function ProfileHeader({
       ) : (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <button type="button" onClick={() => setCurrentView?.('main')} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer" title="Volver">
+            <button type="button" onClick={() => setCurrentView?.('main')} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/40 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white cursor-pointer" title="Volver">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h2 className="text-[17px] sm:text-[18px] font-bold tracking-tight">{SUBVIEW_TITLES[currentView] || ''}</h2>
@@ -89,7 +90,7 @@ export default function ProfileHeader({
                 <Plus className="w-4 h-4 stroke-[2.5]" />
               </button>
             )}
-            <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer" title="Cerrar">
+            <button type="button" onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/40 dark:hover:bg-white/10 active:scale-95 transition-all text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white cursor-pointer" title="Cerrar">
               <X className="w-5 h-5" />
             </button>
           </div>

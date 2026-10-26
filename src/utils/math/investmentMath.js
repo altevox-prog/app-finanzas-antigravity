@@ -18,6 +18,7 @@ export const calculateNetWorth = ({
   let totalInvestmentsValueCOP = 0, totalInvestmentsCostCOP = 0;
   (Array.isArray(investments) ? investments : []).forEach((inv) => {
     if (!inv) return;
+    if (inv.status === 'liquidated' || inv.isLiquidated || inv.is_deleted || inv.status === 'inactive') return;
     const rate = getRate(String(inv.currency || 'USD').toUpperCase(), trmValue);
     const ticker = (inv.ticker || inv.symbol || (inv.name && inv.name.length <= 6 ? inv.name : '')).toUpperCase().trim();
     const livePrice = safeNumber(livePrices[ticker]), shares = safeNumber(inv.shares ?? inv.quantity);

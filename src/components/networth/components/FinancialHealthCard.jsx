@@ -46,7 +46,7 @@ export default function FinancialHealthCard({
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm flex items-start gap-3.5">
+    <div className="p-4 sm:p-5 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] shadow-xs flex items-start gap-3.5">
       <div className={`p-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 ${statusConfig.iconColor} shrink-0 mt-0.5`}>
         <StatusIcon className="w-5 h-5" />
       </div>
@@ -59,7 +59,7 @@ export default function FinancialHealthCard({
             {statusConfig.label} ({debtRatio.toFixed(1)}% deuda)
           </span>
         </div>
-        <p className="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+        <p className="text-xs text-slate-700 dark:text-zinc-300 font-medium leading-relaxed">
           {statusConfig.description}
         </p>
       </div>

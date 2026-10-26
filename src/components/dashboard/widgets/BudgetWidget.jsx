@@ -61,7 +61,7 @@ export default function BudgetWidget({
   const progressBarColor = isExceeded ? '#EF4444' : isWarning ? '#F59E0B' : '#10B981';
 
   return (
-    <div className="h-full flex flex-col justify-between min-w-0 w-full rounded-3xl bg-white dark:bg-zinc-900/90 p-4 sm:p-5 border border-slate-200/60 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] select-none relative overflow-hidden">
+    <div className="h-full flex flex-col justify-between min-w-0 w-full rounded-3xl bg-white dark:bg-zinc-900/90 p-4 sm:p-5 border border-slate-300/80 dark:border-white/[0.08] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] select-none relative overflow-hidden">
       <div>
         <div className="flex items-center justify-between mb-3.5 gap-2">
           <div className="flex items-center gap-2.5 min-w-0">

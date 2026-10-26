@@ -20,14 +20,14 @@ export default function ProfileInvoiceHistoryModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-0 sm:p-4 animate-fadeIn"
+      className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-md flex items-center justify-center p-0 sm:p-4 animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className="relative w-full h-full sm:h-auto sm:max-h-[88vh] sm:max-w-2xl bg-white dark:bg-[#0c0e14] sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden"
+        className="relative w-full h-full sm:h-auto sm:max-h-[88vh] sm:max-w-2xl bg-white/40 dark:bg-zinc-900/40 backdrop-blur-2xl sm:rounded-3xl shadow-2xl border-0 sm:border border-white/60 dark:border-white/[0.08] flex flex-col overflow-hidden text-slate-900 dark:text-zinc-100"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-white/80 dark:bg-[#0c0e14]/80 backdrop-blur-md">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/40 dark:border-white/[0.08] shrink-0 bg-white/20 dark:bg-white/[0.02] backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
               <ReceiptText className="w-5 h-5" />

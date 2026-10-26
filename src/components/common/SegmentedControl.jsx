@@ -30,7 +30,7 @@ export default function SegmentedControl({
   return (
     <div
       role="tablist"
-      className={`relative p-1 bg-slate-100 dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] rounded-xl flex gap-1 select-none ${
+      className={`relative p-1 bg-white/40 dark:bg-white/[0.04] backdrop-blur-md border border-white/60 dark:border-white/[0.08] rounded-2xl flex gap-1 select-none shadow-xs ${
         fullWidth ? 'w-full' : 'inline-flex'
       } ${className}`}
     >
@@ -49,10 +49,10 @@ export default function SegmentedControl({
             onClick={() => onChange && onChange(optId)}
             className={`flex-1 py-1.5 px-3 text-xs sm:text-sm text-center select-none cursor-pointer rounded-lg flex items-center justify-center gap-1.5 transition-all duration-150 ${currentSizeClass} ${
               isActive
-                ? `bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 font-medium shadow-sm border border-slate-200/80 dark:border-white/[0.08] ${
+                ? `bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md text-slate-950 dark:text-white font-bold shadow-xs border border-white/90 dark:border-white/[0.12] ${
                     opt.activeClassName || ''
                   }`
-                : `text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-200/60 dark:hover:bg-zinc-800/40 font-normal transition-colors border border-transparent ${
+                : `text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/[0.06] font-semibold transition-all border border-transparent ${
                     opt.inactiveClassName || ''
                   }`
             }`}
@@ -63,8 +63,8 @@ export default function SegmentedControl({
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full tabular-nums ${
                   isActive
-                    ? 'bg-slate-100 dark:bg-zinc-700 text-slate-800 dark:text-zinc-200'
-                    : 'bg-slate-200/70 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
+                    ? 'bg-white/90 dark:bg-zinc-700/80 text-slate-900 dark:text-zinc-100 font-bold border border-white/80 dark:border-white/10'
+                    : 'bg-white/40 dark:bg-white/[0.06] text-slate-700 dark:text-zinc-300 font-medium'
                 }`}
               >
                 {opt.count}

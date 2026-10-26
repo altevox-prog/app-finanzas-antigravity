@@ -26,7 +26,7 @@ export default function EditCategoryModal({
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 animate-fadeIn">
       <div 
-        className="rounded-t-[28px] sm:rounded-2xl p-5 sm:p-6 w-full max-w-lg shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-slate-900 dark:text-white animate-slide-up pb-safe max-h-[90vh] overflow-y-auto"
+        className="rounded-t-[28px] sm:rounded-2xl p-5 sm:p-6 w-full max-w-lg shadow-2xl border border-white/70 dark:border-white/[0.08] bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl text-slate-900 dark:text-white animate-slide-up pb-safe max-h-[90vh] overflow-y-auto"
       >
         <div className="w-10 h-1 bg-slate-400/40 rounded-full mx-auto mb-3 sm:hidden" />
 
@@ -46,7 +46,7 @@ export default function EditCategoryModal({
           <button
             type="button"
             onClick={onClose}
-            className="opacity-60 hover:opacity-100 text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 cursor-pointer"
+            className="opacity-60 hover:opacity-100 text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center bg-white/60 dark:bg-white/10 text-slate-600 dark:text-zinc-300 cursor-pointer"
           >
             ✕
           </button>
@@ -60,7 +60,7 @@ export default function EditCategoryModal({
               required
               value={editCatName}
               onChange={(e) => setEditCatName(e.target.value)}
-              className="w-full text-sm font-bold px-3.5 py-2.5 border border-slate-200/80 dark:border-white/[0.08] rounded-xl bg-slate-100 dark:bg-zinc-800/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#34C759]"
+              className="w-full text-sm font-bold px-3.5 py-2.5 bg-white/70 dark:bg-white/[0.05] border border-white/80 dark:border-white/[0.08] backdrop-blur-sm rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#34C759]"
             />
           </div>
 
@@ -70,7 +70,7 @@ export default function EditCategoryModal({
               <select
                 value={editCatType}
                 onChange={(e) => setEditCatType(e.target.value)}
-                className="w-full text-xs px-3 py-2.5 border border-slate-200/80 dark:border-white/[0.08] rounded-xl bg-slate-100 dark:bg-zinc-800/80 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#34C759]"
+                className="w-full text-xs px-3 py-2.5 bg-white/70 dark:bg-white/[0.05] border border-white/80 dark:border-white/[0.08] backdrop-blur-sm rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#34C759]"
               >
                 <option value="expense">Gasto</option>
                 <option value="income">Ingreso</option>
@@ -82,7 +82,7 @@ export default function EditCategoryModal({
               <button
                 type="button"
                 onClick={onOpenEmojiPicker}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800/80 text-slate-900 dark:text-white hover:border-emerald-500/40 transition-all cursor-pointer group"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/70 dark:bg-white/[0.05] border border-white/80 dark:border-white/[0.08] backdrop-blur-sm text-slate-900 dark:text-white hover:border-emerald-500/40 transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
                   <CategoryIcon icon={editCatIcon} color={editCatColor} size="sm" withBadge={true} />
@@ -110,7 +110,7 @@ export default function EditCategoryModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200/80 dark:border-white/[0.08]">
+          <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/60 dark:border-white/[0.08]">
             {canDelete ? (
               <button
                 type="button"
@@ -133,7 +133,7 @@ export default function EditCategoryModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-white/50 dark:bg-white/[0.06] text-slate-700 dark:text-zinc-200 hover:bg-white/80 dark:hover:bg-white/[0.12] border border-white/70 dark:border-white/[0.08] transition-colors cursor-pointer"
               >
                 Cancelar
               </button>

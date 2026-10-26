@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { List, Building2 } from 'lucide-react';
 
 /**
@@ -16,8 +16,12 @@ export default function InvestmentFilterBar({
   totalGroupedCount = 0,
   investments = []
 }) {
-  const totalCount = investments.length > 0 ? investments.length : totalFilteredCount;
-  const showViewControls = (investments && investments.length > 0) || totalFilteredCount > 0 || totalGroupedCount > 0;
+  const activeList = useMemo(() => {
+    return (investments || []).filter(i => i && i.status !== 'liquidated' && !i.isLiquidated && !i.is_deleted && i.status !== 'inactive');
+  }, [investments]);
+
+  const totalCount = activeList.length;
+  const showViewControls = activeList.length > 0 || totalFilteredCount > 0 || totalGroupedCount > 0;
 
   return (
     <div className="space-y-2.5">
@@ -36,9 +40,9 @@ export default function InvestmentFilterBar({
         </button>
 
         {categories.map(cat => {
-          const count = investments.length > 0
-            ? investments.filter(i => i.category === cat.id || i.assetType === cat.id).length
-            : (cat.count ?? null);
+          const count = activeList.length > 0
+            ? activeList.filter(i => i.category === cat.id || i.assetType === cat.id).length
+            : 0;
 
           if (count === 0 && selectedCategory !== cat.id) return null;
           const isSelected = selectedCategory === cat.id;

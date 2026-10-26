@@ -10,28 +10,19 @@ export default function AccountCard({
   trm = 4050, showBalance, showBalances, isMasked, isReadOnly = false
 }) {
   const { formatMoney, isPrivacyMode } = usePrivacy();
-  const isVisible = showBalance !== undefined ? Boolean(showBalance)
-    : showBalances !== undefined ? Boolean(showBalances)
-    : isMasked !== undefined ? !isMasked : !isPrivacyMode;
+  const isVisible = showBalance !== undefined ? Boolean(showBalance) : showBalances !== undefined ? Boolean(showBalances) : isMasked !== undefined ? !isMasked : !isPrivacyMode;
 
   if (!account) return null;
 
   const currency = account?.currency || 'COP';
   const balance = Number(account?.currentBalance ?? (account?.balance ?? (account?.initialBalance ?? 0)));
   const shares = Number(account?.shares || 0), unitPrice = Number(account?.unitPrice || 0);
-  const rate = currency === 'USD' ? Number(trm || 4000) : currency === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1;
-  const balanceInCop = Number(account?.copEquivalent) || (balance * rate);
+  const rate = currency === 'USD' ? Number(trm || 4000) : currency === 'EUR' ? Math.round(Number(trm || 4000) * 1.08) : 1, balanceInCop = Number(account?.copEquivalent) || (balance * rate);
 
   const isCreditCard = account?.type === 'card' || account?.type === 'credit';
-  const isInvestment = account?.type === 'investment';
-  const isForeignCurrency = currency === 'USD' || currency === 'EUR';
+  const isInvestment = account?.type === 'investment', isForeignCurrency = currency === 'USD' || currency === 'EUR';
 
-  const typeLabel = 
-    account?.type === 'cash' || (account?.name || '').toLowerCase().includes('efectivo') ? 'Efectivo' :
-    isCreditCard ? 'Tarjeta de Crédito' :
-    (account?.name || '').toLowerCase().includes('nequi') || account?.type === 'wallet' ? 'Billetera Digital' :
-    account?.type === 'savings' ? 'Cuenta de Ahorros' :
-    isInvestment ? 'Inversión / Acciones' : 'Cuenta Bancaria';
+  const typeLabel = account?.type === 'cash' || (account?.name || '').toLowerCase().includes('efectivo') ? 'Efectivo' : isCreditCard ? 'Tarjeta de Crédito' : (account?.name || '').toLowerCase().includes('nequi') || account?.type === 'wallet' ? 'Billetera Digital' : account?.type === 'savings' ? 'Cuenta de Ahorros' : isInvestment ? 'Inversión / Acciones' : 'Cuenta Bancaria';
 
   let saldoRestante = 0, cupoDisponible = 0;
   if (isCreditCard) {
@@ -46,10 +37,8 @@ export default function AccountCard({
     });
     const rawInit = safeNumber(account?.initialBalance ?? account?.initial_balance ?? 0);
     const initialDebt = rawInit < 0 ? Math.abs(rawInit) : 0, initialCredit = rawInit > 0 ? rawInit : 0;
-    const totalExpenses = cardTxs.filter(t => t?.type === 'expense').reduce((s, t) => s + safeNumber(t?.amount), 0);
-    const totalPayments = cardTxs.filter(t => t?.type === 'income').reduce((s, t) => s + safeNumber(t?.amount), 0);
-    saldoRestante = Math.max(0, (initialDebt + totalExpenses) - (initialCredit + totalPayments));
-    cupoDisponible = Math.max(0, (Number(account?.creditLimit) || 5000000) - saldoRestante);
+    const totalExpenses = cardTxs.filter(t => t?.type === 'expense').reduce((s, t) => s + safeNumber(t?.amount), 0), totalPayments = cardTxs.filter(t => t?.type === 'income').reduce((s, t) => s + safeNumber(t?.amount), 0);
+    saldoRestante = Math.max(0, (initialDebt + totalExpenses) - (initialCredit + totalPayments)), cupoDisponible = Math.max(0, (Number(account?.creditLimit) || 5000000) - saldoRestante);
   }
 
   const x = useMotionValue(0);
@@ -75,7 +64,6 @@ export default function AccountCard({
           </motion.div>
         </div>
       )}
-
       {!isReadOnly && onDelete && (
         <div className="absolute inset-y-0 right-0 w-full flex items-center justify-end pr-5 bg-gradient-to-l from-rose-500/20 via-rose-500/10 to-transparent border border-rose-500/30 rounded-2xl z-0 pointer-events-none">
           <motion.div style={{ opacity: deleteOpacity, scale: deleteScale }} className="flex items-center gap-2.5 text-rose-600 dark:text-rose-400 font-bold text-xs sm:text-sm">
@@ -86,21 +74,22 @@ export default function AccountCard({
       )}
 
       <motion.div
-        style={{ x }} drag={!isReadOnly ? "x" : false} dragDirectionLock dragConstraints={{ left: 0, right: 0 }} dragElastic={0.4}
+        style={{ x }}
+        drag={!isReadOnly ? "x" : false} dragDirectionLock dragConstraints={{ left: 0, right: 0 }} dragElastic={0.4}
         onDragEnd={(e, { offset, velocity }) => {
           if (isReadOnly) return;
           if (offset.x > 65 || velocity.x > 300) { vibrate(25); onEdit?.(account); }
           else if (offset.x < -65 || velocity.x < -300) { vibrate(35); onDelete?.(account.id || account); }
         }}
         onClick={handleCardClick}
-        className={`group w-full h-full min-h-[134px] sm:min-h-[138px] flex flex-col justify-between bg-white dark:bg-zinc-900/60 border border-slate-200/80 dark:border-white/[0.08] hover:border-emerald-500/40 hover:dark:bg-zinc-800/80 rounded-2xl p-3 sm:p-3.5 shadow-xs transition-all select-none relative z-10 touch-pan-y ${isReadOnly ? 'cursor-default' : 'cursor-default lg:cursor-pointer'}`}
+        className={`group w-full h-full min-h-[134px] sm:min-h-[138px] flex flex-col justify-between bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/60 dark:border-white/[0.08] shadow-sm hover:border-emerald-500/50 rounded-3xl p-4 sm:p-5 transition-all select-none relative z-10 touch-pan-y ${isReadOnly ? 'cursor-default' : 'cursor-default lg:cursor-pointer'}`}
       >
         <div className="h-8 flex items-center justify-between gap-2 mb-1 shrink-0">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
             <BrandIcon name={account?.name || 'Cuenta'} size={32} className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg select-none shrink-0" type={account?.type} />
             <div className="min-w-0 flex-1">
               <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm leading-snug truncate">{account?.name || 'Sin nombre'}</h4>
-              <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-zinc-500 truncate leading-none mt-0.5">{typeLabel}</p>
+              <p className="text-[10px] sm:text-[11px] font-semibold text-slate-600 dark:text-zinc-400 truncate leading-none mt-0.5">{typeLabel}</p>
             </div>
           </div>
           {!isReadOnly && (
@@ -114,25 +103,31 @@ export default function AccountCard({
         <div className="flex-1 flex flex-col justify-center py-0.5 sm:py-1 min-h-0">
           {isCreditCard ? (
             <div className="flex flex-col items-start w-full min-w-0">
-              <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-slate-400 dark:text-zinc-500 block truncate max-w-full leading-none mb-0.5">DEUDA ACUMULADA</span>
-              <span className={`text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums truncate max-w-full block ${saldoRestante > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}`}>
+              <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-slate-600 dark:text-zinc-400 block truncate max-w-full leading-none mb-0.5">DEUDA ACUMULADA</span>
+              <span
+                className={`text-lg sm:text-xl font-black font-mono tracking-tight tabular-nums truncate max-w-full block ${saldoRestante <= 0 ? 'text-emerald-500 dark:text-emerald-400' : ''}`}
+                style={saldoRestante > 0 ? { color: '#dc2626' } : undefined}
+              >
                 {!isVisible ? '••••••' : (saldoRestante > 0 ? `-${formatMoney(saldoRestante)}` : formatMoney(0))}
               </span>
             </div>
           ) : (
             <div className="flex flex-col items-start w-full min-w-0">
-              <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-slate-400 dark:text-zinc-500 block truncate max-w-full leading-none mb-0.5">SALDO DISPONIBLE</span>
+              <span className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-slate-600 dark:text-zinc-400 block truncate max-w-full leading-none mb-0.5">SALDO DISPONIBLE</span>
               {isForeignCurrency ? (
                 <div className="w-full min-w-0">
                   <span className="text-lg sm:text-xl font-bold font-mono tracking-tight text-slate-900 dark:text-white tabular-nums truncate max-w-full block leading-tight">
                     {!isVisible ? '••••••' : formatNativeCurrency(balance, currency)}
                   </span>
-                  <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-mono tracking-tight block tabular-nums leading-tight mt-0.5 truncate max-w-full">
+                  <span className="text-[9px] text-slate-600 dark:text-zinc-400 font-mono font-medium tracking-tight block tabular-nums leading-tight mt-0.5 truncate max-w-full">
                     {!isVisible ? '≈ •••••• COP' : `≈ $${Math.round(balanceInCop).toLocaleString('es-CO')} COP`}
                   </span>
                 </div>
               ) : (
-                <span className={`text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums truncate max-w-full block ${balance < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+                <span
+                  className={`text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums truncate max-w-full block ${balance >= 0 ? 'text-slate-900 dark:text-white' : ''}`}
+                  style={balance < 0 ? { color: '#dc2626' } : undefined}
+                >
                   {!isVisible ? '••••••' : formatMoney(balance)}
                 </span>
               )}
@@ -149,19 +144,15 @@ export default function AccountCard({
           {isCreditCard ? (
             <>
               <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <span className="text-slate-500 dark:text-zinc-400 text-[10px] sm:text-[11px] shrink-0 font-medium">Cupo libre:</span>
-                <b className="text-emerald-600 dark:text-emerald-400 font-bold font-mono tabular-nums text-[10px] sm:text-[11px] truncate">
-                  {!isVisible ? '••••••' : formatMoney(cupoDisponible)}
-                </b>
+                <span className="text-slate-700 dark:text-zinc-300 text-[10px] sm:text-[11px] shrink-0 font-semibold">Cupo libre:</span>
+                <b className="text-emerald-600 dark:text-emerald-400 font-bold font-mono tabular-nums text-[10px] sm:text-[11px] truncate">{!isVisible ? '••••••' : formatMoney(cupoDisponible)}</b>
               </div>
-              <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 text-[9px] sm:text-[10px] font-medium font-mono shrink-0 ml-2">
-                Corte d.{account.closingDate || account.paymentDueDate || 17}
-              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-900/[0.04] dark:bg-white/[0.06] border border-slate-900/[0.08] dark:border-white/[0.08] text-slate-700 dark:text-zinc-300 text-[9px] sm:text-[10px] font-medium font-mono shrink-0 ml-2 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)] backdrop-blur-xs">Corte d.{account.closingDate || account.paymentDueDate || 17}</span>
             </>
           ) : (
             <>
-              <span className="text-slate-400 dark:text-zinc-500 text-[10px] sm:text-[11px] truncate font-medium">Activa • {account?.currency || 'COP'}</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 text-[9px] sm:text-[10px] font-medium font-mono shrink-0 ml-2">{typeLabel}</span>
+              <span className="text-slate-600 dark:text-zinc-400 text-[10px] sm:text-[11px] truncate font-semibold">Activa • {account?.currency || 'COP'}</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-900/[0.04] dark:bg-white/[0.06] border border-slate-900/[0.08] dark:border-white/[0.08] text-slate-700 dark:text-zinc-300 text-[9px] sm:text-[10px] font-medium font-mono shrink-0 ml-2 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)] backdrop-blur-xs">{typeLabel}</span>
             </>
           )}
         </div>

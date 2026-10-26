@@ -37,7 +37,7 @@ export default function Expenses3DDonut({
 
   return (
     <div className={`relative flex items-center justify-center select-none py-1 ${className}`}>
-      <div className="absolute bottom-2 w-44 h-11 bg-black/85 rounded-full blur-xl pointer-events-none -z-10" />
+      <div className="absolute bottom-1.5 w-44 h-10 bg-slate-900/12 dark:bg-black/60 rounded-full blur-xl pointer-events-none -z-10" />
 
       <div className="relative flex items-center justify-center" style={{ width: size, height: size * 0.72, perspective: '900px' }}>
         <div className="relative flex items-center justify-center transition-transform duration-300" style={{ transform: 'rotateX(52deg)', transformStyle: 'preserve-3d', width: size, height: size }}>
@@ -53,9 +53,14 @@ export default function Expenses3DDonut({
                 <stop offset="35%" stopColor="#05070c" stopOpacity="0.68" />
                 <stop offset="100%" stopColor="#0b0e17" stopOpacity="0.25" />
               </linearGradient>
-              <filter id="compact-depth" x="-10%" y="-10%" width="120%" height="140%">
-                <feDropShadow dx="0" dy="6" stdDeviation="0" floodColor="#000000" floodOpacity="0.5" />
-                <feDropShadow dx="0" dy="10" stdDeviation="1" floodColor="#000000" floodOpacity="0.75" />
+              <linearGradient id="core-cavity-light" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#0f172a" stopOpacity="0.26" />
+                <stop offset="40%" stopColor="#334155" stopOpacity="0.10" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.35" />
+              </linearGradient>
+              <filter id="compact-depth" x="-20%" y="-10%" width="140%" height="160%">
+                <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="#064e3b" floodOpacity="0.12" />
+                <feDropShadow dx="0" dy="16" stdDeviation="16" floodColor="#0f172a" floodOpacity="0.08" />
               </filter>
             </defs>
 
@@ -110,8 +115,15 @@ export default function Expenses3DDonut({
             {/* 3. Biseles perimetrales y núcleo central */}
             <circle cx="100" cy="100" r={radius + strokeWidth / 2} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8" pointerEvents="none" />
             <circle cx="100" cy="100" r={radius - strokeWidth / 2} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.8" pointerEvents="none" />
-            <circle cx="100" cy="100" r={radius - strokeWidth / 2} fill="#06070a" stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
-            <circle cx="100" cy="100" r={radius - strokeWidth / 2 - 0.5} fill="url(#core-cavity)" pointerEvents="none" />
+            <circle
+              cx="100"
+              cy="100"
+              r={radius - strokeWidth / 2}
+              fill="none"
+              className="stroke-slate-900/10 dark:stroke-white/10"
+              strokeWidth="0.8"
+              pointerEvents="none"
+            />
           </svg>
         </div>
 
@@ -119,16 +131,16 @@ export default function Expenses3DDonut({
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ transform: 'translateZ(18px)' }}>
           {hoveredItem ? (
             <div className="flex flex-col items-center text-center px-2">
-              <span className="text-[9px] font-bold tracking-widest text-zinc-400 uppercase leading-none mb-1">{hoveredItem.name?.slice(0, 13)}</span>
-              <span className={`${amtFontSize} font-extrabold font-mono tracking-tight text-white leading-none`}>{displayAmt}</span>
+              <span className="text-[9px] font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase leading-none mb-1">{hoveredItem.name?.slice(0, 13)}</span>
+              <span className={`${amtFontSize} font-extrabold font-mono tracking-tight text-slate-900 dark:text-white leading-none`}>{displayAmt}</span>
               <span className="text-[10px] font-bold font-mono text-emerald-400 leading-none mt-1">{hoveredItem.percentage || hoveredItem.percent}%</span>
             </div>
           ) : (
             <div className="flex flex-col items-center text-center px-2">
-              <span className="text-[9px] font-bold tracking-wider text-zinc-500 uppercase leading-none mb-1">
+              <span className="text-[9px] font-bold tracking-wider text-slate-500 dark:text-zinc-400 uppercase leading-none mb-1">
                 {isZero ? 'ESTADO' : 'TOTAL DEL MES'}
               </span>
-              <span className={`${amtFontSize} font-extrabold font-mono tracking-tight text-white leading-none`}>
+              <span className={`${amtFontSize} font-extrabold font-mono tracking-tight text-slate-900 dark:text-white leading-none`}>
                 {isZero ? '$0' : displayAmt}
               </span>
             </div>

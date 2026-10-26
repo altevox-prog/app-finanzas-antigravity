@@ -101,19 +101,19 @@ export default function RecurringView({
   return (
     <div className="space-y-4 animate-fadeIn pb-12">
       <div className="flex items-center gap-3 min-w-0 mb-2">
-        {Boolean(onBack || fromSettings || previousView === 'settings') && <button type="button" onClick={handleGoBack} className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 cursor-pointer border border-slate-200/60 bg-white dark:bg-zinc-900 shadow-sm shrink-0" title="Volver"><ArrowLeft className="w-5 h-5" /></button>}
-        <div className="min-w-0"><h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate">Pagos recurrentes</h1><p className="text-xs text-slate-500 dark:text-slate-400 truncate">Control de gastos fijos y suscripciones automáticas</p></div>
+        {Boolean(onBack || fromSettings || previousView === 'settings') && <button type="button" onClick={handleGoBack} className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-zinc-800/60 active:scale-95 cursor-pointer border border-white/60 dark:border-white/[0.08] bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md shadow-xs shrink-0" title="Volver"><ArrowLeft className="w-5 h-5" /></button>}
+        <div className="min-w-0"><h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate">Pagos recurrentes</h1><p className="text-xs text-slate-700 dark:text-zinc-300 font-medium truncate">Control de gastos fijos y suscripciones automáticas</p></div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-        <div className="bg-white dark:bg-zinc-900/50 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><TrendingDown className="w-3.5 h-3.5 text-rose-500"/> Gastos comprometidos</span><span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" /></div>
+        <div className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/60 dark:border-white/[0.08] rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 flex items-center gap-1.5"><TrendingDown className="w-3.5 h-3.5 text-rose-500"/> Gastos comprometidos</span><span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" /></div>
           <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-rose-500 dark:text-rose-400">-{formatMoney(totalExpenseProjected)}</div>
-          <p className="text-[11px] text-slate-400 mt-1 font-medium">Proyección mensual fija</p>
+          <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1 font-semibold">Proyección mensual fija</p>
         </div>
-        <div className="bg-white dark:bg-zinc-900/50 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Repeat className="w-3.5 h-3.5 text-indigo-500"/> Servicios activos</span><span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" /></div>
+        <div className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/60 dark:border-white/[0.08] rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 flex items-center gap-1.5"><Repeat className="w-3.5 h-3.5 text-indigo-500"/> Servicios activos</span><span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" /></div>
           <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight tabular-nums text-slate-800 dark:text-white">{activeItems.length}</div>
-          <p className="text-[11px] text-slate-400 mt-1 font-medium">{activeItems.filter(i => (i.mode || 'auto') !== 'manual').length} automáticos • {activeItems.filter(i => i.mode === 'manual').length} manuales</p>
+          <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-1 font-semibold">{activeItems.filter(i => (i.mode || 'auto') !== 'manual').length} automáticos • {activeItems.filter(i => i.mode === 'manual').length} manuales</p>
         </div>
       </div>
       {safeRecurring.length > 0 && (

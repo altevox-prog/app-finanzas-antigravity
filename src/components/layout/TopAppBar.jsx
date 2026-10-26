@@ -10,9 +10,9 @@ import useFinancialDueAlerts from '../../hooks/useFinancialDueAlerts';
 
 const VIEW_TITLES = { transactions: 'Transacciones', movements: 'Transacciones', movimientos: 'Transacciones', investments: 'Portafolio de Inversiones', debts: 'Préstamos y Deudas', loans: 'Préstamos y Deudas', accounts: 'Cuentas y Métodos', recurring: 'Pagos Recurrentes', tax: 'Impuestos', taxes: 'Impuestos', net_worth: 'Patrimonio Neto', networth: 'Patrimonio Neto', categories: 'Categorías', settings: 'Ajustes', profile: 'Perfil' };
 const ROOT_TABS = new Set(['dashboard', 'inicio', 'transactions', 'movements', 'movimientos', 'investments', 'debts', 'loans', 'prestamos']);
-const BTN_BASE = "rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm";
-const BTN_INACTIVE = "bg-slate-100 dark:bg-[#131620] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-slate-900";
-const BTN_ACTIVE = "bg-emerald-500/15 border border-emerald-500/50 text-emerald-400 ring-1 ring-emerald-500/30";
+const BTN_BASE = "rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs backdrop-blur-md";
+const BTN_INACTIVE = "bg-white/50 dark:bg-zinc-900/50 border border-white/70 dark:border-white/[0.08] text-slate-700 dark:text-zinc-200 hover:text-slate-950 dark:hover:text-white hover:bg-white/70 dark:hover:bg-zinc-800/60";
+const BTN_ACTIVE = "bg-emerald-500/15 dark:bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30 font-bold";
 const URGENCY = {
   urgent: { icon: 'bg-rose-500/15 text-rose-500', badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' },
   warning: { icon: 'bg-amber-500/15 text-amber-500', badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
@@ -62,7 +62,9 @@ export default function TopAppBar({
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between transition-all select-none shrink-0 relative overflow-hidden bg-white/80 dark:bg-[#0D0F17]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.06] shadow-xs" style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
+      <header className="sticky top-0 z-40 w-full h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between transition-all select-none shrink-0 relative overflow-hidden bg-[#090A0F]/95 backdrop-blur-md border-b border-emerald-500/10 shadow-2xl text-slate-100" style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
+        <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-emerald-500/15 via-emerald-500/5 to-transparent pointer-events-none z-0" />
+        <div className="absolute top-0 left-1/4 right-1/4 h-6 bg-emerald-500/20 blur-xl pointer-events-none z-0" />
         <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent pointer-events-none z-0" />
         <div className="flex items-center shrink-0 relative z-10">
           {!showBackButton ? (

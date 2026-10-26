@@ -101,13 +101,13 @@ export default function CategoriesView({
       <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200/80 dark:border-white/[0.08]">
         <div className="flex items-center gap-2.5 min-w-0">
           {!hideBackButton && (onBack || fromSettings) && (
-            <button type="button" onClick={handleGoBack} className="p-2 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 opacity-75 hover:opacity-100 active:scale-90 transition-all cursor-pointer" title="Volver">
+            <button type="button" onClick={handleGoBack} className="p-2 rounded-xl border border-white/80 dark:border-white/[0.08] bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md text-slate-800 dark:text-zinc-100 hover:bg-white/90 active:scale-90 transition-all cursor-pointer shadow-xs" title="Volver">
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
           <div>
             {!hideBackButton && <h2 className="text-[17px] sm:text-[18px] font-bold truncate leading-tight text-slate-900 dark:text-white">Mis Categorías</h2>}
-            <p className="text-[12px] text-slate-500 dark:text-slate-400 font-normal truncate">Organiza tus rubros de gastos e ingresos</p>
+            <p className="text-[12px] text-slate-700 dark:text-zinc-300 font-medium truncate">Organiza tus rubros de gastos e ingresos</p>
           </div>
         </div>
         <button type="button" onClick={() => handleOpenAddModal(activeTab)} className="w-9 h-9 bg-[#34C759] hover:bg-emerald-600 text-white rounded-full flex items-center justify-center transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer" title="Nueva Categoría">
@@ -121,7 +121,7 @@ export default function CategoriesView({
 
       <div className="space-y-2.5">
         {currentList.length === 0 ? (
-          <div className="p-8 text-center rounded-2xl border bg-white dark:bg-zinc-900/90 border-slate-200/80 dark:border-white/[0.08]">
+          <div className="p-8 text-center rounded-2xl border bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md border-white/60 dark:border-white/[0.08] shadow-xs">
             <Tag className="w-8 h-8 opacity-30 mx-auto mb-2" />
             <p className="text-xs font-semibold text-slate-700 dark:text-zinc-200">No hay categorías de {activeTab === 'expense' ? 'gastos' : 'ingresos'} aún</p>
             <button type="button" onClick={() => handleOpenAddModal(activeTab)} className="mt-3 px-3 py-1.5 rounded-xl bg-[#34C759] text-white text-xs font-bold active:scale-95 cursor-pointer">Crear primera categoría</button>
@@ -164,8 +164,7 @@ export default function CategoriesView({
       <EmojiPickerModal
         isOpen={showEmojiPicker} onClose={() => setShowEmojiPicker(false)}
         selectedEmoji={emojiPickerTarget === 'edit' ? editCat.icon : newCat.icon}
-        onSelectEmoji={(e) => (emojiPickerTarget === 'edit' ? setEditCat((p) => ({ ...p, icon: e })) : setNewCat((p) => ({ ...p, icon: e })))}
-      />
+        onSelectEmoji={(e) => (emojiPickerTarget === 'edit' ? setEditCat((p) => ({ ...p, icon: e })) : setNewCat((p) => ({ ...p, icon: e })))} />
     </div>
   );
 }

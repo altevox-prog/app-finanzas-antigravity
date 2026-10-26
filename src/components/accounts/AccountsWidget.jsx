@@ -52,7 +52,7 @@ export default function AccountsWidget({
   };
 
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full space-y-2 pt-1 sm:pt-1.5">
       {/* Cabecera del bloque estático de cuentas */}
       <div onClick={handleNavigateToAccounts} className="flex items-center justify-between px-0.5 cursor-pointer group select-none">
         <span className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase group-hover:text-emerald-500 transition-colors">
@@ -123,7 +123,7 @@ export default function AccountsWidget({
               <div 
                 key={acc?.id || `acc-car-${index}`}
                 onClick={handleNavigateToAccounts}
-                className={`w-full min-h-[116px] h-full p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] cursor-pointer active:scale-98 transition-all hover:border-emerald-500/40 hover:dark:bg-zinc-800/80 group ${
+                className={`w-full min-h-[116px] h-full p-4 rounded-2xl border border-slate-300/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 flex flex-col justify-between shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] cursor-pointer active:scale-98 transition-all hover:border-emerald-500/40 hover:dark:bg-zinc-800/80 group ${
                   index >= 2 ? 'hidden md:flex' : 'flex'
                 }`}
               >

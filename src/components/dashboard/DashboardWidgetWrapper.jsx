@@ -10,7 +10,6 @@ export const isWideWidget = (id) => {
   const norm = normalizeWidgetId(id);
   const wideIds = [
     'my_accounts', 'mis_cuentas', 'accounts',
-    'recent_movements', 'movimientos_recientes', 'recent_transactions',
     'bento_metrics', 'bento',
     'balance_cards'
   ];

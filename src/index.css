@@ -5,20 +5,20 @@
 :root,
 html.light,
 body[data-theme="light"] {
-  --surface-base: #F8F9FA;
-  --surface-level1: #FFFFFF;
-  --surface-level2: #F1F5F9;
-  --bg-app: #F8F9FA;
-  --bg-card: #FFFFFF;
-  --bg-card-sub: #F8FAFC;
+  --surface-base: #F2FBF6;
+  --surface-level1: rgba(255, 255, 255, 0.55);
+  --surface-level2: rgba(255, 255, 255, 0.75);
+  --bg-app: #F2FBF6;
+  --bg-card: rgba(255, 255, 255, 0.55);
+  --bg-card-sub: rgba(255, 255, 255, 0.35);
   --bg-input: #F1F5F9;
   --bg-segmented: rgba(15, 23, 42, 0.05);
   --bg-segmented-btn-active: #FFFFFF;
   --text-main: #1E293B;
   --text-muted: #64748B;
   --text-tertiary: #94A3B8;
-  --border-color: #E2E8F0;
-  --border-alpha: rgba(226, 232, 240, 0.6);
+  --border-color: rgba(255, 255, 255, 0.75);
+  --border-alpha: rgba(255, 255, 255, 0.50);
   --header-bg: rgba(248, 249, 250, 0.92);
   --dock-bg: rgba(255, 255, 255, 0.96);
   --modal-bg: #FFFFFF;
@@ -28,7 +28,7 @@ body[data-theme="light"] {
   --brand-primary-text: #FFFFFF;
   --brand-accent: #10B981;
   --brand-accent-bg: #ECFDF5;
-  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+  --card-shadow: 0 12px 30px -4px rgba(16, 185, 129, 0.08), 0 1px 2px 0 rgba(255, 255, 255, 0.9) inset;
   --balance-card-bg: #FFFFFF;
   --balance-card-border: #E2E8F0;
   --balance-card-sub-bg: #F8FAFC;
@@ -38,13 +38,13 @@ body[data-theme="light"] {
 html.dark,
 body[data-theme="dark"] {
   /* Jerarquía de Superficies Elevadas (Dark Mode) - Regla 60-30-10 */
-  --surface-base: #0A0C10;       /* Capa 0 (60%): Lienzo / Fondo base carbón mate */
-  --surface-level1: #0F0F12;     /* Capa 1 (30%): Superficie nivel 1: paneles, tarjetas */
-  --surface-level2: #16171B;     /* Capa 2: menús desplegables / modales / drawers / hover */
+  --surface-base: #0B0E14;
+  --surface-level1: rgba(18, 22, 31, 0.65);
+  --surface-level2: rgba(24, 29, 41, 0.80);
 
-  --bg-app: #0A0C10;
-  --bg-card: #0F0F12;
-  --bg-card-sub: #16171B;
+  --bg-app: #0B0E14;
+  --bg-card: rgba(18, 22, 31, 0.65);
+  --bg-card-sub: rgba(14, 17, 24, 0.50);
   --bg-input: #16171B;
   --bg-segmented: rgba(255, 255, 255, 0.05);
   --bg-segmented-btn-active: #16171B;
@@ -55,8 +55,8 @@ body[data-theme="dark"] {
   --text-tertiary: #64748B;      /* text.muted (slate-500) */
 
   /* Bordes Alpha en lugar de sombras opacas */
-  --border-color: rgba(255, 255, 255, 0.07);
-  --border-alpha: rgba(255, 255, 255, 0.07);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-alpha: rgba(255, 255, 255, 0.05);
   --header-bg: rgba(10, 12, 16, 0.85);
   --dock-bg: rgba(10, 12, 16, 0.92);
   --modal-bg: #0F0F12;           /* Nivel 1/2: modales */
@@ -66,7 +66,7 @@ body[data-theme="dark"] {
   --brand-primary-text: #0A0C10;
   --brand-accent: #10B981;
   --brand-accent-bg: rgba(16, 185, 129, 0.12);
-  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  --card-shadow: 0 14px 34px -6px rgba(0, 0, 0, 0.55), 0 1px 1px 0 rgba(255, 255, 255, 0.1) inset;
   --balance-card-bg: #0F0F12;
   --balance-card-border: rgba(255, 255, 255, 0.07);
   --balance-card-sub-bg: #16171B;
@@ -425,5 +425,488 @@ input[type="number"] {
 [id] {
   scroll-margin-top: 5rem;
 }
+
+/* ==========================================================================
+   Glassmorphism System (Glass Stage & Glassy Cards)
+   ========================================================================== */
+/* Escenario Glassmorphism */
+.glass-stage {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.70) !important;
+  box-shadow: 0 20px 50px -10px rgba(16, 185, 129, 0.05), inset 0 1px 2px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+.dark .glass-stage {
+  background: rgba(11, 14, 20, 0.50) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.28) !important;
+  backdrop-filter: blur(16px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.60) !important;
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08) !important;
+}
+
+.dark .glass-card {
+  background-color: rgba(15, 20, 29, 0.60) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.60), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ==========================================================================
+   BORDE DE CRISTAL ILUMINADO (SPECULAR RIM & CORNER GLOW)
+   ========================================================================== */
+
+/* Regla maestra para todos los widgets del dashboard */
+.glass-stage div[class*="rounded-3xl"],
+.glass-stage article[class*="rounded-3xl"],
+.glass-stage section[class*="rounded-3xl"] {
+  backdrop-filter: blur(16px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+  border-radius: 1.5rem !important;
+  transition: all 0.25s ease !important;
+
+  /* 1. Línea perimetral blanca viva y limpia */
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+
+  /* 2. Resplandor perimetral interno (halo de cristal grueso en cantos curvos) */
+  box-shadow:
+    /* Brillo de filo superior nítido */
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 1),
+    /* Brillo de filo inferior suave */
+    inset 0 -1.5px 1px 0 rgba(255, 255, 255, 0.60),
+    /* Halo difuso interno que ilumina las curvas laterales como la cápsula de referencia */
+    inset 0 0 16px 2px rgba(255, 255, 255, 0.35),
+    /* Sombra exterior contenida para dar flotabilidad sobre el stage */
+    0 20px 40px -10px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Modo oscuro / widgets ahumados: Borde de neón blanco tenue en los cantos */
+.dark .glass-stage div[class*="rounded-3xl"],
+.dark .glass-stage article[class*="rounded-3xl"],
+.dark .glass-stage section[class*="rounded-3xl"],
+.glass-stage .grid > div:nth-child(even) div[class*="rounded-3xl"] {
+  border: 1px solid rgba(255, 255, 255, 0.65) !important;
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 1px 0 rgba(255, 255, 255, 0.40),
+    inset 0 0 18px 2px rgba(255, 255, 255, 0.20),
+    0 20px 40px -10px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* 2. Patrón Claro (Neto del Mes, Actividad de Gastos, Pagos Recurrentes): Vidrio puro translúcido */
+.glass-stage .grid > div:nth-child(odd) div[class*="rounded-3xl"],
+.glass-stage > div:first-child > div:first-child div[class*="rounded-3xl"],
+.glass-stage .grid:first-of-type > div:first-child div[class*="rounded-3xl"] {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 3. Patrón Ahumado (Resumen de Gastos, Préstamos/Presupuesto, Inversiones): Cristal grafito aireado y translúcido */
+.glass-stage .grid > div:nth-child(even) div[class*="rounded-3xl"] {
+  background: rgba(15, 23, 42, 0.25) !important;
+}
+
+/* ==========================================================================
+   CALIBRACIÓN DE CONTRASTE Y TIPOGRAFÍA EN WIDGETS AHUMADOS
+   ========================================================================== */
+
+/* Títulos, subtítulos y textos generales */
+.glass-stage .grid > div:nth-child(even) h2,
+.glass-stage .grid > div:nth-child(even) h3,
+.glass-stage .grid > div:nth-child(even) h4 {
+  color: #f8fafc !important; /* Blanco hueso nítido */
+  font-weight: 700 !important;
+}
+
+/* Textos secundarios y etiquetas atenuadas (p. ej. "0 activos", "Balance neto:", "Sin metas activas") */
+.glass-stage .grid > div:nth-child(even) p,
+.glass-stage .grid > div:nth-child(even) span,
+.glass-stage .grid > div:nth-child(even) label,
+.glass-stage .grid > div:nth-child(even) [class*="text-slate-400"],
+.glass-stage .grid > div:nth-child(even) [class*="text-zinc-400"],
+.glass-stage .grid > div:nth-child(even) [class*="text-slate-500"],
+.glass-stage .grid > div:nth-child(even) [class*="text-zinc-500"],
+.glass-stage .grid > div:nth-child(even) [class*="text-gray-400"],
+.glass-stage .grid > div:nth-child(even) [class*="text-gray-500"] {
+  color: #cbd5e1 !important; /* Slate-300 de alto contraste */
+}
+
+/* Cifras y métricas en verde (p. ej. rendimientos, balance neto, porcentajes) */
+.glass-stage .grid > div:nth-child(even) [class*="text-emerald-"],
+.glass-stage .grid > div:nth-child(even) [class*="text-teal-"],
+.glass-stage .grid > div:nth-child(even) [class*="text-green-"] {
+  color: #34d399 !important; /* Verde esmeralda luminoso para destacar sobre fondo ahumado */
+  text-shadow: 0 0 12px rgba(52, 211, 153, 0.35) !important;
+}
+
+/* Cifras y métricas en rojo/rosa (gastos, deudas) */
+.glass-stage .grid > div:nth-child(even) [class*="text-rose-"],
+.glass-stage .grid > div:nth-child(even) [class*="text-red-"] {
+  color: #fb7185 !important;
+  text-shadow: 0 0 12px rgba(244, 63, 94, 0.35) !important;
+}
+
+/* Pastillas informativas internas dentro de widgets ahumados (p. ej. botones de estado, tags) */
+.glass-stage .grid > div:nth-child(even) [class*="bg-emerald-500/10"],
+.glass-stage .grid > div:nth-child(even) [class*="bg-emerald-500/15"],
+.glass-stage .grid > div:nth-child(even) [class*="bg-emerald-500/20"] {
+  background-color: rgba(16, 185, 129, 0.20) !important;
+  border: 1px solid rgba(52, 211, 153, 0.40) !important;
+}
+
+/* Divisores horizontales y barras de progreso dentro de widgets ahumados */
+.glass-stage .grid > div:nth-child(even) hr,
+.glass-stage .grid > div:nth-child(even) [class*="border-t"],
+.glass-stage .grid > div:nth-child(even) [class*="border-b"] {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* ==========================================================================
+   REFINAMIENTO DE CONTRASTE, SALDO DISPONIBLE Y MICRO-COMPONENTES
+   ========================================================================== */
+
+/* 1. RESTAURAR TRANSPARENCIA REAL EN TARJETAS DE SALDO DISPONIBLE */
+/* Eliminar el tono lechoso opaco y devolver el cristal translúcido idéntico a los demás widgets */
+.glass-stage .overflow-x-auto > div > div,
+.glass-stage div[class*="rounded-2xl"][class*="p-3"],
+.glass-stage div[class*="rounded-2xl"][class*="p-4"] {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.90) !important;
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 10px 1px rgba(255, 255, 255, 0.25),
+    0 8px 20px -4px rgba(15, 23, 42, 0.06) !important;
+  border-radius: 1rem !important;
+}
+
+/* 2. NETO DEL MES: ELIMINAR CONTENEDOR RÍGIDO DE INGRESOS/GASTOS Y CALIBRAR ROJO VIVO */
+/* Neutralizar la barra contenedora para que fluya sin fondo blanco plano */
+.glass-stage > div:first-child > div:first-child div[class*="rounded-2xl"][class*="bg-"],
+.glass-stage .grid:first-of-type > div:first-child div[class*="rounded-2xl"][class*="bg-"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Acento rojo vivo y nítido para cifras y etiquetas de gastos (no rosado) */
+.glass-stage [class*="text-rose-"],
+.glass-stage [class*="text-red-"],
+.glass-stage span[class*="text-rose"],
+.glass-stage p[class*="text-rose"] {
+  color: #dc2626 !important; /* Rojo carmesí nítido idéntico a Últimos Registros */
+  font-weight: 700 !important;
+}
+
+/* Cifra de gastos en Neto del Mes visible y definida */
+.glass-stage > div:first-child > div:first-child [class*="text-rose-"],
+.glass-stage .grid:first-of-type > div:first-child [class*="text-rose-"] {
+  color: #e11d48 !important;
+  text-shadow: 0 1px 2px rgba(225, 29, 72, 0.12) !important;
+}
+
+/* 3. PAGOS RECURRENTES: LEGIBILIDAD DEL SUBTEXTO SECUNDARIO */
+.glass-stage .grid > div:nth-child(even) p,
+.glass-stage div:has([class*="CalendarSync"]) p,
+.glass-stage p:has(+ span),
+.glass-stage p.text-xs,
+.glass-stage p[class*="text-[11px]"] {
+  color: #334155 !important; /* Slate-700 nítido y legible en modo claro */
+  font-weight: 500 !important;
+}
+
+/* 4. METAS DE AHORRO: TRANSFORMAR PÍLDORA BLANCA "ALCANCÍAS" EN CRISTAL */
+.glass-stage div:has([class*="PiggyBank"]) span[class*="rounded-"],
+.glass-stage div:has([class*="PiggyBank"]) button[class*="rounded-"],
+.glass-stage .rounded-full.bg-white,
+.glass-stage .rounded-full.bg-slate-100,
+.glass-stage span[class*="bg-slate-100"] {
+  background: rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.80) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  color: #1e293b !important; /* Texto oscuro visible, sin desvanecerse */
+  font-weight: 600 !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 5. TÍTULOS DE SECCIÓN GENERALES (SALDO DISPONIBLE, PAGOS RECURRENTES, ETC.) */
+.glass-stage h2,
+.glass-stage h3,
+.glass-stage span.text-xs.font-bold:not([class*="font-mono"]),
+.glass-stage p.text-xs.font-bold,
+.glass-stage span[class*="font-semibold"][class*="tracking-wider"]:not([class*="font-mono"]) {
+  color: #0f172a !important; /* Gris oscuro profundo para lectura inmediata */
+}
+
+/* Contenedor general de Saldo Disponible: totalmente transparente sin encajonar */
+.glass-stage > div:first-child > div:nth-child(2),
+.glass-stage .grid:first-of-type > div:nth-child(2) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+}
+
+/* 5. ELIMINAR PASTILLAS BLANCAS PLANAS INTERNAS (Ingresos/Gastos, Préstamos/Deudas, Últimos Registros) */
+/* Se convierten en cápsulas de micro-cristal sutil */
+.glass-stage div[class*="rounded-full"][class*="bg-white"],
+.glass-stage div[class*="rounded-2xl"][class*="bg-white"],
+.glass-stage div[class*="rounded-xl"][class*="bg-white"],
+.glass-stage div[class*="rounded-lg"][class*="bg-white"],
+.glass-stage div[class*="bg-slate-50"],
+.glass-stage div[class*="bg-zinc-50"] {
+  background-color: rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.50) !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   CORRECCIÓN DE CONTENEDORES PARÁSITOS, NOMBRES DE CUENTAS Y ALCANCÍAS
+   ========================================================================== */
+
+/* 1. ELIMINAR EL "FANTASMA" CUADRADO DETRÁS DE LOS WIDGETS
+   Neutraliza fondos, bordes y sombras en los wrappers contenedores del grid */
+.glass-stage .grid > div,
+.glass-stage .grid > div > div:not([class*="rounded-3xl"]),
+.glass-stage .grid > article,
+.glass-stage .grid > section {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 2. SALDO DISPONIBLE: NOMBRES DE CUENTAS (Bancolombia, Nequi, Mastercard, Visa)
+   Oscurecer tipografía secundaria para garantizar lectura inmediata */
+.glass-stage .overflow-x-auto p,
+.glass-stage .overflow-x-auto span,
+.glass-stage div:has(> svg + [class*="text-xs"]) span,
+.glass-stage .overflow-x-auto .text-slate-400,
+.glass-stage .overflow-x-auto .text-zinc-400,
+.glass-stage .overflow-x-auto .text-gray-400,
+.glass-stage div[class*="rounded-2xl"][class*="p-4"] .text-slate-500,
+.glass-stage div[class*="rounded-2xl"][class*="p-4"] .text-slate-400 {
+  color: #334155 !important; /* Slate-700 nítido y de alto contraste */
+  font-weight: 600 !important;
+}
+
+/* Cifras de saldos de las cuentas */
+.glass-stage .overflow-x-auto [class*="font-mono"]:not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-emerald-"]):not([class*="text-green-"]),
+.glass-stage .overflow-x-auto [class*="tabular-nums"]:not([class*="text-rose-"]):not([class*="text-red-"]):not([class*="text-emerald-"]):not([class*="text-green-"]) {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+/* 3. METAS DE AHORRO: PÍLDORA "ALCANCÍAS" TOTALMENTE REDONDA (CÁPSULA) */
+.glass-stage button:has(span),
+.glass-stage button[class*="Alcancías"],
+.glass-stage div:has(> [class*="PiggyBank"]) button,
+.glass-stage div:has(> [class*="PiggyBank"]) span.rounded-full,
+.glass-stage div:has(svg.lucide-piggy-bank) span[class*="rounded"],
+.glass-stage div:has([class*="PiggyBank"]) span[class*="rounded"] {
+  border-radius: 9999px !important; /* Píldora curva suave completa */
+  padding: 0.25rem 0.85rem !important;
+  background: rgba(255, 255, 255, 0.40) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.90) !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.95), 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Si el botón de Alcancías tiene un tag interno específico */
+.glass-stage button:has(svg.lucide-piggy-bank) + span,
+.glass-stage div:has(svg) span.rounded-full {
+  border-radius: 9999px !important;
+}
+
+/* Blindaje de texto secundario en Pagos Recurrentes para modo claro */
+.glass-stage div:has(svg.lucide-calendar-sync) p,
+.glass-stage div:has(svg.lucide-calendar-sync) span,
+.glass-stage div:has([class*="CalendarSync"]) p,
+.glass-stage div:has([class*="CalendarSync"]) span {
+  color: #334155 !important;
+}
+
+/* Núcleo y Cavidad 3D Adaptativa para Expenses3DDonut */
+.donut-core-base {
+  fill: transparent !important;
+}
+
+.donut-core-shadow {
+  display: none !important;
+}
+
+/* Blindaje de montos en listas de movimientos recientes */
+.glass-stage .recent-tx-expense {
+  color: #dc2626 !important;
+  font-weight: 700 !important;
+}
+
+.glass-stage .recent-tx-income {
+  color: #16a34a !important;
+  font-weight: 700 !important;
+}
+
+/* Blindaje absoluto para montos de transacciones en Últimos Registros */
+#root .glass-stage [data-tx-type="expense"],
+#root .glass-stage .tx-amount-expense,
+.glass-stage span[data-tx-type="expense"] {
+  color: #dc2626 !important;
+  -webkit-text-fill-color: #dc2626 !important;
+  font-weight: 700 !important;
+}
+
+#root .glass-stage [data-tx-type="income"],
+#root .glass-stage .tx-amount-income,
+.glass-stage span[data-tx-type="income"] {
+  color: #16a34a !important;
+  -webkit-text-fill-color: #16a34a !important;
+  font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   UNIFICACIÓN GLOBAL DE ROJO SEMÁNTICO (REEMPLAZO DE TONOS ROSADOS)
+   ========================================================================== */
+
+/* 1. Textos y etiquetas en rojo en toda la interfaz */
+.glass-stage [class*="text-rose-"],
+.glass-stage [class*="text-red-"],
+.glass-stage .text-rose-500,
+.glass-stage .text-rose-400,
+.glass-stage .text-rose-600,
+.glass-stage .text-rose-700,
+.glass-stage .text-red-500,
+.glass-stage .text-red-400,
+.glass-stage .text-red-600 {
+  color: #dc2626 !important;
+  -webkit-text-fill-color: #dc2626 !important;
+}
+
+/* 2. Tarjetas de crédito en Saldo Disponible con saldo negativo */
+.glass-stage .overflow-x-auto [class*="text-rose-"],
+.glass-stage .overflow-x-auto [class*="text-red-"],
+.glass-stage .overflow-x-auto span[class*="text-rose-"],
+.glass-stage .overflow-x-auto span[class*="text-red-"],
+.glass-stage .overflow-x-auto [class*="font-mono"][class*="text-rose-"],
+.glass-stage .overflow-x-auto [class*="font-mono"][class*="text-red-"] {
+  color: #dc2626 !important;
+  -webkit-text-fill-color: #dc2626 !important;
+  font-weight: 700 !important;
+}
+
+/* 3. Widget de Préstamos y Deudas: sección de DEUDAS y cifras negativas */
+.glass-stage div:has(> [class*="HandCoins"]) [class*="text-rose-"],
+.glass-stage div:has(> [class*="HandCoins"]) [class*="text-red-"],
+.glass-stage div:has(svg.lucide-hand-coins) [class*="text-rose-"],
+.glass-stage div:has(svg.lucide-hand-coins) [class*="text-red-"],
+.glass-stage div[class*="bg-rose-500/10"] span,
+.glass-stage div[class*="bg-rose-500/15"] span,
+.glass-stage div[class*="bg-rose-500/20"] span,
+.glass-stage .grid > div:nth-child(even) [class*="text-rose-"],
+.glass-stage .grid > div:nth-child(even) [class*="text-red-"] {
+  color: #dc2626 !important;
+  -webkit-text-fill-color: #dc2626 !important;
+  text-shadow: 0 0 10px rgba(220, 38, 38, 0.25) !important;
+}
+
+/* 4. Columnas y barras del gráfico en Actividad de Gastos */
+/* Reemplazar los rellenos rosados por rojo carmesí con degradado translúcido uniforme */
+.glass-stage [class*="bg-rose-"],
+.glass-stage [class*="bg-red-"],
+.glass-stage .bg-rose-500,
+.glass-stage .bg-rose-400,
+.glass-stage .bg-red-500 {
+  background-color: #dc2626 !important;
+}
+
+/* Barras verticales del gráfico de gastos semanal */
+.glass-stage div:has(svg.lucide-bar-chart-3) [class*="rounded-full"][class*="bg-rose-"],
+.glass-stage div:has(svg.lucide-bar-chart) [class*="rounded-full"][class*="bg-rose-"],
+.glass-stage [class*="rounded-full"][class*="bg-rose-500"],
+.glass-stage [class*="rounded-full"].bg-rose-500,
+.glass-stage [class*="rounded-full"].bg-rose-400 {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%) !important;
+  box-shadow: 0 0 14px rgba(220, 38, 38, 0.40) !important;
+  border: 1px solid rgba(254, 202, 202, 0.60) !important;
+}
+
+/* Acentos tenues o badges con fondo rojo suave (p. ej. estados de alerta / déficit) */
+.glass-stage [class*="bg-rose-500/10"],
+.glass-stage [class*="bg-rose-500/15"],
+.glass-stage [class*="bg-rose-500/20"],
+.glass-stage [class*="bg-red-500/10"],
+.glass-stage [class*="bg-red-500/15"],
+.glass-stage [class*="bg-red-500/20"] {
+  background-color: rgba(220, 38, 38, 0.15) !important;
+  border-color: rgba(220, 38, 38, 0.35) !important;
+}
+
+/* Iconos de flecha de gasto o deuda */
+.glass-stage svg[class*="text-rose-"],
+.glass-stage svg[class*="text-red-"] {
+  color: #dc2626 !important;
+  stroke: #dc2626 !important;
+}
+
+/* ==========================================================================
+   ELIMINACIÓN DEFINITIVA DE FONDOS CUADRADOS PARÁSITOS ("FANTASMA") EN WIDGETS
+   ========================================================================== */
+
+/* 1. Neutralizar cualquier fondo plano, sombra rígida o borde en los wrappers directos del grid */
+.glass-stage .grid > div,
+.glass-stage .grid > article,
+.glass-stage .grid > section,
+.glass-stage .grid > div > div,
+.glass-stage .grid > div > div:has(> .glass-card) {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* 2. Asegurar que las tarjetas de cristal recorten cualquier sub-capa interna */
+.glass-card,
+.glass-stage [class*="rounded-3xl"],
+.glass-stage div[class*="rounded-3xl"] {
+  overflow: hidden !important;
+  border-radius: 1.5rem !important; /* 24px uniforme */
+}
+
+/* 3. Evitar que elementos hermanos o pseudoelementos ::before / ::after queden con esquinas rectas */
+.glass-card::before,
+.glass-card::after,
+.glass-stage [class*="rounded-3xl"]::before,
+.glass-stage [class*="rounded-3xl"]::after {
+  border-radius: inherit !important;
+}
+
+/* 4. Si el contenedor del grid tiene items envueltos en componentes de arrastre o wrappers de animación */
+.glass-stage [data-grid-item],
+.glass-stage [data-widget-id],
+.glass-stage div[style*="position: relative"] {
+  border-radius: 1.5rem !important;
+  background-clip: padding-box !important;
+}
+
+
 
 

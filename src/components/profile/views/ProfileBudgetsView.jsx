@@ -13,7 +13,7 @@ const getBudgetStatus = (spent, limit, fallback = '#10B981') => {
 const BudgetProgress = ({ percent, barColor, textColor, labelLeft, labelRight }) => (
   <div className="space-y-1">
     <div className="h-2 w-full bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden mt-2 mb-1.5"><div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${percent > 0 ? Math.max(3, percent) : 0}%`, backgroundColor: barColor }} /></div>
-    <div className="flex justify-between text-xs font-mono text-slate-500 dark:text-zinc-400 tabular-nums"><span className={textColor}>{labelLeft}</span><span>{labelRight}</span></div>
+    <div className="flex justify-between text-xs font-mono text-slate-700 dark:text-zinc-300 font-semibold tabular-nums"><span className={textColor}>{labelLeft}</span><span>{labelRight}</span></div>
   </div>
 );
 
@@ -33,7 +33,7 @@ function CategoryBudgetItem({ cat, spent, catLimit, isEditing, tempCatBudgetAmou
             else if (offset.x < -60 || velocity.x < -300) { triggerVibrate(35); onRemove(); }
           }
         }}
-        className="w-full relative z-10 p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-white/[0.08] space-y-2.5 shadow-sm touch-pan-y">
+        className="w-full relative z-10 p-4 sm:p-5 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] space-y-2.5 shadow-xs touch-pan-y">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0"><span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color || '#10B981' }} /><span className="text-sm sm:text-base font-semibold text-slate-900 dark:text-zinc-100 truncate">{cat.name}</span></div>
           <div className="flex items-center gap-2 shrink-0">
@@ -71,24 +71,24 @@ export default function ProfileBudgetsView({
 
   return (
     <div className="space-y-4">
-      <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-3">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-white/70 dark:border-white/[0.08] shadow-xs space-y-3">
         <div className="flex items-center justify-between">
-          <div><h3 className="text-xs font-bold text-slate-900 dark:text-zinc-100 uppercase tracking-wider font-mono">Presupuesto Mensual Global</h3><p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">Límite general para todo el mes</p></div>
+          <div><h3 className="text-xs font-extrabold text-slate-900 dark:text-zinc-100 uppercase tracking-wider font-mono">Presupuesto Mensual Global</h3><p className="text-xs text-slate-700 dark:text-zinc-300 font-medium font-mono">Límite general para todo el mes</p></div>
           {!isEditingGlobalBudget && <button type="button" onClick={() => { setTempGlobalBudget(budgets?.global ? budgets.global.toString() : ''); setIsEditingGlobalBudget(true); }} className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">Modificar</button>}
         </div>
         {isEditingGlobalBudget ? (
           <div className="flex items-center gap-2 pt-1">
-            <AmountInput value={tempGlobalBudget} onFocus={(e) => e.target.select()} onChange={setTempGlobalBudget} placeholder="Sin límite ($0)" className="flex-1 h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-zinc-100 text-xs sm:text-sm font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500/60" />
+            <AmountInput value={tempGlobalBudget} onFocus={(e) => e.target.select()} onChange={setTempGlobalBudget} placeholder="Sin límite ($0)" className="flex-1 h-11 px-3.5 rounded-xl bg-white/60 dark:bg-white/[0.05] border border-white/80 dark:border-white/[0.08] text-slate-900 dark:text-zinc-100 text-xs sm:text-sm font-mono font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500/60" />
             <button type="button" onClick={handleSaveGlobalBudget} className="h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shrink-0 cursor-pointer shadow-sm active:scale-95">Guardar</button>
             <button type="button" onClick={() => setIsEditingGlobalBudget(false)} className="h-11 px-3.5 rounded-xl border border-slate-200 dark:border-white/[0.08] text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">Cancelar</button>
           </div>
         ) : (
           <div className="space-y-2">
             <div className="flex items-baseline justify-between gap-2 flex-wrap">
-              <span className="text-lg sm:text-xl font-bold font-mono tracking-tight tabular-nums text-slate-900 dark:text-zinc-100">{formatMoney(totalMonthExpense)}</span>
-              <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono tabular-nums">{globalLimit > 0 ? `de ${formatMoney(globalLimit)}` : 'Sin límite configurado'}</span>
+              <span className="text-lg sm:text-xl font-extrabold font-mono tracking-tight tabular-nums text-slate-950 dark:text-white">{formatMoney(totalMonthExpense)}</span>
+              <span className="text-xs text-slate-700 dark:text-zinc-300 font-semibold font-mono tabular-nums tracking-tight">{globalLimit > 0 ? `de ${formatMoney(globalLimit)}` : 'Sin límite configurado'}</span>
             </div>
-            <BudgetProgress percent={globalLimit === 0 ? 0 : globalStatus.percent} barColor={globalStatus.barColor} textColor={globalLimit === 0 ? 'text-slate-500 dark:text-zinc-400' : globalStatus.textColor} labelLeft={`${globalStatus.percent}% consumido`} labelRight={globalLimit === 0 ? 'Sin límite global asignado' : globalStatus.isOver ? `Excedido en ${formatMoney(totalMonthExpense - globalLimit)}` : `Disponible: ${formatMoney(Math.max(0, globalLimit - totalMonthExpense))}`} />
+            <BudgetProgress percent={globalLimit === 0 ? 0 : globalStatus.percent} barColor={globalStatus.barColor} textColor={globalLimit === 0 ? 'text-slate-700 dark:text-zinc-300 font-semibold' : globalStatus.textColor} labelLeft={`${globalStatus.percent}% consumido`} labelRight={globalLimit === 0 ? 'Sin límite global asignado' : globalStatus.isOver ? `Excedido en ${formatMoney(totalMonthExpense - globalLimit)}` : `Disponible: ${formatMoney(Math.max(0, globalLimit - totalMonthExpense))}`} />
           </div>
         )}
       </div>
@@ -100,7 +100,7 @@ export default function ProfileBudgetsView({
         </div>
 
         {isAddingCategory && (
-          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-emerald-500/30 shadow-md space-y-3 animate-fadeIn">
+          <div className="p-4 rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border border-emerald-500/30 shadow-sm space-y-3 animate-fadeIn">
             {availableCategories.length === 0 ? (
               <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 font-mono py-1">
                 <span>Todas tus categorías de gasto ya están en el presupuesto.</span>

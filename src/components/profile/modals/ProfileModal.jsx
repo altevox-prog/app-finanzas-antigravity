@@ -24,6 +24,8 @@ import useProfileDataActions from '../hooks/useProfileDataActions';
 import useProfileSecurity from '../hooks/useProfileSecurity';
 import useProfileFinances from '../hooks/useProfileFinances';
 import useProfileMetrics from '../hooks/useProfileMetrics';
+import InvoiceHistoryList from '../../invoicing/history/InvoiceHistoryList';
+import { useInvoicesHistory } from '../../../hooks/useInvoicesHistory';
 
 export default function ProfileModal({
   isOpen, onClose, onOpenAuth, userProfile, onUpdateProfile, securitySettings, onUpdateSecurity,
@@ -34,7 +36,8 @@ export default function ProfileModal({
   categories = [], onAddCategory, onUpdateCategory, onDeleteCategory, onAddSubcategory, onUpdateSubcategory,
   onDeleteSubcategory, investments = [], debtsAndLoans = [], accounts = [], onAddAccount, onUpdateAccount,
   onDeleteAccount, onReorderAccounts, trm = 4000, onRestoreBackup, onFactoryReset, onOpenTutorial,
-  onNavigateToRecurring, onNavigateToNetWorth, onNavigate, onManualCloudSync, onLogout, selectedDate = null, selectedMonth = null, selectedYear = null
+  onNavigateToRecurring, onNavigateToNetWorth, onNavigate, onManualCloudSync, onLogout, selectedDate = null, selectedMonth = null, selectedYear = null,
+  onAddTransaction, onDeleteTransaction
 }) {
   const { formatMoney, enableDecimals, toggleEnableDecimals } = usePrivacy();
   const { user, signOut } = useAuth();
@@ -59,6 +62,7 @@ export default function ProfileModal({
   const security = useProfileSecurity({ securitySettings, onUpdateSecurity, setCurrentView, showToast });
   const finances = useProfileFinances({ userProfile, onUpdateProfile, budgets, onUpdateBudgets, savingsGoals, onAddGoal, onUpdateGoal, onDeleteGoal, subscriptions, onAddSubscription, onDeleteSubscription, showToast, formatMoney, safeNumber, supabase, isSupabaseConfigured, user });
   const metrics = useProfileMetrics({ transactions, savingsGoals, safeNumber, selectedDate, selectedMonth, selectedYear });
+  const invoiceHistory = useInvoicesHistory({ accounts, transactions, onAddTransaction, onDeleteTransaction });
 
   useBackHandler(isOpen, () => {
     if (finances.showAddGoalForm || finances.editingGoal) { finances.setShowAddGoalForm(false); finances.setEditingGoal(null); }
@@ -123,12 +127,26 @@ export default function ProfileModal({
     if (currentView === 'categories') return <CategoriesView categories={categories} onAddCategory={onAddCategory} onUpdateCategory={onUpdateCategory} onDeleteCategory={onDeleteCategory} onAddSubcategory={onAddSubcategory} onUpdateSubcategory={onUpdateSubcategory} onDeleteSubcategory={onDeleteSubcategory} onBack={() => setCurrentView('main')} hideBackButton />;
     if (currentView === 'tax') return <TaxView transactions={transactions} accounts={accounts} investments={investments} onBack={() => setCurrentView('main')} onClose={onClose} />;
     if (currentView === 'accounts') return <AccountsAndCategories accounts={accounts} transactions={transactions} onAddAccount={onAddAccount} onUpdateAccount={onUpdateAccount} onDeleteAccount={onDeleteAccount} onReorderAccounts={onReorderAccounts} isReadOnly={false} fromSettings trm={trm} onBack={() => setCurrentView('main')} />;
+    if (currentView === 'invoice_history') {
+      return (
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-16">
+          <InvoiceHistoryList
+            invoices={invoiceHistory.invoices}
+            pendingTotal={invoiceHistory.pendingTotal}
+            accounts={accounts}
+            onMarkAsPaid={invoiceHistory.markAsPaid}
+            onDelete={invoiceHistory.deleteInvoice}
+            loading={invoiceHistory.loading}
+          />
+        </div>
+      );
+    }
     return renderActiveTab();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-fadeIn">
-      <div className="relative z-10 w-full max-w-xl h-[85dvh] sm:h-[620px] max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#121214] text-slate-900 dark:text-zinc-100 shadow-2xl border border-slate-200/80 dark:border-white/[0.08] overflow-hidden animate-slide-up">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-fadeIn">
+      <div className="relative z-10 w-full max-w-xl h-[85dvh] sm:h-[620px] max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-white/40 dark:bg-zinc-900/40 backdrop-blur-2xl text-slate-900 dark:text-zinc-100 shadow-2xl border border-white/60 dark:border-white/[0.08] overflow-hidden animate-slide-up">
         <div className="w-12 h-1.5 bg-slate-400/30 dark:bg-white/20 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
         <ProfileHeader currentView={currentView} setCurrentView={setCurrentView} user={user} userProfile={userProfile} fileInputRef={fileInputRef} isOnline={isOnline} onClose={onClose} handleSync={dataActions.handleCloudSync} isSyncing={dataActions.isCloudSyncing} handleSignOut={() => dataActions.setShowLogoutConfirm(true)} {...finances}>
           <ProfileTabBar activeTab={activeTab} setActiveTab={setActiveTab} />

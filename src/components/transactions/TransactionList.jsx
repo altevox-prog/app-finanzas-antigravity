@@ -78,7 +78,11 @@ export default function TransactionList({
   const totalItems = filteredTransactions.length, totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage)), startIndex = (currentPage - 1) * itemsPerPage;
   const itemsToRender = isCompact ? (limit ? filteredTransactions.slice(0, limit) : filteredTransactions) : filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
   const handleResetFilters = () => { setTypeFilter('all'); setAccountFilter('all'); setCategoryFilter('all'); handleClearSelectedDay(); };
-  const pillCls = (active) => `px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${active ? 'bg-[#007AFF] text-white shadow-sm font-bold' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-200'}`;
+  const pillCls = (active) => `px-3.5 py-1.5 rounded-2xl text-xs font-semibold shrink-0 transition-all cursor-pointer select-none active:scale-95 ${
+    active
+      ? 'bg-emerald-500/90 text-white font-bold shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_4px_12px_rgba(16,185,129,0.25)] border border-emerald-400/80'
+      : 'bg-white/40 dark:bg-white/[0.06] text-slate-700 dark:text-zinc-200 hover:bg-white/60 dark:hover:bg-white/10 border border-white/70 dark:border-white/10 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)]'
+  }`;
 
   return (
     <div className={isCompact ? 'ios-card p-3.5 sm:p-4' : 'space-y-4'}>
@@ -105,16 +109,20 @@ export default function TransactionList({
       )}
 
       {totalItems === 0 ? (
-        <div className="text-center py-8 px-4 border border-dashed border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-zinc-900/90 rounded-2xl">
+        <div
+          className="text-center py-10 px-4 rounded-3xl bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-dashed border-white/60 dark:border-white/[0.08] shadow-sm"
+        >
           <Inbox className="w-8 h-8 opacity-30 mx-auto mb-2" /><p className="text-xs font-bold text-slate-900 dark:text-white">{selectedDay ? 'No hay movimientos en este día' : 'Sin movimientos registrados este mes'}</p>
           <p className="text-[11px] opacity-50 mt-0.5">{selectedDay ? 'Toca "Ver todo el mes" para ver el período completo.' : 'Usa el botón central (+) para registrar tus ingresos y gastos.'}</p>
           {selectedDay && <button onClick={handleClearSelectedDay} className="mt-3 px-3.5 py-2 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-sm active:scale-95 cursor-pointer">Mostrar todo el mes</button>}
         </div>
       ) : (
-        <div className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-white/[0.06]">
+        <div
+          className="rounded-3xl overflow-hidden divide-y divide-white/40 dark:divide-white/[0.06] transition-all bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/60 dark:border-white/[0.08] shadow-sm"
+        >
           {itemsToRender.map((tx) => <TransactionItem key={tx.id} transaction={tx} category={categoryMap.get(tx.categoryId)} account={accountMap.get(tx.accountId)} onSelect={setSelectedDetailTx} onEdit={setEditingTx} onDelete={onDeleteTransaction} onViewReceipt={setViewingReceiptTx} />)}
           {!isCompact && totalItems > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-zinc-800 text-xs text-slate-500">
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/40 dark:border-white/[0.06] text-xs text-slate-600 dark:text-zinc-400 font-medium bg-white/10">
               <span>Mostrando {startIndex + 1} - {Math.min(startIndex + itemsPerPage, totalItems)} de {totalItems}</span>
               <div className="flex items-center gap-1">
                 <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-800 disabled:opacity-40 cursor-pointer"><ChevronLeft size={16} /></button>

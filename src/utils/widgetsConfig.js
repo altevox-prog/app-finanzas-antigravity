@@ -1,32 +1,29 @@
 export const WIDGETS_CONFIG_STORAGE_KEY = 'monety_widgets_config';
-export const WIDGETS_ORDER_STORAGE_KEY_V2 = 'monety_widgets_order_v2';
+export const WIDGETS_ORDER_STORAGE_KEY_V2 = 'monety_widgets_order_v5';
 
 export const DEFAULT_WIDGETS_CONFIG = [
-  ['weekly_cashflow', 'Actividad de gastos', 'Evolución y comparación semanal de gastos', 'Activity'],
   ['expenses_category', 'Gastos y movimientos', 'Distribución de gastos y últimos movimientos', 'PieChart'],
-  ['debts_loans', 'Préstamos y deudas', 'Montos por cobrar y compromisos por pagar', 'HandCoins'],
-  ['investments', 'Inversiones', 'Portafolio por banco, capital aportado y rentabilidad neta', 'TrendingUp'],
-  ['recent_movements', 'Movimientos recientes', 'Últimos movimientos con acceso rápido', 'Receipt'],
+  ['weekly_cashflow', 'Actividad de gastos', 'Evolución y comparación semanal de gastos', 'Activity'],
+  ['savings_goals', 'Metas de ahorro', 'Progreso de metas de ahorro y alcancías', 'PiggyBank'],
   ['recurring_payments', 'Pagos recurrentes', 'Suscripciones y gastos fijos al mes', 'CalendarSync'],
-  ['savings_rate', 'Metas de ahorro', 'Progreso de metas de ahorro y alcancías', 'PiggyBank'],
-  ['budget', 'Presupuesto mensual', 'Progreso y límites del presupuesto mensual y categorías', 'Target']
-].map(([id, label, description, icon]) => ({ id, label, name: label, description, icon, visible: true }));
+  ['debts_and_budget', 'Préstamos y presupuesto', 'Compromisos financieros y límites de presupuesto', 'HandCoins'],
+  ['investments', 'Inversiones', 'Portafolio por banco, capital aportado y rentabilidad neta', 'TrendingUp']
+].map(([id, label, description, icon, visible = true]) => ({ id, label, name: label, description, icon, visible }));
 
 const WIDGET_ID_ALIASES = {
   inversiones: 'investments',
-  prestamos: 'debts_loans', prestamos_deudas: 'debts_loans', debts: 'debts_loans',
+  prestamos: 'debts_and_budget', prestamos_deudas: 'debts_and_budget', debts: 'debts_and_budget', debts_loans: 'debts_and_budget',
+  presupuesto: 'debts_and_budget', presupuesto_metas: 'debts_and_budget', budget: 'debts_and_budget', debts_budget: 'debts_and_budget',
   gastos_categoria: 'expenses_category', charts: 'expenses_category', expenses: 'expenses_category', tus_gastos: 'expenses_category', donut: 'expenses_category',
   expenses_and_movements: 'expenses_category', gastos_movimientos: 'expenses_category', gastos_y_movimientos: 'expenses_category',
-  movimientos_recientes: 'recent_movements', recent_transactions: 'recent_movements', recent: 'recent_movements', transactions: 'recent_movements',
   pagos_recurrentes: 'recurring_payments', recurring: 'recurring_payments',
-  tasa_ahorro: 'savings_rate', superavit: 'savings_rate', savings: 'savings_rate', savings_goals: 'savings_rate', metas_ahorro: 'savings_rate', metas: 'savings_rate',
-  presupuesto: 'budget', presupuesto_metas: 'budget',
+  tasa_ahorro: 'savings_goals', superavit: 'savings_goals', savings: 'savings_goals', savings_rate: 'savings_goals', metas_ahorro: 'savings_goals', metas: 'savings_goals',
   pill_bar_chart: 'weekly_cashflow', weekly_cashflow_classic: 'weekly_cashflow'
 };
 
 export const normalizeWidgetId = (id) => WIDGET_ID_ALIASES[id] || id || '';
 
-const EXCLUDED_IDS = new Set(['liquid_balance', 'accounts', 'my_accounts', 'monthly_net', 'hero_net']);
+const EXCLUDED_IDS = new Set(['liquid_balance', 'accounts', 'my_accounts', 'monthly_net', 'hero_net', 'recent_movements']);
 
 export const getStoredWidgetsConfig = () => {
   try {
@@ -69,7 +66,7 @@ export const saveStoredWidgetsConfig = async (config, userId = null) => {
   try {
     const str = JSON.stringify(config);
     if (localStorage.getItem(WIDGETS_CONFIG_STORAGE_KEY) === str) hasChanged = false;
-    [WIDGETS_ORDER_STORAGE_KEY_V2, WIDGETS_CONFIG_STORAGE_KEY, 'presu_widget_order', 'presu_dashboard_widgets_v1'].forEach((k) =>
+    [WIDGETS_ORDER_STORAGE_KEY_V2, 'monety_widgets_order_v2', WIDGETS_CONFIG_STORAGE_KEY, 'presu_widget_order', 'presu_dashboard_widgets_v1'].forEach((k) =>
       localStorage.setItem(k, str)
     );
 
